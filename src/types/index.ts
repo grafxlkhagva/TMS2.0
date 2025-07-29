@@ -124,6 +124,7 @@ export type OrderItemStatus = 'Pending' | 'Assigned' | 'In Transit' | 'Delivered
 
 export type Order = {
     id: string;
+    orderNumber: string;
     customerId: string;
     customerName: string;
     employeeId: string;
@@ -143,7 +144,8 @@ export type OrderItem = {
     endWarehouseId: string;
     serviceTypeId: string;
     cargoInfo: string;
-    deliveryDate: Date;
+    deliveryDate: any;
     status: OrderItemStatus;
     createdAt: Date;
 };
+

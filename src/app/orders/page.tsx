@@ -95,7 +95,7 @@ export default function OrdersPage() {
             await deleteDoc(doc(db, 'orders', orderToDelete.id));
 
             setOrders(prev => prev.filter(o => o.id !== orderToDelete.id));
-            toast({ title: 'Амжилттай', description: `${orderToDelete.id} дугаартай захиалгыг устгалаа.`});
+            toast({ title: 'Амжилттай', description: `${orderToDelete.orderNumber} дугаартай захиалгыг устгалаа.`});
         } catch (error) {
             console.error("Error deleting order:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалга устгахад алдаа гарлаа.'});
@@ -107,7 +107,7 @@ export default function OrdersPage() {
     
     const filteredOrders = orders.filter(order =>
         order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.id.toLowerCase().includes(searchTerm.toLowerCase())
+        order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
   return (
@@ -174,7 +174,7 @@ export default function OrdersPage() {
                         <TableRow key={order.id}>
                         <TableCell className="font-mono">
                             <Link href={`/orders/${order.id}`} className="hover:underline">
-                            {order.id.substring(0, 10)}...
+                            {order.orderNumber}
                             </Link>
                         </TableCell>
                         <TableCell className="font-medium">{order.customerName}</TableCell>
@@ -229,7 +229,7 @@ export default function OrdersPage() {
             <AlertDialogHeader>
                 <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    "{orderToDelete?.id}" дугаартай захиалгыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй. Энэ захиалгатай холбоотой бүх тээвэрлэлтийн мэдээлэл мөн устгагдана.
+                    "{orderToDelete?.orderNumber}" дугаартай захиалгыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй. Энэ захиалгатай холбоотой бүх тээвэрлэлтийн мэдээлэл мөн устгагдана.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

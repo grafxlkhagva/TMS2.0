@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
 import type { Order, OrderItem, Warehouse, ServiceType } from '@/types';
@@ -125,7 +125,13 @@ export default function OrderDetailPage() {
         getDocs(query(collection(db, "service_types"), orderBy("name"))),
       ]);
       
-      setOrderItems(itemsSnap.docs.map(d => ({id: d.id, ...d.data(), createdAt: d.data().createdAt.toDate()} as OrderItem)));
+      const itemsData = itemsSnap.docs.map(d => {
+        const data = d.data();
+        const deliveryDate = data.deliveryDate instanceof Timestamp ? data.deliveryDate.toDate() : data.deliveryDate;
+        return {id: d.id, ...data, createdAt: data.createdAt.toDate(), deliveryDate } as OrderItem
+      });
+      setOrderItems(itemsData);
+
       setWarehouses(warehouseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Warehouse)));
       setServiceTypes(serviceTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceType)));
 
@@ -206,7 +212,7 @@ export default function OrderDetailPage() {
             Захиалгын жагсаалт
         </Button>
         <h1 className="text-3xl font-headline font-bold">Захиалгын дэлгэрэнгүй</h1>
-        <p className="text-muted-foreground font-mono">{order.id}</p>
+        <p className="text-muted-foreground font-mono">{order.orderNumber}</p>
       </div>
 
        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
@@ -246,7 +252,7 @@ export default function OrderDetailPage() {
                                         <TableCell>{getWarehouseName(item.startWarehouseId)}</TableCell>
                                         <TableCell>{getWarehouseName(item.endWarehouseId)}</TableCell>
                                         <TableCell>{item.cargoInfo}</TableCell>
-                                        <TableCell>{format(item.deliveryDate.toDate(), "yyyy-MM-dd")}</TableCell>
+                                        <TableCell>{item.deliveryDate ? format(item.deliveryDate, "yyyy-MM-dd") : ''}</TableCell>
                                         <TableCell className="text-right">
                                             <Button variant="ghost" size="icon" onClick={() => setItemToDelete(item)}>
                                                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -324,5 +330,3 @@ export default function OrderDetailPage() {
     </div>
   );
 }
-
-    

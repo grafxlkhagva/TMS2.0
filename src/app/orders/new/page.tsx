@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
-import { collection, getDocs, query, orderBy, addDoc, serverTimestamp, where } from 'firebase/firestore';
+import { collection, getDocs, query, addDoc, serverTimestamp, where, runTransaction, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -33,6 +33,28 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+async function generateOrderNumber() {
+    const counterRef = doc(db, 'counters', 'orderCounter');
+
+    const newCount = await runTransaction(db, async (transaction) => {
+        const counterDoc = await transaction.get(counterRef);
+        if (!counterDoc.exists()) {
+            transaction.set(counterRef, { current: 1 });
+            return 1;
+        }
+        const newCurrent = counterDoc.data().current + 1;
+        transaction.update(counterRef, { current: newCurrent });
+        return newCurrent;
+    });
+
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    
+    return `ORD-${year}${month}${day}-${String(newCount).padStart(4, '0')}`;
+}
+
 export default function NewOrderPage() {
   const { toast } = useToast();
   const router = useRouter();
@@ -57,7 +79,7 @@ export default function NewOrderPage() {
   React.useEffect(() => {
     async function fetchCustomers() {
       try {
-        const customerSnap = await getDocs(query(collection(db, "customers"), orderBy("name")));
+        const customerSnap = await getDocs(query(collection(db, "customers")));
         setCustomers(customerSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer)));
       } catch (error) {
         toast({ variant: 'destructive', title: 'Алдаа', description: 'Харилцагчдын мэдээлэл татахад алдаа гарлаа.'});
@@ -99,7 +121,10 @@ export default function NewOrderPage() {
       const selectedCustomer = customers.find(c => c.id === values.customerId);
       const selectedEmployee = employees.find(e => e.id === values.employeeId);
       
+      const orderNumber = await generateOrderNumber();
+
       const docRef = await addDoc(collection(db, 'orders'), {
+        orderNumber: orderNumber,
         customerId: values.customerId,
         customerName: selectedCustomer?.name,
         employeeId: values.employeeId,
@@ -114,7 +139,7 @@ export default function NewOrderPage() {
       
       toast({
         title: 'Амжилттай бүртгэлээ',
-        description: `Шинэ захиалгыг системд бүртгэлээ.`,
+        description: `${orderNumber} дугаартай шинэ захиалгыг системд бүртгэлээ.`,
       });
       
       router.push(`/orders/${docRef.id}`);
