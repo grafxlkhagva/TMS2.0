@@ -193,7 +193,7 @@ export default function CustomersPage() {
                                   </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => setCustomerToDelete(customer)} className="text-destructive">
+                                <DropdownMenuItem onClick={() => setCustomerToDelete(customer)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                                    <Trash2 className="mr-2 h-4 w-4"/>
                                    Устгах
                                 </DropdownMenuItem>
