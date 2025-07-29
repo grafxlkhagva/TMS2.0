@@ -23,29 +23,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const fetchUserData = React.useCallback(async (fbUser: FirebaseUser, isInitialAuth: boolean) => {
+  const fetchUserData = React.useCallback(async (fbUser: FirebaseUser) => {
     if (fbUser) {
       const userDocRef = doc(db, 'users', fbUser.uid);
       const userDoc = await getDoc(userDocRef);
+
       if (userDoc.exists()) {
         const userData = userDoc.data() as SystemUser;
-        // Only check status and redirect on initial authentication state change
-        if (isInitialAuth && userData.status !== 'active') {
+        if (userData.status === 'active') {
+          setUser({
+            ...userData,
+            createdAt: (userData.createdAt as any).toDate(),
+          });
+        } else {
+          // If user is not active, sign them out and clear state
           await auth.signOut();
           setUser(null);
           setFirebaseUser(null);
-          // Redirect to login only if not already on an auth page
-          if (pathname !== '/login' && pathname !== '/signup') {
-            router.push('/login');
-          }
-        } else {
-           setUser({
-            ...userData,
-             createdAt: (userData.createdAt as any).toDate(),
-          });
         }
       } else {
-         // If no user doc, sign them out
+        // If no user doc, sign them out
         await auth.signOut();
         setUser(null);
         setFirebaseUser(null);
@@ -54,16 +51,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setFirebaseUser(null);
     }
-  }, [router, pathname]);
-
+  }, []);
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
-        await fetchUserData(fbUser, true); // `true` indicates this is the initial auth check
+        await fetchUserData(fbUser);
       } else {
         setUser(null);
+        // Only redirect if not on an auth page
         const isAuthPage = pathname === '/login' || pathname === '/signup';
         if (!isAuthPage) {
           router.push('/login');
@@ -76,9 +73,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchUserData, router, pathname]);
 
   const refreshUserData = React.useCallback(async () => {
-    if (auth.currentUser) {
-        // `false` indicates this is a manual refresh, not the initial auth check
-        await fetchUserData(auth.currentUser, false);
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+        await fetchUserData(currentUser);
     }
   }, [fetchUserData]);
 
