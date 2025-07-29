@@ -45,6 +45,8 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+const defaultGeolocation = { lat: 47.91976, lng: 106.91763 };
+
 export default function NewWarehousePage() {
   const { toast } = useToast();
   const router = useRouter();
@@ -56,6 +58,7 @@ export default function NewWarehousePage() {
     defaultValues: {
       name: '',
       location: '',
+      geolocation: defaultGeolocation,
       conditions: '',
       contactInfo: '',
       contactName: '',
@@ -151,6 +154,7 @@ export default function NewWarehousePage() {
                             name="location"
                             render={({ field: { onChange } }) => (
                                 <LocationPicker
+                                    initialCoordinates={defaultGeolocation}
                                     onLocationSelect={(address, latLng) => {
                                         onChange(address);
                                         form.setValue('geolocation', latLng);

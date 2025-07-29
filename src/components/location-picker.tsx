@@ -45,10 +45,6 @@ function LocationPickerInner({ onLocationSelect, initialValue, initialCoordinate
       setValue,
       clearSuggestions,
     } = usePlacesAutocomplete({
-      requestOptions: {
-        // location: new google.maps.LatLng(defaultCenter.lat, defaultCenter.lng),
-        // radius: 100 * 1000, // 100km
-      },
       debounce: 300,
     });
     
@@ -98,7 +94,7 @@ function LocationPickerInner({ onLocationSelect, initialValue, initialCoordinate
 
     return (
         <div className="space-y-4">
-           <Popover open={status === 'OK' && ready} onOpenChange={(open) => !open && clearSuggestions()}>
+           <Popover open={status === 'OK'} onOpenChange={(open) => !open && clearSuggestions()}>
              <PopoverTrigger asChild>
                 <div className="relative">
                     <Input

@@ -84,7 +84,10 @@ export default function EditWarehousePage() {
                 const data = docSnap.data() as Warehouse;
                 form.reset({
                   ...data,
-                  customerId: data.customerId || 'no-owner'
+                  contactName: data.contactName || '',
+                  contactPosition: data.contactPosition || '',
+                  customerId: data.customerId || 'no-owner',
+                  note: data.note || '',
                 });
                 setWarehouseName(data.name);
             } else {
