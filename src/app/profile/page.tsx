@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2, Camera } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, DocumentData } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
@@ -30,8 +30,10 @@ const formSchema = z.object({
   firstName: z.string().min(2, { message: 'Өөрийн нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
   phone: z.string().min(8, { message: 'Утасны дугаар буруу байна.' }),
   email: z.string().email(),
-  avatar: z.any().optional(),
+  avatarFile: z.instanceof(File).optional(),
 });
+
+type FormValues = z.infer<typeof formSchema>;
 
 export default function ProfilePage() {
   const { user, loading, refreshUserData } = useAuth();
@@ -40,27 +42,36 @@ export default function ProfilePage() {
   const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    values: {
-      lastName: user?.lastName || '',
-      firstName: user?.firstName || '',
-      phone: user?.phone || '',
-      email: user?.email || '',
-      avatar: null,
+    defaultValues: {
+      lastName: '',
+      firstName: '',
+      phone: '',
+      email: '',
+      avatarFile: undefined,
     },
   });
 
   React.useEffect(() => {
-    if (user?.avatarUrl) {
-      setAvatarPreview(user.avatarUrl);
+    if (user) {
+      form.reset({
+        lastName: user.lastName || '',
+        firstName: user.firstName || '',
+        phone: user.phone || '',
+        email: user.email || '',
+        avatarFile: undefined,
+      });
+      if (user.avatarUrl) {
+        setAvatarPreview(user.avatarUrl);
+      }
     }
-  }, [user?.avatarUrl]);
+  }, [user, form]);
   
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      form.setValue('avatar', file);
+      form.setValue('avatarFile', file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
@@ -69,47 +80,58 @@ export default function ProfilePage() {
     }
   };
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: FormValues) {
     if (!user) return;
 
     setIsSubmitting(true);
     try {
-      let avatarUrl = user.avatarUrl;
+      const dataToUpdate: DocumentData = {};
+      let newAvatarUrl: string | undefined = undefined;
 
       // If a new avatar has been selected, upload it
-      if (values.avatar && values.avatar instanceof File) {
-        const file = values.avatar;
-        const storageRef = ref(storage, `avatars/${user.uid}/${file.name}`);
+      if (values.avatarFile) {
+        const file = values.avatarFile;
+        const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_${file.name}`);
         const snapshot = await uploadBytes(storageRef, file);
-        avatarUrl = await getDownloadURL(snapshot.ref);
+        newAvatarUrl = await getDownloadURL(snapshot.ref);
+        dataToUpdate.avatarUrl = newAvatarUrl;
       }
+      
+      // Compare and add other fields if they have changed
+      if(values.firstName !== user.firstName) dataToUpdate.firstName = values.firstName;
+      if(values.lastName !== user.lastName) dataToUpdate.lastName = values.lastName;
+      if(values.phone !== user.phone) dataToUpdate.phone = values.phone;
 
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        lastName: values.lastName,
-        firstName: values.firstName,
-        phone: values.phone,
-        avatarUrl: avatarUrl, // Save the new URL
-      });
+      // Only update if there's something to update
+      if (Object.keys(dataToUpdate).length > 0) {
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, dataToUpdate);
 
-      await refreshUserData(); // Refresh user data in the context
-      toast({
-        title: 'Амжилттай шинэчиллээ',
-        description: 'Таны мэдээлэл амжилттай шинэчлэгдлээ.',
-      });
+        await refreshUserData(); // Refresh user data in the context
+        toast({
+          title: 'Амжилттай шинэчиллээ',
+          description: 'Таны мэдээлэл амжилттай шинэчлэгдлээ.',
+        });
+      } else {
+        toast({
+          title: 'Өөрчлөлт алга',
+          description: 'Шинэчлэх мэдээлэл олдсонгүй.',
+        });
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
         variant: 'destructive',
         title: 'Алдаа',
-        description: 'Профайл шинэчлэхэд алдаа гарлаа.',
+        description: 'Профайл шинэчлэхэд алдаа гарлаа. Та дахин оролдоно уу.',
       });
     } finally {
       setIsSubmitting(false);
+      form.setValue('avatarFile', undefined);
     }
   }
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="container mx-auto py-6">
         <div className="mb-6">
@@ -184,12 +206,23 @@ export default function ProfilePage() {
                         <span className="sr-only">Change avatar</span>
                     </Button>
                   </div>
-                  <Input 
-                    ref={fileInputRef}
-                    type="file" 
-                    className="hidden" 
-                    accept="image/png, image/jpeg, image/gif"
-                    onChange={handleAvatarChange}
+                  <FormField
+                    control={form.control}
+                    name="avatarFile"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                           <Input 
+                            ref={fileInputRef}
+                            type="file" 
+                            className="hidden" 
+                            accept="image/png, image/jpeg, image/gif"
+                            onChange={handleAvatarChange}
+                          />
+                        </FormControl>
+                         <FormMessage />
+                      </FormItem>
+                    )}
                   />
                </div>
 

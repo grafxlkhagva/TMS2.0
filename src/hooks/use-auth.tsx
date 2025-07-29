@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { SystemUser } from '@/types';
 import { usePathname, useRouter } from 'next/navigation';
@@ -16,6 +16,14 @@ interface AuthContextType {
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
+// Helper function to convert Firestore data to SystemUser
+const fromFirestore = (data: any): SystemUser => {
+  return {
+    ...data,
+    createdAt: (data.createdAt as Timestamp).toDate(),
+  } as SystemUser;
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<SystemUser | null>(null);
   const [firebaseUser, setFirebaseUser] = React.useState<FirebaseUser | null>(null);
@@ -23,50 +31,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  const fetchUserData = React.useCallback(async (fbUser: FirebaseUser) => {
-    if (fbUser) {
-      const userDocRef = doc(db, 'users', fbUser.uid);
-      const userDoc = await getDoc(userDocRef);
+  const handleSignOut = React.useCallback(async () => {
+    await auth.signOut();
+    setUser(null);
+    setFirebaseUser(null);
+    const isAuthPage = pathname === '/login' || pathname === '/signup';
+    if (!isAuthPage) {
+      router.push('/login');
+    }
+  }, [router, pathname]);
 
-      if (userDoc.exists()) {
-        const userData = userDoc.data() as SystemUser;
-        if (userData.status === 'active') {
-          setUser({
-            ...userData,
-            createdAt: (userData.createdAt as any).toDate(),
-          });
-        } else {
-          // If user is not active, sign them out and clear state
-          await auth.signOut();
-          setUser(null);
-          setFirebaseUser(null);
-        }
+  const fetchUserData = React.useCallback(async (fbUser: FirebaseUser) => {
+    const userDocRef = doc(db, 'users', fbUser.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (userDoc.exists()) {
+      const userData = fromFirestore(userDoc.data());
+      if (userData.status === 'active') {
+        setUser(userData);
       } else {
-        // If no user doc, sign them out
-        await auth.signOut();
-        setUser(null);
-        setFirebaseUser(null);
+        await handleSignOut();
       }
     } else {
-      setUser(null);
-      setFirebaseUser(null);
+      await handleSignOut();
     }
-  }, []);
+  }, [handleSignOut]);
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
+        setLoading(true);
         await fetchUserData(fbUser);
+        setLoading(false);
       } else {
         setUser(null);
-        // Only redirect if not on an auth page
+        setLoading(false);
         const isAuthPage = pathname === '/login' || pathname === '/signup';
         if (!isAuthPage) {
           router.push('/login');
         }
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -75,9 +80,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUserData = React.useCallback(async () => {
     const currentUser = auth.currentUser;
     if (currentUser) {
-        await fetchUserData(currentUser);
+       const userDocRef = doc(db, 'users', currentUser.uid);
+       const userDoc = await getDoc(userDocRef);
+       if (userDoc.exists()) {
+           setUser(fromFirestore(userDoc.data()));
+       }
     }
-  }, [fetchUserData]);
+  }, []);
 
   const value = { user, firebaseUser, loading, refreshUserData };
 
