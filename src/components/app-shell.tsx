@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -11,6 +12,7 @@ import {
   User as UserIcon,
   Building2,
   Settings,
+  Warehouse,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -43,6 +45,7 @@ import {
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/customers', icon: Building2, label: 'Харилцагчид' },
+  { href: '/warehouses', icon: Warehouse, label: 'Агуулах' },
 ];
 
 const adminNavItems = [
@@ -64,23 +67,48 @@ function Nav() {
 
   React.useEffect(() => {
     if (user?.role) {
-      const userRole = user.role;
-      let newItems = userRole === 'admin' ? [...adminNavItems] : [...navItems];
-      
-      // This logic is now safe inside useEffect
-      if (process.env.NODE_ENV === 'development' && userRole !== 'admin') {
+      let newItems;
+      if (user.role === 'admin') {
+        newItems = [...adminNavItems];
+      } else {
+        newItems = [...navItems];
+        // For development, show settings to non-admins, but check for existence first.
+        if (process.env.NODE_ENV === 'development') {
           const settingsItem = adminNavItems.find(item => item.href === '/settings');
           const hasSettings = newItems.some(item => item.href === '/settings');
-          if(settingsItem && !hasSettings) {
+          if (settingsItem && !hasSettings) {
             newItems.push(settingsItem);
           }
+        }
       }
       setItems(newItems);
     }
   }, [user?.role]);
 
   if (!mounted) {
-    return null; // or a loading skeleton
+    // To prevent hydration mismatch, we can render a skeleton or null on the server.
+    // Let's render the basic nav items to avoid layout shift.
+    return (
+        <SidebarMenu>
+          {navItems.map((item) => (
+            <SidebarMenuItem key={item.href}>
+              <Link href={item.href}>
+                <SidebarMenuButton
+                  isActive={pathname.startsWith(item.href)}
+                  tooltip={
+                    state === 'collapsed'
+                      ? { children: item.label, side: 'right' }
+                      : undefined
+                  }
+                >
+                  <item.icon />
+                  <span>{item.label}</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          ))}
+      </SidebarMenu>
+    );
   }
 
   return (

@@ -1,4 +1,5 @@
 
+
 export type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Delayed';
 
 export type Shipment = {
@@ -73,4 +74,16 @@ export type Industry = {
   id: string;
   name: string;
   createdAt: Date;
+};
+
+export type Warehouse = {
+    id: string;
+    name: string;
+    location: string;
+    conditions: string;
+    contactInfo: string;
+    note?: string;
+    customerId?: string;
+    customerName?: string;
+    createdAt: Date;
 };
