@@ -75,13 +75,13 @@ export default function ProfilePage() {
     }
   };
 
-  const isFormDirty = form.formState.isDirty;
-  const isAvatarChanged = !!avatarFile;
-
   async function onSubmit(values: FormValues) {
     if (!user) return;
 
-    if (!isFormDirty && !isAvatarChanged) {
+    const { isDirty, dirtyFields } = form.formState;
+    const isAvatarChanged = !!avatarFile;
+
+    if (!isDirty && !isAvatarChanged) {
       toast({
         title: 'Өөрчлөлт алга',
         description: 'Шинэчлэх мэдээлэл олдсонгүй.',
@@ -92,44 +92,37 @@ export default function ProfilePage() {
     setIsSubmitting(true);
     try {
       const dataToUpdate: DocumentData = {};
-      let newAvatarUrl: string | null = null;
-
+      
       // Step 1: Upload new avatar if a new file was selected
       if (avatarFile) {
         const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_${avatarFile.name}`);
         const snapshot = await uploadBytes(storageRef, avatarFile);
-        newAvatarUrl = await getDownloadURL(snapshot.ref);
+        const newAvatarUrl = await getDownloadURL(snapshot.ref);
         dataToUpdate.avatarUrl = newAvatarUrl;
       }
 
       // Step 2: Add only changed form fields to the update object.
-      if (form.formState.dirtyFields.firstName) {
-        dataToUpdate.firstName = values.firstName;
-      }
-      if (form.formState.dirtyFields.lastName) {
-        dataToUpdate.lastName = values.lastName;
-      }
-      if (form.formState.dirtyFields.phone) {
-        dataToUpdate.phone = values.phone;
-      }
-
+      if (dirtyFields.firstName) dataToUpdate.firstName = values.firstName;
+      if (dirtyFields.lastName) dataToUpdate.lastName = values.lastName;
+      if (dirtyFields.phone) dataToUpdate.phone = values.phone;
+      
       // Step 3: Update Firestore only if there are actual changes
       if (Object.keys(dataToUpdate).length > 0) {
         const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, dataToUpdate);
       }
 
-      // Step 4: Refresh user data in the context
+      // Step 4: Refresh user data in the context to reflect changes everywhere
       await refreshUserData();
       
-      // Step 5: Show success toast and reset form state
+      // Step 5: Show success toast and clean up state
       toast({
         title: 'Амжилттай шинэчиллээ',
         description: 'Таны мэдээлэл амжилттай шинэчлэгдлээ.',
       });
 
       setAvatarFile(null); // Clear the uploaded file state
-      // Form will be reset via useEffect when new user data comes in from refreshUserData
+      // The form will be reset by the useEffect when the new user data is fetched by refreshUserData
       
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -274,7 +267,7 @@ export default function ProfilePage() {
                 </FormControl>
               </FormItem>
 
-              <Button type="submit" disabled={isSubmitting || (!isFormDirty && !isAvatarChanged)}>
+              <Button type="submit" disabled={isSubmitting || (!form.formState.isDirty && !avatarFile)}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Хадгалах
               </Button>
