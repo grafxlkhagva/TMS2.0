@@ -38,3 +38,27 @@ export type SystemUser = {
   createdAt: Date;
   avatarUrl?: string;
 };
+
+export type Customer = {
+  id: string;
+  name: string;
+  registerNumber: string;
+  industry: string;
+  address: string;
+  officePhone: string;
+  email: string;
+  note?: string;
+  createdAt: Date;
+};
+
+export type CustomerEmployee = {
+  id: string;
+  customerId: string;
+  lastName: string;
+  firstName: string;
+  phone: string;
+  email: string;
+  position: string;
+  note?: string;
+  createdAt: Date;
+};

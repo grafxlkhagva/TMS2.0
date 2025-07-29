@@ -8,6 +8,7 @@ import {
   Users,
   LogOut,
   User as UserIcon,
+  Building2,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -37,7 +38,10 @@ import {
   DropdownMenuSeparator 
 } from './ui/dropdown-menu';
 
-const navItems = [{ href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' }];
+const navItems = [
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/customers', icon: Building2, label: 'Харилцагчид' },
+];
 
 const adminNavItems = [
   ...navItems,
@@ -58,7 +62,7 @@ function Nav() {
         <SidebarMenuItem key={item.href}>
           <Link href={item.href}>
             <SidebarMenuButton
-              isActive={pathname === item.href}
+              isActive={pathname.startsWith(item.href)}
               tooltip={
                 state === 'collapsed'
                   ? { children: item.label, side: 'right' }
