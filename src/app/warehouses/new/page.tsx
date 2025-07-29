@@ -74,10 +74,12 @@ export default function NewWarehousePage() {
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true);
     try {
-      const selectedCustomer = customers.find(c => c.id === values.customerId);
+      const customerId = values.customerId === 'no-owner' ? undefined : values.customerId;
+      const selectedCustomer = customers.find(c => c.id === customerId);
 
       await addDoc(collection(db, 'warehouses'), {
         ...values,
+        customerId: customerId,
         customerName: selectedCustomer ? selectedCustomer.name : 'Эзэмшигчгүй',
         createdAt: serverTimestamp(),
       });
@@ -183,7 +185,7 @@ export default function NewWarehousePage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Эзэмшигчгүй</SelectItem>
+                        <SelectItem value="no-owner">Эзэмшигчгүй</SelectItem>
                         {customers.map(customer => (
                           <SelectItem key={customer.id} value={customer.id}>
                             {customer.name}
