@@ -13,7 +13,7 @@ import { useLoadScript, GoogleMap, Marker } from '@react-google-maps/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, MapPin, FileText, Info, Phone, Building } from 'lucide-react';
+import { ArrowLeft, Edit, MapPin, FileText, Info, Phone, Building, User } from 'lucide-react';
 
 function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value?: string }) {
   if (!value) return null;
@@ -137,6 +137,8 @@ export default function WarehouseDetailPage() {
           <CardContent className="space-y-4">
             <DetailItem icon={MapPin} label="Агуулахын байршил" value={warehouse.location} />
             <DetailItem icon={Building} label="Эзэмшигч байгууллага" value={warehouse.customerName} />
+            <DetailItem icon={User} label="Холбоо барих хүний нэр" value={warehouse.contactName} />
+            <DetailItem icon={Info} label="Албан тушаал" value={warehouse.contactPosition} />
             <DetailItem icon={Phone} label="Холбоо барих мэдээлэл" value={warehouse.contactInfo} />
             <DetailItem icon={Info} label="Ачих буулгах нөхцөл" value={warehouse.conditions} />
             <DetailItem icon={FileText} label="Тэмдэглэл" value={warehouse.note} />

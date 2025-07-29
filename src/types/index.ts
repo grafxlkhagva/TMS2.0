@@ -86,9 +86,12 @@ export type Warehouse = {
     };
     conditions: string;
     contactInfo: string;
+    contactName?: string;
+    contactPosition?: string;
     note?: string;
     customerId?: string;
     customerName?: string;
     createdAt: Date;
     updatedAt?: Date;
 };
+

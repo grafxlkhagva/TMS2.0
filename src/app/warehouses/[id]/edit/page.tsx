@@ -38,6 +38,8 @@ const formSchema = z.object({
   }),
   conditions: z.string().min(5, { message: 'Нөхцөлийн мэдээлэл дор хаяж 5 тэмдэгттэй байх ёстой.' }),
   contactInfo: z.string().min(5, { message: 'Холбоо барих мэдээлэл дор хаяж 5 тэмдэгттэй байх ёстой.' }),
+  contactName: z.string().optional(),
+  contactPosition: z.string().optional(),
   customerId: z.string().optional(),
   note: z.string().optional(),
 });
@@ -231,13 +233,42 @@ export default function EditWarehousePage() {
                   </FormItem>
                 )}
               />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <FormField
+                  control={form.control}
+                  name="contactName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Холбоо барих хүний нэр</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Д.Дорж" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="contactPosition"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Албан тушаал</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ахлах менежер" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               
               <FormField
                 control={form.control}
                 name="contactInfo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Холбоо барих мэдээлэл</FormLabel>
+                    <FormLabel>Холбоо барих мэдээлэл (Утас, и-мэйл)</FormLabel>
                     <FormControl>
                       <Input placeholder="Утас: 88XXXXXX, Мэйл: info@warehouse.mn" {...field} />
                     </FormControl>
