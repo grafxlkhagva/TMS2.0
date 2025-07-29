@@ -29,7 +29,6 @@ const formSchema = z.object({
   lastName: z.string().min(2, { message: 'Эцэг/эхийн нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
   firstName: z.string().min(2, { message: 'Өөрийн нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
   phone: z.string().min(8, { message: 'Утасны дугаар буруу байна.' }),
-  email: z.string().email(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -48,24 +47,21 @@ export default function ProfilePage() {
       lastName: '',
       firstName: '',
       phone: '',
-      email: '',
     },
   });
 
-  // Effect to populate the form and avatar once the user data is loaded
   React.useEffect(() => {
     if (user) {
       form.reset({
         lastName: user.lastName || '',
         firstName: user.firstName || '',
         phone: user.phone || '',
-        email: user.email || '',
       });
       if (user.avatarUrl) {
         setAvatarPreview(user.avatarUrl);
       }
     }
-  }, [user, form]);
+  }, [user, form.reset]);
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -79,12 +75,11 @@ export default function ProfilePage() {
     }
   };
 
+  const isFormDirty = form.formState.isDirty;
+  const isAvatarChanged = !!avatarFile;
+
   async function onSubmit(values: FormValues) {
     if (!user) return;
-    
-    // Check if there are any changes to submit
-    const isFormDirty = form.formState.isDirty;
-    const isAvatarChanged = !!avatarFile;
 
     if (!isFormDirty && !isAvatarChanged) {
       toast({
@@ -97,9 +92,9 @@ export default function ProfilePage() {
     setIsSubmitting(true);
     try {
       const dataToUpdate: DocumentData = {};
-      let newAvatarUrl: string | undefined = undefined;
+      let newAvatarUrl: string | null = null;
 
-      // 1. Upload new avatar if a new file was selected
+      // Step 1: Upload new avatar if a new file was selected
       if (avatarFile) {
         const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_${avatarFile.name}`);
         const snapshot = await uploadBytes(storageRef, avatarFile);
@@ -107,7 +102,7 @@ export default function ProfilePage() {
         dataToUpdate.avatarUrl = newAvatarUrl;
       }
 
-      // 2. Add only changed form fields to the update object.
+      // Step 2: Add only changed form fields to the update object.
       if (form.formState.dirtyFields.firstName) {
         dataToUpdate.firstName = values.firstName;
       }
@@ -118,24 +113,24 @@ export default function ProfilePage() {
         dataToUpdate.phone = values.phone;
       }
 
-      // 3. Update Firestore only if there are actual changes
+      // Step 3: Update Firestore only if there are actual changes
       if (Object.keys(dataToUpdate).length > 0) {
         const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, dataToUpdate);
       }
-      
-      // 4. Refresh user data in the context to reflect changes immediately across the app
-      await refreshUserData();
 
+      // Step 4: Refresh user data in the context
+      await refreshUserData();
+      
+      // Step 5: Show success toast and reset form state
       toast({
         title: 'Амжилттай шинэчиллээ',
         description: 'Таны мэдээлэл амжилттай шинэчлэгдлээ.',
       });
-      
-      // 5. Reset the form state after successful submission
-      setAvatarFile(null); // Clear the uploaded file
-      // The form will be reset by the useEffect when fresh user data arrives via refreshUserData
 
+      setAvatarFile(null); // Clear the uploaded file state
+      // Form will be reset via useEffect when new user data comes in from refreshUserData
+      
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
@@ -231,33 +226,34 @@ export default function ProfilePage() {
                     />
                   </div>
                </div>
-
-              <FormField
-                control={form.control}
-                name="lastName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Эцэг/эхийн нэр</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Бат" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="firstName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Өөрийн нэр</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Болд" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Эцэг/эхийн нэр</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Бат" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Өөрийн нэр</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Болд" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="phone"
@@ -271,20 +267,14 @@ export default function ProfilePage() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>И-мэйл</FormLabel>
-                    <FormControl>
-                      <Input disabled {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" disabled={isSubmitting || (!form.formState.isDirty && !avatarFile)}>
+              <FormItem>
+                <FormLabel>И-мэйл</FormLabel>
+                <FormControl>
+                  <Input disabled value={user.email || ''} />
+                </FormControl>
+              </FormItem>
+
+              <Button type="submit" disabled={isSubmitting || (!isFormDirty && !isAvatarChanged)}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Хадгалах
               </Button>
