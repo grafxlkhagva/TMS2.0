@@ -44,16 +44,18 @@ export default function ProfilePage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      lastName: '',
-      firstName: '',
-      phone: '',
-      email: '',
+    // We will use `values` to keep the form state in sync with the user data
+    values: {
+      lastName: user?.lastName || '',
+      firstName: user?.firstName || '',
+      phone: user?.phone || '',
+      email: user?.email || '',
       avatarFile: undefined,
     },
   });
 
   React.useEffect(() => {
+    // When user data is loaded or changed, reset the form with the new data
     if (user) {
       form.reset({
         lastName: user.lastName || '',
@@ -86,21 +88,20 @@ export default function ProfilePage() {
     setIsSubmitting(true);
     try {
       const dataToUpdate: DocumentData = {};
-      let newAvatarUrl: string | undefined = undefined;
-
-      // If a new avatar has been selected, upload it
+      
+      // Upload new avatar if one was selected
       if (values.avatarFile) {
         const file = values.avatarFile;
         const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_${file.name}`);
         const snapshot = await uploadBytes(storageRef, file);
-        newAvatarUrl = await getDownloadURL(snapshot.ref);
+        const newAvatarUrl = await getDownloadURL(snapshot.ref);
         dataToUpdate.avatarUrl = newAvatarUrl;
       }
       
-      // Compare and add other fields if they have changed
-      if(values.firstName !== user.firstName) dataToUpdate.firstName = values.firstName;
-      if(values.lastName !== user.lastName) dataToUpdate.lastName = values.lastName;
-      if(values.phone !== user.phone) dataToUpdate.phone = values.phone;
+      // Compare form values with original user data and add only what's changed
+      if (values.firstName !== user.firstName) dataToUpdate.firstName = values.firstName;
+      if (values.lastName !== user.lastName) dataToUpdate.lastName = values.lastName;
+      if (values.phone !== user.phone) dataToUpdate.phone = values.phone;
 
       // Only update if there's something to update
       if (Object.keys(dataToUpdate).length > 0) {
