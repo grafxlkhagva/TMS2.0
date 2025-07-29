@@ -44,8 +44,7 @@ export default function ProfilePage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    // Use `values` instead of `defaultValues` to re-initialize the form when `user` data changes.
-    values: {
+    values: { // Use `values` to ensure form is re-initialized when user data changes
       lastName: user?.lastName || '',
       firstName: user?.firstName || '',
       phone: user?.phone || '',
@@ -53,13 +52,24 @@ export default function ProfilePage() {
       avatarFile: undefined,
     },
   });
-
-  React.useEffect(() => {
-    if (user?.avatarUrl) {
-      setAvatarPreview(user.avatarUrl);
-    }
-  }, [user?.avatarUrl]);
   
+  // Effect to sync form with user data from auth context after initial load or refresh
+  React.useEffect(() => {
+    if (user) {
+      form.reset({
+        lastName: user.lastName,
+        firstName: user.firstName,
+        phone: user.phone,
+        email: user.email,
+        avatarFile: undefined,
+      });
+      if (user.avatarUrl) {
+         setAvatarPreview(user.avatarUrl);
+      }
+    }
+  }, [user, form.reset]);
+
+
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -97,15 +107,16 @@ export default function ProfilePage() {
       }
       
       // 2. Compare form values with original user data and add only what's changed
-      if (values.firstName !== user.firstName) dataToUpdate.firstName = values.firstName;
-      if (values.lastName !== user.lastName) dataToUpdate.lastName = values.lastName;
-      if (values.phone !== user.phone) dataToUpdate.phone = values.phone;
+      if (values.firstName.trim() !== user.firstName) dataToUpdate.firstName = values.firstName.trim();
+      if (values.lastName.trim() !== user.lastName) dataToUpdate.lastName = values.lastName.trim();
+      if (values.phone.trim() !== user.phone) dataToUpdate.phone = values.phone.trim();
       
       // 3. Update Firestore only if there are changes
       if (Object.keys(dataToUpdate).length > 0) {
         const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, dataToUpdate);
         
+        // Refresh user data in the context to reflect changes immediately across the app
         await refreshUserData(); 
 
         toast({
@@ -128,10 +139,8 @@ export default function ProfilePage() {
     } finally {
       setIsSubmitting(false);
       // After submission, reset the form to the newly saved values to clear the dirty state.
-      form.reset({
-        ...form.getValues(),
-        avatarFile: undefined, // Clear the file input
-      });
+      // The useEffect will handle resetting to the latest `user` data from the context.
+      form.setValue('avatarFile', undefined);
     }
   }
 

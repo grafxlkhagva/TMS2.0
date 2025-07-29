@@ -44,54 +44,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router, pathname]);
 
-  const fetchUserData = React.useCallback(async (fbUser: FirebaseUser) => {
-    const userDocRef = doc(db, 'users', fbUser.uid);
-    const userDoc = await getDoc(userDocRef);
+  const fetchUserData = React.useCallback(async (fbUser: FirebaseUser | null) => {
+    if (!fbUser) {
+      setUser(null);
+      setFirebaseUser(null);
+      setLoading(false);
+      const isAuthPage = pathname === '/login' || pathname === '/signup';
+      if (!isAuthPage) {
+        router.push('/login');
+      }
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const userDocRef = doc(db, 'users', fbUser.uid);
+      const userDoc = await getDoc(userDocRef);
 
-    if (userDoc.exists()) {
-      const userData = fromFirestore(userDoc.data());
-      if (userData.status === 'active') {
-        setUser(userData);
+      if (userDoc.exists()) {
+        const userData = fromFirestore(userDoc.data());
+        if (userData.status === 'active') {
+          setUser(userData);
+        } else {
+          // If user is pending or inactive, sign them out.
+          await handleSignOut();
+        }
       } else {
+        // If user document doesn't exist, sign them out.
         await handleSignOut();
       }
-    } else {
+    } catch (error) {
+      console.error("Error fetching user data:", error);
       await handleSignOut();
+    } finally {
+      setLoading(false);
     }
-  }, [handleSignOut]);
+  }, [handleSignOut, router, pathname]);
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
-      if (fbUser) {
-        setLoading(true);
-        await fetchUserData(fbUser);
-        setLoading(false);
-      } else {
-        setUser(null);
-        setLoading(false);
-        const isAuthPage = pathname === '/login' || pathname === '/signup';
-        if (!isAuthPage) {
-          router.push('/login');
-        }
-      }
+      await fetchUserData(fbUser);
     });
 
     return () => unsubscribe();
-  }, [fetchUserData, router, pathname]);
+  }, [fetchUserData]);
 
   const refreshUserData = React.useCallback(async () => {
     const currentUser = auth.currentUser;
     if (currentUser) {
+       setLoading(true);
        const userDocRef = doc(db, 'users', currentUser.uid);
        const userDoc = await getDoc(userDocRef);
        if (userDoc.exists()) {
            const freshData = fromFirestore(userDoc.data());
-           setUser(freshData); // Update the user state directly
+           setUser(freshData);
        } else {
-          // If the user document is somehow deleted, sign them out.
           await handleSignOut();
        }
+       setLoading(false);
     }
   }, [handleSignOut]);
 
