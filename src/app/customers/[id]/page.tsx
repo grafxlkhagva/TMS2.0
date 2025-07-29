@@ -167,7 +167,7 @@ export default function CustomerDetailPage() {
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
-        <Button variant="outline" size="sm" onClick={() => router.back()} className="mb-4">
+        <Button variant="outline" size="sm" onClick={() => router.push('/customers')} className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Буцах
         </Button>
