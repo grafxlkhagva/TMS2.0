@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy } from 'firebase/firestore';
@@ -26,10 +26,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import LocationPicker from '@/components/location-picker';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Агуулахын нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
-  location: z.string().min(5, { message: 'Байршил дор хаяж 5 тэмдэгттэй байх ёстой.' }),
+  location: z.string().min(5, { message: 'Байршил сонгоно уу.' }),
+  geolocation: z.object({
+      lat: z.number(),
+      lng: z.number(),
+  }),
   conditions: z.string().min(5, { message: 'Нөхцөлийн мэдээлэл дор хаяж 5 тэмдэгттэй байх ёстой.' }),
   contactInfo: z.string().min(5, { message: 'Холбоо барих мэдээлэл дор хаяж 5 тэмдэгттэй байх ёстой.' }),
   customerId: z.string().optional(),
@@ -130,20 +135,32 @@ export default function NewWarehousePage() {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Агуулахын байршил</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Улаанбаатар, Сонгинохайрхан дүүрэг..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
+               <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Агуулахын байршил</FormLabel>
+                      <FormControl>
+                        <Controller
+                            control={form.control}
+                            name="location"
+                            render={({ field: { onChange } }) => (
+                                <LocationPicker
+                                    onLocationSelect={(address, latLng) => {
+                                        onChange(address);
+                                        form.setValue('geolocation', latLng);
+                                        form.clearErrors('location');
+                                    }}
+                                />
+                            )}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                <FormField
                 control={form.control}
                 name="conditions"

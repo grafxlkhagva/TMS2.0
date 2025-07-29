@@ -80,6 +80,10 @@ export type Warehouse = {
     id: string;
     name: string;
     location: string;
+    geolocation: {
+        lat: number;
+        lng: number;
+    };
     conditions: string;
     contactInfo: string;
     note?: string;

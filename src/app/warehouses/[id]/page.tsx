@@ -8,8 +8,9 @@ import { useParams, useRouter } from 'next/navigation';
 import type { Warehouse } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { useLoadScript, GoogleMap, Marker } from '@react-google-maps/api';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, MapPin, FileText, Info, Phone, Building } from 'lucide-react';
@@ -34,6 +35,11 @@ export default function WarehouseDetailPage() {
 
   const [warehouse, setWarehouse] = React.useState<Warehouse | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  
+  const { isLoaded: isMapLoaded } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+    libraries: ['places'],
+  });
 
   React.useEffect(() => {
     if (!id) return;
@@ -78,17 +84,20 @@ export default function WarehouseDetailPage() {
                 <Skeleton className="h-10 w-36" />
             </div>
         </div>
-        <Card>
-            <CardHeader>
-                <Skeleton className="h-6 w-1/2" />
-            </CardHeader>
-            <CardContent className="space-y-4 pt-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-            </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-6 w-1/2" />
+                </CardHeader>
+                <CardContent className="space-y-4 pt-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                </CardContent>
+            </Card>
+            <Skeleton className="h-[400px] w-full rounded-lg" />
+        </div>
       </div>
     );
   }
@@ -119,7 +128,8 @@ export default function WarehouseDetailPage() {
             </Button>
         </div>
       </div>
-
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
         <Card>
           <CardHeader>
             <CardTitle>Агуулахын мэдээлэл</CardTitle>
@@ -132,6 +142,21 @@ export default function WarehouseDetailPage() {
             <DetailItem icon={FileText} label="Тэмдэглэл" value={warehouse.note} />
           </CardContent>
         </Card>
+        
+        <div className="h-[400px] w-full rounded-lg overflow-hidden border">
+           {isMapLoaded && warehouse.geolocation ? (
+                <GoogleMap
+                    mapContainerClassName="w-full h-full"
+                    center={warehouse.geolocation}
+                    zoom={15}
+                >
+                    <Marker position={warehouse.geolocation} />
+                </GoogleMap>
+            ) : (
+                 <Skeleton className="h-full w-full" />
+            )}
+        </div>
+      </div>
     </div>
   );
 }
