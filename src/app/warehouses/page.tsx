@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Warehouse } from '@/types';
 import {
@@ -15,16 +15,36 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { PlusCircle, RefreshCw, Search } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, RefreshCw, Search, Eye, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export default function WarehousesPage() {
   const [warehouses, setWarehouses] = React.useState<Warehouse[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [itemToDelete, setItemToDelete] = React.useState<Warehouse | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const { toast } = useToast();
 
   const fetchWarehouses = React.useCallback(async () => {
@@ -56,6 +76,21 @@ export default function WarehousesPage() {
   React.useEffect(() => {
     fetchWarehouses();
   }, [fetchWarehouses]);
+  
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'warehouses', itemToDelete.id));
+      setWarehouses(prev => prev.filter(item => item.id !== itemToDelete.id));
+      toast({ title: 'Амжилттай', description: `${itemToDelete.name} агуулахыг устгалаа.`});
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Алдаа', description: 'Агуулах устгахад алдаа гарлаа.'});
+    } finally {
+      setIsDeleting(false);
+      setItemToDelete(null);
+    }
+  };
 
   const filteredWarehouses = warehouses.filter(warehouse =>
     warehouse.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -106,7 +141,7 @@ export default function WarehousesPage() {
                 <TableHead>Байршил</TableHead>
                 <TableHead>Эзэмшигч</TableHead>
                 <TableHead>Бүртгүүлсэн</TableHead>
-                <TableHead><span className="sr-only">Үйлдэл</span></TableHead>
+                <TableHead className="text-right">Үйлдэл</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -123,12 +158,43 @@ export default function WarehousesPage() {
               ) : filteredWarehouses.length > 0 ? (
                 filteredWarehouses.map((warehouse) => (
                     <TableRow key={warehouse.id}>
-                      <TableCell className="font-medium">{warehouse.name}</TableCell>
+                      <TableCell className="font-medium">
+                         <Link href={`/warehouses/${warehouse.id}`} className="hover:underline">
+                          {warehouse.name}
+                        </Link>
+                      </TableCell>
                       <TableCell>{warehouse.location}</TableCell>
                       <TableCell>{warehouse.customerName || 'Тодорхойгүй'}</TableCell>
                       <TableCell>{warehouse.createdAt.toLocaleDateString()}</TableCell>
                       <TableCell className="text-right">
-                         {/* Action Menu will be added here later */}
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Цэс нээх</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Үйлдлүүд</DropdownMenuLabel>
+                                 <DropdownMenuItem asChild>
+                                  <Link href={`/warehouses/${warehouse.id}`}>
+                                    <Eye className="mr-2 h-4 w-4"/>
+                                    Дэлгэрэнгүй
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/warehouses/${warehouse.id}/edit`}>
+                                    <Edit className="mr-2 h-4 w-4"/>
+                                    Засах
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => setItemToDelete(warehouse)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                   <Trash2 className="mr-2 h-4 w-4"/>
+                                   Устгах
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                 ))
@@ -143,6 +209,24 @@ export default function WarehousesPage() {
           </Table>
         </CardContent>
       </Card>
+      
+       <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        "{itemToDelete?.name}" нэртэй агуулахыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setItemToDelete(null)}>Цуцлах</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                        {isDeleting ? "Устгаж байна..." : "Устгах"}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
     </div>
   );
 }

@@ -86,4 +86,5 @@ export type Warehouse = {
     customerId?: string;
     customerName?: string;
     createdAt: Date;
+    updatedAt?: Date;
 };
