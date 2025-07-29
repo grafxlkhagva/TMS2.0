@@ -61,7 +61,7 @@ export default function SignupPage() {
         firstName: values.firstName,
         phone: values.phone,
         email: values.email,
-        role: 'manager',
+        role: 'customer_officer',
         status: 'pending',
         createdAt: new Date(),
       });

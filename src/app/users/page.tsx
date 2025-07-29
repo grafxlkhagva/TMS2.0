@@ -23,11 +23,25 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
 import type { SystemUser, UserStatus, UserRole } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
+
+const roleNames: Record<UserRole, string> = {
+  admin: 'Админ',
+  manager: 'Менежер',
+  transport_manager: 'Тээврийн менежер',
+  finance_manager: 'Санхүүгийн менежер',
+  customer_officer: 'Харилцагчийн ажилтан',
+};
+
+const userRoles: UserRole[] = ['admin', 'transport_manager', 'finance_manager', 'customer_officer'];
 
 
 function StatusBadge({ status }: { status: UserStatus }) {
@@ -37,7 +51,7 @@ function StatusBadge({ status }: { status: UserStatus }) {
 }
 
 function RoleBadge({ role }: { role: UserRole }) {
-    const text = role === 'admin' ? 'Админ' : 'Менежер';
+    const text = roleNames[role] || 'Тодорхойгүй';
     return <Badge variant="outline">{text}</Badge>;
 }
 
@@ -120,7 +134,7 @@ export default function UsersPage() {
       setUsers(prevUsers => prevUsers.map(u => u.uid === userId ? { ...u, role } : u));
       toast({
         title: 'Эрх амжилттай өөрчиллөө',
-        description: `Хэрэглэгчийн эрх "${role === 'admin' ? 'Админ' : 'Менежер'}" боллоо.`,
+        description: `Хэрэглэгчийн эрх "${roleNames[role]}" боллоо.`,
       });
     } catch (error) {
       console.error("Error updating role: ", error);
@@ -210,7 +224,7 @@ export default function UsersPage() {
                       <TableCell>
                           <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <Button variant="ghost" className="h-8 w-8 p-0" disabled={user.uid === currentUser?.uid}>
                                       <span className="sr-only">Цэс нээх</span>
                                       <MoreHorizontal className="h-4 w-4" />
                                   </Button>
@@ -224,10 +238,7 @@ export default function UsersPage() {
                                       </DropdownMenuItem>
                                   )}
                                   {user.status === 'active' && (
-                                       <DropdownMenuItem 
-                                        onClick={() => handleStatusChange(user.uid, 'inactive')}
-                                        disabled={user.uid === currentUser?.uid}
-                                       >
+                                       <DropdownMenuItem onClick={() => handleStatusChange(user.uid, 'inactive')}>
                                           Идэвхгүй болгох
                                       </DropdownMenuItem>
                                   )}
@@ -236,23 +247,25 @@ export default function UsersPage() {
                                           Идэвхтэй болгох
                                       </DropdownMenuItem>
                                   )}
+                                  
+                                  <DropdownMenuSub>
+                                    <DropdownMenuSubTrigger>Эрх өөрчлөх</DropdownMenuSubTrigger>
+                                    <DropdownMenuPortal>
+                                      <DropdownMenuSubContent>
+                                        {userRoles.map(role => (
+                                          <DropdownMenuItem 
+                                            key={role}
+                                            disabled={user.role === role}
+                                            onClick={() => handleRoleChange(user.uid, role)}
+                                          >
+                                            {roleNames[role]}
+                                          </DropdownMenuItem>
+                                        ))}
+                                      </DropdownMenuSubContent>
+                                    </DropdownMenuPortal>
+                                  </DropdownMenuSub>
 
-                                  {user.role === 'manager' && (
-                                    <DropdownMenuItem 
-                                      onClick={() => handleRoleChange(user.uid, 'admin')}
-                                      disabled={user.uid === currentUser?.uid}
-                                    >
-                                      Админ болгох
-                                    </DropdownMenuItem>
-                                  )}
-                                  {user.role === 'admin' && (
-                                    <DropdownMenuItem 
-                                      onClick={() => handleRoleChange(user.uid, 'manager')}
-                                      disabled={user.uid === currentUser?.uid}
-                                    >
-                                      Менежер болгох
-                                    </DropdownMenuItem>
-                                  )}
+                                  <DropdownMenuSeparator />
 
                                   <DropdownMenuItem onClick={() => handleResetPassword(user.email)}>
                                       Нууц үг сэргээх

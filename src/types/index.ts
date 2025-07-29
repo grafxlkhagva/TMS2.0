@@ -24,7 +24,7 @@ export type Driver = {
   avatarUrl: string;
 };
 
-export type UserRole = 'admin' | 'manager';
+export type UserRole = 'admin' | 'transport_manager' | 'finance_manager' | 'customer_officer' | 'manager';
 export type UserStatus = 'pending' | 'active' | 'inactive';
 
 export type SystemUser = {
