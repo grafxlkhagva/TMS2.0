@@ -1,7 +1,8 @@
+
 'use client';
 
 import * as React from 'react';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, doc, deleteDoc, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Customer } from '@/types';
 import {
@@ -14,7 +15,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { MoreHorizontal, PlusCircle, RefreshCw, Eye } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, RefreshCw, Eye, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -24,12 +25,25 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 
 export default function CustomersPage() {
   const [customers, setCustomers] = React.useState<Customer[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [customerToDelete, setCustomerToDelete] = React.useState<Customer | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const { toast } = useToast();
 
   const fetchCustomers = React.useCallback(async () => {
@@ -61,6 +75,34 @@ export default function CustomersPage() {
   React.useEffect(() => {
     fetchCustomers();
   }, [fetchCustomers]);
+
+  const handleDeleteCustomer = async () => {
+    if (!customerToDelete) return;
+    setIsDeleting(true);
+    try {
+      // 1. Delete all employees associated with the customer
+      const employeesQuery = query(collection(db, 'customer_employees'), where('customerId', '==', customerToDelete.id));
+      const employeesSnapshot = await getDocs(employeesQuery);
+      const batch = writeBatch(db);
+      employeesSnapshot.forEach(doc => {
+          batch.delete(doc.ref);
+      });
+      await batch.commit();
+
+      // 2. Delete the customer itself
+      await deleteDoc(doc(db, 'customers', customerToDelete.id));
+
+      setCustomers(prev => prev.filter(c => c.id !== customerToDelete.id));
+      toast({ title: 'Амжилттай', description: `${customerToDelete.name} харилцагчийг устгалаа.`});
+    } catch (error) {
+      console.error("Error deleting customer:", error);
+      toast({ variant: 'destructive', title: 'Алдаа', description: 'Харилцагч устгахад алдаа гарлаа.'});
+    } finally {
+      setIsDeleting(false);
+      setCustomerToDelete(null);
+    }
+  };
+
 
   return (
     <div className="container mx-auto py-6">
@@ -144,6 +186,17 @@ export default function CustomersPage() {
                                     Дэлгэрэнгүй
                                   </Link>
                                 </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/customers/${customer.id}/edit`}>
+                                    <Edit className="mr-2 h-4 w-4"/>
+                                    Засах
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => setCustomerToDelete(customer)} className="text-destructive">
+                                   <Trash2 className="mr-2 h-4 w-4"/>
+                                   Устгах
+                                </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -160,6 +213,22 @@ export default function CustomersPage() {
           </Table>
         </CardContent>
       </Card>
+      <AlertDialog open={!!customerToDelete} onOpenChange={(open) => !open && setCustomerToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        "{customerToDelete?.name}" нэртэй харилцагчийг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй. Энэ харилцагчтай холбоотой бүх ажилтны мэдээлэл мөн устгагдана.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setCustomerToDelete(null)}>Цуцлах</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteCustomer} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                        {isDeleting ? "Устгаж байна..." : "Устгах"}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }

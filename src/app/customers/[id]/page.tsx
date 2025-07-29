@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -170,19 +171,27 @@ export default function CustomerDetailPage() {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Буцах
         </Button>
-        <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20 border">
-                <AvatarImage src={customer.logoUrl} alt={customer.name} />
-                <AvatarFallback className="text-2xl">
-                    {customer.name?.charAt(0)}
-                </AvatarFallback>
-            </Avatar>
-            <div>
-                 <h1 className="text-3xl font-headline font-bold">{customer.name}</h1>
-                <p className="text-muted-foreground">
-                  Харилцагчийн дэлгэрэнгүй мэдээлэл.
-                </p>
+        <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20 border">
+                    <AvatarImage src={customer.logoUrl} alt={customer.name} />
+                    <AvatarFallback className="text-2xl">
+                        {customer.name?.charAt(0)}
+                    </AvatarFallback>
+                </Avatar>
+                <div>
+                    <h1 className="text-3xl font-headline font-bold">{customer.name}</h1>
+                    <p className="text-muted-foreground">
+                    Харилцагчийн дэлгэрэнгүй мэдээлэл.
+                    </p>
+                </div>
             </div>
+             <Button asChild>
+                <Link href={`/customers/${id}/edit`}>
+                    <Edit className="mr-2 h-4 w-4"/>
+                    Мэдээлэл засах
+                </Link>
+            </Button>
         </div>
       </div>
 
