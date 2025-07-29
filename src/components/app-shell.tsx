@@ -2,17 +2,15 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
-  CarFront,
-  FileDown,
   LayoutDashboard,
-  MapPin,
-  Settings,
-  Sparkles,
-  Truck,
   Users,
+  LogOut,
+  User as UserIcon,
 } from 'lucide-react';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 import {
   SidebarProvider,
@@ -29,10 +27,15 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-
-// Assume a hook that provides the current user's role
-// In a real app, this would come from your auth context
-const useUserRole = () => 'admin'; // Hardcoded for now
+import { useAuth } from '@/hooks/use-auth';
+import { 
+  DropdownMenu, 
+  DropdownMenuTrigger, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator 
+} from './ui/dropdown-menu';
 
 const navItems = [{ href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' }];
 
@@ -44,7 +47,8 @@ const adminNavItems = [
 function Nav() {
   const pathname = usePathname();
   const { state } = useSidebar();
-  const userRole = useUserRole();
+  const { user, loading } = useAuth();
+  const userRole = user?.role || 'manager';
 
   const items = userRole === 'admin' ? adminNavItems : navItems;
 
@@ -70,6 +74,78 @@ function Nav() {
     </SidebarMenu>
   );
 }
+
+function UserProfile() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.push('/login');
+    } catch (error) {
+      console.error('Error signing out: ', error);
+    }
+  };
+
+  if (loading) {
+    return (
+       <div className="flex items-center gap-2 rounded-lg bg-background/50 p-2">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback>?</AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold">Loading...</span>
+            <span className="text-xs text-muted-foreground">
+              Please wait...
+            </span>
+          </div>
+        </div>
+    )
+  }
+
+  if (!user) {
+     return null;
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <div className="flex cursor-pointer items-center gap-2 rounded-lg bg-background/50 p-2 transition-colors hover:bg-muted">
+          <Avatar className="h-8 w-8">
+            <AvatarImage
+              src="https://placehold.co/100x100"
+              data-ai-hint="person portrait"
+            />
+            <AvatarFallback>{user.firstName?.[0] || 'A'}</AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col text-left">
+            <span className="truncate text-sm font-semibold">{user.firstName} {user.lastName}</span>
+            <span className="truncate text-xs text-muted-foreground">
+              {user.email}
+            </span>
+          </div>
+        </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56" align="end" forceMount>
+        <DropdownMenuLabel>Миний бүртгэл</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/profile">
+            <UserIcon className="mr-2 h-4 w-4" />
+            <span>Профайл</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Гарах</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -111,21 +187,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </SidebarContent>
         <SidebarFooter>
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 rounded-lg bg-background/50 p-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage
-                  src="https://placehold.co/100x100"
-                  data-ai-hint="person portrait"
-                />
-                <AvatarFallback>AD</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold">Admin</span>
-                <span className="text-xs text-muted-foreground">
-                  admin@tumen.tech
-                </span>
-              </div>
-            </div>
+            <UserProfile />
           </div>
         </SidebarFooter>
       </Sidebar>
