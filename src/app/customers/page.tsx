@@ -14,10 +14,18 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { PlusCircle, RefreshCw } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, RefreshCw, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
 
 export default function CustomersPage() {
   const [customers, setCustomers] = React.useState<Customer[]>([]);
@@ -108,13 +116,33 @@ export default function CustomersPage() {
               ) : customers.length > 0 ? (
                 customers.map((customer) => (
                     <TableRow key={customer.id}>
-                      <TableCell className="font-medium">{customer.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link href={`/customers/${customer.id}`} className="hover:underline">
+                          {customer.name}
+                        </Link>
+                      </TableCell>
                       <TableCell>{customer.registerNumber}</TableCell>
                       <TableCell>{customer.email}</TableCell>
                       <TableCell>{customer.officePhone}</TableCell>
                       <TableCell>{customer.createdAt.toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        {/* Action menu will be here */}
+                      <TableCell className="text-right">
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Цэс нээх</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Үйлдлүүд</DropdownMenuLabel>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/customers/${customer.id}`}>
+                                    <Eye className="mr-2 h-4 w-4"/>
+                                    Дэлгэрэнгүй
+                                  </Link>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                 ))
