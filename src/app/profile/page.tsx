@@ -4,7 +4,7 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, User, Camera } from 'lucide-react';
+import { Loader2, Camera } from 'lucide-react';
 import { doc, updateDoc, type DocumentData } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
@@ -72,11 +72,10 @@ export default function ProfilePage() {
         setPreviewUrl(reader.result as string);
       };
       reader.readAsDataURL(file);
-      form.trigger(); // Trigger validation to enable save button
     }
   };
 
-  const handleAvatarClick = () => {
+  const handleIconClick = () => {
     fileInputRef.current?.click();
   };
 
@@ -96,9 +95,8 @@ export default function ProfilePage() {
     setIsSubmitting(true);
     try {
       const dataToUpdate: DocumentData = {};
-      let newAvatarUrl: string | undefined = undefined;
+      let newAvatarUrl: string | undefined = user?.avatarUrl;
 
-      // 1. Upload image if a new one is selected
       if (selectedFile) {
         const storageRef = ref(storage, `avatars/${user.uid}/${selectedFile.name}`);
         const snapshot = await uploadBytes(storageRef, selectedFile);
@@ -106,24 +104,22 @@ export default function ProfilePage() {
         dataToUpdate.avatarUrl = newAvatarUrl;
       }
 
-      // 2. Add other dirty fields to the update object
       if (dirtyFields.firstName) dataToUpdate.firstName = values.firstName;
       if (dirtyFields.lastName) dataToUpdate.lastName = values.lastName;
       if (dirtyFields.phone) dataToUpdate.phone = values.phone;
       
-      // 3. Perform the update if there's anything to update
       if (Object.keys(dataToUpdate).length > 0) {
         const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, dataToUpdate);
       }
 
-      // 4. Refresh data and show success
       await refreshUserData();
       
       toast({
         title: 'Амжилттай шинэчиллээ',
         description: 'Таны мэдээлэл амжилттай шинэчлэгдлээ.',
       });
+      
       setSelectedFile(null);
       form.reset(values, { keepValues: true, keepDirty: false });
 
@@ -194,13 +190,16 @@ export default function ProfilePage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <div className="flex justify-center">
                 <div className="relative">
-                  <Avatar className="h-32 w-32 cursor-pointer" onClick={handleAvatarClick}>
+                  <Avatar className="h-32 w-32">
                     <AvatarImage src={previewUrl || user.avatarUrl} alt="User avatar" />
                     <AvatarFallback className="text-4xl">
                       {fallbackText}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                  <div 
+                    className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground cursor-pointer"
+                    onClick={handleIconClick}
+                    >
                     <Camera className="h-4 w-4" />
                   </div>
                   <FormControl>
