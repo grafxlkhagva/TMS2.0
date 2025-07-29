@@ -46,8 +46,8 @@ function LocationPickerInner({ onLocationSelect, initialValue, initialCoordinate
       clearSuggestions,
     } = usePlacesAutocomplete({
       requestOptions: {
-        location: new google.maps.LatLng(defaultCenter.lat, defaultCenter.lng),
-        radius: 100 * 1000, // 100km
+        // location: new google.maps.LatLng(defaultCenter.lat, defaultCenter.lng),
+        // radius: 100 * 1000, // 100km
       },
       debounce: 300,
     });
@@ -98,29 +98,30 @@ function LocationPickerInner({ onLocationSelect, initialValue, initialCoordinate
 
     return (
         <div className="space-y-4">
-           <Popover open={status === 'OK'} onOpenChange={(open) => !open && clearSuggestions()}>
+           <Popover open={status === 'OK' && ready} onOpenChange={(open) => !open && clearSuggestions()}>
              <PopoverTrigger asChild>
-                 <Input
-                    value={value}
-                    onChange={(e) => setValue(e.target.value)}
-                    disabled={!ready}
-                    placeholder="Хаягаар хайх..."
-                />
+                <div className="relative">
+                    <Input
+                        value={value}
+                        onChange={(e) => setValue(e.target.value)}
+                        disabled={!ready}
+                        placeholder="Хаягаар хайх..."
+                        autoComplete="off"
+                    />
+                </div>
              </PopoverTrigger>
-             <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                 {status === 'OK' && (
-                    <ul className="bg-background rounded-md shadow-lg">
-                        {data.map(({ place_id, description }) => (
-                            <li
-                                key={place_id}
-                                onClick={() => handleSelect(description)}
-                                className="p-2 hover:bg-accent cursor-pointer text-sm"
-                            >
-                               {description}
-                            </li>
-                        ))}
-                    </ul>
-                )}
+             <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                <ul className="bg-background rounded-md shadow-lg">
+                    {data.map(({ place_id, description }) => (
+                        <li
+                            key={place_id}
+                            onClick={() => handleSelect(description)}
+                            className="p-2 hover:bg-accent cursor-pointer text-sm"
+                        >
+                           {description}
+                        </li>
+                    ))}
+                </ul>
              </PopoverContent>
            </Popover>
     
@@ -129,6 +130,10 @@ function LocationPickerInner({ onLocationSelect, initialValue, initialCoordinate
             zoom={marker ? 15 : 10}
             center={center}
             onClick={handleMapClick}
+            options={{
+                streetViewControl: false,
+                mapTypeControl: false,
+            }}
           >
             {marker && <Marker position={marker} />}
           </GoogleMap>
