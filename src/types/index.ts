@@ -49,6 +49,7 @@ export type Customer = {
   email: string;
   note?: string;
   createdAt: Date;
+  logoUrl?: string;
 };
 
 export type CustomerEmployee = {
@@ -62,3 +63,5 @@ export type CustomerEmployee = {
   note?: string;
   createdAt: Date;
 };
+
+    
