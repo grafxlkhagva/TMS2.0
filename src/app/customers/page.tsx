@@ -97,6 +97,7 @@ export default function CustomersPage() {
                 <TableHead>Регистрийн дугаар</TableHead>
                 <TableHead>И-мэйл</TableHead>
                 <TableHead>Утас</TableHead>
+                <TableHead>Бүртгэсэн ажилтан</TableHead>
                 <TableHead>Бүртгүүлсэн</TableHead>
                 <TableHead><span className="sr-only">Үйлдэл</span></TableHead>
               </TableRow>
@@ -109,6 +110,7 @@ export default function CustomersPage() {
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
                   </TableRow>
@@ -124,6 +126,7 @@ export default function CustomersPage() {
                       <TableCell>{customer.registerNumber}</TableCell>
                       <TableCell>{customer.email}</TableCell>
                       <TableCell>{customer.officePhone}</TableCell>
+                      <TableCell>{customer.createdBy?.name || 'N/A'}</TableCell>
                       <TableCell>{customer.createdAt.toLocaleDateString()}</TableCell>
                       <TableCell className="text-right">
                          <DropdownMenu>
@@ -148,7 +151,7 @@ export default function CustomersPage() {
                 ))
               ) : (
                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                         Бүртгэлтэй харилцагч олдсонгүй.
                     </TableCell>
                  </TableRow>

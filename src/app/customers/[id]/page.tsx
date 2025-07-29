@@ -203,7 +203,8 @@ export default function CustomerDetailPage() {
             <CustomerDetailItem icon={Mail} label="Албан ёсны и-мэйл" value={customer.email} />
             <CustomerDetailItem icon={Phone} label="Оффисын утас" value={customer.officePhone} />
             <CustomerDetailItem icon={FileText} label="Албан ёсны хаяг" value={customer.address} />
-             <CustomerDetailItem icon={FileText} label="Тэмдэглэл" value={customer.note} />
+            <CustomerDetailItem icon={User} label="Бүртгэсэн ажилтан" value={customer.createdBy?.name} />
+            <CustomerDetailItem icon={FileText} label="Тэмдэглэл" value={customer.note} />
           </CardContent>
         </Card>
 
@@ -285,5 +286,3 @@ export default function CustomerDetailPage() {
     </div>
   );
 }
-
-    

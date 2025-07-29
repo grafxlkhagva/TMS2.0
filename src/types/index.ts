@@ -50,6 +50,10 @@ export type Customer = {
   note?: string;
   createdAt: Date;
   logoUrl?: string;
+  createdBy: {
+    uid: string;
+    name: string;
+  };
 };
 
 export type CustomerEmployee = {

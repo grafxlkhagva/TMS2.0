@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Харилцагчийн нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
@@ -39,6 +40,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function NewCustomerPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<FormValues>({
@@ -55,10 +57,23 @@ export default function NewCustomerPage() {
   });
 
   async function onSubmit(values: FormValues) {
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Алдаа',
+        description: 'Нэвтэрч орсоны дараа харилцагч бүртгэнэ үү.',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, 'customers'), {
         ...values,
+        createdBy: {
+          uid: user.uid,
+          name: `${user.lastName} ${user.firstName}`,
+        },
         createdAt: serverTimestamp(),
       });
       
