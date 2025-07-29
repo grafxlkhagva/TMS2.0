@@ -13,6 +13,7 @@ import {
   Building2,
   Settings,
   Warehouse,
+  Briefcase,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -44,6 +45,7 @@ import {
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/orders', icon: Briefcase, label: 'Захиалга' },
   { href: '/customers', icon: Building2, label: 'Харилцагчид' },
   { href: '/warehouses', icon: Warehouse, label: 'Агуулах' },
 ];
@@ -94,7 +96,7 @@ function Nav() {
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
-                  isActive={pathname.startsWith(item.href)}
+                  isActive={item.href === '/orders' ? pathname.includes(item.href) : pathname.startsWith(item.href)}
                   tooltip={
                     state === 'collapsed'
                       ? { children: item.label, side: 'right' }
@@ -117,7 +119,7 @@ function Nav() {
         <SidebarMenuItem key={item.href}>
           <Link href={item.href}>
             <SidebarMenuButton
-              isActive={pathname.startsWith(item.href)}
+              isActive={item.href === '/orders' ? pathname.includes(item.href) : pathname.startsWith(item.href)}
               tooltip={
                 state === 'collapsed'
                   ? { children: item.label, side: 'right' }
