@@ -44,7 +44,9 @@ export default function ProfilePage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    values: { // Use `values` to ensure form is re-initialized when user data changes
+    // Use `values` to make the form fully controlled by the `user` object from the auth context.
+    // This ensures the form is always in sync with the latest user data.
+    values: {
       lastName: user?.lastName || '',
       firstName: user?.firstName || '',
       phone: user?.phone || '',
@@ -52,23 +54,13 @@ export default function ProfilePage() {
       avatarFile: undefined,
     },
   });
-  
-  // Effect to sync form with user data from auth context after initial load or refresh
-  React.useEffect(() => {
-    if (user) {
-      form.reset({
-        lastName: user.lastName,
-        firstName: user.firstName,
-        phone: user.phone,
-        email: user.email,
-        avatarFile: undefined,
-      });
-      if (user.avatarUrl) {
-         setAvatarPreview(user.avatarUrl);
-      }
-    }
-  }, [user, form.reset]);
 
+  // Effect to update the avatar preview whenever the user's avatar URL changes.
+  React.useEffect(() => {
+    if (user?.avatarUrl) {
+      setAvatarPreview(user.avatarUrl);
+    }
+  }, [user?.avatarUrl]);
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -84,11 +76,13 @@ export default function ProfilePage() {
 
   async function onSubmit(values: FormValues) {
     if (!user) return;
+
+    // Check if any field is actually dirty (changed)
     if (!form.formState.isDirty) {
-       toast({
-          title: 'Өөрчлөлт алга',
-          description: 'Шинэчлэх мэдээлэл олдсонгүй.',
-        });
+      toast({
+        title: 'Өөрчлөлт алга',
+        description: 'Шинэчлэх мэдээлэл олдсонгүй.',
+      });
       return;
     }
 
@@ -97,7 +91,7 @@ export default function ProfilePage() {
       const dataToUpdate: DocumentData = {};
       let newAvatarUrl: string | undefined = undefined;
 
-      // 1. Upload new avatar if selected
+      // 1. Upload new avatar if a new file was selected
       if (values.avatarFile) {
         const file = values.avatarFile;
         const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_${file.name}`);
@@ -105,30 +99,46 @@ export default function ProfilePage() {
         newAvatarUrl = await getDownloadURL(snapshot.ref);
         dataToUpdate.avatarUrl = newAvatarUrl;
       }
-      
-      // 2. Compare form values with original user data and add only what's changed
-      if (values.firstName.trim() !== user.firstName) dataToUpdate.firstName = values.firstName.trim();
-      if (values.lastName.trim() !== user.lastName) dataToUpdate.lastName = values.lastName.trim();
-      if (values.phone.trim() !== user.phone) dataToUpdate.phone = values.phone.trim();
-      
-      // 3. Update Firestore only if there are changes
+
+      // 2. Compare form values with the original user data and add only changed fields to the update object.
+      if (form.formState.dirtyFields.firstName && values.firstName.trim() !== user.firstName) {
+        dataToUpdate.firstName = values.firstName.trim();
+      }
+      if (form.formState.dirtyFields.lastName && values.lastName.trim() !== user.lastName) {
+        dataToUpdate.lastName = values.lastName.trim();
+      }
+      if (form.formState.dirtyFields.phone && values.phone.trim() !== user.phone) {
+        dataToUpdate.phone = values.phone.trim();
+      }
+
+      // 3. Update Firestore only if there are actual changes
       if (Object.keys(dataToUpdate).length > 0) {
         const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, dataToUpdate);
         
         // Refresh user data in the context to reflect changes immediately across the app
-        await refreshUserData(); 
+        await refreshUserData();
 
         toast({
           title: 'Амжилттай шинэчиллээ',
           description: 'Таны мэдээлэл амжилттай шинэчлэгдлээ.',
         });
-      } else {
-         toast({
+      } else if (!values.avatarFile) { // Handle case where user edits and reverts changes
+        toast({
           title: 'Өөрчлөлт алга',
           description: 'Шинэчлэх мэдээлэл олдсонгүй.',
         });
       }
+      
+      // Reset the form to its new clean state after submission
+      form.reset({
+        ...values,
+        avatarFile: undefined // Clear the file input from the form state
+      });
+      if (newAvatarUrl) {
+          setAvatarPreview(newAvatarUrl);
+      }
+
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
@@ -138,9 +148,6 @@ export default function ProfilePage() {
       });
     } finally {
       setIsSubmitting(false);
-      // After submission, reset the form to the newly saved values to clear the dirty state.
-      // The useEffect will handle resetting to the latest `user` data from the context.
-      form.setValue('avatarFile', undefined);
     }
   }
 

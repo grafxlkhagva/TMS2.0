@@ -18,14 +18,12 @@ const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
 // Helper function to convert Firestore data to SystemUser
 const fromFirestore = (data: any): SystemUser => {
-  // Ensure createdAt is a Date object, handling both Firestore Timestamp and potential existing Date objects.
   const createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt;
   return {
     ...data,
     createdAt: createdAt,
   } as SystemUser;
 };
-
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<SystemUser | null>(null);
@@ -65,12 +63,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userData = fromFirestore(userDoc.data());
         if (userData.status === 'active') {
           setUser(userData);
+          setFirebaseUser(fbUser);
         } else {
-          // If user is pending or inactive, sign them out.
           await handleSignOut();
         }
       } else {
-        // If user document doesn't exist, sign them out.
         await handleSignOut();
       }
     } catch (error) {
@@ -79,14 +76,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [handleSignOut, router, pathname]);
+  }, [handleSignOut, pathname]);
 
   React.useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      setFirebaseUser(fbUser);
-      await fetchUserData(fbUser);
+    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+      fetchUserData(fbUser);
     });
-
     return () => unsubscribe();
   }, [fetchUserData]);
 
@@ -94,15 +89,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const currentUser = auth.currentUser;
     if (currentUser) {
        setLoading(true);
-       const userDocRef = doc(db, 'users', currentUser.uid);
-       const userDoc = await getDoc(userDocRef);
-       if (userDoc.exists()) {
-           const freshData = fromFirestore(userDoc.data());
-           setUser(freshData);
-       } else {
-          await handleSignOut();
+       try {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+            const freshData = fromFirestore(userDoc.data());
+            setUser(freshData);
+        } else {
+           await handleSignOut();
+        }
+       } catch (e) {
+         console.error("Error refreshing user data", e);
+         await handleSignOut();
+       } finally {
+         setLoading(false);
        }
-       setLoading(false);
     }
   }, [handleSignOut]);
 
