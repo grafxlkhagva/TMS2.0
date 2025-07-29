@@ -114,7 +114,7 @@ function UserProfile() {
         <div className="flex cursor-pointer items-center gap-2 rounded-lg bg-background/50 p-2 transition-colors hover:bg-muted">
           <Avatar className="h-8 w-8">
             <AvatarImage
-              src="https://placehold.co/100x100"
+              src={user.avatarUrl}
               data-ai-hint="person portrait"
             />
             <AvatarFallback>{user.firstName?.[0] || 'A'}</AvatarFallback>

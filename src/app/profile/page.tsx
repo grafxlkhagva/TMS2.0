@@ -4,9 +4,10 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Camera } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 
 import { Button } from '@/components/ui/button';
@@ -22,18 +23,22 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const formSchema = z.object({
   lastName: z.string().min(2, { message: 'Эцэг/эхийн нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
   firstName: z.string().min(2, { message: 'Өөрийн нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
   phone: z.string().min(8, { message: 'Утасны дугаар буруу байна.' }),
   email: z.string().email(),
+  avatar: z.any().optional(),
 });
 
 export default function ProfilePage() {
   const { user, loading, refreshUserData } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -42,6 +47,7 @@ export default function ProfilePage() {
       firstName: '',
       phone: '',
       email: '',
+      avatar: null,
     },
   });
 
@@ -53,20 +59,47 @@ export default function ProfilePage() {
         phone: user.phone,
         email: user.email,
       });
+      if (user.avatarUrl) {
+        setAvatarPreview(user.avatarUrl);
+      }
     }
   }, [user, form]);
+  
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      form.setValue('avatar', file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) return;
 
     setIsSubmitting(true);
     try {
+      let avatarUrl = user.avatarUrl;
+
+      // If a new avatar has been selected, upload it
+      if (values.avatar && values.avatar instanceof File) {
+        const file = values.avatar;
+        const storageRef = ref(storage, `avatars/${user.uid}/${file.name}`);
+        const snapshot = await uploadBytes(storageRef, file);
+        avatarUrl = await getDownloadURL(snapshot.ref);
+      }
+
       const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, {
         lastName: values.lastName,
         firstName: values.firstName,
         phone: values.phone,
+        avatarUrl: avatarUrl, // Save the new URL
       });
+
       await refreshUserData(); // Refresh user data in the context
       toast({
         title: 'Амжилттай шинэчиллээ',
@@ -97,6 +130,9 @@ export default function ProfilePage() {
              <Skeleton className="mt-2 h-4 w-1/3" />
           </CardHeader>
           <CardContent className="space-y-8 pt-6">
+             <div className="flex justify-center">
+                <Skeleton className="h-32 w-32 rounded-full" />
+             </div>
             <div className="space-y-2">
                 <Skeleton className="h-4 w-24" />
                 <Skeleton className="h-10 w-full" />
@@ -136,6 +172,35 @@ export default function ProfilePage() {
         <CardContent className="pt-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+               <div className="flex flex-col items-center space-y-4">
+                  <div className="relative">
+                    <Avatar className="h-32 w-32">
+                      <AvatarImage src={avatarPreview || undefined} data-ai-hint="person portrait" />
+                      <AvatarFallback className="text-4xl">
+                        {user?.firstName?.[0] || 'A'}
+                        {user?.lastName?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="absolute bottom-1 right-1 rounded-full h-10 w-10"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                        <Camera className="h-5 w-5"/>
+                        <span className="sr-only">Change avatar</span>
+                    </Button>
+                  </div>
+                  <Input 
+                    ref={fileInputRef}
+                    type="file" 
+                    className="hidden" 
+                    accept="image/png, image/jpeg, image/gif"
+                    onChange={handleAvatarChange}
+                  />
+               </div>
+
               <FormField
                 control={form.control}
                 name="lastName"
