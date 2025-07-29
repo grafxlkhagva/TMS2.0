@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2, PlusCircle, Trash2, CalendarIcon } from 'lucide-react';
-import { collection, getDocs, query, where, orderBy, addDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, addDoc, serverTimestamp, writeBatch, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -102,11 +102,12 @@ export default function NewOrderPage() {
     if (watchedCustomerId) {
       async function fetchEmployees() {
         try {
-          const q = query(collection(db, "customer_employees"), where("customerId", "==", watchedCustomerId), orderBy("firstName"));
+          const q = query(collection(db, "customer_employees"), where("customerId", "==", watchedCustomerId));
           const querySnapshot = await getDocs(q);
           setEmployees(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomerEmployee)));
           form.setValue('employeeId', '');
         } catch (error) {
+           console.error("Error fetching employees:", error);
            toast({ variant: 'destructive', title: 'Алдаа', description: 'Ажилтны мэдээлэл татахад алдаа гарлаа.'});
         }
       }
