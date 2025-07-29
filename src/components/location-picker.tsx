@@ -143,7 +143,7 @@ export default function LocationPicker(props: LocationPickerProps) {
   });
 
   if (loadError) return <div>Газрын зураг дуудахад алдаа гарлаа.</div>;
-  if (!isLoaded) return <Skeleton className="h-[400px] w-full" />;
+  if (!isLoaded) return <Skeleton className="h-[464px] w-full" />;
 
   return <LocationPickerInner {...props} />;
 }
