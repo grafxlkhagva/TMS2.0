@@ -44,27 +44,21 @@ export default function ProfilePage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      lastName: '',
-      firstName: '',
-      phone: '',
-      email: '',
+    // Use `values` instead of `defaultValues` to re-initialize the form when `user` data changes.
+    values: {
+      lastName: user?.lastName || '',
+      firstName: user?.firstName || '',
+      phone: user?.phone || '',
+      email: user?.email || '',
       avatarFile: undefined,
     },
   });
 
   React.useEffect(() => {
-    if (user) {
-      form.reset({
-        lastName: user.lastName || '',
-        firstName: user.firstName || '',
-        phone: user.phone || '',
-        email: user.email || '',
-        avatarFile: undefined,
-      });
-      setAvatarPreview(user.avatarUrl || null);
+    if (user?.avatarUrl) {
+      setAvatarPreview(user.avatarUrl);
     }
-  }, [user, form]);
+  }, [user?.avatarUrl]);
   
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -91,7 +85,7 @@ export default function ProfilePage() {
     setIsSubmitting(true);
     try {
       const dataToUpdate: DocumentData = {};
-      let newAvatarUrl = user.avatarUrl;
+      let newAvatarUrl: string | undefined = undefined;
 
       // 1. Upload new avatar if selected
       if (values.avatarFile) {
@@ -112,7 +106,6 @@ export default function ProfilePage() {
         const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, dataToUpdate);
         
-        // The toast will be shown after the data is successfully refreshed.
         await refreshUserData(); 
 
         toast({
@@ -134,7 +127,11 @@ export default function ProfilePage() {
       });
     } finally {
       setIsSubmitting(false);
-      form.reset(form.getValues()); // Reset to the new values to clear dirty state
+      // After submission, reset the form to the newly saved values to clear the dirty state.
+      form.reset({
+        ...form.getValues(),
+        avatarFile: undefined, // Clear the file input
+      });
     }
   }
 

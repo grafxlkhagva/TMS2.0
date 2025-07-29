@@ -18,11 +18,14 @@ const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
 // Helper function to convert Firestore data to SystemUser
 const fromFirestore = (data: any): SystemUser => {
+  // Ensure createdAt is a Date object, handling both Firestore Timestamp and potential existing Date objects.
+  const createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt;
   return {
     ...data,
-    createdAt: (data.createdAt as Timestamp).toDate(),
+    createdAt: createdAt,
   } as SystemUser;
 };
+
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<SystemUser | null>(null);
@@ -83,10 +86,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
        const userDocRef = doc(db, 'users', currentUser.uid);
        const userDoc = await getDoc(userDocRef);
        if (userDoc.exists()) {
-           setUser(fromFirestore(userDoc.data()));
+           const freshData = fromFirestore(userDoc.data());
+           setUser(freshData); // Update the user state directly
+       } else {
+          // If the user document is somehow deleted, sign them out.
+          await handleSignOut();
        }
     }
-  }, []);
+  }, [handleSignOut]);
 
   const value = { user, firebaseUser, loading, refreshUserData };
 
