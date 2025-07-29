@@ -57,12 +57,15 @@ function Nav() {
   const { user } = useAuth();
   const userRole = user?.role || 'manager';
 
-  let items = userRole === 'admin' ? adminNavItems : navItems;
+  let items = userRole === 'admin' ? [...adminNavItems] : [...navItems];
   
   // A temporary fix to show settings for all roles for development
   if (process.env.NODE_ENV === 'development' && userRole !== 'admin') {
       const settingsItem = adminNavItems.find(item => item.href === '/settings');
-      if(settingsItem) items.push(settingsItem);
+      const hasSettings = items.some(item => item.href === '/settings');
+      if(settingsItem && !hasSettings) {
+        items.push(settingsItem);
+      }
   }
 
 
