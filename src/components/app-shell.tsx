@@ -26,7 +26,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from './ui/button';
-import { Avatar, AvatarFallback } from './ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
 import { 
   DropdownMenu, 
@@ -116,6 +116,7 @@ function UserProfile() {
       <DropdownMenuTrigger asChild>
         <div className="flex cursor-pointer items-center gap-2 rounded-lg bg-background/50 p-2 transition-colors hover:bg-muted">
           <Avatar className="h-8 w-8">
+            {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt="User Avatar" />}
             <AvatarFallback>{fallbackText}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col text-left">

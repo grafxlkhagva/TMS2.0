@@ -28,6 +28,7 @@ const fromFirestore = (data: any): SystemUser => {
     role: data.role,
     status: data.status,
     createdAt: createdAt,
+    avatarUrl: data.avatarUrl,
   } as SystemUser;
 };
 
