@@ -15,14 +15,16 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { PlusCircle, RefreshCw } from 'lucide-react';
+import { PlusCircle, RefreshCw, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { Input } from '@/components/ui/input';
 
 export default function WarehousesPage() {
   const [warehouses, setWarehouses] = React.useState<Warehouse[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [searchTerm, setSearchTerm] = React.useState('');
   const { toast } = useToast();
 
   const fetchWarehouses = React.useCallback(async () => {
@@ -55,6 +57,10 @@ export default function WarehousesPage() {
     fetchWarehouses();
   }, [fetchWarehouses]);
 
+  const filteredWarehouses = warehouses.filter(warehouse =>
+    warehouse.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
 
   return (
     <div className="container mx-auto py-6">
@@ -66,6 +72,15 @@ export default function WarehousesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+           <div className="relative">
+             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+             <Input 
+                placeholder="Нэрээр хайх..."
+                className="pl-9"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+             />
+           </div>
            <Button variant="outline" size="icon" onClick={fetchWarehouses} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
@@ -81,7 +96,7 @@ export default function WarehousesPage() {
       <Card>
         <CardHeader>
           <CardTitle>Агуулахын жагсаалт</CardTitle>
-          <CardDescription>Нийт {warehouses.length} агуулах байна.</CardDescription>
+          <CardDescription>Нийт {filteredWarehouses.length} агуулах байна.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -102,11 +117,11 @@ export default function WarehousesPage() {
                     <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8 rounded-full ml-auto" /></TableCell>
                   </TableRow>
                 ))
-              ) : warehouses.length > 0 ? (
-                warehouses.map((warehouse) => (
+              ) : filteredWarehouses.length > 0 ? (
+                filteredWarehouses.map((warehouse) => (
                     <TableRow key={warehouse.id}>
                       <TableCell className="font-medium">{warehouse.name}</TableCell>
                       <TableCell>{warehouse.location}</TableCell>
@@ -120,7 +135,7 @@ export default function WarehousesPage() {
               ) : (
                  <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                        Бүртгэлтэй агуулах олдсонгүй.
+                        {searchTerm ? "Хайлтад тохирох үр дүн олдсонгүй." : "Бүртгэлтэй агуулах олдсонгүй."}
                     </TableCell>
                  </TableRow>
               )}
