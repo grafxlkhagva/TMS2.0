@@ -22,10 +22,12 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import type { SystemUser, UserStatus, UserRole } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/hooks/use-auth';
 
 
 function StatusBadge({ status }: { status: UserStatus }) {
@@ -43,6 +45,8 @@ export default function UsersPage() {
   const [users, setUsers] = React.useState<SystemUser[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
+
 
   const fetchUsers = React.useCallback(async () => {
     setIsLoading(true);
@@ -73,6 +77,15 @@ export default function UsersPage() {
   }, [fetchUsers]);
   
   const handleStatusChange = async (userId: string, status: UserStatus) => {
+    if (userId === currentUser?.uid) {
+      toast({
+        variant: 'destructive',
+        title: 'Алдаа',
+        description: 'Та өөрийн статусыг өөрчлөх боломжгүй.',
+      });
+      return;
+    }
+
     const userRef = doc(db, 'users', userId);
     try {
       await updateDoc(userRef, { status: status });
@@ -87,6 +100,34 @@ export default function UsersPage() {
         variant: 'destructive',
         title: 'Алдаа',
         description: 'Хэрэглэгчийн статус өөрчлөхөд алдаа гарлаа.',
+      });
+    }
+  };
+
+  const handleRoleChange = async (userId: string, role: UserRole) => {
+    if (userId === currentUser?.uid) {
+      toast({
+        variant: 'destructive',
+        title: 'Алдаа',
+        description: 'Та өөрийн эрхийг өөрчлөх боломжгүй.',
+      });
+      return;
+    }
+
+    const userRef = doc(db, 'users', userId);
+    try {
+      await updateDoc(userRef, { role });
+      setUsers(prevUsers => prevUsers.map(u => u.uid === userId ? { ...u, role } : u));
+      toast({
+        title: 'Эрх амжилттай өөрчиллөө',
+        description: `Хэрэглэгчийн эрх "${role === 'admin' ? 'Админ' : 'Менежер'}" боллоо.`,
+      });
+    } catch (error) {
+      console.error("Error updating role: ", error);
+      toast({
+        variant: 'destructive',
+        title: 'Алдаа',
+        description: 'Хэрэглэгчийн эрх өөрчлөхөд алдаа гарлаа.',
       });
     }
   };
@@ -176,13 +217,17 @@ export default function UsersPage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                   <DropdownMenuLabel>Үйлдлүүд</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
                                   {user.status === 'pending' && (
                                       <DropdownMenuItem onClick={() => handleStatusChange(user.uid, 'active')}>
                                           Хүсэлт зөвшөөрөх
                                       </DropdownMenuItem>
                                   )}
-                                  {user.status === 'active' && user.role !== 'admin' && (
-                                       <DropdownMenuItem onClick={() => handleStatusChange(user.uid, 'inactive')}>
+                                  {user.status === 'active' && (
+                                       <DropdownMenuItem 
+                                        onClick={() => handleStatusChange(user.uid, 'inactive')}
+                                        disabled={user.uid === currentUser?.uid}
+                                       >
                                           Идэвхгүй болгох
                                       </DropdownMenuItem>
                                   )}
@@ -191,6 +236,24 @@ export default function UsersPage() {
                                           Идэвхтэй болгох
                                       </DropdownMenuItem>
                                   )}
+
+                                  {user.role === 'manager' && (
+                                    <DropdownMenuItem 
+                                      onClick={() => handleRoleChange(user.uid, 'admin')}
+                                      disabled={user.uid === currentUser?.uid}
+                                    >
+                                      Админ болгох
+                                    </DropdownMenuItem>
+                                  )}
+                                  {user.role === 'admin' && (
+                                    <DropdownMenuItem 
+                                      onClick={() => handleRoleChange(user.uid, 'manager')}
+                                      disabled={user.uid === currentUser?.uid}
+                                    >
+                                      Менежер болгох
+                                    </DropdownMenuItem>
+                                  )}
+
                                   <DropdownMenuItem onClick={() => handleResetPassword(user.email)}>
                                       Нууц үг сэргээх
                                   </DropdownMenuItem>
