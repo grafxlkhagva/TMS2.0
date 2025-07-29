@@ -31,11 +31,6 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/shipments/new', icon: Truck, label: 'New Shipment' },
-  { href: '/vehicles', icon: CarFront, label: 'Vehicles' },
-  { href: '/monitoring', icon: MapPin, label: 'Monitoring' },
-  { href: '/optimize-route', icon: Sparkles, label: 'Optimize Route' },
-  { href: '/reports', icon: FileDown, label: 'Reports' },
 ];
 
 function Nav() {
