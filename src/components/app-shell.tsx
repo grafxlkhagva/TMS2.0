@@ -26,7 +26,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from './ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Avatar, AvatarFallback } from './ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
 import { 
   DropdownMenu, 
@@ -47,7 +47,7 @@ const adminNavItems = [
 function Nav() {
   const pathname = usePathname();
   const { state } = useSidebar();
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const userRole = user?.role || 'manager';
 
   const items = userRole === 'admin' ? adminNavItems : navItems;
@@ -107,13 +107,16 @@ function UserProfile() {
   if (!user) {
      return null;
   }
+  
+  const fallbackText = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || 'U';
+
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <div className="flex cursor-pointer items-center gap-2 rounded-lg bg-background/50 p-2 transition-colors hover:bg-muted">
           <Avatar className="h-8 w-8">
-            <AvatarFallback>{user.firstName?.[0] || 'A'}</AvatarFallback>
+            <AvatarFallback>{fallbackText}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col text-left">
             <span className="truncate text-sm font-semibold">{user.firstName} {user.lastName}</span>

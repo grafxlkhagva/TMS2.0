@@ -20,7 +20,13 @@ const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 const fromFirestore = (data: any): SystemUser => {
   const createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt;
   return {
-    ...data,
+    uid: data.uid,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    phone: data.phone,
+    email: data.email,
+    role: data.role,
+    status: data.status,
     createdAt: createdAt,
   } as SystemUser;
 };
