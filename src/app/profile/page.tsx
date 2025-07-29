@@ -5,8 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2, Camera } from 'lucide-react';
-import { doc, updateDoc, DocumentData } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, updateDoc, type DocumentData } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 
@@ -44,7 +44,8 @@ export default function ProfilePage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    // We will use `values` to keep the form state in sync with the user data
+    // Use `values` to keep the form state in sync with the user data.
+    // This is more reliable than using useEffect with reset.
     values: {
       lastName: user?.lastName || '',
       firstName: user?.firstName || '',
@@ -54,19 +55,20 @@ export default function ProfilePage() {
     },
   });
 
+  // This effect handles the initial avatar preview when the user data is loaded.
   React.useEffect(() => {
-    // When user data is loaded or changed, reset the form with the new data
+    if (user?.avatarUrl) {
+      setAvatarPreview(user.avatarUrl);
+    }
+    // Also reset the form in case the user object changes (e.g., after a refresh)
     if (user) {
-      form.reset({
-        lastName: user.lastName || '',
-        firstName: user.firstName || '',
-        phone: user.phone || '',
-        email: user.email || '',
-        avatarFile: undefined,
-      });
-      if (user.avatarUrl) {
-        setAvatarPreview(user.avatarUrl);
-      }
+        form.reset({
+            lastName: user.lastName || '',
+            firstName: user.firstName || '',
+            phone: user.phone || '',
+            email: user.email || '',
+            avatarFile: undefined,
+        });
     }
   }, [user, form]);
   
@@ -107,8 +109,10 @@ export default function ProfilePage() {
       if (Object.keys(dataToUpdate).length > 0) {
         const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, dataToUpdate);
+        
+        // The toast will be shown after the data is successfully refreshed.
+        await refreshUserData(); 
 
-        await refreshUserData(); // Refresh user data in the context
         toast({
           title: 'Амжилттай шинэчиллээ',
           description: 'Таны мэдээлэл амжилттай шинэчлэгдлээ.',
@@ -128,7 +132,7 @@ export default function ProfilePage() {
       });
     } finally {
       setIsSubmitting(false);
-      form.setValue('avatarFile', undefined);
+      form.setValue('avatarFile', undefined); // Clear the file input after submission
     }
   }
 
@@ -210,7 +214,7 @@ export default function ProfilePage() {
                   <FormField
                     control={form.control}
                     name="avatarFile"
-                    render={({ field }) => (
+                    render={() => ( // No need to render anything for the file input itself
                       <FormItem>
                         <FormControl>
                            <Input 
@@ -279,7 +283,7 @@ export default function ProfilePage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || !form.formState.isDirty}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Хадгалах
               </Button>
