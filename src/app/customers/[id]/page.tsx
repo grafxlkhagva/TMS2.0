@@ -36,12 +36,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 function CustomerDetailItem({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value?: string }) {
+  if (!value) return null;
   return (
     <div className="flex items-start gap-3">
         <Icon className="h-4 w-4 mt-1 text-muted-foreground" />
         <div>
             <p className="text-sm text-muted-foreground">{label}</p>
-            <p className="font-medium">{value || 'N/A'}</p>
+            <p className="font-medium">{value}</p>
         </div>
     </div>
   );
@@ -151,10 +152,40 @@ export default function CustomerDetailPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto py-6">
-        <Skeleton className="h-8 w-1/4 mb-4" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-1"><CardHeader><Skeleton className="h-6 w-3/4" /></CardHeader><CardContent><Skeleton className="h-40 w-full" /></CardContent></Card>
-            <Card className="lg:col-span-2"><CardHeader><Skeleton className="h-6 w-1/2" /></CardHeader><CardContent><Skeleton className="h-32 w-full" /></CardContent></Card>
+        <div className="mb-6">
+            <Skeleton className="h-8 w-24 mb-4" />
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <Skeleton className="h-20 w-20 rounded-full" />
+                    <div>
+                        <Skeleton className="h-8 w-48 mb-2" />
+                        <Skeleton className="h-4 w-64" />
+                    </div>
+                </div>
+                <Skeleton className="h-10 w-36" />
+            </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <Card className="lg:col-span-1">
+                <CardHeader>
+                    <Skeleton className="h-6 w-1/2" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                </CardContent>
+            </Card>
+            <Card className="lg:col-span-2">
+                <CardHeader>
+                     <Skeleton className="h-6 w-1/3" />
+                     <Skeleton className="h-4 w-1/4" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-32 w-full" />
+                </CardContent>
+            </Card>
         </div>
       </div>
     );
@@ -169,7 +200,7 @@ export default function CustomerDetailPage() {
       <div className="mb-6">
         <Button variant="outline" size="sm" onClick={() => router.push('/customers')} className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Буцах
+            Харилцагчдын жагсаалт
         </Button>
         <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -196,7 +227,6 @@ export default function CustomerDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Customer Details Card */}
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Байгууллагын мэдээлэл</CardTitle>
@@ -217,7 +247,6 @@ export default function CustomerDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Employees Card */}
         <Card className="lg:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -239,7 +268,7 @@ export default function CustomerDetailPage() {
                             <TableHead>Албан тушаал</TableHead>
                             <TableHead>И-мэйл</TableHead>
                             <TableHead>Утас</TableHead>
-                            <TableHead><span className="sr-only">Үйлдэл</span></TableHead>
+                            <TableHead className="text-right">Үйлдэл</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>

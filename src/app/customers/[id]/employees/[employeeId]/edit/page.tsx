@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -22,7 +23,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -43,6 +44,7 @@ export default function EditEmployeePage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [employeeName, setEmployeeName] = React.useState('');
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -65,6 +67,7 @@ export default function EditEmployeePage() {
             if (docSnap.exists()) {
                 const data = docSnap.data() as CustomerEmployee;
                 form.reset(data);
+                setEmployeeName(`${data.lastName} ${data.firstName}`);
             } else {
                 toast({ variant: 'destructive', title: 'Алдаа', description: 'Ажилтан олдсонгүй.' });
                 router.push(`/customers/${customerId}`);
@@ -110,8 +113,10 @@ export default function EditEmployeePage() {
   if (isLoading) {
     return (
         <div className="container mx-auto py-6">
-            <Skeleton className="h-8 w-1/4 mb-4" />
-            <Skeleton className="h-4 w-1/2 mb-6" />
+            <div className="mb-6">
+                <Skeleton className="h-8 w-1/4 mb-4" />
+                <Skeleton className="h-4 w-1/2" />
+            </div>
             <Card>
                 <CardContent className="pt-6 space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -124,6 +129,10 @@ export default function EditEmployeePage() {
                         <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
                     </div>
                     <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-20 w-full" /></div>
+                     <div className="flex justify-end gap-2">
+                        <Skeleton className="h-10 w-20" />
+                        <Skeleton className="h-10 w-24" />
+                    </div>
                 </CardContent>
             </Card>
         </div>
@@ -139,9 +148,9 @@ export default function EditEmployeePage() {
                 Буцах
              </Link>
         </Button>
-        <h1 className="text-3xl font-headline font-bold">Ажилтны мэдээлэл засах</h1>
+        <h1 className="text-3xl font-headline font-bold">Ажилтан засах: {employeeName}</h1>
         <p className="text-muted-foreground">
-          Харилцагчийн ажилтны мэдээллийг засах.
+          Харилцагчийн ажилтны мэдээллийг эндээс засна уу.
         </p>
       </div>
       <Card>
@@ -251,5 +260,3 @@ export default function EditEmployeePage() {
     </div>
   );
 }
-
-    
