@@ -55,19 +55,33 @@ function Nav() {
   const pathname = usePathname();
   const { state } = useSidebar();
   const { user } = useAuth();
-  const userRole = user?.role || 'manager';
+  const [items, setItems] = React.useState(navItems);
+  const [mounted, setMounted] = React.useState(false);
 
-  let items = userRole === 'admin' ? [...adminNavItems] : [...navItems];
-  
-  // A temporary fix to show settings for all roles for development
-  if (process.env.NODE_ENV === 'development' && userRole !== 'admin') {
-      const settingsItem = adminNavItems.find(item => item.href === '/settings');
-      const hasSettings = items.some(item => item.href === '/settings');
-      if(settingsItem && !hasSettings) {
-        items.push(settingsItem);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (user?.role) {
+      const userRole = user.role;
+      let newItems = userRole === 'admin' ? [...adminNavItems] : [...navItems];
+      
+      // This logic is now safe inside useEffect
+      if (process.env.NODE_ENV === 'development' && userRole !== 'admin') {
+          const settingsItem = adminNavItems.find(item => item.href === '/settings');
+          const hasSettings = newItems.some(item => item.href === '/settings');
+          if(settingsItem && !hasSettings) {
+            newItems.push(settingsItem);
+          }
       }
-  }
+      setItems(newItems);
+    }
+  }, [user?.role]);
 
+  if (!mounted) {
+    return null; // or a loading skeleton
+  }
 
   return (
     <SidebarMenu>
