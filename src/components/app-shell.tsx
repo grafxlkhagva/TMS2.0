@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -9,6 +10,7 @@ import {
   LogOut,
   User as UserIcon,
   Building2,
+  Settings,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -46,6 +48,7 @@ const navItems = [
 const adminNavItems = [
   ...navItems,
   { href: '/users', icon: Users, label: 'Системийн хэрэглэгчид' },
+  { href: '/settings', icon: Settings, label: 'Тохиргоо' },
 ];
 
 function Nav() {
@@ -54,7 +57,14 @@ function Nav() {
   const { user } = useAuth();
   const userRole = user?.role || 'manager';
 
-  const items = userRole === 'admin' ? adminNavItems : navItems;
+  let items = userRole === 'admin' ? adminNavItems : navItems;
+  
+  // A temporary fix to show settings for all roles for development
+  if (process.env.NODE_ENV === 'development' && userRole !== 'admin') {
+      const settingsItem = adminNavItems.find(item => item.href === '/settings');
+      if(settingsItem) items.push(settingsItem);
+  }
+
 
   return (
     <SidebarMenu>

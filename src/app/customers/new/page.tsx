@@ -6,10 +6,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import type { Industry } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -22,14 +23,16 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Харилцагчийн нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
   registerNumber: z.string().min(7, { message: 'Регистрийн дугаар буруу байна.' }),
-  industry: z.string().min(2, { message: 'Үйл ажиллагааны чиглэл дор хаяж 2 үсэгтэй байх ёстой.' }),
+  industry: z.string().min(1, { message: 'Үйл ажиллагааны чиглэл сонгоно уу.' }),
   address: z.string().min(5, { message: 'Хаяг дор хаяж 5 тэмдэгттэй байх ёстой.' }),
   officePhone: z.string().min(8, { message: 'Утасны дугаар буруу байна.' }),
   email: z.string().email({ message: 'Хүчинтэй и-мэйл хаяг оруулна уу.' }),
@@ -43,6 +46,7 @@ export default function NewCustomerPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [industries, setIndustries] = React.useState<Industry[]>([]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -56,6 +60,21 @@ export default function NewCustomerPage() {
       note: '',
     },
   });
+
+  React.useEffect(() => {
+    const fetchIndustries = async () => {
+      try {
+        const q = query(collection(db, "industries"), orderBy("name"));
+        const querySnapshot = await getDocs(q);
+        const industriesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Industry));
+        setIndustries(industriesData);
+      } catch (error) {
+        console.error("Error fetching industries:", error);
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Үйл ажиллагааны чиглэл татахад алдаа гарлаа.'});
+      }
+    };
+    fetchIndustries();
+  }, [toast]);
 
   async function onSubmit(values: FormValues) {
     if (!user) {
@@ -139,19 +158,30 @@ export default function NewCustomerPage() {
                 />
               </div>
 
-               <FormField
-                control={form.control}
-                name="industry"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Үйл ажиллагааны чиглэл</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Програм хангамж" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="industry"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Үйл ажиллагааны чиглэл</FormLabel>
+                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Чиглэл сонгоно уу..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {industries.map(industry => (
+                            <SelectItem key={industry.id} value={industry.name}>
+                              {industry.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
               <FormField
                 control={form.control}
