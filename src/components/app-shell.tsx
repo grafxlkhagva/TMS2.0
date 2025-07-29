@@ -100,14 +100,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </SidebarContent>
         <SidebarFooter>
           <div className="flex flex-col gap-2">
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton>
-                  <Settings />
-                  <span>Settings</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
             <div className="flex items-center gap-2 rounded-lg bg-background/50 p-2">
               <Avatar className="h-8 w-8">
                 <AvatarImage src="https://placehold.co/100x100" data-ai-hint="person portrait" />
