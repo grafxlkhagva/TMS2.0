@@ -106,3 +106,16 @@ export type ServiceType = {
   name: string;
   createdAt: Date;
 };
+
+export type VehicleType = {
+  id: string;
+  name: string;
+  createdAt: Date;
+};
+
+export type TrailerType = {
+  id: string;
+  name: string;
+  createdAt: Date;
+};
+
