@@ -30,7 +30,6 @@ const formSchema = z.object({
   firstName: z.string().min(2, { message: 'Өөрийн нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
   phone: z.string().min(8, { message: 'Утасны дугаар буруу байна.' }),
   email: z.string().email(),
-  avatarFile: z.instanceof(File).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -40,32 +39,38 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    // Use `values` to make the form fully controlled by the `user` object from the auth context.
-    // This ensures the form is always in sync with the latest user data.
-    values: {
-      lastName: user?.lastName || '',
-      firstName: user?.firstName || '',
-      phone: user?.phone || '',
-      email: user?.email || '',
-      avatarFile: undefined,
+    defaultValues: {
+      lastName: '',
+      firstName: '',
+      phone: '',
+      email: '',
     },
   });
 
-  // Effect to update the avatar preview whenever the user's avatar URL changes.
+  // Effect to populate the form and avatar once the user data is loaded
   React.useEffect(() => {
-    if (user?.avatarUrl) {
-      setAvatarPreview(user.avatarUrl);
+    if (user) {
+      form.reset({
+        lastName: user.lastName || '',
+        firstName: user.firstName || '',
+        phone: user.phone || '',
+        email: user.email || '',
+      });
+      if (user.avatarUrl) {
+        setAvatarPreview(user.avatarUrl);
+      }
     }
-  }, [user?.avatarUrl]);
+  }, [user, form]);
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      form.setValue('avatarFile', file, { shouldDirty: true });
+      setAvatarFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
@@ -76,9 +81,12 @@ export default function ProfilePage() {
 
   async function onSubmit(values: FormValues) {
     if (!user) return;
+    
+    // Check if there are any changes to submit
+    const isFormDirty = form.formState.isDirty;
+    const isAvatarChanged = !!avatarFile;
 
-    // Check if any field is actually dirty (changed)
-    if (!form.formState.isDirty) {
+    if (!isFormDirty && !isAvatarChanged) {
       toast({
         title: 'Өөрчлөлт алга',
         description: 'Шинэчлэх мэдээлэл олдсонгүй.',
@@ -92,52 +100,41 @@ export default function ProfilePage() {
       let newAvatarUrl: string | undefined = undefined;
 
       // 1. Upload new avatar if a new file was selected
-      if (values.avatarFile) {
-        const file = values.avatarFile;
-        const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_${file.name}`);
-        const snapshot = await uploadBytes(storageRef, file);
+      if (avatarFile) {
+        const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_${avatarFile.name}`);
+        const snapshot = await uploadBytes(storageRef, avatarFile);
         newAvatarUrl = await getDownloadURL(snapshot.ref);
         dataToUpdate.avatarUrl = newAvatarUrl;
       }
 
-      // 2. Compare form values with the original user data and add only changed fields to the update object.
-      if (form.formState.dirtyFields.firstName && values.firstName.trim() !== user.firstName) {
-        dataToUpdate.firstName = values.firstName.trim();
+      // 2. Add only changed form fields to the update object.
+      if (form.formState.dirtyFields.firstName) {
+        dataToUpdate.firstName = values.firstName;
       }
-      if (form.formState.dirtyFields.lastName && values.lastName.trim() !== user.lastName) {
-        dataToUpdate.lastName = values.lastName.trim();
+      if (form.formState.dirtyFields.lastName) {
+        dataToUpdate.lastName = values.lastName;
       }
-      if (form.formState.dirtyFields.phone && values.phone.trim() !== user.phone) {
-        dataToUpdate.phone = values.phone.trim();
+      if (form.formState.dirtyFields.phone) {
+        dataToUpdate.phone = values.phone;
       }
 
       // 3. Update Firestore only if there are actual changes
       if (Object.keys(dataToUpdate).length > 0) {
         const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, dataToUpdate);
-        
-        // Refresh user data in the context to reflect changes immediately across the app
-        await refreshUserData();
-
-        toast({
-          title: 'Амжилттай шинэчиллээ',
-          description: 'Таны мэдээлэл амжилттай шинэчлэгдлээ.',
-        });
-      } else if (!values.avatarFile) { // Handle case where user edits and reverts changes
-        toast({
-          title: 'Өөрчлөлт алга',
-          description: 'Шинэчлэх мэдээлэл олдсонгүй.',
-        });
       }
       
-      // Reset the form to its new clean state after submission
-      form.reset({
-        ...values,
-        avatarFile: undefined // Clear the file input from the form state
+      // 4. Refresh user data in the context to reflect changes immediately across the app
+      await refreshUserData();
+
+      toast({
+        title: 'Амжилттай шинэчиллээ',
+        description: 'Таны мэдээлэл амжилттай шинэчлэгдлээ.',
       });
-      if (newAvatarUrl) {
-          setAvatarPreview(newAvatarUrl);
-      }
+      
+      // 5. Reset the form state after successful submission
+      setAvatarFile(null); // Clear the uploaded file
+      // The form will be reset by the useEffect when fresh user data arrives via refreshUserData
 
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -225,25 +222,14 @@ export default function ProfilePage() {
                         <Camera className="h-5 w-5"/>
                         <span className="sr-only">Change avatar</span>
                     </Button>
+                    <Input 
+                      ref={fileInputRef}
+                      type="file" 
+                      className="hidden" 
+                      accept="image/png, image/jpeg, image/gif"
+                      onChange={handleAvatarChange}
+                    />
                   </div>
-                  <FormField
-                    control={form.control}
-                    name="avatarFile"
-                    render={() => ( 
-                      <FormItem>
-                        <FormControl>
-                           <Input 
-                            ref={fileInputRef}
-                            type="file" 
-                            className="hidden" 
-                            accept="image/png, image/jpeg, image/gif"
-                            onChange={handleAvatarChange}
-                          />
-                        </FormControl>
-                         <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                </div>
 
               <FormField
@@ -298,7 +284,7 @@ export default function ProfilePage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" disabled={isSubmitting || !form.formState.isDirty}>
+              <Button type="submit" disabled={isSubmitting || (!form.formState.isDirty && !avatarFile)}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Хадгалах
               </Button>
