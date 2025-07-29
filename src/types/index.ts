@@ -23,3 +23,17 @@ export type Driver = {
   name: string;
   avatarUrl: string;
 };
+
+export type UserRole = 'admin' | 'manager';
+export type UserStatus = 'pending' | 'active' | 'inactive';
+
+export type SystemUser = {
+  uid: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+  createdAt: Date;
+};

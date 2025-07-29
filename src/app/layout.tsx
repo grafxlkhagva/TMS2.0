@@ -12,6 +12,17 @@ export const metadata: Metadata = {
   description: 'Transportation Management System by Tumen Tech',
 };
 
+function AuthProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isAuthPage = pathname === '/login' || pathname === '/signup';
+
+  if (isAuthPage) {
+    return <>{children}</>;
+  }
+
+  return <AppShell>{children}</AppShell>;
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -25,6 +36,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body className={`${inter.variable} ${manrope.variable} font-body antialiased`}>
+        {/* This logic will be improved later to conditionally render based on auth status */}
         <AppShell>{children}</AppShell>
         <Toaster />
       </body>

@@ -11,6 +11,7 @@ import {
   Settings,
   Sparkles,
   Truck,
+  Users,
 } from 'lucide-react';
 
 import {
@@ -29,17 +30,27 @@ import {
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
-const navItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+// Assume a hook that provides the current user's role
+// In a real app, this would come from your auth context
+const useUserRole = () => 'admin'; // Hardcoded for now
+
+const navItems = [{ href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' }];
+
+const adminNavItems = [
+  ...navItems,
+  { href: '/users', icon: Users, label: 'Системийн хэрэглэгчид' },
 ];
 
 function Nav() {
   const pathname = usePathname();
   const { state } = useSidebar();
+  const userRole = useUserRole();
+
+  const items = userRole === 'admin' ? adminNavItems : navItems;
 
   return (
     <SidebarMenu>
-      {navItems.map((item) => (
+      {items.map((item) => (
         <SidebarMenuItem key={item.href}>
           <Link href={item.href}>
             <SidebarMenuButton
@@ -67,7 +78,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarHeader>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-8 w-8">
-            <svg
+              <svg
                 width="100%"
                 height="100%"
                 viewBox="0 0 714 735"
@@ -102,7 +113,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 rounded-lg bg-background/50 p-2">
               <Avatar className="h-8 w-8">
-                <AvatarImage src="https://placehold.co/100x100" data-ai-hint="person portrait" />
+                <AvatarImage
+                  src="https://placehold.co/100x100"
+                  data-ai-hint="person portrait"
+                />
                 <AvatarFallback>AD</AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
