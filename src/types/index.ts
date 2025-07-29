@@ -36,5 +36,4 @@ export type SystemUser = {
   role: UserRole;
   status: UserStatus;
   createdAt: Date;
-  avatarUrl?: string;
 };
