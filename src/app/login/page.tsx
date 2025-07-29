@@ -7,6 +7,9 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -41,25 +44,55 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    // TODO: Implement Firebase login logic here
-    console.log(values);
-    
-    // Simulate API call
-    setTimeout(() => {
-      // On success:
-      toast({
-        title: 'Амжилттай нэвтэрлээ',
-      });
-      router.push('/dashboard');
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
 
-      // On error:
-      // toast({
-      //   variant: 'destructive',
-      //   title: 'Нэвтрэхэд алдаа гарлаа',
-      //   description: 'Таны и-мэйл эсвэл нууц үг буруу байна.',
-      // });
+      // Check user status in Firestore
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.status === 'active') {
+          toast({
+            title: 'Амжилттай нэвтэрлээ',
+          });
+          router.push('/dashboard');
+        } else if (userData.status === 'pending') {
+           await auth.signOut();
+           toast({
+            variant: 'destructive',
+            title: 'Нэвтрэх боломжгүй',
+            description: 'Таны бүртгэлийг админ хараахан зөвшөөрөөгүй байна.',
+          });
+        } else {
+           await auth.signOut();
+           toast({
+            variant: 'destructive',
+            title: 'Нэвтрэх боломжгүй',
+            description: 'Таны хаяг идэвхгүйжүүлэгдсэн байна. Админтай холбогдоно уу.',
+          });
+        }
+      } else {
+         await auth.signOut();
+         toast({
+            variant: 'destructive',
+            title: 'Алдаа',
+            description: 'Хэрэглэгчийн мэдээлэл олдсонгүй.',
+          });
+      }
+
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Нэвтрэхэд алдаа гарлаа',
+        description: 'Таны и-мэйл эсвэл нууц үг буруу байна.',
+      });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   }
 
   return (

@@ -6,6 +6,9 @@ import { z } from 'zod';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -48,14 +51,36 @@ export default function SignupPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    // TODO: Implement Firebase user creation and Firestore document creation logic here
-    console.log(values);
-    
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        lastName: values.lastName,
+        firstName: values.firstName,
+        phone: values.phone,
+        email: values.email,
+        role: 'manager',
+        status: 'pending',
+        createdAt: new Date(),
+      });
+
       setIsSubmitted(true);
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      let errorMessage = 'Бүртгүүлэхэд алдаа гарлаа.';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'Энэ и-мэйл хаяг бүртгэлтэй байна.';
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Алдаа',
+        description: errorMessage,
+      });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   }
 
   if (isSubmitted) {
