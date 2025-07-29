@@ -85,7 +85,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarHeader>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-8 w-8">
-              <svg
+            <svg
                 width="100%"
                 height="100%"
                 viewBox="0 0 714 735"
@@ -93,7 +93,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 xmlns="http://www.w3.org/2000/svg"
                 xmlnsXlink="http://www.w3.org/1999/xlink"
                 xmlSpace="preserve"
-                xmlnsSerif="http://www.serif.com/"
                 style={{
                   fillRule: 'evenodd',
                   clipRule: 'evenodd',
