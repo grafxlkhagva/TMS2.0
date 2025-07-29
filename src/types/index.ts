@@ -95,3 +95,14 @@ export type Warehouse = {
     updatedAt?: Date;
 };
 
+export type Region = {
+  id: string;
+  name: string;
+  createdAt: Date;
+};
+
+export type ServiceType = {
+  id: string;
+  name: string;
+  createdAt: Date;
+};
