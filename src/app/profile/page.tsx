@@ -42,28 +42,20 @@ export default function ProfilePage() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      lastName: '',
-      firstName: '',
-      phone: '',
-      email: '',
+    values: {
+      lastName: user?.lastName || '',
+      firstName: user?.firstName || '',
+      phone: user?.phone || '',
+      email: user?.email || '',
       avatar: null,
     },
   });
 
   React.useEffect(() => {
-    if (user) {
-      form.reset({
-        lastName: user.lastName,
-        firstName: user.firstName,
-        phone: user.phone,
-        email: user.email,
-      });
-      if (user.avatarUrl) {
-        setAvatarPreview(user.avatarUrl);
-      }
+    if (user?.avatarUrl) {
+      setAvatarPreview(user.avatarUrl);
     }
-  }, [user, form]);
+  }, [user?.avatarUrl]);
   
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
