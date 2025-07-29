@@ -66,21 +66,8 @@ function Nav() {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = React.useState(true);
-
-  // Set sidebar open state based on cookie on initial load
-  React.useEffect(() => {
-    const cookieValue = document.cookie
-      .split('; ')
-      .find((row) => row.startsWith('sidebar_state='))
-      ?.split('=')[1];
-    if (cookieValue !== undefined) {
-      setOpen(cookieValue === 'true');
-    }
-  }, []);
-
   return (
-    <SidebarProvider open={open} onOpenChange={setOpen}>
+    <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
