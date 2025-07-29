@@ -44,38 +44,32 @@ export default function ProfilePage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    // Use `values` to keep the form state in sync with the user data.
-    // This is more reliable than using useEffect with reset.
-    values: {
-      lastName: user?.lastName || '',
-      firstName: user?.firstName || '',
-      phone: user?.phone || '',
-      email: user?.email || '',
+    defaultValues: {
+      lastName: '',
+      firstName: '',
+      phone: '',
+      email: '',
       avatarFile: undefined,
     },
   });
 
-  // This effect handles the initial avatar preview when the user data is loaded.
   React.useEffect(() => {
-    if (user?.avatarUrl) {
-      setAvatarPreview(user.avatarUrl);
-    }
-    // Also reset the form in case the user object changes (e.g., after a refresh)
     if (user) {
-        form.reset({
-            lastName: user.lastName || '',
-            firstName: user.firstName || '',
-            phone: user.phone || '',
-            email: user.email || '',
-            avatarFile: undefined,
-        });
+      form.reset({
+        lastName: user.lastName || '',
+        firstName: user.firstName || '',
+        phone: user.phone || '',
+        email: user.email || '',
+        avatarFile: undefined,
+      });
+      setAvatarPreview(user.avatarUrl || null);
     }
   }, [user, form]);
   
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      form.setValue('avatarFile', file);
+      form.setValue('avatarFile', file, { shouldDirty: true });
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
@@ -86,26 +80,34 @@ export default function ProfilePage() {
 
   async function onSubmit(values: FormValues) {
     if (!user) return;
+    if (!form.formState.isDirty) {
+       toast({
+          title: 'Өөрчлөлт алга',
+          description: 'Шинэчлэх мэдээлэл олдсонгүй.',
+        });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       const dataToUpdate: DocumentData = {};
-      
-      // Upload new avatar if one was selected
+      let newAvatarUrl = user.avatarUrl;
+
+      // 1. Upload new avatar if selected
       if (values.avatarFile) {
         const file = values.avatarFile;
         const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_${file.name}`);
         const snapshot = await uploadBytes(storageRef, file);
-        const newAvatarUrl = await getDownloadURL(snapshot.ref);
+        newAvatarUrl = await getDownloadURL(snapshot.ref);
         dataToUpdate.avatarUrl = newAvatarUrl;
       }
       
-      // Compare form values with original user data and add only what's changed
+      // 2. Compare form values with original user data and add only what's changed
       if (values.firstName !== user.firstName) dataToUpdate.firstName = values.firstName;
       if (values.lastName !== user.lastName) dataToUpdate.lastName = values.lastName;
       if (values.phone !== user.phone) dataToUpdate.phone = values.phone;
-
-      // Only update if there's something to update
+      
+      // 3. Update Firestore only if there are changes
       if (Object.keys(dataToUpdate).length > 0) {
         const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, dataToUpdate);
@@ -118,7 +120,7 @@ export default function ProfilePage() {
           description: 'Таны мэдээлэл амжилттай шинэчлэгдлээ.',
         });
       } else {
-        toast({
+         toast({
           title: 'Өөрчлөлт алга',
           description: 'Шинэчлэх мэдээлэл олдсонгүй.',
         });
@@ -132,7 +134,7 @@ export default function ProfilePage() {
       });
     } finally {
       setIsSubmitting(false);
-      form.setValue('avatarFile', undefined); // Clear the file input after submission
+      form.reset(form.getValues()); // Reset to the new values to clear dirty state
     }
   }
 
@@ -214,7 +216,7 @@ export default function ProfilePage() {
                   <FormField
                     control={form.control}
                     name="avatarFile"
-                    render={() => ( // No need to render anything for the file input itself
+                    render={() => ( 
                       <FormItem>
                         <FormControl>
                            <Input 
