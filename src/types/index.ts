@@ -145,8 +145,10 @@ export type OrderItem = {
     startWarehouseId: string;
     endRegionId: string;
     endWarehouseId: string;
-    deliveryStartDate: Date;
-    deliveryEndDate: Date;
+    loadingStartDate: Date;
+    loadingEndDate: Date;
+    unloadingStartDate: Date;
+    unloadingEndDate: Date;
     serviceTypeId: string;
     vehicleTypeId: string;
     trailerTypeId: string;
@@ -156,5 +158,3 @@ export type OrderItem = {
     status: OrderItemStatus;
     createdAt: Date;
 };
-
-    
