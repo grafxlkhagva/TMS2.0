@@ -787,13 +787,13 @@ export default function OrderDetailPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                <DetailItem icon={Info} label="Ачилт" value={order.conditions.loading} />
-                                <DetailItem icon={Info} label="Буулгалт" value={order.conditions.unloading} />
-                                <DetailItem icon={Info} label="ТХ-н бэлэн байдал" value={order.conditions.vehicleAvailability} />
-                                <DetailItem icon={Info} label="Төлбөрийн нөхцөл" value={order.conditions.paymentTerm} />
+                                <OrderDetailItem icon={Info} label="Ачилт" value={order.conditions.loading} />
+                                <OrderDetailItem icon={Info} label="Буулгалт" value={order.conditions.unloading} />
+                                <OrderDetailItem icon={Info} label="ТХ-н бэлэн байдал" value={order.conditions.vehicleAvailability} />
+                                <OrderDetailItem icon={Info} label="Төлбөрийн нөхцөл" value={order.conditions.paymentTerm} />
                             </div>
-                            <DetailItem icon={Info} label="Даатгал" value={order.conditions.insurance} />
-                             <DetailItem icon={Info} label="Нэмэлт нөхцөл" value={order.conditions.additionalConditions} />
+                            <OrderDetailItem icon={Info} label="Даатгал" value={order.conditions.insurance} />
+                             <OrderDetailItem icon={Info} label="Нэмэлт нөхцөл" value={order.conditions.additionalConditions} />
                              <div>
                                 <p className="text-sm text-muted-foreground flex items-center gap-3"><Info className="h-4 w-4"/>Зөвшөөрөл</p>
                                 <div className="font-medium mt-2 space-y-1 pl-7">
