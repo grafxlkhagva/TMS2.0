@@ -2,10 +2,10 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, orderBy, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Order, OrderItem, Warehouse, ServiceType } from '@/types';
+import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -57,7 +57,7 @@ function OrderDetailItem({ icon: Icon, label, value }: { icon: React.ElementType
         <Icon className="h-4 w-4 mt-1 text-muted-foreground" />
         <div>
             <p className="text-sm text-muted-foreground">{label}</p>
-            <p className="font-medium">{value}</p>
+            <div className="font-medium">{value}</div>
         </div>
     </div>
   );
@@ -87,10 +87,13 @@ export default function OrderDetailPage() {
   const [orderItems, setOrderItems] = React.useState<OrderItem[]>([]);
   const [warehouses, setWarehouses] = React.useState<Warehouse[]>([]);
   const [serviceTypes, setServiceTypes] = React.useState<ServiceType[]>([]);
+  const [customerEmployees, setCustomerEmployees] = React.useState<CustomerEmployee[]>([]);
+
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [itemToDelete, setItemToDelete] = React.useState<OrderItem | null>(null);
+  const [isUpdatingEmployee, setIsUpdatingEmployee] = React.useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -117,12 +120,14 @@ export default function OrderDetailPage() {
         return;
       }
       const data = orderDocSnap.data();
-      setOrder({ id: orderDocSnap.id, ...data, createdAt: data.createdAt.toDate() } as Order);
+      const currentOrder = { id: orderDocSnap.id, ...data, createdAt: data.createdAt.toDate() } as Order;
+      setOrder(currentOrder);
 
-      const [itemsSnap, warehouseSnap, serviceTypeSnap] = await Promise.all([
+      const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap] = await Promise.all([
         getDocs(query(collection(db, 'order_items'), where('orderId', '==', orderId))),
         getDocs(query(collection(db, "warehouses"), orderBy("name"))),
         getDocs(query(collection(db, "service_types"), orderBy("name"))),
+        getDocs(query(collection(db, 'customer_employees'), where('customerId', '==', currentOrder.customerId)))
       ]);
       
       const itemsData = itemsSnap.docs.map(d => {
@@ -134,6 +139,8 @@ export default function OrderDetailPage() {
 
       setWarehouses(warehouseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Warehouse)));
       setServiceTypes(serviceTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceType)));
+      setCustomerEmployees(employeesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomerEmployee)));
+
 
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -161,6 +168,37 @@ export default function OrderDetailPage() {
       setItemToDelete(null);
     }
   };
+
+  async function handleEmployeeChange(newEmployeeId: string) {
+    if (!order) return;
+    setIsUpdatingEmployee(true);
+    try {
+        const selectedEmployee = customerEmployees.find(e => e.id === newEmployeeId);
+        if (!selectedEmployee) {
+             toast({ variant: 'destructive', title: 'Алдаа', description: 'Сонгогдсон ажилтан олдсонгүй.' });
+             return;
+        }
+
+        const orderDocRef = doc(db, 'orders', order.id);
+        await updateDoc(orderDocRef, {
+            employeeId: newEmployeeId,
+            employeeName: `${selectedEmployee.lastName} ${selectedEmployee.firstName}`,
+        });
+
+        setOrder(prevOrder => prevOrder ? {
+             ...prevOrder,
+             employeeId: newEmployeeId,
+             employeeName: `${selectedEmployee.lastName} ${selectedEmployee.firstName}`
+        } : null);
+
+        toast({ title: 'Амжилттай', description: 'Хариуцсан ажилтан солигдлоо.' });
+    } catch (error) {
+        console.error("Error updating employee:", error);
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Ажилтан солиход алдаа гарлаа.' });
+    } finally {
+        setIsUpdatingEmployee(false);
+    }
+  }
 
   async function onSubmit(values: FormValues) {
     if (!orderId) return;
@@ -222,7 +260,24 @@ export default function OrderDetailPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <OrderDetailItem icon={Building} label="Харилцагч" value={<Link href={`/customers/${order.customerId}`} className="hover:underline text-primary">{order.customerName}</Link>} />
-            <OrderDetailItem icon={User} label="Хариуцсан ажилтан" value={order.employeeName} />
+            <OrderDetailItem 
+                icon={User} 
+                label="Хариуцсан ажилтан" 
+                value={
+                    <Select onValueChange={handleEmployeeChange} value={order.employeeId} disabled={isUpdatingEmployee || customerEmployees.length === 0}>
+                        <SelectTrigger className="w-[250px]">
+                            <SelectValue placeholder="Ажилтан сонгоно уу..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {customerEmployees.map(employee => (
+                                <SelectItem key={employee.id} value={employee.id}>
+                                  {employee.lastName} {employee.firstName}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                } 
+            />
             <OrderDetailItem icon={User} label="Бүртгэсэн хэрэглэгч" value={order.createdBy.name} />
             <OrderDetailItem icon={FileText} label="Бүртгэсэн огноо" value={order.createdAt.toLocaleString()} />
           </CardContent>
@@ -330,3 +385,5 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+
+    
