@@ -8,7 +8,7 @@ import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, getDocs, collection, query, where } from 'firebase/firestore';
+import { doc, setDoc, getDocs, collection, query, where, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
 import { Button } from '@/components/ui/button';
@@ -98,13 +98,12 @@ export default function SignupPage() {
         email: values.email,
         role: 'customer_officer',
         status: 'pending',
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
       });
-      
-      await auth.signOut();
       
       setUserEmailForCheck(values.email);
       setIsSubmitted(true);
+
     } catch (error: any) {
       console.error("Signup error:", error);
       let errorMessage = 'Бүртгүүлэхэд алдаа гарлаа.';
