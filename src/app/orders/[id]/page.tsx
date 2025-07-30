@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, orderBy, Timestamp, updateDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, Timestamp, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
 import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, VehicleType, TrailerType, Region, PackagingType, DriverQuote } from '@/types';
@@ -152,18 +152,26 @@ export default function OrderDetailPage() {
 
       const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap, packagingTypeSnap] = await Promise.all([
         getDocs(query(collection(db, 'order_items'), where('orderId', '==', orderId))),
-        getDocs(query(collection(db, "warehouses"), orderBy("name"))),
-        getDocs(query(collection(db, "service_types"), orderBy("name"))),
+        getDocs(query(collection(db, "warehouses"), where('name', '!=', ''))),
+        getDocs(query(collection(db, "service_types"), where('name', '!=', ''))),
         getDocs(query(collection(db, 'customer_employees'), where('customerId', '==', currentOrder.customerId))),
-        getDocs(query(collection(db, "vehicle_types"), orderBy("name"))),
-        getDocs(query(collection(db, "trailer_types"), orderBy("name"))),
-        getDocs(query(collection(db, "regions"), orderBy("name"))),
-        getDocs(query(collection(db, "packaging_types"), orderBy("name"))),
+        getDocs(query(collection(db, "vehicle_types"), where('name', '!=', ''))),
+        getDocs(query(collection(db, "trailer_types"), where('name', '!=', ''))),
+        getDocs(query(collection(db, "regions"), where('name', '!=', ''))),
+        getDocs(query(collection(db, "packaging_types"), where('name', '!=', ''))),
       ]);
       
       const itemsData: OrderItem[] = itemsSnap.docs.map(d => {
         const data = d.data();
-        return {id: d.id, ...data, createdAt: data.createdAt.toDate() } as OrderItem
+        return {
+            id: d.id, 
+            ...data,
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt,
+            loadingStartDate: data.loadingStartDate instanceof Timestamp ? data.loadingStartDate.toDate() : data.loadingStartDate,
+            loadingEndDate: data.loadingEndDate instanceof Timestamp ? data.loadingEndDate.toDate() : data.loadingEndDate,
+            unloadingStartDate: data.unloadingStartDate instanceof Timestamp ? data.unloadingStartDate.toDate() : data.unloadingStartDate,
+            unloadingEndDate: data.unloadingEndDate instanceof Timestamp ? data.unloadingEndDate.toDate() : data.unloadingEndDate,
+        } as OrderItem
       });
       itemsData.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       setOrderItems(itemsData);
@@ -173,7 +181,14 @@ export default function OrderDetailPage() {
       for (const item of itemsData) {
           const quotesQuery = query(collection(db, 'driver_quotes'), where('orderItemId', '==', item.id));
           const quotesSnapshot = await getDocs(quotesQuery);
-          let quotesData = quotesSnapshot.docs.map(d => ({id: d.id, ...d.data(), createdAt: d.data().createdAt.toDate()} as DriverQuote));
+          let quotesData = quotesSnapshot.docs.map(d => {
+            const data = d.data();
+            return {
+                id: d.id, 
+                ...data, 
+                createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt
+            } as DriverQuote
+          });
           quotesData.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime());
           quotesMap.set(item.id, quotesData);
       }
@@ -624,5 +639,3 @@ export default function OrderDetailPage() {
     </div>
   );
 }
-
-    
