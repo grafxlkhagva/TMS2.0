@@ -472,6 +472,8 @@ function OrderItemForm({ form, itemIndex, onRemove, serviceTypes, regions, wareh
     });
   }
 
+  const standardUnits = ["кг", "тн", "м3", "литр", "ш", "боодол", "хайрцаг"];
+
   return (
     <div className="p-4 border rounded-md relative space-y-4">
         <div className="flex justify-between items-center">
@@ -599,8 +601,27 @@ function OrderItemForm({ form, itemIndex, onRemove, serviceTypes, regions, wareh
                 <div key={cargoField.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start p-2 border rounded-md">
                      <FormField control={form.control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.name`} render={({ field }: any) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Нэр</FormLabel><FormControl><Input placeholder="Цемент" {...field} /></FormControl><FormMessage /></FormItem>)} />
                      <FormField control={form.control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.quantity`} render={({ field }: any) => (<FormItem className="md:col-span-1"><FormLabel className="text-xs">Хэмжээ</FormLabel><FormControl><Input type="number" placeholder="25" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                     <FormField control={form.control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.unit`} render={({ field }: any) => (<FormItem className="md:col-span-1"><FormLabel className="text-xs">Нэгж</FormLabel><FormControl><Input placeholder="тн" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                     <FormField control={form.control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.packagingTypeId`} render={({ field }: any) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Баглаа</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Сонгох..." /></SelectTrigger></FormControl><SelectContent>{packagingTypes.map((p: any) => ( <SelectItem key={p.id} value={p.id}> {p.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                     <FormField control={form.control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.unit`} render={({ field }: any) => (
+                        <FormItem className="md:col-span-2">
+                          <FormLabel className="text-xs">Нэгж</FormLabel>
+                           <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Нэгж..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {standardUnits.map(unit => (
+                                <SelectItem key={unit} value={unit}>
+                                  {unit}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                     <FormField control={form.control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.packagingTypeId`} render={({ field }: any) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Баглаа</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Сонгох..." /></SelectTrigger></FormControl><SelectContent>{packagingTypes.map((p: any) => ( <SelectItem key={p.id} value={p.id}> {p.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)} />
                      <FormField control={form.control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.notes`} render={({ field }: any) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Input placeholder="..." {...field} /></FormControl><FormMessage /></FormItem>)} />
                      <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive self-end" onClick={() => remove(cargoIndex)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
@@ -611,3 +632,5 @@ function OrderItemForm({ form, itemIndex, onRemove, serviceTypes, regions, wareh
     </div>
   )
 }
+
+    
