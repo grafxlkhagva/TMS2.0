@@ -695,16 +695,17 @@ export default function OrderDetailPage() {
                         <Accordion type="multiple" className="w-full">
                            {orderItems.map((item, index) => (
                                <AccordionItem value={`item-${index}`} key={item.id}>
-                                   <AccordionTrigger>
-                                        <div className="flex items-center gap-4 w-full pr-4">
+                                   <div className="flex items-center gap-4 w-full pr-4 border-b">
+                                       <div className="py-4 pl-4">
                                             <Checkbox
                                                 id={`select-item-${item.id}`}
                                                 checked={selectedItemsForQuote.has(item.id)}
                                                 onCheckedChange={() => handleSelectItemForQuote(item.id)}
-                                                onClick={(e) => e.stopPropagation()} 
                                                 disabled={!item.acceptedQuoteId}
                                                 aria-label="Нэгдсэн саналд нэмэх"
                                             />
+                                       </div>
+                                       <AccordionTrigger className="flex-1 py-4 pr-0 border-b-0">
                                             <div className="flex justify-between w-full">
                                                 <div className="text-left">
                                                     <p className="font-semibold">Тээвэрлэлт #{index + 1}: {getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</p>
@@ -717,8 +718,8 @@ export default function OrderDetailPage() {
                                                 <Badge variant={item.status === 'Assigned' ? 'default' : 'secondary'}>{item.status}</Badge>
                                                 </div>
                                            </div>
-                                        </div>
-                                   </AccordionTrigger>
+                                       </AccordionTrigger>
+                                   </div>
                                    <AccordionContent className="space-y-4">
                                        <div className="flex items-center justify-end gap-2 px-4 pb-4 border-b">
                                            <Button variant="outline" size="sm" asChild>
@@ -897,5 +898,7 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+
+    
 
     
