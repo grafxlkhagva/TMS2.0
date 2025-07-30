@@ -80,6 +80,7 @@ export type Warehouse = {
     id: string;
     name: string;
     location: string;
+    regionId: string;
     geolocation: {
         lat: number;
         lng: number;
@@ -140,11 +141,18 @@ export type Order = {
 export type OrderItem = {
     id: string;
     orderId: string;
+    startRegionId: string;
     startWarehouseId: string;
+    endRegionId: string;
     endWarehouseId: string;
+    deliveryStartDate: Date;
+    deliveryEndDate: Date;
     serviceTypeId: string;
+    vehicleTypeId: string;
+    trailerTypeId: string;
+    totalDistance: number;
+    cargoWeight: number;
     cargoInfo: string;
-    deliveryDate: Date;
     status: OrderItemStatus;
     createdAt: Date;
 };

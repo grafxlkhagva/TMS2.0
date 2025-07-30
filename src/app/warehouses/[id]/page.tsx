@@ -2,10 +2,10 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Warehouse } from '@/types';
+import type { Warehouse, Region } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useLoadScript, GoogleMap, Marker } from '@react-google-maps/api';
@@ -34,6 +34,7 @@ export default function WarehouseDetailPage() {
   const { toast } = useToast();
 
   const [warehouse, setWarehouse] = React.useState<Warehouse | null>(null);
+  const [regionName, setRegionName] = React.useState<string>('');
   const [isLoading, setIsLoading] = React.useState(true);
   
   const { isLoaded: isMapLoaded } = useLoadScript({
@@ -50,12 +51,20 @@ export default function WarehouseDetailPage() {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          const data = docSnap.data();
+          const data = docSnap.data() as Warehouse;
           setWarehouse({
             id: docSnap.id,
             ...data,
             createdAt: data.createdAt.toDate(),
-          } as Warehouse);
+          });
+
+          if (data.regionId) {
+            const regionDoc = await getDoc(doc(db, 'regions', data.regionId));
+            if (regionDoc.exists()) {
+              setRegionName(regionDoc.data().name);
+            }
+          }
+
         } else {
           toast({ variant: 'destructive', title: 'Алдаа', description: 'Агуулах олдсонгүй.' });
           router.push('/warehouses');
@@ -135,6 +144,7 @@ export default function WarehouseDetailPage() {
             <CardTitle>Агуулахын мэдээлэл</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <DetailItem icon={MapPin} label="Бүс нутаг" value={regionName} />
             <DetailItem icon={MapPin} label="Агуулахын байршил" value={warehouse.location} />
             <DetailItem icon={Building} label="Эзэмшигч байгууллага" value={warehouse.customerName} />
             <DetailItem icon={User} label="Холбоо барих хүний нэр" value={warehouse.contactName} />

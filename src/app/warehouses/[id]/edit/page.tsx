@@ -10,7 +10,7 @@ import { doc, getDoc, updateDoc, serverTimestamp, collection, getDocs, query, or
 import { db } from '@/lib/firebase';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import type { Warehouse, Customer } from '@/types';
+import type { Warehouse, Customer, Region } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -31,6 +31,7 @@ import LocationPicker from '@/components/location-picker';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Агуулахын нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
+  regionId: z.string().min(1, { message: 'Бүс нутаг сонгоно уу.' }),
   location: z.string().min(5, { message: 'Байршил сонгоно уу.' }),
    geolocation: z.object({
       lat: z.number(),
@@ -54,24 +55,35 @@ export default function EditWarehousePage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [warehouseName, setWarehouseName] = React.useState('');
   const [customers, setCustomers] = React.useState<Customer[]>([]);
+  const [regions, setRegions] = React.useState<Region[]>([]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
   });
   
   React.useEffect(() => {
-    const fetchCustomers = async () => {
+     const fetchRelatedData = async () => {
       try {
-        const q = query(collection(db, "customers"), orderBy("name"));
-        const querySnapshot = await getDocs(q);
-        const customersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
+        const customersQuery = query(collection(db, "customers"), orderBy("name"));
+        const regionsQuery = query(collection(db, "regions"), orderBy("name"));
+
+        const [customersSnapshot, regionsSnapshot] = await Promise.all([
+            getDocs(customersQuery),
+            getDocs(regionsQuery)
+        ]);
+
+        const customersData = customersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
         setCustomers(customersData);
+
+        const regionsData = regionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Region));
+        setRegions(regionsData);
+
       } catch (error) {
-        console.error("Error fetching customers:", error);
-        toast({ variant: 'destructive', title: 'Алдаа', description: 'Харилцагчдын мэдээлэл татахад алдаа гарлаа.'});
+        console.error("Error fetching data:", error);
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Хамааралтай мэдээлэл татахад алдаа гарлаа.'});
       }
     };
-    fetchCustomers();
+    fetchRelatedData();
   }, [toast]);
 
   React.useEffect(() => {
@@ -181,19 +193,45 @@ export default function EditWarehousePage() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Агуулахын нэр</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Нарны агуулах" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Агуулахын нэр</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Нарны агуулах" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="regionId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Бүс нутаг</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Бүс нутаг сонгоно уу..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {regions.map(region => (
+                            <SelectItem key={region.id} value={region.id}>
+                              {region.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                   control={form.control}

@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { collection, getDocs, orderBy, query, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Warehouse } from '@/types';
+import type { Warehouse, Region } from '@/types';
 import {
   Table,
   TableBody,
@@ -41,6 +41,7 @@ import {
 
 export default function WarehousesPage() {
   const [warehouses, setWarehouses] = React.useState<Warehouse[]>([]);
+  const [regions, setRegions] = React.useState<Map<string, string>>(new Map());
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [itemToDelete, setItemToDelete] = React.useState<Warehouse | null>(null);
@@ -50,17 +51,27 @@ export default function WarehousesPage() {
   const fetchWarehouses = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const q = query(collection(db, "warehouses"), orderBy("createdAt", "desc"));
-      const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map(doc => {
-        const docData = doc.data();
-        return {
-          id: doc.id,
-          ...docData,
-          createdAt: docData.createdAt.toDate(),
-        } as Warehouse;
-      });
-      setWarehouses(data);
+        const warehousesQuery = query(collection(db, "warehouses"), orderBy("createdAt", "desc"));
+        const regionsQuery = query(collection(db, "regions"));
+        
+        const [warehousesSnapshot, regionsSnapshot] = await Promise.all([
+            getDocs(warehousesQuery),
+            getDocs(regionsQuery)
+        ]);
+        
+        const regionsMap = new Map(regionsSnapshot.docs.map(doc => [doc.id, doc.data().name]));
+        setRegions(regionsMap);
+
+        const data = warehousesSnapshot.docs.map(doc => {
+            const docData = doc.data();
+            return {
+            id: doc.id,
+            ...docData,
+            createdAt: docData.createdAt.toDate(),
+            } as Warehouse;
+        });
+        setWarehouses(data);
+
     } catch (error) {
       console.error("Error fetching warehouses: ", error);
       toast({
@@ -138,6 +149,7 @@ export default function WarehousesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Нэр</TableHead>
+                <TableHead>Бүс нутаг</TableHead>
                 <TableHead>Байршил</TableHead>
                 <TableHead>Эзэмшигч</TableHead>
                 <TableHead>Бүртгүүлсэн</TableHead>
@@ -149,6 +161,7 @@ export default function WarehousesPage() {
                 Array.from({ length: 5 }).map((_, index) => (
                   <TableRow key={index}>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
@@ -163,6 +176,7 @@ export default function WarehousesPage() {
                           {warehouse.name}
                         </Link>
                       </TableCell>
+                      <TableCell>{regions.get(warehouse.regionId) || 'Тодорхойгүй'}</TableCell>
                       <TableCell>{warehouse.location}</TableCell>
                       <TableCell>{warehouse.customerName || 'Тодорхойгүй'}</TableCell>
                       <TableCell>{warehouse.createdAt.toLocaleDateString()}</TableCell>
@@ -200,7 +214,7 @@ export default function WarehousesPage() {
                 ))
               ) : (
                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                         {searchTerm ? "Хайлтад тохирох үр дүн олдсонгүй." : "Бүртгэлтэй агуулах олдсонгүй."}
                     </TableCell>
                  </TableRow>
