@@ -150,7 +150,7 @@ export default function OrderDetailPage() {
       setOrder(currentOrder);
 
       const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap, packagingTypeSnap] = await Promise.all([
-        getDocs(query(collection(db, 'order_items'), where('orderId', '==', orderId))),
+        getDocs(query(collection(db, 'order_items'), where('orderId', '==', orderId), orderBy("createdAt"))),
         getDocs(query(collection(db, "warehouses"), orderBy("name"))),
         getDocs(query(collection(db, "service_types"), orderBy("name"))),
         getDocs(query(collection(db, 'customer_employees'), where('customerId', '==', currentOrder.customerId))),
@@ -369,8 +369,8 @@ export default function OrderDetailPage() {
                             <TableRow>
                                 <TableHead>Үйлчилгээ</TableHead>
                                 <TableHead>Давтамж</TableHead>
-                                <TableHead>Ачих агуулах</TableHead>
-                                <TableHead>Буулгах агуулах</TableHead>
+                                <TableHead>Ачих огноо</TableHead>
+                                <TableHead>Буулгах огноо</TableHead>
                                 <TableHead className="text-right"></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -380,8 +380,8 @@ export default function OrderDetailPage() {
                                     <TableRow key={item.id}>
                                         <TableCell>{getServiceName(item.serviceTypeId)}</TableCell>
                                         <TableCell>{item.frequency}</TableCell>
-                                        <TableCell>{getWarehouseName(item.startWarehouseId)}</TableCell>
-                                        <TableCell>{getWarehouseName(item.endWarehouseId)}</TableCell>
+                                        <TableCell>{format(item.loadingStartDate, "yyyy-MM-dd")}</TableCell>
+                                        <TableCell>{format(item.unloadingStartDate, "yyyy-MM-dd")}</TableCell>
                                         <TableCell className="text-right">
                                             <Button variant="ghost" size="icon" onClick={() => setItemToDelete(item)}>
                                                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -476,127 +476,143 @@ function OrderItemForm({ form, itemIndex, onRemove, serviceTypes, regions, wareh
 
   return (
     <div className="p-4 border rounded-md relative space-y-4">
-        <div className="flex justify-between items-center">
-            <h4 className="font-semibold">Тээвэрлэлт #{itemIndex + 1}</h4>
+        <div className="flex justify-between items-center mb-2">
+            <h4 className="font-semibold text-lg">Тээвэрлэлт #{itemIndex + 1}</h4>
             <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={onRemove}>
                 <Trash2 className="h-4 w-4" />
             </Button>
         </div>
         <Separator/>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={form.control} name={`items.${itemIndex}.serviceTypeId`} render={({ field }: any) => (<FormItem><FormLabel>Үйлчилгээний төрөл</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{serviceTypes.map((s: any) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-            <FormField control={form.control} name={`items.${itemIndex}.frequency`} render={({ field }: any) => ( <FormItem><FormLabel>Давтамж</FormLabel><FormControl><Input type="number" placeholder="1" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={form.control} name={`items.${itemIndex}.startRegionId`} render={({ field }: any) => ( <FormItem><FormLabel>Ачих бүс</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map((r: any) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-            <FormField control={form.control} name={`items.${itemIndex}.startWarehouseId`} render={({ field }: any) => ( <FormItem><FormLabel>Ачих агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map((w: any) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+
+        <div className="space-y-4">
+            <h5 className="font-semibold mt-4">Тээврийн үйлчилгээ</h5>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField control={form.control} name={`items.${itemIndex}.serviceTypeId`} render={({ field }: any) => (<FormItem><FormLabel>Үйлчилгээний төрөл</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{serviceTypes.map((s: any) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name={`items.${itemIndex}.frequency`} render={({ field }: any) => ( <FormItem><FormLabel>Давтамж</FormLabel><FormControl><Input type="number" placeholder="1" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+             </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={form.control} name={`items.${itemIndex}.endRegionId`} render={({ field }: any) => ( <FormItem><FormLabel>Буулгах бүс</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map((r: any) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-            <FormField control={form.control} name={`items.${itemIndex}.endWarehouseId`} render={({ field }: any) => ( <FormItem><FormLabel>Буулгах агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map((w: any) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={form.control} name={`items.${itemIndex}.vehicleTypeId`} render={({ field }: any) => (<FormItem><FormLabel>Машин</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{vehicleTypes.map((s: any) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-            <FormField control={form.control} name={`items.${itemIndex}.trailerTypeId`} render={({ field }: any) => (<FormItem><FormLabel>Тэвш</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{trailerTypes.map((s: any) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-        </div>
-        <FormField control={form.control} name={`items.${itemIndex}.totalDistance`} render={({ field }: any) => ( <FormItem><FormLabel>Нийт зам (км)</FormLabel><FormControl><Input type="number" placeholder="500" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={form.control} name={`items.${itemIndex}.loadingDateRange`} render={({ field }: any) => (
-                <FormItem className="flex flex-col">
-                    <FormLabel>Ачих огноо</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <FormControl>
-                            <Button
-                            variant={'outline'}
-                            className={cn(
-                                'w-full justify-start text-left font-normal',
-                                !field.value?.from && 'text-muted-foreground'
-                            )}
-                            >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value?.from ? (
-                                field.value.to ? (
-                                <>
-                                    {format(field.value.from, 'LLL dd, y')} -{' '}
-                                    {format(field.value.to, 'LLL dd, y')}
-                                </>
+
+        <Separator/>
+        
+        <div className="space-y-4">
+            <h5 className="font-semibold">Тээврийн чиглэл</h5>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField control={form.control} name={`items.${itemIndex}.startRegionId`} render={({ field }: any) => ( <FormItem><FormLabel>Ачих бүс</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map((r: any) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name={`items.${itemIndex}.startWarehouseId`} render={({ field }: any) => ( <FormItem><FormLabel>Ачих агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map((w: any) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField control={form.control} name={`items.${itemIndex}.endRegionId`} render={({ field }: any) => ( <FormItem><FormLabel>Буулгах бүс</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map((r: any) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name={`items.${itemIndex}.endWarehouseId`} render={({ field }: any) => ( <FormItem><FormLabel>Буулгах агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map((w: any) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+            </div>
+             <FormField control={form.control} name={`items.${itemIndex}.totalDistance`} render={({ field }: any) => ( <FormItem><FormLabel>Нийт зам (км)</FormLabel><FormControl><Input type="number" placeholder="500" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField control={form.control} name={`items.${itemIndex}.loadingDateRange`} render={({ field }: any) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Ачих огноо</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <FormControl>
+                                <Button
+                                variant={'outline'}
+                                className={cn(
+                                    'w-full justify-start text-left font-normal',
+                                    !field.value?.from && 'text-muted-foreground'
+                                )}
+                                >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value?.from ? (
+                                    field.value.to ? (
+                                    <>
+                                        {format(field.value.from, 'LLL dd, y')} -{' '}
+                                        {format(field.value.to, 'LLL dd, y')}
+                                    </>
+                                    ) : (
+                                    format(field.value.from, 'LLL dd, y')
+                                    )
                                 ) : (
-                                format(field.value.from, 'LLL dd, y')
-                                )
-                            ) : (
-                                <span>Огноо сонгох</span>
-                            )}
-                            </Button>
-                        </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={field.value?.from}
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            numberOfMonths={2}
-                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                        />
-                        </PopoverContent>
-                    </Popover>
-                    <FormDescription>Эхлэх огноог сонгохдоо хоёр товшино уу.</FormDescription>
-                    <FormMessage />
-                </FormItem>
-            )}/>
-              <FormField control={form.control} name={`items.${itemIndex}.unloadingDateRange`} render={({ field }: any) => (
-                <FormItem className="flex flex-col">
-                    <FormLabel>Буулгах огноо</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <FormControl>
-                            <Button
-                            variant={'outline'}
-                            className={cn(
-                                'w-full justify-start text-left font-normal',
-                                !field.value?.from && 'text-muted-foreground'
-                            )}
-                            >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value?.from ? (
-                                field.value.to ? (
-                                <>
-                                    {format(field.value.from, 'LLL dd, y')} -{' '}
-                                    {format(field.value.to, 'LLL dd, y')}
-                                </>
+                                    <span>Огноо сонгох</span>
+                                )}
+                                </Button>
+                            </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={field.value?.from}
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                numberOfMonths={2}
+                                disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                            />
+                            </PopoverContent>
+                        </Popover>
+                        <FormDescription>Эхлэх огноог сонгохдоо хоёр товшино уу.</FormDescription>
+                        <FormMessage />
+                    </FormItem>
+                )}/>
+                <FormField control={form.control} name={`items.${itemIndex}.unloadingDateRange`} render={({ field }: any) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Буулгах огноо</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <FormControl>
+                                <Button
+                                variant={'outline'}
+                                className={cn(
+                                    'w-full justify-start text-left font-normal',
+                                    !field.value?.from && 'text-muted-foreground'
+                                )}
+                                >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value?.from ? (
+                                    field.value.to ? (
+                                    <>
+                                        {format(field.value.from, 'LLL dd, y')} -{' '}
+                                        {format(field.value.to, 'LLL dd, y')}
+                                    </>
+                                    ) : (
+                                    format(field.value.from, 'LLL dd, y')
+                                    )
                                 ) : (
-                                format(field.value.from, 'LLL dd, y')
-                                )
-                            ) : (
-                                <span>Огноо сонгох</span>
-                            )}
-                            </Button>
-                        </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={field.value?.from}
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            numberOfMonths={2}
-                            disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                        />
-                        </PopoverContent>
-                    </Popover>
-                    <FormDescription>Эхлэх огноог сонгохдоо хоёр товшино уу.</FormDescription>
-                    <FormMessage />
-                </FormItem>
-            )}/>
+                                    <span>Огноо сонгох</span>
+                                )}
+                                </Button>
+                            </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={field.value?.from}
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                numberOfMonths={2}
+                                disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                            />
+                            </PopoverContent>
+                        </Popover>
+                        <FormDescription>Эхлэх огноог сонгохдоо хоёр товшино уу.</FormDescription>
+                        <FormMessage />
+                    </FormItem>
+                )}/>
+            </div>
+        </div>
+
+        <Separator/>
+
+        <div className="space-y-4">
+             <h5 className="font-semibold">Тээврийн хэрэгсэл</h5>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField control={form.control} name={`items.${itemIndex}.vehicleTypeId`} render={({ field }: any) => (<FormItem><FormLabel>Машин</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{vehicleTypes.map((s: any) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name={`items.${itemIndex}.trailerTypeId`} render={({ field }: any) => (<FormItem><FormLabel>Тэвш</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{trailerTypes.map((s: any) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+            </div>
         </div>
         
         <Separator />
 
         <div className="space-y-2">
-            <h5 className="font-semibold">Ачааны мэдээлэл</h5>
+            <h5 className="font-semibold">Ачаа</h5>
             {fields.map((cargoField, cargoIndex) => (
                 <div key={cargoField.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start p-2 border rounded-md">
                      <FormField control={form.control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.name`} render={({ field }: any) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Нэр</FormLabel><FormControl><Input placeholder="Цемент" {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -632,7 +648,3 @@ function OrderItemForm({ form, itemIndex, onRemove, serviceTypes, regions, wareh
     </div>
   )
 }
-
-    
-
-    
