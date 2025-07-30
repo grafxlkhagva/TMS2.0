@@ -377,6 +377,35 @@ export default function OrderDetailPage() {
     }
   }
 
+  const handleRevertQuoteSelection = async (item: OrderItem, acceptedQuote: DriverQuote) => {
+    setIsSubmitting(true);
+    try {
+        const batch = writeBatch(db);
+        const itemQuotes = quotes.get(item.id) || [];
+
+        // 1. Revert all quotes for this item to 'Pending'
+        itemQuotes.forEach(q => {
+             batch.update(doc(db, 'driver_quotes', q.id), { status: 'Pending' });
+        });
+
+        // 2. Revert the order item itself
+        const orderItemRef = doc(db, 'order_items', item.id);
+        batch.update(orderItemRef, {
+            acceptedQuoteId: null,
+            finalPrice: null,
+            status: 'Pending'
+        });
+
+        await batch.commit();
+        toast({ title: 'Буцаалаа', description: 'Жолоочийн сонголтыг буцаалаа. Та шинээр сонгох боломжтой.' });
+        fetchOrderData();
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Сонголтыг буцаахад алдаа гарлаа.' });
+    } finally {
+        setIsSubmitting(false);
+    }
+  }
+
   const handleDeleteQuote = async (quoteId: string) => {
       try {
           await deleteDoc(doc(db, 'driver_quotes', quoteId));
@@ -588,16 +617,23 @@ export default function OrderDetailPage() {
                                                             </Badge>
                                                         </TableCell>
                                                         <TableCell className="text-right">
-                                                            {quote.status === 'Pending' && !item.acceptedQuoteId && (
-                                                                <Button size="sm" onClick={() => handleAcceptQuote(item, quote)} disabled={isSubmitting}>
-                                                                    <CheckCircle className="mr-2 h-4 w-4"/> Сонгох
-                                                                </Button>
-                                                            )}
-                                                             {quote.status !== 'Accepted' && (
-                                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteQuote(quote.id)} disabled={isSubmitting}>
-                                                                    <Trash2 className="h-4 w-4 text-destructive"/>
-                                                                </Button>
-                                                             )}
+                                                            <div className="flex gap-2 justify-end">
+                                                                {quote.status === 'Accepted' ? (
+                                                                     <Button size="sm" variant="destructive" onClick={() => handleRevertQuoteSelection(item, quote)} disabled={isSubmitting}>
+                                                                         <XCircle className="mr-2 h-4 w-4"/> Буцаах
+                                                                     </Button>
+                                                                ) : (
+                                                                    <Button size="sm" onClick={() => handleAcceptQuote(item, quote)} disabled={isSubmitting || !!item.acceptedQuoteId}>
+                                                                        <CheckCircle className="mr-2 h-4 w-4"/> Сонгох
+                                                                    </Button>
+                                                                )}
+
+                                                                {quote.status !== 'Accepted' && (
+                                                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteQuote(quote.id)} disabled={isSubmitting}>
+                                                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                                                    </Button>
+                                                                )}
+                                                            </div>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))
