@@ -514,9 +514,14 @@ export default function OrderDetailPage() {
                                    <div className="flex justify-between w-full pr-4">
                                        <div className="text-left">
                                            <p className="font-semibold">Тээвэрлэлт #{index + 1}: {getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</p>
-                                           <p className="text-sm text-muted-foreground">{getServiceName(item.serviceTypeId)} | {format(item.loadingStartDate, "yyyy-MM-dd")}</p>
+                                           <p className="text-sm text-muted-foreground">{getServiceName(item.serviceTypeId)} | {format(new Date(item.loadingStartDate), "yyyy-MM-dd")}</p>
                                        </div>
-                                       <Badge variant={item.status === 'Assigned' ? 'default' : 'secondary'}>{item.status}</Badge>
+                                       <div className="flex items-center gap-4">
+                                            {item.finalPrice && (
+                                                <p className="font-semibold text-primary">{item.finalPrice.toLocaleString()}₮</p>
+                                            )}
+                                           <Badge variant={item.status === 'Assigned' ? 'default' : 'secondary'}>{item.status}</Badge>
+                                       </div>
                                    </div>
                                </AccordionTrigger>
                                <AccordionContent className="space-y-4">
