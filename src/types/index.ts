@@ -120,6 +120,12 @@ export type TrailerType = {
   createdAt: Date;
 };
 
+export type PackagingType = {
+  id: string;
+  name: string;
+  createdAt: Date;
+};
+
 export type OrderStatus = 'Pending' | 'Processing' | 'Completed' | 'Cancelled';
 export type OrderItemStatus = 'Pending' | 'Assigned' | 'In Transit' | 'Delivered' | 'Cancelled';
 
@@ -153,11 +159,17 @@ export type OrderItem = {
     vehicleTypeId: string;
     trailerTypeId: string;
     totalDistance: number;
-    cargoWeight: number;
-    cargoInfo: string;
     status: OrderItemStatus;
     createdAt: Date;
     frequency: number;
 };
 
-    
+export type OrderItemCargo = {
+    id: string;
+    orderItemId: string;
+    name: string;
+    quantity: number;
+    unit: string;
+    packagingTypeId: string;
+    notes?: string;
+};

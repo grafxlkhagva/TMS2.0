@@ -3,7 +3,7 @@
 'use client';
 
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowRight, CaseSensitive, Map, Truck, Car, Container } from "lucide-react";
+import { ArrowRight, CaseSensitive, Map, Truck, Car, Container, Package } from "lucide-react";
 import Link from "next/link";
 
 const settingsItems = [
@@ -36,6 +36,12 @@ const settingsItems = [
         description: "Тэвшний төрлүүдийг удирдах лавлах сан.",
         href: "/settings/trailer-types",
         icon: Container
+    },
+    {
+        title: "Баглаа боодлын төрөл",
+        description: "Ачааны баглаа боодлын төрлийн лавлах сан.",
+        href: "/settings/packaging-types",
+        icon: Package
     }
 ]
 
