@@ -41,6 +41,7 @@ import OrderItemForm from '@/components/order-item-form';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 
 const quoteFormSchema = z.object({
@@ -147,7 +148,11 @@ export default function OrderDetailPage() {
         return;
       }
       const data = orderDocSnap.data();
-      const currentOrder = { id: orderDocSnap.id, ...data, createdAt: data.createdAt.toDate() } as Order;
+      const currentOrder = {
+          id: orderDocSnap.id,
+          ...data,
+          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt
+      } as Order;
       setOrder(currentOrder);
 
       const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap, packagingTypeSnap] = await Promise.all([
