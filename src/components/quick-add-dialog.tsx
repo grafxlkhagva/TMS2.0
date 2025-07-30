@@ -119,39 +119,37 @@ export default function QuickAddDialog({ open, onClose, collectionName, title, o
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleAddNew)}>
-            <DialogHeader>
-              <DialogTitle>{title}</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              {isWarehouse ? (
-                <div className="space-y-4">
-                  <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Агуулахын нэр</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                  <FormField control={form.control} name="regionId" render={({ field }) => ( <FormItem><FormLabel>Бүс нутаг</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map(r => (<SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="location" render={({ field }) => ( <FormItem><FormLabel>Байршил</FormLabel><FormControl><Controller control={form.control} name="location" render={({ field: { onChange } }) => (<LocationPicker initialCoordinates={defaultGeolocation} onLocationSelect={(address, latLng) => { onChange(address); form.setValue('geolocation', latLng); form.clearErrors('location'); }} /> )}/></FormControl><FormMessage /></FormItem>)}/>
-                  <FormField control={form.control} name="conditions" render={({ field }) => ( <FormItem><FormLabel>Ачих буулгах нөхцөл</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )} />
-                  <FormField control={form.control} name="contactInfo" render={({ field }) => ( <FormItem><FormLabel>Холбоо барих мэдээлэл</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                </div>
-              ) : (
-                <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Нэр</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-              )}
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline">Цуцлах</Button>
-              </DialogClose>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Хадгалах
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+      <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 overflow-y-auto -mr-6 pr-6">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleAddNew)} id="quick-add-form" className="space-y-4">
+                  {isWarehouse ? (
+                    <div className="space-y-4">
+                      <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Агуулахын нэр</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                      <FormField control={form.control} name="regionId" render={({ field }) => ( <FormItem><FormLabel>Бүс нутаг</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map(r => (<SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                      <FormField control={form.control} name="location" render={({ field }) => ( <FormItem><FormLabel>Байршил</FormLabel><FormControl><Controller control={form.control} name="location" render={({ field: { onChange } }) => (<LocationPicker initialCoordinates={defaultGeolocation} onLocationSelect={(address, latLng) => { onChange(address); form.setValue('geolocation', latLng); form.clearErrors('location'); }} /> )}/></FormControl><FormMessage /></FormItem>)}/>
+                      <FormField control={form.control} name="conditions" render={({ field }) => ( <FormItem><FormLabel>Ачих буулгах нөхцөл</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )} />
+                      <FormField control={form.control} name="contactInfo" render={({ field }) => ( <FormItem><FormLabel>Холбоо барих мэдээлэл</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                    </div>
+                  ) : (
+                    <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Нэр</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                  )}
+              </form>
+            </Form>
+        </div>
+        <DialogFooter className="flex-shrink-0">
+          <DialogClose asChild>
+            <Button type="button" variant="outline">Цуцлах</Button>
+          </DialogClose>
+          <Button type="submit" form="quick-add-form" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Хадгалах
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-    
