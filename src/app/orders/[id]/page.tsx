@@ -15,7 +15,7 @@ import { format } from "date-fns"
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Download } from 'lucide-react';
@@ -45,6 +45,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import QuotePrintLayout from '@/components/quote-print-layout';
+import CombinedQuotePrintLayout from '@/components/combined-quote-print-layout';
 
 
 const quoteFormSchema = z.object({
@@ -128,6 +129,7 @@ export default function OrderDetailPage() {
   const [isUpdatingEmployee, setIsUpdatingEmployee] = React.useState(false);
   
   const printRefs = React.useRef<Map<string, HTMLDivElement | null>>(new Map());
+  const combinedPrintRef = React.useRef<HTMLDivElement | null>(null);
 
 
   const form = useForm<FormValues>({
@@ -461,6 +463,45 @@ export default function OrderDetailPage() {
     }
   };
 
+  const handlePrintCombinedQuote = async () => {
+    const input = combinedPrintRef.current;
+    if (!input) {
+      toast({ variant: "destructive", title: "Алдаа", description: "Хэвлэх загвар олдсонгүй." });
+      return;
+    }
+    setIsPrinting(true);
+    try {
+        const canvas = await html2canvas(input, { scale: 2 });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = pdfWidth / imgWidth;
+        const canvasHeight = imgHeight * ratio;
+        let heightLeft = canvasHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, canvasHeight);
+        heightLeft -= pdfHeight;
+
+        while (heightLeft > 0) {
+            position = -heightLeft;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, canvasHeight);
+            heightLeft -= pdfHeight;
+        }
+
+        pdf.save(`uneyn-sanal-${order?.orderNumber}-combined.pdf`);
+    } catch (error) {
+        console.error("Error generating PDF:", error);
+        toast({ variant: "destructive", title: "Алдаа", description: "PDF үүсгэхэд алдаа гарлаа." });
+    } finally {
+        setIsPrinting(false);
+    }
+  }
+
 
   if (isLoading) {
     return (
@@ -595,6 +636,44 @@ export default function OrderDetailPage() {
                     <OrderDetailItem icon={User} label="Бүртгэсэн хэрэглэгч" value={order.createdBy.name} />
                     <OrderDetailItem icon={FileText} label="Бүртгэсэн огноо" value={order.createdAt.toLocaleString()} />
                   </CardContent>
+                  <CardFooter>
+                      <Button onClick={handlePrintCombinedQuote} disabled={isPrinting} className="w-full">
+                           {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
+                           Нэгдсэн үнийн санал хэвлэх
+                      </Button>
+                  </CardFooter>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Шинэ тээвэрлэлт нэмэх</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <OrderItemForm 
+                            form={form}
+                            fields={fields}
+                            append={append}
+                            remove={remove}
+                            allData={{
+                              serviceTypes,
+                              regions,
+                              warehouses,
+                              vehicleTypes,
+                              trailerTypes,
+                              packagingTypes,
+                            }}
+                            setAllData={{
+                              setServiceTypes,
+                              setRegions,
+                              setWarehouses,
+                              setVehicleTypes,
+                              setTrailerTypes,
+                              setPackagingTypes,
+                            }}
+                            isSubmitting={isSubmitting}
+                            onSubmit={onNewItemSubmit}
+                            onAddNewItem={handleAddNewItem}
+                        />
+                    </CardContent>
                 </Card>
             </div>
         
@@ -613,7 +692,7 @@ export default function OrderDetailPage() {
                                        <div className="flex justify-between w-full pr-4">
                                            <div className="text-left">
                                                <p className="font-semibold">Тээвэрлэлт #{index + 1}: {getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</p>
-                                               <p className="text-sm text-muted-foreground">{getServiceName(item.serviceTypeId)} | {format(item.loadingStartDate, "yyyy-MM-dd")}</p>
+                                               <p className="text-sm text-muted-foreground">{getServiceName(item.serviceTypeId)} | {format(new Date(item.loadingStartDate), "yyyy-MM-dd")}</p>
                                            </div>
                                             <div className="flex items-center gap-4">
                                                 {item.finalPrice && (
@@ -674,7 +753,7 @@ export default function OrderDetailPage() {
                                                             </TableCell>
                                                             <TableCell className="text-right">
                                                                 <div className="flex gap-2 justify-end">
-                                                                    {quote.status === 'Accepted' ? (
+                                                                    {item.acceptedQuoteId === quote.id ? (
                                                                          <Button size="sm" variant="destructive" onClick={() => handleRevertQuoteSelection(item)} disabled={isSubmitting}>
                                                                              <XCircle className="mr-2 h-4 w-4"/> Буцаах
                                                                          </Button>
@@ -709,39 +788,6 @@ export default function OrderDetailPage() {
                     </CardContent>
                 </Card>
 
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Шинэ тээвэрлэлт нэмэх</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <OrderItemForm 
-                            form={form}
-                            fields={fields}
-                            append={append}
-                            remove={remove}
-                            allData={{
-                              serviceTypes,
-                              regions,
-                              warehouses,
-                              vehicleTypes,
-                              trailerTypes,
-                              packagingTypes,
-                            }}
-                            setAllData={{
-                              setServiceTypes,
-                              setRegions,
-                              setWarehouses,
-                              setVehicleTypes,
-                              setTrailerTypes,
-                              setPackagingTypes,
-                            }}
-                            isSubmitting={isSubmitting}
-                            onSubmit={onNewItemSubmit}
-                            onAddNewItem={handleAddNewItem}
-                        />
-                    </CardContent>
-                </Card>
-
             </div>
       </div>
       
@@ -762,7 +808,7 @@ export default function OrderDetailPage() {
             </AlertDialogContent>
         </AlertDialog>
 
-        {/* Hidden printable component */}
+        {/* Hidden printable components */}
         <div className="absolute -left-[9999px] top-auto">
              <div>
                 {orderItems.map((item, index) => (
@@ -777,6 +823,14 @@ export default function OrderDetailPage() {
                     </div>
                 ))}
              </div>
+             <div ref={combinedPrintRef}>
+                <CombinedQuotePrintLayout 
+                    order={order}
+                    orderItems={orderItems}
+                    quotes={quotes}
+                    calculateFinalPrice={calculateFinalPrice}
+                />
+            </div>
         </div>
     </div>
   );
