@@ -129,6 +129,23 @@ export type PackagingType = {
 export type OrderStatus = 'Pending' | 'Processing' | 'Completed' | 'Cancelled';
 export type OrderItemStatus = 'Pending' | 'Assigned' | 'In Transit' | 'Delivered' | 'Cancelled';
 
+export type LoadingUnloadingResponsibility = 'Захиалагч хариуцах' | 'Тээвэрлэгч хариуцах';
+export type VehicleAvailability = '8 цаг' | '12 цаг' | '24 цаг' | '48 цаг' | '7 хоног' | '14 хоног';
+export type PaymentTerm = 'Урьдчилгаа 30%' | 'Урьдчилгаа 40%' | 'Урьдчилгаа 50%' | 'Тээвэрлэлт дуусаад' | 'Гэрээгээр тохиролцоно';
+
+export type TransportationConditions = {
+    loading: LoadingUnloadingResponsibility;
+    unloading: LoadingUnloadingResponsibility;
+    permits: {
+      roadPermit: boolean;
+      roadToll: boolean;
+    };
+    vehicleAvailability: VehicleAvailability;
+    paymentTerm: PaymentTerm;
+    insurance: string;
+    additionalConditions?: string;
+};
+
 export type Order = {
     id: string;
     orderNumber: string;
@@ -142,6 +159,7 @@ export type Order = {
         uid: string;
         name: string;
     };
+    conditions?: TransportationConditions;
 };
 
 export type OrderItem = {

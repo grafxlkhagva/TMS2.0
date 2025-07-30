@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -18,7 +19,7 @@ import html2canvas from 'html2canvas';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Download } from 'lucide-react';
+import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Download, Info } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -778,6 +779,33 @@ export default function OrderDetailPage() {
                         )}
                     </CardContent>
                 </Card>
+
+                 {order.conditions && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Тээврийн нөхцөл</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                <DetailItem icon={Info} label="Ачилт" value={order.conditions.loading} />
+                                <DetailItem icon={Info} label="Буулгалт" value={order.conditions.unloading} />
+                                <DetailItem icon={Info} label="ТХ-н бэлэн байдал" value={order.conditions.vehicleAvailability} />
+                                <DetailItem icon={Info} label="Төлбөрийн нөхцөл" value={order.conditions.paymentTerm} />
+                            </div>
+                            <DetailItem icon={Info} label="Даатгал" value={order.conditions.insurance} />
+                             <DetailItem icon={Info} label="Нэмэлт нөхцөл" value={order.conditions.additionalConditions} />
+                             <div>
+                                <p className="text-sm text-muted-foreground flex items-center gap-3"><Info className="h-4 w-4"/>Зөвшөөрөл</p>
+                                <div className="font-medium mt-2 space-y-1 pl-7">
+                                    {order.conditions.permits.roadPermit && <p>&#x2713; Замын зөвшөөрөл авна</p>}
+                                    {order.conditions.permits.roadToll && <p>&#x2713; Замын хураамж тушаана</p>}
+                                    {!order.conditions.permits.roadPermit && !order.conditions.permits.roadToll && <p>Тодорхойлогдоогүй</p>}
+                                </div>
+                             </div>
+                        </CardContent>
+                    </Card>
+                )}
+                 
                  <Card>
                     <CardHeader>
                         <CardTitle>Шинэ тээвэрлэлт нэмэх</CardTitle>

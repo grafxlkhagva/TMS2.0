@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -104,6 +105,31 @@ const CombinedQuotePrintLayout = ({ order, orderItems, allData }: CombinedQuoteP
                 </table>
             </div>
             
+            {order.conditions && (
+                 <div className="mb-6 mt-8">
+                    <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Тээврийн нөхцөл</h3>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                        <div><strong>Ачилт:</strong> {order.conditions.loading}</div>
+                        <div><strong>Буулгалт:</strong> {order.conditions.unloading}</div>
+                        <div><strong>ТХ-н бэлэн байдал:</strong> {order.conditions.vehicleAvailability}</div>
+                        <div><strong>Төлбөрийн нөхцөл:</strong> {order.conditions.paymentTerm}</div>
+                        <div className="col-span-2"><strong>Даатгал:</strong> {order.conditions.insurance}</div>
+                        <div className="col-span-2">
+                            <strong>Зөвшөөрөл:</strong>
+                            {(order.conditions.permits?.roadPermit || order.conditions.permits?.roadToll) ? (
+                                <ul className="list-disc list-inside">
+                                    {order.conditions.permits.roadPermit && <li>Замын зөвшөөрөл авна</li>}
+                                    {order.conditions.permits.roadToll && <li>Замын хураамж тушаана</li>}
+                                </ul>
+                            ) : "Тодорхойлоогүй"}
+                        </div>
+                         {order.conditions.additionalConditions && (
+                            <div className="col-span-2"><strong>Нэмэлт нөхцөл:</strong> {order.conditions.additionalConditions}</div>
+                        )}
+                    </div>
+                 </div>
+            )}
+
             {/* Footer */}
             <div className="text-center text-gray-500 mt-10 pt-4 border-t">
                 <p>Tumen Tech TMS - Тээвэр ложистикийн удирдлагын систем</p>
