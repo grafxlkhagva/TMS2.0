@@ -42,6 +42,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 const quoteFormSchema = z.object({
@@ -177,11 +178,11 @@ export default function OrderDetailPage() {
         return {
             id: d.id, 
             ...data,
-            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
-            loadingStartDate: data.loadingStartDate instanceof Timestamp ? data.loadingStartDate.toDate() : new Date(data.loadingStartDate),
-            loadingEndDate: data.loadingEndDate instanceof Timestamp ? data.loadingEndDate.toDate() : new Date(data.loadingEndDate),
-            unloadingStartDate: data.unloadingStartDate instanceof Timestamp ? data.unloadingStartDate.toDate() : new Date(data.unloadingStartDate),
-            unloadingEndDate: data.unloadingEndDate instanceof Timestamp ? data.unloadingEndDate.toDate() : new Date(data.unloadingEndDate),
+            createdAt: data.createdAt.toDate(),
+            loadingStartDate: data.loadingStartDate.toDate(),
+            loadingEndDate: data.loadingEndDate.toDate(),
+            unloadingStartDate: data.unloadingStartDate.toDate(),
+            unloadingEndDate: data.unloadingEndDate.toDate(),
         } as OrderItem
       });
       itemsData.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
@@ -197,7 +198,7 @@ export default function OrderDetailPage() {
             return {
                 id: d.id, 
                 ...data, 
-                createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt)
+                createdAt: data.createdAt.toDate()
             } as DriverQuote
           });
           quotesData.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -519,38 +520,74 @@ export default function OrderDetailPage() {
       </div>
 
        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Захиалгын мэдээлэл</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <OrderDetailItem icon={Building} label="Харилцагч" value={<Link href={`/customers/${order.customerId}`} className="hover:underline text-primary">{order.customerName}</Link>} />
-            <OrderDetailItem 
-                icon={User} 
-                label="Хариуцсан ажилтан" 
-                value={
-                    <Select onValueChange={handleEmployeeChange} value={order.employeeId} disabled={isUpdatingEmployee || customerEmployees.length === 0}>
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Ажилтан сонгоно уу..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {customerEmployees.map(employee => (
-                                <SelectItem key={employee.id} value={employee.id}>
-                                  {employee.lastName} {employee.firstName}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                } 
-            />
-            {totalOrderPrice > 0 && (
-                <OrderDetailItem icon={CircleDollarSign} label="Нийт үнийн дүн" value={`${totalOrderPrice.toLocaleString()}₮`} />
-            )}
-            <OrderDetailItem icon={FileText} label="Статус" value={<Badge>{order.status}</Badge>} />
-            <OrderDetailItem icon={User} label="Бүртгэсэн хэрэглэгч" value={order.createdBy.name} />
-            <OrderDetailItem icon={FileText} label="Бүртгэсэн огноо" value={order.createdAt.toLocaleString()} />
-          </CardContent>
-        </Card>
+        <div className="lg:col-span-1 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Захиалгын мэдээлэл</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <OrderDetailItem icon={Building} label="Харилцагч" value={<Link href={`/customers/${order.customerId}`} className="hover:underline text-primary">{order.customerName}</Link>} />
+                <OrderDetailItem 
+                    icon={User} 
+                    label="Хариуцсан ажилтан" 
+                    value={
+                        <Select onValueChange={handleEmployeeChange} value={order.employeeId} disabled={isUpdatingEmployee || customerEmployees.length === 0}>
+                            <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Ажилтан сонгоно уу..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {customerEmployees.map(employee => (
+                                    <SelectItem key={employee.id} value={employee.id}>
+                                      {employee.lastName} {employee.firstName}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    } 
+                />
+                {totalOrderPrice > 0 && (
+                    <OrderDetailItem icon={CircleDollarSign} label="Нийт үнийн дүн" value={`${totalOrderPrice.toLocaleString()}₮`} />
+                )}
+                <OrderDetailItem icon={FileText} label="Статус" value={<Badge>{order.status}</Badge>} />
+                <OrderDetailItem icon={User} label="Бүртгэсэн хэрэглэгч" value={order.createdBy.name} />
+                <OrderDetailItem icon={FileText} label="Бүртгэсэн огноо" value={order.createdAt.toLocaleString()} />
+              </CardContent>
+            </Card>
+
+             <Card>
+                <CardHeader>
+                    <CardTitle>Шинэ тээвэрлэлт нэмэх</CardTitle>
+                </CardHeader>
+                <CardContent>
+                <OrderItemForm 
+                    form={form}
+                    fields={fields}
+                    append={append}
+                    remove={remove}
+                    allData={{
+                      serviceTypes,
+                      regions,
+                      warehouses,
+                      vehicleTypes,
+                      trailerTypes,
+                      packagingTypes,
+                    }}
+                    setAllData={{
+                      setServiceTypes,
+                      setRegions,
+                      setWarehouses,
+                      setVehicleTypes,
+                      setTrailerTypes,
+                      setPackagingTypes,
+                    }}
+                    isSubmitting={isSubmitting}
+                    onSubmit={onNewItemSubmit}
+                    onAddNewItem={handleAddNewItem}
+                />
+                </CardContent>
+            </Card>
+
+        </div>
         
         <div className="lg:col-span-2 space-y-6">
             <Card>
@@ -590,14 +627,35 @@ export default function OrderDetailPage() {
                                            Устгах
                                        </Button>
                                    </div>
-                                   
-                                   <div className="px-4">
-                                     <h4 className="font-semibold mb-2">Үнийн санал цуглуулах</h4>
-                                     <QuoteForm orderItemId={item.id} />
-                                   </div>
+                               </AccordionContent>
+                           </AccordionItem>
+                       ))}
+                    </Accordion>
+                    ) : (
+                        <div className="text-center h-24 flex items-center justify-center text-muted-foreground">Тээвэрлэлт одоогоор алга.</div>
+                    )}
+                </CardContent>
+            </Card>
 
-                                   <div className="px-4">
-                                    <Table>
+            {orderItems.length > 0 && (
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Үнийн санал цуглуулах</CardTitle>
+                        <CardDescription>Тээвэрлэлт тус бүрээр үнийн санал авч, жолооч сонгох хэсэг.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Tabs defaultValue={orderItems[0].id} className="w-full">
+                            <TabsList>
+                                {orderItems.map((item, index) => (
+                                    <TabsTrigger key={item.id} value={item.id}>Тээвэрлэлт #{index + 1}</TabsTrigger>
+                                ))}
+                            </TabsList>
+                            {orderItems.map((item) => (
+                                <TabsContent key={item.id} value={item.id} className="space-y-4">
+                                    <h4 className="font-semibold mt-4">Шинэ үнийн санал нэмэх</h4>
+                                    <QuoteForm orderItemId={item.id} />
+                                    <h4 className="font-semibold pt-4">Ирсэн саналууд</h4>
+                                     <Table>
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>Жолооч</TableHead>
@@ -649,49 +707,13 @@ export default function OrderDetailPage() {
                                             )}
                                         </TableBody>
                                     </Table>
-                                   </div>
-                               </AccordionContent>
-                           </AccordionItem>
-                       ))}
-                    </Accordion>
-                    ) : (
-                        <div className="text-center h-24 flex items-center justify-center text-muted-foreground">Тээвэрлэлт одоогоор алга.</div>
-                    )}
-                </CardContent>
-            </Card>
+                                </TabsContent>
+                            ))}
+                        </Tabs>
+                    </CardContent>
+                </Card>
+            )}
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Шинэ тээвэрлэлт нэмэх</CardTitle>
-                </CardHeader>
-                <CardContent>
-                <OrderItemForm 
-                    form={form}
-                    fields={fields}
-                    append={append}
-                    remove={remove}
-                    allData={{
-                      serviceTypes,
-                      regions,
-                      warehouses,
-                      vehicleTypes,
-                      trailerTypes,
-                      packagingTypes,
-                    }}
-                    setAllData={{
-                      setServiceTypes,
-                      setRegions,
-                      setWarehouses,
-                      setVehicleTypes,
-                      setTrailerTypes,
-                      setPackagingTypes,
-                    }}
-                    isSubmitting={isSubmitting}
-                    onSubmit={onNewItemSubmit}
-                    onAddNewItem={handleAddNewItem}
-                />
-                </CardContent>
-            </Card>
         </div>
       </div>
       
