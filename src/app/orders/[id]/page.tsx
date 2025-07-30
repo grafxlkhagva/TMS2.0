@@ -42,15 +42,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Checkbox } from '@/components/ui/checkbox';
 
 
 const quoteFormSchema = z.object({
     driverName: z.string().min(2, "Жолоочийн нэр оруулна уу."),
     driverPhone: z.string().min(8, "Утасны дугаар буруу байна."),
     price: z.coerce.number().min(1, "Үнийн санал оруулна уу."),
-    profitMargin: z.coerce.number().min(0, "Ашгийн хувь 0-аас багагүй байна.").max(100, "Ашгийн хувь 100-аас ихгүй байна."),
-    withVAT: z.boolean(),
     notes: z.string().optional(),
 });
 type QuoteFormValues = z.infer<typeof quoteFormSchema>;
@@ -87,6 +84,8 @@ const orderItemSchema = z.object({
   }),
   vehicleTypeId: z.string().min(1, "Машины төрөл сонгоно уу."),
   trailerTypeId: z.string().min(1, "Тэвшний төрөл сонгоно уу."),
+  profitMargin: z.coerce.number().min(0, "Ашгийн хувь 0-аас багагүй байна.").max(100, "Ашгийн хувь 100-аас ихгүй байна.").optional(),
+  withVAT: z.boolean().optional(),
   cargoItems: z.array(z.object({
     name: z.string().min(2, "Ачааны нэр дор хаяж 2 тэмдэгттэй байх ёстой."),
     quantity: z.coerce.number().min(0.1, "Тоо хэмжээг оруулна уу."),
@@ -356,9 +355,9 @@ export default function OrderDetailPage() {
             }
         });
 
-        // Calculate final price
-        const basePrice = quoteToAccept.price * (1 + (quoteToAccept.profitMargin || 0) / 100);
-        const finalPrice = quoteToAccept.withVAT ? basePrice * 1.1 : basePrice;
+        // Calculate final price based on the item's settings
+        const basePrice = quoteToAccept.price * (1 + (item.profitMargin || 0) / 100);
+        const finalPrice = item.withVAT ? basePrice * 1.1 : basePrice;
 
         // Update the order item
         const orderItemRef = doc(db, 'order_items', item.id);
@@ -428,6 +427,8 @@ export default function OrderDetailPage() {
         vehicleTypeId: '',
         trailerTypeId: '',
         totalDistance: 0,
+        profitMargin: 0,
+        withVAT: true,
         cargoItems: [],
     });
   };
@@ -435,22 +436,19 @@ export default function OrderDetailPage() {
   function QuoteForm({ orderItemId }: { orderItemId: string }) {
     const quoteForm = useForm<QuoteFormValues>({
         resolver: zodResolver(quoteFormSchema),
-        defaultValues: { driverName: '', driverPhone: '', price: 0, profitMargin: 0, withVAT: true, notes: '' },
+        defaultValues: { driverName: '', driverPhone: '', price: 0, notes: '' },
     });
     quoteForms.current.set(orderItemId, quoteForm);
 
     return (
         <Form {...quoteForm}>
             <form onSubmit={quoteForm.handleSubmit((values) => handleAddQuote(orderItemId, values))} className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 items-start p-3 border rounded-md bg-muted/50">
-                <FormField control={quoteForm.control} name="driverName" render={({ field }) => (<FormItem className="md:col-span-4"><FormLabel className="text-xs">Жолоочийн нэр</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={quoteForm.control} name="driverPhone" render={({ field }) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Утас</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={quoteForm.control} name="notes" render={({ field }) => (<FormItem className="md:col-span-5"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Textarea rows={1} {...field} /></FormControl><FormMessage /></FormItem>)} />
-
-                <FormField control={quoteForm.control} name="price" render={({ field }) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Жолоочийн үнэ (₮)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={quoteForm.control} name="profitMargin" render={({ field }) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Ашгийн хувь (%)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={quoteForm.control} name="withVAT" render={({ field }) => (<FormItem className="md:col-span-3 flex flex-row items-end space-x-2 pb-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><div className="space-y-1 leading-none"><label htmlFor="withVAT" className="text-xs">НӨАТ-тэй эсэх</label></div></FormItem>)} />
+                <FormField control={quoteForm.control} name="driverName" render={({ field }) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Жолоочийн нэр</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={quoteForm.control} name="driverPhone" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Утас</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={quoteForm.control} name="price" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Үнийн санал (₮)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={quoteForm.control} name="notes" render={({ field }) => (<FormItem className="md:col-span-4"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Textarea rows={1} {...field} /></FormControl><FormMessage /></FormItem>)} />
                 
-                <div className="md:col-span-3 flex justify-end items-end h-full">
+                <div className="md:col-span-1 flex justify-end items-end h-full">
                     <Button type="submit" disabled={isSubmitting} className="w-full">
                         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin"/> : "Нэмэх"}
                     </Button>
@@ -460,9 +458,9 @@ export default function OrderDetailPage() {
     );
   }
   
-  const calculateFinalPrice = (quote: DriverQuote) => {
-      const basePrice = quote.price * (1 + (quote.profitMargin || 0) / 100);
-      const finalPrice = quote.withVAT ? basePrice * 1.1 : basePrice;
+  const calculateFinalPrice = (item: OrderItem, quote: DriverQuote) => {
+      const basePrice = quote.price * (1 + (item.profitMargin || 0) / 100);
+      const finalPrice = item.withVAT ? basePrice * 1.1 : basePrice;
       return finalPrice;
   }
 
@@ -581,9 +579,8 @@ export default function OrderDetailPage() {
                                                             <p className="text-xs text-muted-foreground">{quote.driverPhone}</p>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <p className="font-medium text-primary">{calculateFinalPrice(quote).toLocaleString()}₮</p>
+                                                            <p className="font-medium text-primary">{calculateFinalPrice(item, quote).toLocaleString()}₮</p>
                                                             <p className="text-xs text-muted-foreground">Жолооч: {quote.price.toLocaleString()}₮</p>
-                                                            <p className="text-xs text-muted-foreground">Ашиг: {quote.profitMargin}% {quote.withVAT ? '(+НӨАТ)' : ''}</p>
                                                         </TableCell>
                                                         <TableCell>
                                                             <Badge variant={quote.status === 'Accepted' ? 'default' : quote.status === 'Rejected' ? 'destructive' : 'secondary'}>

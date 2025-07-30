@@ -164,6 +164,8 @@ export type OrderItem = {
     frequency: number;
     acceptedQuoteId?: string;
     finalPrice?: number;
+    profitMargin?: number;
+    withVAT?: boolean;
 };
 
 export type OrderItemCargo = {
@@ -182,8 +184,6 @@ export type DriverQuote = {
     driverName: string;
     driverPhone: string;
     price: number;
-    profitMargin: number;
-    withVAT: boolean;
     notes?: string;
     createdAt: Date;
     status: 'Pending' | 'Accepted' | 'Rejected';

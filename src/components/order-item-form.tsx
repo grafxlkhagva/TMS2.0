@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import QuickAddDialog, { type QuickAddDialogProps } from '@/components/quick-add-dialog';
+import { Checkbox } from './ui/checkbox';
 
 
 function CargoForm({ control, itemIndex, packagingTypes, onRemove, cargoIndex, onQuickAdd }: any) {
@@ -123,6 +124,16 @@ function ShipmentItemForm({ form, itemIndex, onRemove, onQuickAdd, allData }: an
                 <FormField control={form.control} name={`items.${itemIndex}.trailerTypeId`} render={({ field }: any) => (<FormItem><FormLabel>Тэвш</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{allData.trailerTypes.map((s: any) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => onQuickAdd('trailer_types', `items.${itemIndex}.trailerTypeId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
             </div>
         </div>
+
+        <Separator/>
+
+        <div className="space-y-4">
+            <h5 className="font-semibold">Санхүүгийн мэдээлэл</h5>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField control={form.control} name={`items.${itemIndex}.profitMargin`} render={({ field }: any) => ( <FormItem><FormLabel>Ашгийн хувь (%)</FormLabel><FormControl><Input type="number" placeholder="10" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name={`items.${itemIndex}.withVAT`} render={({ field }: any) => (<FormItem className="flex flex-row items-end space-x-2 pb-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id={`withVAT-new-${itemIndex}`}/></FormControl><div className="space-y-1 leading-none"><label htmlFor={`withVAT-new-${itemIndex}`} className="text-sm">НӨАТ-тэй эсэх</label></div><FormMessage /></FormItem>)}/>
+            </div>
+        </div>
         
         <Separator />
 
@@ -199,5 +210,3 @@ export default function OrderItemForm({ form, fields, remove, isSubmitting, onSu
         </Form>
     )
 }
-
-    

@@ -34,6 +34,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import QuickAddDialog, { type QuickAddDialogProps } from '@/components/quick-add-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 const cargoItemSchema = z.object({
@@ -63,6 +64,8 @@ const formSchema = z.object({
   }),
   vehicleTypeId: z.string().min(1, "Машины төрөл сонгоно уу."),
   trailerTypeId: z.string().min(1, "Тэвшний төрөл сонгоно уу."),
+  profitMargin: z.coerce.number().min(0, "Ашгийн хувь 0-аас багагүй байна.").max(100, "Ашгийн хувь 100-аас ихгүй байна.").optional(),
+  withVAT: z.boolean().optional(),
   cargoItems: z.array(cargoItemSchema).min(1, "Дор хаяж нэг ачаа нэмнэ үү."),
 });
 
@@ -137,6 +140,8 @@ export default function EditOrderItemPage() {
                         totalDistance: itemData.totalDistance,
                         vehicleTypeId: itemData.vehicleTypeId,
                         trailerTypeId: itemData.trailerTypeId,
+                        profitMargin: itemData.profitMargin || 0,
+                        withVAT: itemData.withVAT || false,
                         loadingDateRange: {
                             from: itemData.loadingStartDate instanceof Timestamp ? itemData.loadingStartDate.toDate() : itemData.loadingStartDate,
                             to: itemData.loadingEndDate instanceof Timestamp ? itemData.loadingEndDate.toDate() : itemData.loadingEndDate,
@@ -319,6 +324,14 @@ export default function EditOrderItemPage() {
                                 </div>
                             </div>
                             <Separator/>
+                            <div className="space-y-4">
+                                <h5 className="font-semibold">Санхүүгийн мэдээлэл</h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <FormField control={form.control} name="profitMargin" render={({ field }) => (<FormItem><FormLabel>Ашгийн хувь (%)</FormLabel><FormControl><Input type="number" placeholder="10" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField control={form.control} name="withVAT" render={({ field }) => (<FormItem className="flex flex-row items-end space-x-2 pb-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="withVAT-edit"/></FormControl><div className="space-y-1 leading-none"><label htmlFor="withVAT-edit" className="text-sm">НӨАТ-тэй эсэх</label></div><FormMessage /></FormItem>)} />
+                                </div>
+                            </div>
+                            <Separator/>
                             <div className="space-y-2">
                                 <h5 className="font-semibold">Ачаа</h5>
                                 {fields.map((cargoField, cargoIndex) => (
@@ -352,5 +365,3 @@ export default function EditOrderItemPage() {
         </div>
     );
 }
-
-    
