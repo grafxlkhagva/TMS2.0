@@ -5,7 +5,7 @@ import * as React from 'react';
 import { doc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, orderBy, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, VehicleType, TrailerType } from '@/types';
+import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, VehicleType, TrailerType, Region } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -66,7 +66,9 @@ function OrderDetailItem({ icon: Icon, label, value }: { icon: React.ElementType
 }
 
 const orderItemSchema = z.object({
+  startRegionId: z.string().min(1, "Ачих бүс сонгоно уу."),
   startWarehouseId: z.string().min(1, "Ачих агуулах сонгоно уу."),
+  endRegionId: z.string().min(1, "Буулгах бүс сонгоно уу."),
   endWarehouseId: z.string().min(1, "Буулгах агуулах сонгоно уу."),
   deliveryDateRange: z.object({
     from: z.date({ required_error: "Эхлэх огноо сонгоно уу." }),
@@ -95,6 +97,7 @@ export default function OrderDetailPage() {
   const [order, setOrder] = React.useState<Order | null>(null);
   const [orderItems, setOrderItems] = React.useState<OrderItem[]>([]);
   const [warehouses, setWarehouses] = React.useState<Warehouse[]>([]);
+  const [regions, setRegions] = React.useState<Region[]>([]);
   const [serviceTypes, setServiceTypes] = React.useState<ServiceType[]>([]);
   const [vehicleTypes, setVehicleTypes] = React.useState<VehicleType[]>([]);
   const [trailerTypes, setTrailerTypes] = React.useState<TrailerType[]>([]);
@@ -111,8 +114,6 @@ export default function OrderDetailPage() {
       items: [],
     },
   });
-  
-  const watchedItems = form.watch("items");
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -135,13 +136,14 @@ export default function OrderDetailPage() {
       const currentOrder = { id: orderDocSnap.id, ...data, createdAt: data.createdAt.toDate() } as Order;
       setOrder(currentOrder);
 
-      const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, vehicleTypeSnap, trailerTypeSnap] = await Promise.all([
+      const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap] = await Promise.all([
         getDocs(query(collection(db, 'order_items'), where('orderId', '==', orderId))),
         getDocs(query(collection(db, "warehouses"), orderBy("name"))),
         getDocs(query(collection(db, "service_types"), orderBy("name"))),
         getDocs(query(collection(db, 'customer_employees'), where('customerId', '==', currentOrder.customerId))),
         getDocs(query(collection(db, "vehicle_types"), orderBy("name"))),
-        getDocs(query(collection(db, "trailer_types"), orderBy("name")))
+        getDocs(query(collection(db, "trailer_types"), orderBy("name"))),
+        getDocs(query(collection(db, "regions"), orderBy("name"))),
       ]);
       
       const itemsData = itemsSnap.docs.map(d => {
@@ -157,6 +159,7 @@ export default function OrderDetailPage() {
       setCustomerEmployees(employeesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomerEmployee)));
       setVehicleTypes(vehicleTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as VehicleType)));
       setTrailerTypes(trailerTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrailerType)));
+      setRegions(regionSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Region)));
 
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -264,7 +267,9 @@ export default function OrderDetailPage() {
 
   const handleAddNewItem = () => {
     append({
+        startRegionId: '',
         startWarehouseId: '',
+        endRegionId: '',
         endWarehouseId: '',
         deliveryDateRange: { from: new Date(), to: new Date() },
         serviceTypeId: '',
@@ -376,6 +381,10 @@ export default function OrderDetailPage() {
                                 </Button>
                             </div>
                             <Separator/>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormField control={form.control} name={`items.${index}.startRegionId`} render={({ field }) => ( <FormItem><FormLabel>Ачих бүс</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map(r => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                                <FormField control={form.control} name={`items.${index}.endRegionId`} render={({ field }) => ( <FormItem><FormLabel>Буулгах бүс</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map(r => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField control={form.control} name={`items.${index}.startWarehouseId`} render={({ field }) => ( <FormItem><FormLabel>Ачих агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map(w => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
                                 <FormField control={form.control} name={`items.${index}.endWarehouseId`} render={({ field }) => ( <FormItem><FormLabel>Буулгах агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map(w => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
@@ -424,10 +433,10 @@ export default function OrderDetailPage() {
                                     <FormMessage />
                                 </FormItem>
                             )}/>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField control={form.control} name={`items.${index}.serviceTypeId`} render={({ field }) => (<FormItem><FormLabel>Үйлчилгээний төрөл</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Үйлчилгээний төрөл..." /></SelectTrigger></FormControl><SelectContent>{serviceTypes.map(s => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                                <FormField control={form.control} name={`items.${index}.vehicleTypeId`} render={({ field }) => (<FormItem><FormLabel>Машины төрөл</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Машины төрөл..." /></SelectTrigger></FormControl><SelectContent>{vehicleTypes.map(s => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                                <FormField control={form.control} name={`items.${index}.trailerTypeId`} render={({ field }) => (<FormItem><FormLabel>Тэвшний төрөл</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Тэвшний төрөл..." /></SelectTrigger></FormControl><SelectContent>{trailerTypes.map(s => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <FormField control={form.control} name={`items.${index}.serviceTypeId`} render={({ field }) => (<FormItem><FormLabel>Үйлчилгээ</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{serviceTypes.map(s => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                                <FormField control={form.control} name={`items.${index}.vehicleTypeId`} render={({ field }) => (<FormItem><FormLabel>Машин</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{vehicleTypes.map(s => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                                <FormField control={form.control} name={`items.${index}.trailerTypeId`} render={({ field }) => (<FormItem><FormLabel>Тэвш</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{trailerTypes.map(s => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                <FormField control={form.control} name={`items.${index}.totalDistance`} render={({ field }) => ( <FormItem><FormLabel>Нийт зам (км)</FormLabel><FormControl><Input type="number" placeholder="500" {...field} /></FormControl><FormMessage /></FormItem>)}/>
