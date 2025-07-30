@@ -52,7 +52,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import QuotePrintLayout from '@/components/quote-print-layout';
 import CombinedQuotePrintLayout from '@/components/combined-quote-print-layout';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -139,7 +138,6 @@ export default function OrderDetailPage() {
   const [isUpdatingEmployee, setIsUpdatingEmployee] = React.useState(false);
   const [selectedItemsForQuote, setSelectedItemsForQuote] = React.useState<Set<string>>(new Set());
   
-  const printRefs = React.useRef<Map<string, HTMLDivElement | null>>(new Map());
   const combinedPrintRef = React.useRef<HTMLDivElement | null>(null);
 
 
@@ -452,34 +450,6 @@ export default function OrderDetailPage() {
       }
   }
 
-  const handlePrint = async (itemId: string) => {
-    const input = printRefs.current.get(itemId);
-    if (!input) {
-      toast({ variant: "destructive", title: "Алдаа", description: "Хэвлэх загвар олдсонгүй." });
-      return;
-    }
-    setIsPrinting(true);
-    try {
-        const canvas = await html2canvas(input, { scale: 2 });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
-        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-        const imgX = (pdfWidth - imgWidth * ratio) / 2;
-        const imgY = 10;
-        pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-        pdf.save(`uneyn-sanal-${order?.orderNumber}-${itemId.substring(0,5)}.pdf`);
-    } catch (error) {
-        console.error("Error generating PDF:", error);
-        toast({ variant: "destructive", title: "Алдаа", description: "PDF үүсгэхэд алдаа гарлаа." });
-    } finally {
-        setIsPrinting(false);
-    }
-  };
-
   const handlePrintCombinedQuote = async () => {
     const input = combinedPrintRef.current;
     if (!input) {
@@ -737,13 +707,7 @@ export default function OrderDetailPage() {
                                            </Button>
                                        </div>
                                        <div className="px-4 space-y-4">
-                                         <div className="flex justify-between items-center pt-2">
-                                            <h4 className="font-semibold">Шинэ үнийн санал нэмэх</h4>
-                                            <Button variant="outline" size="sm" onClick={() => handlePrint(item.id)} disabled={isPrinting}>
-                                                {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
-                                                PDF татах
-                                            </Button>
-                                        </div>
+                                         <h4 className="font-semibold pt-2">Шинэ үнийн санал нэмэх</h4>
                                         <QuoteForm orderItemId={item.id} />
                                         <h4 className="font-semibold pt-4">Ирсэн саналууд</h4>
                                          <Table>
@@ -886,28 +850,6 @@ export default function OrderDetailPage() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-
-
-        {/* Hidden printable components */}
-        <div className="absolute -left-[9999px] top-auto">
-             <div>
-                {orderItems.map((item, index) => (
-                    <div key={item.id} ref={(el) => printRefs.current.set(item.id, el)}>
-                        <QuotePrintLayout 
-                            order={order} 
-                            orderItem={item} 
-                            quotes={quotes.get(item.id) || []}
-                            itemIndex={index}
-                            calculateFinalPrice={calculateFinalPrice}
-                        />
-                    </div>
-                ))}
-             </div>
-        </div>
     </div>
   );
 }
-
-    
-
-    
