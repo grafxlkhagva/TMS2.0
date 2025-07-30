@@ -99,11 +99,11 @@ function ShipmentItemForm({ form, itemIndex, onRemove, onQuickAdd, allData }: an
             <h5 className="font-semibold">Тээврийн чиглэл</h5>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField control={form.control} name={`items.${itemIndex}.startRegionId`} render={({ field }: any) => ( <FormItem><FormLabel>Ачих бүс</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих бүс..." /></SelectTrigger></FormControl><SelectContent>{allData.regions.map((r: any) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => onQuickAdd('regions', `items.${itemIndex}.startRegionId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
-                <FormField control={form.control} name={`items.${itemIndex}.startWarehouseId`} render={({ field }: any) => ( <FormItem><FormLabel>Ачих агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих агуулах..." /></SelectTrigger></FormControl><SelectContent>{allData.warehouses.map((w: any) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name={`items.${itemIndex}.startWarehouseId`} render={({ field }: any) => ( <FormItem><FormLabel>Ачих агуулах</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих агуулах..." /></SelectTrigger></FormControl><SelectContent>{allData.warehouses.map((w: any) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => onQuickAdd('warehouses', `items.${itemIndex}.startWarehouseId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField control={form.control} name={`items.${itemIndex}.endRegionId`} render={({ field }: any) => ( <FormItem><FormLabel>Буулгах бүс</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах бүс..." /></SelectTrigger></FormControl><SelectContent>{allData.regions.map((r: any) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => onQuickAdd('regions', `items.${itemIndex}.endRegionId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
-                <FormField control={form.control} name={`items.${itemIndex}.endWarehouseId`} render={({ field }: any) => ( <FormItem><FormLabel>Буулгах агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах агуулах..." /></SelectTrigger></FormControl><SelectContent>{allData.warehouses.map((w: any) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name={`items.${itemIndex}.endWarehouseId`} render={({ field }: any) => ( <FormItem><FormLabel>Буулгах агуулах</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах агуулах..." /></SelectTrigger></FormControl><SelectContent>{allData.warehouses.map((w: any) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => onQuickAdd('warehouses', `items.${itemIndex}.endWarehouseId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
             </div>
             <FormField control={form.control} name={`items.${itemIndex}.totalDistance`} render={({ field }: any) => ( <FormItem><FormLabel>Нийт зам (км)</FormLabel><FormControl><Input type="number" placeholder="500" {...field} /></FormControl><FormMessage /></FormItem>)}/>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -149,11 +149,12 @@ function ShipmentItemForm({ form, itemIndex, onRemove, onQuickAdd, allData }: an
 export default function OrderItemForm({ form, fields, remove, isSubmitting, onSubmit, onAddNewItem, allData, setAllData }: any) {
     const [dialogProps, setDialogProps] = React.useState<Omit<QuickAddDialogProps, 'onClose'> | null>(null);
 
-    const handleQuickAdd = (type: 'regions' | 'service_types' | 'vehicle_types' | 'trailer_types' | 'packaging_types', formField: any) => {
+    const handleQuickAdd = (type: 'regions' | 'service_types' | 'vehicle_types' | 'trailer_types' | 'packaging_types' | 'warehouses', formField: any) => {
         setDialogProps({
             open: true,
             collectionName: type,
             title: `Шинэ ${type} нэмэх`,
+            isWarehouse: type === 'warehouses',
             onSuccess: (newItem) => {
                 switch(type) {
                     case 'regions': setAllData.setRegions((prev: Region[]) => [...prev, newItem as Region]); break;
@@ -161,6 +162,7 @@ export default function OrderItemForm({ form, fields, remove, isSubmitting, onSu
                     case 'vehicle_types': setAllData.setVehicleTypes((prev: VehicleType[]) => [...prev, newItem as VehicleType]); break;
                     case 'trailer_types': setAllData.setTrailerTypes((prev: TrailerType[]) => [...prev, newItem as TrailerType]); break;
                     case 'packaging_types': setAllData.setPackagingTypes((prev: PackagingType[]) => [...prev, newItem as PackagingType]); break;
+                    case 'warehouses': setAllData.setWarehouses((prev: Warehouse[]) => [...prev, newItem as Warehouse]); break;
                 }
                 form.setValue(formField, newItem.id);
                 setDialogProps(null);
@@ -197,3 +199,5 @@ export default function OrderItemForm({ form, fields, remove, isSubmitting, onSu
         </Form>
     )
 }
+
+    
