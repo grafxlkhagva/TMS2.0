@@ -283,8 +283,8 @@ export default function OrderDetailPage() {
         startWarehouseId: '',
         endRegionId: '',
         endWarehouseId: '',
-        loadingDateRange: { from, to },
-        unloadingDateRange: { from, to },
+        loadingDateRange: { from: new Date(from), to: new Date(to) },
+        unloadingDateRange: { from: new Date(from), to: new Date(to) },
         serviceTypeId: '',
         vehicleTypeId: '',
         trailerTypeId: '',
@@ -539,3 +539,5 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+
+    
