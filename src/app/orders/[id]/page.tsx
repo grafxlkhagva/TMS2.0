@@ -5,7 +5,7 @@ import * as React from 'react';
 import { doc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, orderBy, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, Region, VehicleType, TrailerType } from '@/types';
+import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, VehicleType, TrailerType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -66,9 +66,7 @@ function OrderDetailItem({ icon: Icon, label, value }: { icon: React.ElementType
 }
 
 const orderItemSchema = z.object({
-  startRegionId: z.string().min(1, "Ачих бүс сонгоно уу."),
   startWarehouseId: z.string().min(1, "Ачих агуулах сонгоно уу."),
-  endRegionId: z.string().min(1, "Буулгах бүс сонгоно уу."),
   endWarehouseId: z.string().min(1, "Буулгах агуулах сонгоно уу."),
   deliveryDateRange: z.object({
     from: z.date({ required_error: "Эхлэх огноо сонгоно уу." }),
@@ -97,7 +95,6 @@ export default function OrderDetailPage() {
   const [order, setOrder] = React.useState<Order | null>(null);
   const [orderItems, setOrderItems] = React.useState<OrderItem[]>([]);
   const [warehouses, setWarehouses] = React.useState<Warehouse[]>([]);
-  const [regions, setRegions] = React.useState<Region[]>([]);
   const [serviceTypes, setServiceTypes] = React.useState<ServiceType[]>([]);
   const [vehicleTypes, setVehicleTypes] = React.useState<VehicleType[]>([]);
   const [trailerTypes, setTrailerTypes] = React.useState<TrailerType[]>([]);
@@ -138,12 +135,11 @@ export default function OrderDetailPage() {
       const currentOrder = { id: orderDocSnap.id, ...data, createdAt: data.createdAt.toDate() } as Order;
       setOrder(currentOrder);
 
-      const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, regionSnap, vehicleTypeSnap, trailerTypeSnap] = await Promise.all([
+      const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, vehicleTypeSnap, trailerTypeSnap] = await Promise.all([
         getDocs(query(collection(db, 'order_items'), where('orderId', '==', orderId))),
         getDocs(query(collection(db, "warehouses"), orderBy("name"))),
         getDocs(query(collection(db, "service_types"), orderBy("name"))),
         getDocs(query(collection(db, 'customer_employees'), where('customerId', '==', currentOrder.customerId))),
-        getDocs(query(collection(db, "regions"), orderBy("name"))),
         getDocs(query(collection(db, "vehicle_types"), orderBy("name"))),
         getDocs(query(collection(db, "trailer_types"), orderBy("name")))
       ]);
@@ -159,7 +155,6 @@ export default function OrderDetailPage() {
       setWarehouses(warehouseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Warehouse)));
       setServiceTypes(serviceTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceType)));
       setCustomerEmployees(employeesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomerEmployee)));
-      setRegions(regionSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Region)));
       setVehicleTypes(vehicleTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as VehicleType)));
       setTrailerTypes(trailerTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrailerType)));
 
@@ -269,9 +264,7 @@ export default function OrderDetailPage() {
 
   const handleAddNewItem = () => {
     append({
-        startRegionId: '',
         startWarehouseId: '',
-        endRegionId: '',
         endWarehouseId: '',
         deliveryDateRange: { from: new Date(), to: new Date() },
         serviceTypeId: '',
@@ -374,11 +367,6 @@ export default function OrderDetailPage() {
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     {fields.map((field, index) => {
-                        const startRegionId = watchedItems[index]?.startRegionId;
-                        const endRegionId = watchedItems[index]?.endRegionId;
-                        const filteredStartWarehouses = warehouses.filter(w => w.regionId === startRegionId);
-                        const filteredEndWarehouses = warehouses.filter(w => w.regionId === endRegionId);
-
                         return (
                         <div key={field.id} className="p-4 border rounded-md relative space-y-4">
                             <div className="flex justify-between items-center">
@@ -389,10 +377,8 @@ export default function OrderDetailPage() {
                             </div>
                             <Separator/>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField control={form.control} name={`items.${index}.startRegionId`} render={({ field }) => ( <FormItem><FormLabel>Ачих бүс</FormLabel><Select onValueChange={(value) => { field.onChange(value); form.setValue(`items.${index}.startWarehouseId`, ''); }} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map(r => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                                <FormField control={form.control} name={`items.${index}.endRegionId`} render={({ field }) => ( <FormItem><FormLabel>Буулгах бүс</FormLabel><Select onValueChange={(value) => { field.onChange(value); form.setValue(`items.${index}.endWarehouseId`, ''); }} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map(r => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                                <FormField control={form.control} name={`items.${index}.startWarehouseId`} render={({ field }) => ( <FormItem><FormLabel>Ачих агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={!startRegionId}><FormControl><SelectTrigger><SelectValue placeholder="Ачих агуулах..." /></SelectTrigger></FormControl><SelectContent>{filteredStartWarehouses.map(w => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                                <FormField control={form.control} name={`items.${index}.endWarehouseId`} render={({ field }) => ( <FormItem><FormLabel>Буулгах агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={!endRegionId}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах агуулах..." /></SelectTrigger></FormControl><SelectContent>{filteredEndWarehouses.map(w => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                                <FormField control={form.control} name={`items.${index}.startWarehouseId`} render={({ field }) => ( <FormItem><FormLabel>Ачих агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map(w => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                                <FormField control={form.control} name={`items.${index}.endWarehouseId`} render={({ field }) => ( <FormItem><FormLabel>Буулгах агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map(w => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
                             </div>
                             <FormField control={form.control} name={`items.${index}.deliveryDateRange`} render={({ field }) => (
                                 <FormItem className="flex flex-col">
@@ -485,3 +471,5 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+
+    
