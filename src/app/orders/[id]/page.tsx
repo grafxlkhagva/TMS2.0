@@ -151,7 +151,7 @@ export default function OrderDetailPage() {
       const currentOrder = {
           id: orderDocSnap.id,
           ...data,
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt
+          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt)
       } as Order;
       setOrder(currentOrder);
 
@@ -171,11 +171,11 @@ export default function OrderDetailPage() {
         return {
             id: d.id, 
             ...data,
-            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt,
-            loadingStartDate: data.loadingStartDate instanceof Timestamp ? data.loadingStartDate.toDate() : data.loadingStartDate,
-            loadingEndDate: data.loadingEndDate instanceof Timestamp ? data.loadingEndDate.toDate() : data.loadingEndDate,
-            unloadingStartDate: data.unloadingStartDate instanceof Timestamp ? data.unloadingStartDate.toDate() : data.unloadingStartDate,
-            unloadingEndDate: data.unloadingEndDate instanceof Timestamp ? data.unloadingEndDate.toDate() : data.unloadingEndDate,
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
+            loadingStartDate: data.loadingStartDate instanceof Timestamp ? data.loadingStartDate.toDate() : new Date(data.loadingStartDate),
+            loadingEndDate: data.loadingEndDate instanceof Timestamp ? data.loadingEndDate.toDate() : new Date(data.loadingEndDate),
+            unloadingStartDate: data.unloadingStartDate instanceof Timestamp ? data.unloadingStartDate.toDate() : new Date(data.unloadingStartDate),
+            unloadingEndDate: data.unloadingEndDate instanceof Timestamp ? data.unloadingEndDate.toDate() : new Date(data.unloadingEndDate),
         } as OrderItem
       });
       itemsData.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
@@ -191,7 +191,7 @@ export default function OrderDetailPage() {
             return {
                 id: d.id, 
                 ...data, 
-                createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt
+                createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt)
             } as DriverQuote
           });
           quotesData.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -433,15 +433,17 @@ export default function OrderDetailPage() {
     quoteForms.current.set(orderItemId, quoteForm);
 
     return (
-        <form onSubmit={quoteForm.handleSubmit((values) => handleAddQuote(orderItemId, values))} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start p-3 border rounded-md bg-muted/50">
-           <FormField control={quoteForm.control} name="driverName" render={({ field }) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Жолоочийн нэр</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-           <FormField control={quoteForm.control} name="driverPhone" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Утас</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-           <FormField control={quoteForm.control} name="price" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Үнийн санал (₮)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-           <FormField control={quoteForm.control} name="notes" render={({ field }) => (<FormItem className="md:col-span-4"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Textarea rows={1} {...field} /></FormControl><FormMessage /></FormItem>)} />
-           <Button type="submit" disabled={isSubmitting} className="self-end md:col-span-1">
-                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin"/> : "Нэмэх"}
-           </Button>
-        </form>
+        <Form {...quoteForm}>
+            <form onSubmit={quoteForm.handleSubmit((values) => handleAddQuote(orderItemId, values))} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start p-3 border rounded-md bg-muted/50">
+                <FormField control={quoteForm.control} name="driverName" render={({ field }) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Жолоочийн нэр</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={quoteForm.control} name="driverPhone" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Утас</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={quoteForm.control} name="price" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Үнийн санал (₮)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={quoteForm.control} name="notes" render={({ field }) => (<FormItem className="md:col-span-4"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Textarea rows={1} {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <Button type="submit" disabled={isSubmitting} className="self-end md:col-span-1">
+                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin"/> : "Нэмэх"}
+                </Button>
+            </form>
+        </Form>
     );
   }
 
@@ -644,3 +646,5 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+
+    
