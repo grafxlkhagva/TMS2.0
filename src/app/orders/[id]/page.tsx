@@ -44,7 +44,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -592,6 +591,15 @@ export default function OrderDetailPage() {
       return finalPrice;
   }
 
+  const allData = {
+    serviceTypes,
+    regions,
+    warehouses,
+    vehicleTypes,
+    trailerTypes,
+    packagingTypes,
+  };
+
   return (
     <div className="container mx-auto py-6">
        <div className="mb-6">
@@ -614,7 +622,7 @@ export default function OrderDetailPage() {
       </div>
 
        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            <div className="lg:col-span-1 space-y-6">
+            <div className="lg:col-span-1 space-y-6 sticky top-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>Захиалгын мэдээлэл</CardTitle>
@@ -775,14 +783,7 @@ export default function OrderDetailPage() {
                             fields={fields}
                             append={append}
                             remove={remove}
-                            allData={{
-                              serviceTypes,
-                              regions,
-                              warehouses,
-                              vehicleTypes,
-                              trailerTypes,
-                              packagingTypes,
-                            }}
+                            allData={allData}
                             setAllData={{
                               setServiceTypes,
                               setRegions,
@@ -831,8 +832,7 @@ export default function OrderDetailPage() {
                         <CombinedQuotePrintLayout 
                             order={order}
                             orderItems={orderItems}
-                            quotes={quotes}
-                            calculateFinalPrice={calculateFinalPrice}
+                            allData={allData}
                         />
                     </div>
                 </div>

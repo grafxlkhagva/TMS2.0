@@ -2,25 +2,36 @@
 'use client';
 
 import * as React from 'react';
-import type { Order, OrderItem, DriverQuote } from '@/types';
+import type { Order, OrderItem, ServiceType, Region, VehicleType, TrailerType } from '@/types';
 import { format } from 'date-fns';
+
+type AllData = {
+    regions: Region[];
+    serviceTypes: ServiceType[];
+    vehicleTypes: VehicleType[];
+    trailerTypes: TrailerType[];
+};
 
 type CombinedQuotePrintLayoutProps = {
   order: Order | null;
   orderItems: OrderItem[];
-  quotes: Map<string, DriverQuote[]>;
-  calculateFinalPrice: (item: OrderItem, quote: DriverQuote) => number;
+  allData: AllData;
 };
 
-const CombinedQuotePrintLayout = ({ order, orderItems, quotes, calculateFinalPrice }: CombinedQuotePrintLayoutProps) => {
+const CombinedQuotePrintLayout = ({ order, orderItems, allData }: CombinedQuotePrintLayoutProps) => {
     if (!order) return null;
 
-    const totalFinalPrice = orderItems.reduce((acc, item) => acc + (item.finalPrice || 0), 0);
+    const getRegionName = (id: string) => allData.regions.find(r => r.id === id)?.name || 'N/A';
+    const getVehicleTypeName = (id: string) => allData.vehicleTypes.find(v => v.id === id)?.name || 'N/A';
+    const getTrailerTypeName = (id: string) => allData.trailerTypes.find(t => t.id === id)?.name || 'N/A';
+
+    const acceptedItems = orderItems.filter(item => item.acceptedQuoteId && item.finalPrice);
+    const totalFinalPrice = acceptedItems.reduce((acc, item) => acc + (item.finalPrice || 0), 0);
 
     return (
-        <div className="bg-white p-8 font-sans text-gray-800" style={{ width: '210mm' }}>
+        <div className="bg-white p-8 font-sans text-gray-800 text-xs" style={{ width: '210mm' }}>
              {/* Header */}
-            <div className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-8">
+            <div className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
                 <div>
                      <svg
                         className="h-12 w-12"
@@ -37,68 +48,58 @@ const CombinedQuotePrintLayout = ({ order, orderItems, quotes, calculateFinalPri
                           </g>
                         </g>
                       </svg>
-                    <h1 className="text-3xl font-bold mt-2">Tumen Tech TMS</h1>
+                    <h1 className="text-2xl font-bold mt-2">Tumen Tech TMS</h1>
                 </div>
                 <div className="text-right">
-                    <h2 className="text-2xl font-bold uppercase">Нэгдсэн үнийн санал</h2>
+                    <h2 className="text-xl font-bold uppercase">Нэгдсэн үнийн санал</h2>
                     <p className="mt-1">Огноо: {format(new Date(), 'yyyy-MM-dd')}</p>
                     <p className="mt-1">Захиалгын №: {order.orderNumber}</p>
                 </div>
             </div>
 
             {/* Customer Info */}
-            <div className="mb-8">
-                <h3 className="text-lg font-semibold border-b border-gray-400 pb-1 mb-2">Захиалагчийн мэдээлэл</h3>
+            <div className="mb-6">
+                <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Захиалагчийн мэдээлэл</h3>
                 <p><strong>Байгууллага:</strong> {order.customerName}</p>
                 <p><strong>Хариуцсан ажилтан:</strong> {order.employeeName}</p>
             </div>
 
-            {orderItems.map((item, index) => {
-                 const acceptedQuote = (quotes.get(item.id) || []).find(q => q.id === item.acceptedQuoteId);
-                 return (
-                 <div key={item.id} className="mb-8" style={{ pageBreakInside: 'avoid' }}>
-                    <h3 className="text-lg font-semibold bg-gray-100 p-2 rounded-md">Тээвэрлэлт #{index + 1}</h3>
-                     <table className="w-full text-sm text-left mt-2">
-                        <thead className="bg-gray-200 uppercase">
-                            <tr>
-                                <th className="p-2">Жолооч</th>
-                                <th className="p-2">Утас</th>
-                                <th className="p-2">Санал (₮)</th>
-                                <th className="p-2">Эцсийн үнэ (₮)</th>
-                                <th className="p-2">Тэмдэглэл</th>
+             <div className="mb-4">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-gray-100 font-bold">
+                            <th className="p-2 border">№</th>
+                            <th className="p-2 border">Чиглэл</th>
+                            <th className="p-2 border">Тээврийн хэрэгсэл</th>
+                            <th className="p-2 border">Огноо</th>
+                            <th className="p-2 border text-right">Эцсийн үнэ (₮)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {acceptedItems.map((item, index) => (
+                            <tr key={item.id} className="border-b">
+                                <td className="p-2 border">{index + 1}</td>
+                                <td className="p-2 border">{getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</td>
+                                <td className="p-2 border">{getVehicleTypeName(item.vehicleTypeId)}, {getTrailerTypeName(item.trailerTypeId)}</td>
+                                <td className="p-2 border">
+                                    <p>Ачих: {format(new Date(item.loadingStartDate), 'yy/MM/dd')}-{format(new Date(item.loadingEndDate), 'yy/MM/dd')}</p>
+                                    <p>Буулгах: {format(new Date(item.unloadingStartDate), 'yy/MM/dd')}-{format(new Date(item.unloadingEndDate), 'yy/MM/dd')}</p>
+                                </td>
+                                <td className="p-2 border text-right font-medium">{item.finalPrice?.toLocaleString()}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                           {acceptedQuote ? (
-                                <tr className="border-b">
-                                    <td className="p-2">{acceptedQuote.driverName}</td>
-                                    <td className="p-2">{acceptedQuote.driverPhone}</td>
-                                    <td className="p-2">{acceptedQuote.price.toLocaleString()}</td>
-                                    <td className="p-2">{item.finalPrice?.toLocaleString() || '-'}</td>
-                                    <td className="p-2">{acceptedQuote.notes || '-'}</td>
-                                </tr>
-                           ) : (
-                                <tr>
-                                    <td colSpan={5} className="p-2 text-center text-gray-500">Жолооч сонгогдоогүй байна.</td>
-                                </tr>
-                           )}
-                        </tbody>
-                    </table>
-                </div>
-            )})}
-            
-             {/* Total Price */}
-            <div className="flex justify-end mt-8">
-                <div className="w-1/3">
-                    <div className="flex justify-between font-bold text-lg border-t-2 border-gray-700 pt-2">
-                        <span>Нийт дүн:</span>
-                        <span>{totalFinalPrice.toLocaleString()}₮</span>
-                    </div>
-                </div>
+                        ))}
+                    </tbody>
+                    <tfoot>
+                        <tr className="font-bold bg-gray-100">
+                            <td colSpan={4} className="p-2 border text-right">Нийт дүн:</td>
+                            <td className="p-2 border text-right">{totalFinalPrice.toLocaleString()}</td>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
-
+            
             {/* Footer */}
-            <div className="text-center text-xs text-gray-500 mt-12 pt-4 border-t">
+            <div className="text-center text-gray-500 mt-10 pt-4 border-t">
                 <p>Tumen Tech TMS - Тээвэр ложистикийн удирдлагын систем</p>
             </div>
         </div>
