@@ -298,7 +298,6 @@ export default function OrderDetailPage() {
     return null;
   }
   
-  const getWarehouseName = (id: string) => warehouses.find(w => w.id === id)?.name || id;
   const getServiceName = (id: string) => serviceTypes.find(s => s.id === id)?.name || id;
 
   const handleAddNewItem = () => {
@@ -506,6 +505,7 @@ function OrderItemForm({ form, itemIndex, onRemove, serviceTypes, regions, wareh
                 <FormField control={form.control} name={`items.${itemIndex}.endRegionId`} render={({ field }: any) => ( <FormItem><FormLabel>Буулгах бүс</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map((r: any) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
                 <FormField control={form.control} name={`items.${itemIndex}.endWarehouseId`} render={({ field }: any) => ( <FormItem><FormLabel>Буулгах агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map((w: any) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
             </div>
+             <FormField control={form.control} name={`items.${itemIndex}.totalDistance`} render={({ field }: any) => ( <FormItem><FormLabel>Нийт зам (км)</FormLabel><FormControl><Input type="number" placeholder="500" {...field} /></FormControl><FormMessage /></FormItem>)}/>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField control={form.control} name={`items.${itemIndex}.loadingDateRange`} render={({ field }: any) => (
                     <FormItem className="flex flex-col">
@@ -611,13 +611,6 @@ function OrderItemForm({ form, itemIndex, onRemove, serviceTypes, regions, wareh
         </div>
         
         <Separator />
-        
-        <div className="space-y-4">
-            <h5 className="font-semibold">Чиглэл ба зай</h5>
-             <FormField control={form.control} name={`items.${itemIndex}.totalDistance`} render={({ field }: any) => ( <FormItem><FormLabel>Нийт зам (км)</FormLabel><FormControl><Input type="number" placeholder="500" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-        </div>
-        
-        <Separator />
 
         <div className="space-y-2">
             <h5 className="font-semibold">Ачаа</h5>
@@ -656,5 +649,3 @@ function OrderItemForm({ form, itemIndex, onRemove, serviceTypes, regions, wareh
     </div>
   )
 }
-
-    
