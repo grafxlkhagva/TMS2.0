@@ -44,7 +44,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import QuotePrintLayout from '@/components/quote-print-layout';
 
 
@@ -128,7 +127,7 @@ export default function OrderDetailPage() {
   const [itemToDelete, setItemToDelete] = React.useState<OrderItem | null>(null);
   const [isUpdatingEmployee, setIsUpdatingEmployee] = React.useState(false);
   
-  const printRef = React.useRef<HTMLDivElement>(null);
+  const printRefs = React.useRef<Map<string, HTMLDivElement | null>>(new Map());
 
 
   const form = useForm<FormValues>({
@@ -171,13 +170,13 @@ export default function OrderDetailPage() {
 
       const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap, packagingTypeSnap] = await Promise.all([
         getDocs(query(collection(db, 'order_items'), where('orderId', '==', orderId))),
-        getDocs(query(collection(db, "warehouses"), where('name', '!=', ''))),
-        getDocs(query(collection(db, "service_types"), where('name', '!=', ''))),
+        getDocs(query(collection(db, "warehouses"), orderBy("name"))),
+        getDocs(query(collection(db, "service_types"), orderBy("name"))),
         getDocs(query(collection(db, 'customer_employees'), where('customerId', '==', currentOrder.customerId))),
-        getDocs(query(collection(db, "vehicle_types"), where('name', '!=', ''))),
-        getDocs(query(collection(db, "trailer_types"), where('name', '!=', ''))),
-        getDocs(query(collection(db, "regions"), where('name', '!=', ''))),
-        getDocs(query(collection(db, "packaging_types"), where('name', '!=', ''))),
+        getDocs(query(collection(db, "vehicle_types"), orderBy("name"))),
+        getDocs(query(collection(db, "trailer_types"), orderBy("name"))),
+        getDocs(query(collection(db, "regions"), orderBy("name"))),
+        getDocs(query(collection(db, "packaging_types"), orderBy("name"))),
       ]);
       
       const itemsData: OrderItem[] = itemsSnap.docs.map(d => {
@@ -186,10 +185,10 @@ export default function OrderDetailPage() {
             id: d.id, 
             ...data,
             createdAt: data.createdAt.toDate(),
-            loadingStartDate: data.loadingStartDate.toDate(),
-            loadingEndDate: data.loadingEndDate.toDate(),
-            unloadingStartDate: data.unloadingStartDate.toDate(),
-            unloadingEndDate: data.unloadingEndDate.toDate(),
+            loadingStartDate: data.loadingStartDate instanceof Timestamp ? data.loadingStartDate.toDate() : new Date(data.loadingStartDate),
+            loadingEndDate: data.loadingEndDate instanceof Timestamp ? data.loadingEndDate.toDate() : new Date(data.loadingEndDate),
+            unloadingStartDate: data.unloadingStartDate instanceof Timestamp ? data.unloadingStartDate.toDate() : new Date(data.unloadingStartDate),
+            unloadingEndDate: data.unloadingEndDate instanceof Timestamp ? data.unloadingEndDate.toDate() : new Date(data.unloadingEndDate),
         } as OrderItem
       });
       itemsData.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
@@ -242,6 +241,10 @@ export default function OrderDetailPage() {
       const quotesQuery = query(collection(db, 'driver_quotes'), where('orderItemId', '==', itemToDelete.id));
       const quotesSnapshot = await getDocs(quotesQuery);
       quotesSnapshot.forEach(doc => batch.delete(doc.ref));
+      
+      const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', itemToDelete.id));
+      const cargoSnapshot = await getDocs(cargoQuery);
+      cargoSnapshot.forEach(doc => batch.delete(doc.ref));
 
       // Delete the item itself
       batch.delete(doc(db, 'order_items', itemToDelete.id));
@@ -383,6 +386,7 @@ export default function OrderDetailPage() {
         toast({ title: 'Амжилттай', description: 'Үнийн санал сонгогдлоо.' });
         fetchOrderData();
     } catch (error) {
+        console.error("Error accepting quote:", error);
         toast({ variant: 'destructive', title: 'Алдаа', description: 'Үнийн санал сонгоход алдаа гарлаа.' });
     } finally {
         setIsSubmitting(false);
@@ -412,6 +416,7 @@ export default function OrderDetailPage() {
         toast({ title: 'Буцаалаа', description: 'Жолоочийн сонголтыг буцаалаа. Та шинээр сонгох боломжтой.' });
         fetchOrderData();
     } catch (error) {
+        console.error("Error reverting quote:", error);
         toast({ variant: 'destructive', title: 'Алдаа', description: 'Сонголтыг буцаахад алдаа гарлаа.' });
     } finally {
         setIsSubmitting(false);
@@ -428,8 +433,8 @@ export default function OrderDetailPage() {
       }
   }
 
-  const handlePrint = async () => {
-    const input = printRef.current;
+  const handlePrint = async (itemId: string) => {
+    const input = printRefs.current.get(itemId);
     if (!input) {
       toast({ variant: "destructive", title: "Алдаа", description: "Хэвлэх загвар олдсонгүй." });
       return;
@@ -447,7 +452,7 @@ export default function OrderDetailPage() {
         const imgX = (pdfWidth - imgWidth * ratio) / 2;
         const imgY = 10;
         pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-        pdf.save(`uneyn-sanal-${order?.orderNumber}.pdf`);
+        pdf.save(`uneyn-sanal-${order?.orderNumber}-${itemId.substring(0,5)}.pdf`);
     } catch (error) {
         console.error("Error generating PDF:", error);
         toast({ variant: "destructive", title: "Алдаа", description: "PDF үүсгэхэд алдаа гарлаа." });
@@ -619,7 +624,7 @@ export default function OrderDetailPage() {
                                        </div>
                                    </AccordionTrigger>
                                    <AccordionContent className="space-y-4">
-                                       <div className="flex items-center justify-end gap-2 px-4">
+                                       <div className="flex items-center justify-end gap-2 px-4 pb-4 border-b">
                                            <Button variant="outline" size="sm" asChild>
                                                <Link href={`/orders/${orderId}/items/${item.id}/edit`}>
                                                    <Edit className="mr-2 h-4 w-4" />
@@ -631,67 +636,10 @@ export default function OrderDetailPage() {
                                                Устгах
                                            </Button>
                                        </div>
-                                   </AccordionContent>
-                               </AccordionItem>
-                           ))}
-                        </Accordion>
-                        ) : (
-                            <div className="text-center h-24 flex items-center justify-center text-muted-foreground">Тээвэрлэлт одоогоор алга.</div>
-                        )}
-                    </CardContent>
-                </Card>
-
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Шинэ тээвэрлэлт нэмэх</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <OrderItemForm 
-                            form={form}
-                            fields={fields}
-                            append={append}
-                            remove={remove}
-                            allData={{
-                              serviceTypes,
-                              regions,
-                              warehouses,
-                              vehicleTypes,
-                              trailerTypes,
-                              packagingTypes,
-                            }}
-                            setAllData={{
-                              setServiceTypes,
-                              setRegions,
-                              setWarehouses,
-                              setVehicleTypes,
-                              setTrailerTypes,
-                              setPackagingTypes,
-                            }}
-                            isSubmitting={isSubmitting}
-                            onSubmit={onNewItemSubmit}
-                            onAddNewItem={handleAddNewItem}
-                        />
-                    </CardContent>
-                </Card>
-
-                {orderItems.length > 0 && (
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>Үнийн санал цуглуулах</CardTitle>
-                            <CardDescription>Тээвэрлэлт тус бүрээр үнийн санал авч, жолооч сонгох хэсэг.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Tabs defaultValue={orderItems[0].id} className="w-full">
-                                <TabsList className="mb-4">
-                                    {orderItems.map((item, index) => (
-                                        <TabsTrigger key={item.id} value={item.id}>Тээвэрлэлт #{index + 1}</TabsTrigger>
-                                    ))}
-                                </TabsList>
-                                {orderItems.map((item) => (
-                                    <TabsContent key={item.id} value={item.id} className="space-y-4">
-                                        <div className="flex justify-between items-center">
+                                       <div className="px-4 space-y-4">
+                                         <div className="flex justify-between items-center pt-2">
                                             <h4 className="font-semibold">Шинэ үнийн санал нэмэх</h4>
-                                            <Button variant="outline" size="sm" onClick={handlePrint} disabled={isPrinting}>
+                                            <Button variant="outline" size="sm" onClick={() => handlePrint(item.id)} disabled={isPrinting}>
                                                 {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
                                                 PDF татах
                                             </Button>
@@ -750,12 +698,50 @@ export default function OrderDetailPage() {
                                                 )}
                                             </TableBody>
                                         </Table>
-                                    </TabsContent>
-                                ))}
-                            </Tabs>
-                        </CardContent>
-                    </Card>
-                )}
+                                       </div>
+                                   </AccordionContent>
+                               </AccordionItem>
+                           ))}
+                        </Accordion>
+                        ) : (
+                            <div className="text-center h-24 flex items-center justify-center text-muted-foreground">Тээвэрлэлт одоогоор алга.</div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Шинэ тээвэрлэлт нэмэх</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <OrderItemForm 
+                            form={form}
+                            fields={fields}
+                            append={append}
+                            remove={remove}
+                            allData={{
+                              serviceTypes,
+                              regions,
+                              warehouses,
+                              vehicleTypes,
+                              trailerTypes,
+                              packagingTypes,
+                            }}
+                            setAllData={{
+                              setServiceTypes,
+                              setRegions,
+                              setWarehouses,
+                              setVehicleTypes,
+                              setTrailerTypes,
+                              setPackagingTypes,
+                            }}
+                            isSubmitting={isSubmitting}
+                            onSubmit={onNewItemSubmit}
+                            onAddNewItem={handleAddNewItem}
+                        />
+                    </CardContent>
+                </Card>
+
             </div>
       </div>
       
@@ -778,16 +764,17 @@ export default function OrderDetailPage() {
 
         {/* Hidden printable component */}
         <div className="absolute -left-[9999px] top-auto">
-             <div ref={printRef}>
+             <div>
                 {orderItems.map((item, index) => (
-                    <QuotePrintLayout 
-                        key={item.id}
-                        order={order} 
-                        orderItem={item} 
-                        quotes={quotes.get(item.id) || []}
-                        itemIndex={index}
-                        calculateFinalPrice={calculateFinalPrice}
-                     />
+                    <div key={item.id} ref={(el) => printRefs.current.set(item.id, el)}>
+                        <QuotePrintLayout 
+                            order={order} 
+                            orderItem={item} 
+                            quotes={quotes.get(item.id) || []}
+                            itemIndex={index}
+                            calculateFinalPrice={calculateFinalPrice}
+                        />
+                    </div>
                 ))}
              </div>
         </div>

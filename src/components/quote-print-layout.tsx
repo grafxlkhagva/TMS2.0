@@ -13,11 +13,11 @@ type QuotePrintLayoutProps = {
   calculateFinalPrice: (item: OrderItem, quote: DriverQuote) => number;
 };
 
-const QuotePrintLayout = React.forwardRef<HTMLDivElement, QuotePrintLayoutProps>(({ order, orderItem, quotes, itemIndex, calculateFinalPrice }, ref) => {
+const QuotePrintLayout = ({ order, orderItem, quotes, itemIndex, calculateFinalPrice }: QuotePrintLayoutProps) => {
     if (!order) return null;
 
     return (
-        <div ref={ref} className="bg-white p-8 font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm' }}>
+        <div className="bg-white p-8 font-sans text-gray-800" style={{ width: '210mm', minHeight: '297mm' }}>
             {/* Header */}
             <div className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-8">
                 <div>
@@ -83,7 +83,7 @@ const QuotePrintLayout = React.forwardRef<HTMLDivElement, QuotePrintLayoutProps>
             </div>
         </div>
     );
-});
+};
 
 QuotePrintLayout.displayName = 'QuotePrintLayout';
 
