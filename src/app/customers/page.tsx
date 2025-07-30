@@ -82,17 +82,20 @@ export default function CustomersPage() {
     if (!customerToDelete) return;
     setIsDeleting(true);
     try {
+      const batch = writeBatch(db);
+      
       // 1. Delete all employees associated with the customer
       const employeesQuery = query(collection(db, 'customer_employees'), where('customerId', '==', customerToDelete.id));
       const employeesSnapshot = await getDocs(employeesQuery);
-      const batch = writeBatch(db);
       employeesSnapshot.forEach(doc => {
           batch.delete(doc.ref);
       });
-      await batch.commit();
 
       // 2. Delete the customer itself
-      await deleteDoc(doc(db, 'customers', customerToDelete.id));
+      const customerRef = doc(db, 'customers', customerToDelete.id);
+      batch.delete(customerRef);
+
+      await batch.commit();
 
       setCustomers(prev => prev.filter(c => c.id !== customerToDelete.id));
       toast({ title: 'Амжилттай', description: `${customerToDelete.name} харилцагчийг устгалаа.`});
@@ -246,5 +249,3 @@ export default function CustomersPage() {
     </div>
   );
 }
-
-    

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -41,7 +42,7 @@ const roleNames: Record<UserRole, string> = {
   customer_officer: 'Харилцагчийн ажилтан',
 };
 
-const userRoles: UserRole[] = ['admin', 'transport_manager', 'finance_manager', 'customer_officer'];
+const userRoles: UserRole[] = ['admin', 'manager', 'transport_manager', 'finance_manager', 'customer_officer'];
 
 
 function StatusBadge({ status }: { status: UserStatus }) {
