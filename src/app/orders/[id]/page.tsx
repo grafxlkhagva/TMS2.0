@@ -16,7 +16,7 @@ import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -136,6 +136,10 @@ export default function OrderDetailPage() {
   });
   
   const quoteForms = React.useRef<Map<string, any>>(new Map());
+
+  const totalOrderPrice = React.useMemo(() => {
+    return orderItems.reduce((acc, item) => acc + (item.finalPrice || 0), 0);
+  }, [orderItems]);
 
   const fetchOrderData = React.useCallback(async () => {
     if (!orderId) return;
@@ -539,6 +543,9 @@ export default function OrderDetailPage() {
                     </Select>
                 } 
             />
+            {totalOrderPrice > 0 && (
+                <OrderDetailItem icon={CircleDollarSign} label="Нийт үнийн дүн" value={`${totalOrderPrice.toLocaleString()}₮`} />
+            )}
             <OrderDetailItem icon={FileText} label="Статус" value={<Badge>{order.status}</Badge>} />
             <OrderDetailItem icon={User} label="Бүртгэсэн хэрэглэгч" value={order.createdBy.name} />
             <OrderDetailItem icon={FileText} label="Бүртгэсэн огноо" value={order.createdAt.toLocaleString()} />
