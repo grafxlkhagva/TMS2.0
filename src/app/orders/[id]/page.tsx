@@ -553,40 +553,6 @@ export default function OrderDetailPage() {
                 <OrderDetailItem icon={FileText} label="Бүртгэсэн огноо" value={order.createdAt.toLocaleString()} />
               </CardContent>
             </Card>
-
-             <Card>
-                <CardHeader>
-                    <CardTitle>Шинэ тээвэрлэлт нэмэх</CardTitle>
-                </CardHeader>
-                <CardContent>
-                <OrderItemForm 
-                    form={form}
-                    fields={fields}
-                    append={append}
-                    remove={remove}
-                    allData={{
-                      serviceTypes,
-                      regions,
-                      warehouses,
-                      vehicleTypes,
-                      trailerTypes,
-                      packagingTypes,
-                    }}
-                    setAllData={{
-                      setServiceTypes,
-                      setRegions,
-                      setWarehouses,
-                      setVehicleTypes,
-                      setTrailerTypes,
-                      setPackagingTypes,
-                    }}
-                    isSubmitting={isSubmitting}
-                    onSubmit={onNewItemSubmit}
-                    onAddNewItem={handleAddNewItem}
-                />
-                </CardContent>
-            </Card>
-
         </div>
         
         <div className="lg:col-span-2 space-y-6">
@@ -634,6 +600,39 @@ export default function OrderDetailPage() {
                     ) : (
                         <div className="text-center h-24 flex items-center justify-center text-muted-foreground">Тээвэрлэлт одоогоор алга.</div>
                     )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Шинэ тээвэрлэлт нэмэх</CardTitle>
+                </CardHeader>
+                <CardContent>
+                <OrderItemForm 
+                    form={form}
+                    fields={fields}
+                    append={append}
+                    remove={remove}
+                    allData={{
+                      serviceTypes,
+                      regions,
+                      warehouses,
+                      vehicleTypes,
+                      trailerTypes,
+                      packagingTypes,
+                    }}
+                    setAllData={{
+                      setServiceTypes,
+                      setRegions,
+                      setWarehouses,
+                      setVehicleTypes,
+                      setTrailerTypes,
+                      setPackagingTypes,
+                    }}
+                    isSubmitting={isSubmitting}
+                    onSubmit={onNewItemSubmit}
+                    onAddNewItem={handleAddNewItem}
+                />
                 </CardContent>
             </Card>
 
@@ -736,3 +735,5 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+
+    
