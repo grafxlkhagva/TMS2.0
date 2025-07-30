@@ -680,16 +680,16 @@ export default function OrderDetailPage() {
                                             />
                                        </div>
                                        <AccordionTrigger className="flex-1 py-4 pr-0 border-b-0">
-                                            <div className="flex justify-between w-full">
-                                                <div className="text-left">
-                                                    <p className="font-semibold">Тээвэрлэлт #{index + 1}: {getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</p>
+                                            <div className="flex justify-between items-center w-full gap-4">
+                                                <div className="text-left flex-1 min-w-0">
+                                                    <p className="font-semibold truncate">Тээвэрлэлт #{index + 1}: {getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</p>
                                                     <p className="text-sm text-muted-foreground">{getServiceName(item.serviceTypeId)} | {format(new Date(item.loadingStartDate), "yyyy-MM-dd")}</p>
                                                 </div>
-                                                <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-4 flex-shrink-0">
                                                     {item.finalPrice && (
                                                         <p className="font-semibold text-primary">{item.finalPrice.toLocaleString()}₮</p>
                                                     )}
-                                                <Badge variant={item.status === 'Assigned' ? 'default' : 'secondary'}>{item.status}</Badge>
+                                                    <Badge variant={item.status === 'Assigned' ? 'default' : 'secondary'}>{item.status}</Badge>
                                                 </div>
                                            </div>
                                        </AccordionTrigger>
