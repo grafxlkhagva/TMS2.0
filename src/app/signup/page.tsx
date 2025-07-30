@@ -142,13 +142,15 @@ export default function SignupPage() {
                     <AlertTitle>Хүсэлт амжилттай илгээгдлээ!</AlertTitle>
                     <AlertDescription>
                         Таны бүртгэлийг админ зөвшөөрсний дараа та системд нэвтрэх боломжтой болно.
-                        <Button onClick={checkUserStatus} disabled={accountStatus === 'checking'} className="w-full mt-4">
-                            {accountStatus === 'checking' && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                            Статус шалгах
-                        </Button>
-                         <Button variant="link" asChild className="p-0 h-auto mt-2 -ml-1">
-                            <Link href="/login">Нэвтрэх хуудас руу буцах</Link>
-                        </Button>
+                        <div className='flex flex-col gap-2 mt-4'>
+                          <Button onClick={checkUserStatus} disabled={accountStatus === 'checking'} className="w-full">
+                              {accountStatus === 'checking' && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                              Статус шалгах
+                          </Button>
+                          <Button variant="link" asChild className="p-0 h-auto">
+                              <Link href="/login">Нэвтрэх хуудас руу буцах</Link>
+                          </Button>
+                        </div>
                     </AlertDescription>
                 </>
             )}

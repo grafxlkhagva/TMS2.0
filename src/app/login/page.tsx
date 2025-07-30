@@ -67,7 +67,7 @@ export default function LoginPage() {
             title: 'Нэвтрэх боломжгүй',
             description: 'Таны бүртгэлийг админ хараахан зөвшөөрөөгүй байна.',
           });
-        } else {
+        } else { // 'inactive' or any other status
            await auth.signOut();
            toast({
             variant: 'destructive',
@@ -76,6 +76,7 @@ export default function LoginPage() {
           });
         }
       } else {
+         // This case might happen if user is created in Auth but not in Firestore
          await auth.signOut();
          toast({
             variant: 'destructive',

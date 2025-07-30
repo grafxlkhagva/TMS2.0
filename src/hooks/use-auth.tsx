@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -43,18 +44,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await auth.signOut();
     setUser(null);
     setFirebaseUser(null);
-    const isAuthPage = pathname === '/login' || pathname === '/signup';
-    if (!isAuthPage) {
+    if (pathname !== '/login' && pathname !== '/signup') {
       router.push('/login');
     }
   }, [router, pathname]);
 
   const fetchUserData = React.useCallback(async (fbUser: FirebaseUser | null) => {
+    const isAuthPage = pathname === '/login' || pathname === '/signup';
+    
     if (!fbUser) {
       setUser(null);
       setFirebaseUser(null);
       setLoading(false);
-      const isAuthPage = pathname === '/login' || pathname === '/signup';
       if (!isAuthPage) {
         router.push('/login');
       }
@@ -62,20 +63,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     setLoading(true);
+    setFirebaseUser(fbUser);
+
     try {
       const userDocRef = doc(db, 'users', fbUser.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
         const userData = fromFirestore(userDoc.data());
-        if (userData.status === 'active') {
-          setUser(userData);
-          setFirebaseUser(fbUser);
+        setUser(userData);
+        
+        if (userData.status !== 'active') {
+          // Allow user to stay on signup page if their status is pending
+          if (pathname !== '/signup') {
+            await handleSignOut();
+          }
         } else {
-          await handleSignOut();
+          if (isAuthPage) {
+            router.push('/dashboard');
+          }
         }
       } else {
-        await handleSignOut();
+        // User exists in Auth but not Firestore, likely during signup process
+        if (pathname !== '/signup') {
+          await handleSignOut();
+        }
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -83,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [handleSignOut, pathname]);
+  }, [handleSignOut, pathname, router]);
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
