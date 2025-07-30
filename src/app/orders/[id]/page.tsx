@@ -391,9 +391,7 @@ export default function OrderDetailPage() {
             }
         });
 
-        // Calculate final price based on the item's settings
-        const basePrice = quoteToAccept.price * (1 + (item.profitMargin || 0) / 100);
-        const finalPrice = item.withVAT ? basePrice * 1.1 : basePrice;
+        const { finalPrice } = calculateFinalPrice(item, quoteToAccept);
 
         // Update the order item
         const orderItemRef = doc(db, 'order_items', item.id);
@@ -607,9 +605,14 @@ export default function OrderDetailPage() {
   }
   
   const calculateFinalPrice = (item: OrderItem, quote: DriverQuote) => {
-      const basePrice = quote.price * (1 + (item.profitMargin || 0) / 100);
-      const finalPrice = item.withVAT ? basePrice * 1.1 : basePrice;
-      return finalPrice;
+    const priceWithProfit = quote.price * (1 + (item.profitMargin || 0) / 100);
+    const vatAmount = item.withVAT ? priceWithProfit * 0.1 : 0;
+    const finalPrice = priceWithProfit + vatAmount;
+    return {
+        priceWithProfit,
+        vatAmount,
+        finalPrice,
+    };
   }
 
   const allData = {
@@ -754,15 +757,21 @@ export default function OrderDetailPage() {
                                             </TableHeader>
                                             <TableBody>
                                                 {quotes.get(item.id)?.length > 0 ? (
-                                                    quotes.get(item.id)?.map(quote => (
+                                                    quotes.get(item.id)?.map(quote => {
+                                                        const { priceWithProfit, vatAmount, finalPrice } = calculateFinalPrice(item, quote);
+                                                        return (
                                                         <TableRow key={quote.id} className={quote.status === 'Accepted' ? 'bg-green-100 dark:bg-green-900/50' : ''}>
                                                             <TableCell>
                                                                 <p className="font-medium">{quote.driverName}</p>
                                                                 <p className="text-xs text-muted-foreground">{quote.driverPhone}</p>
                                                             </TableCell>
                                                             <TableCell>
-                                                                <p className="font-medium text-primary">{calculateFinalPrice(item, quote).toLocaleString()}₮</p>
-                                                                <p className="text-xs text-muted-foreground">Жолооч: {quote.price.toLocaleString()}₮</p>
+                                                                <div className="text-xs space-y-0.5">
+                                                                    <p>Жолооч: {quote.price.toLocaleString()}₮</p>
+                                                                    <p>Ашиг ({item.profitMargin || 0}%): {priceWithProfit.toLocaleString()}₮</p>
+                                                                    {item.withVAT && <p>НӨАТ (10%): {vatAmount.toLocaleString()}₮</p>}
+                                                                    <p className="font-bold text-base text-primary pt-1">{finalPrice.toLocaleString()}₮</p>
+                                                                </div>
                                                             </TableCell>
                                                             <TableCell>
                                                                 <Badge variant={quote.status === 'Accepted' ? 'default' : quote.status === 'Rejected' ? 'destructive' : 'secondary'}>
@@ -789,7 +798,7 @@ export default function OrderDetailPage() {
                                                                 </div>
                                                             </TableCell>
                                                         </TableRow>
-                                                    ))
+                                                    )})
                                                 ) : (
                                                     <TableRow><TableCell colSpan={4} className="text-center h-24">Үнийн санал олдсонгүй.</TableCell></TableRow>
                                                 )}

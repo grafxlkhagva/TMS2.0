@@ -10,7 +10,11 @@ type QuotePrintLayoutProps = {
   orderItem: OrderItem;
   quotes: DriverQuote[];
   itemIndex: number;
-  calculateFinalPrice: (item: OrderItem, quote: DriverQuote) => number;
+  calculateFinalPrice: (item: OrderItem, quote: DriverQuote) => {
+    priceWithProfit: number;
+    vatAmount: number;
+    finalPrice: number;
+  };
 };
 
 const QuotePrintLayout = ({ order, orderItem, quotes, itemIndex, calculateFinalPrice }: QuotePrintLayoutProps) => {
@@ -65,15 +69,18 @@ const QuotePrintLayout = ({ order, orderItem, quotes, itemIndex, calculateFinalP
                     </tr>
                 </thead>
                 <tbody>
-                    {quotes.map(quote => (
+                    {quotes.map(quote => {
+                       const { finalPrice } = calculateFinalPrice(orderItem, quote);
+                       return (
                         <tr key={quote.id} className="border-b">
                             <td className="p-2">{quote.driverName}</td>
                             <td className="p-2">{quote.driverPhone}</td>
                             <td className="p-2">{quote.price.toLocaleString()}</td>
-                            <td className="p-2">{calculateFinalPrice(orderItem, quote).toLocaleString()}</td>
+                            <td className="p-2">{finalPrice.toLocaleString()}</td>
                             <td className="p-2">{quote.notes || '-'}</td>
                         </tr>
-                    ))}
+                       )
+                    })}
                 </tbody>
             </table>
             
@@ -88,3 +95,4 @@ const QuotePrintLayout = ({ order, orderItem, quotes, itemIndex, calculateFinalP
 QuotePrintLayout.displayName = 'QuotePrintLayout';
 
 export default QuotePrintLayout;
+
