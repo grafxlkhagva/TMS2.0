@@ -40,6 +40,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -283,8 +284,8 @@ export default function OrderDetailPage() {
         startWarehouseId: '',
         endRegionId: '',
         endWarehouseId: '',
-        loadingDateRange: { from: new Date(from), to: new Date(to) },
-        unloadingDateRange: { from: new Date(from), to: new Date(to) },
+        loadingDateRange: { from: new Date(from.getTime()), to: new Date(to.getTime()) },
+        unloadingDateRange: { from: new Date(from.getTime()), to: new Date(to.getTime()) },
         serviceTypeId: '',
         vehicleTypeId: '',
         trailerTypeId: '',
@@ -444,6 +445,7 @@ export default function OrderDetailPage() {
                                             />
                                             </PopoverContent>
                                         </Popover>
+                                        <FormDescription>Эхлэх огноог сонгохдоо хоёр товшино уу.</FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )}/>
@@ -488,6 +490,7 @@ export default function OrderDetailPage() {
                                             />
                                             </PopoverContent>
                                         </Popover>
+                                        <FormDescription>Эхлэх огноог сонгохдоо хоёр товшино уу.</FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )}/>
