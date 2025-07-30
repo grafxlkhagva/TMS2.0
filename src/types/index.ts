@@ -144,8 +144,7 @@ export type OrderItem = {
     endWarehouseId: string;
     serviceTypeId: string;
     cargoInfo: string;
-    deliveryDate: any;
+    deliveryDate: Date;
     status: OrderItemStatus;
     createdAt: Date;
 };
-

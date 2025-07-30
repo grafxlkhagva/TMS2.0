@@ -72,7 +72,7 @@ const orderItemSchema = z.object({
 });
 
 const formSchema = z.object({
-  items: z.array(orderItemSchema).min(1, { message: 'Дор хаяж нэг тээврийн зүйл нэмнэ үү.' }),
+  items: z.array(orderItemSchema).min(1, { message: 'Дор хаяж нэг тээвэрлэлт нэмнэ үү.' }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -160,7 +160,7 @@ export default function OrderDetailPage() {
     try {
       await deleteDoc(doc(db, 'order_items', itemToDelete.id));
       setOrderItems(prev => prev.filter(i => i.id !== itemToDelete.id));
-      toast({ title: 'Амжилттай', description: 'Тээврийн зүйл устгагдлаа.'});
+      toast({ title: 'Амжилттай', description: 'Тээвэрлэлт устгагдлаа.'});
     } catch (error) {
       toast({ variant: 'destructive', title: 'Алдаа', description: 'Устгахад алдаа гарлаа.'});
     } finally {
@@ -213,11 +213,11 @@ export default function OrderDetailPage() {
         })
       );
       await Promise.all(promises);
-      toast({ title: 'Амжилттай', description: 'Шинэ тээвэрлэлтийн зүйлс нэмэгдлээ.'});
+      toast({ title: 'Амжилттай', description: 'Шинэ тээвэрлэлтүүд нэмэгдлээ.'});
       form.reset({ items: [] });
       fetchOrderData(); // Refetch data to show new items
     } catch (error) {
-       toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн зүйлс нэмэхэд алдаа гарлаа.'});
+       toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрлэлт нэмэхэд алдаа гарлаа.'});
     } finally {
       setIsSubmitting(false);
     }
@@ -286,8 +286,8 @@ export default function OrderDetailPage() {
         <div className="lg:col-span-2 space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Тээврийн зүйлсийн жагсаалт</CardTitle>
-                    <CardDescription>Энэ захиалгад хамаарах тээвэрлэлтийн мэдээлэл.</CardDescription>
+                    <CardTitle>Тээвэрлэлтийн жагсаалт</CardTitle>
+                    <CardDescription>Энэ захиалгад хамаарах тээвэрлэлтүүд.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -317,7 +317,7 @@ export default function OrderDetailPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24">Тээвэрлэлтийн зүйлс одоогоор алга.</TableCell>
+                                    <TableCell colSpan={5} className="text-center h-24">Тээвэрлэлт одоогоор алга.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
@@ -327,7 +327,7 @@ export default function OrderDetailPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Шинэ тээврийн зүйлс нэмэх</CardTitle>
+                    <CardTitle>Шинэ тээвэрлэлт нэмэх</CardTitle>
                 </CardHeader>
                 <CardContent>
                 <Form {...form}>
@@ -352,7 +352,7 @@ export default function OrderDetailPage() {
                     ))}
                     <div className="flex justify-between items-center">
                         <Button type="button" variant="outline" onClick={() => append({ startWarehouseId: '', endWarehouseId: '', serviceTypeId: '', cargoInfo: '', deliveryDate: new Date() })}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Шинэ зүйл нэмэх
+                            <PlusCircle className="mr-2 h-4 w-4" /> Шинэ тээвэрлэлт нэмэх
                         </Button>
                         <Button type="submit" disabled={isSubmitting || fields.length === 0}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Нэмэх
@@ -371,7 +371,7 @@ export default function OrderDetailPage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Энэ тээврийн зүйлийг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
+                        Энэ тээвэрлэлтийг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
