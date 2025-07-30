@@ -52,8 +52,37 @@ function OrderDetailItem({ icon: Icon, label, value }: { icon: React.ElementType
   );
 }
 
+const cargoItemSchema = z.object({
+  name: z.string().min(2, "Ачааны нэр дор хаяж 2 тэмдэгттэй байх ёстой."),
+  quantity: z.coerce.number().min(0.1, "Тоо хэмжээг оруулна уу."),
+  unit: z.string().min(1, "Хэмжих нэгжийг оруулна уу."),
+  packagingTypeId: z.string().min(1, "Баглаа боодол сонгоно уу."),
+  notes: z.string().optional(),
+});
+
+const orderItemSchema = z.object({
+  serviceTypeId: z.string().min(1, "Үйлчилгээний төрөл сонгоно уу."),
+  frequency: z.coerce.number().min(1, "Давтамж дор хаяж 1 байх ёстой."),
+  startRegionId: z.string().min(1, "Ачих бүс сонгоно уу."),
+  startWarehouseId: z.string().min(1, "Ачих агуулах сонгоно уу."),
+  endRegionId: z.string().min(1, "Буулгах бүс сонгоно уу."),
+  endWarehouseId: z.string().min(1, "Буулгах агуулах сонгоно уу."),
+  totalDistance: z.coerce.number().min(1, "Нийт зайг оруулна уу."),
+  loadingDateRange: z.object({
+    from: z.date({ required_error: "Ачих эхлэх огноо сонгоно уу." }),
+    to: z.date({ required_error: "Ачих дуусах огноо сонгоно уу." }),
+  }),
+  unloadingDateRange: z.object({
+    from: z.date({ required_error: "Буулгах эхлэх огноо сонгоно уу." }),
+    to: z.date({ required_error: "Буулгах дуусах огноо сонгоно уу." }),
+  }),
+  vehicleTypeId: z.string().min(1, "Машины төрөл сонгоно уу."),
+  trailerTypeId: z.string().min(1, "Тэвшний төрөл сонгоно уу."),
+  cargoItems: z.array(cargoItemSchema).min(1, "Дор хаяж нэг ачаа нэмнэ үү."),
+});
+
 const formSchema = z.object({
-  items: z.array(z.any()).min(1, { message: 'Дор хаяж нэг тээвэрлэлт нэмнэ үү.' }),
+  items: z.array(orderItemSchema).min(1, { message: 'Дор хаяж нэг тээвэрлэлт нэмнэ үү.' }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -402,12 +431,22 @@ export default function OrderDetailPage() {
                     fields={fields}
                     append={append}
                     remove={remove}
-                    serviceTypes={serviceTypes}
-                    regions={regions}
-                    warehouses={warehouses}
-                    vehicleTypes={vehicleTypes}
-                    trailerTypes={trailerTypes}
-                    packagingTypes={packagingTypes}
+                    allData={{
+                      serviceTypes,
+                      regions,
+                      warehouses,
+                      vehicleTypes,
+                      trailerTypes,
+                      packagingTypes,
+                    }}
+                    setAllData={{
+                      setServiceTypes,
+                      setRegions,
+                      setWarehouses,
+                      setVehicleTypes,
+                      setTrailerTypes,
+                      setPackagingTypes,
+                    }}
                     isSubmitting={isSubmitting}
                     onSubmit={onSubmit}
                     onAddNewItem={handleAddNewItem}

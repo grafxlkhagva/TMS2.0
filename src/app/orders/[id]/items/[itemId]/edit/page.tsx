@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, collection, query, getDocs, updateDoc, writeBatch, serverTimestamp, Timestamp, where, deleteDoc, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, query, getDocs, updateDoc, writeBatch, serverTimestamp, Timestamp, where, deleteDoc, orderBy, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
 import type { OrderItem, OrderItemCargo, Warehouse, ServiceType, VehicleType, TrailerType, Region, PackagingType } from '@/types';
@@ -16,7 +16,7 @@ import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, PlusCircle, Trash2, CalendarIcon, Loader2 } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, CalendarIcon, Loader2, Plus } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import {
   Form,
@@ -33,6 +33,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
+import QuickAddDialog, { type QuickAddDialogProps } from '@/components/quick-add-dialog';
+
 
 const cargoItemSchema = z.object({
   id: z.string().optional(), // Keep track of existing items
@@ -50,6 +52,7 @@ const formSchema = z.object({
   startWarehouseId: z.string().min(1, "Ачих агуулах сонгоно уу."),
   endRegionId: z.string().min(1, "Буулгах бүс сонгоно уу."),
   endWarehouseId: z.string().min(1, "Буулгах агуулах сонгоно уу."),
+  totalDistance: z.coerce.number().min(1, "Нийт зайг оруулна уу."),
   loadingDateRange: z.object({
     from: z.date({ required_error: "Ачих эхлэх огноо сонгоно уу." }),
     to: z.date({ required_error: "Ачих дуусах огноо сонгоно уу." }),
@@ -60,7 +63,6 @@ const formSchema = z.object({
   }),
   vehicleTypeId: z.string().min(1, "Машины төрөл сонгоно уу."),
   trailerTypeId: z.string().min(1, "Тэвшний төрөл сонгоно уу."),
-  totalDistance: z.coerce.number().min(1, "Нийт зайг оруулна уу."),
   cargoItems: z.array(cargoItemSchema).min(1, "Дор хаяж нэг ачаа нэмнэ үү."),
 });
 
@@ -84,6 +86,7 @@ export default function EditOrderItemPage() {
     // Control states
     const [isLoading, setIsLoading] = React.useState(true);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const [dialogProps, setDialogProps] = React.useState<Omit<QuickAddDialogProps, 'onClose'> | null>(null);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -231,6 +234,26 @@ export default function EditOrderItemPage() {
     }
     
     const standardUnits = ["кг", "тн", "м3", "литр", "ш", "боодол", "хайрцаг"];
+    
+    const handleQuickAdd = (type: 'regions' | 'service_types' | 'vehicle_types' | 'trailer_types' | 'packaging_types', formField: any) => {
+        setDialogProps({
+            open: true,
+            collectionName: type,
+            title: `Шинэ ${type} нэмэх`,
+            onSuccess: (newItem) => {
+                switch(type) {
+                    case 'regions': setRegions(prev => [...prev, newItem as Region]); break;
+                    case 'service_types': setServiceTypes(prev => [...prev, newItem as ServiceType]); break;
+                    case 'vehicle_types': setVehicleTypes(prev => [...prev, newItem as VehicleType]); break;
+                    case 'trailer_types': setTrailerTypes(prev => [...prev, newItem as TrailerType]); break;
+                    case 'packaging_types': setPackagingTypes(prev => [...prev, newItem as PackagingType]); break;
+                }
+                form.setValue(formField, newItem.id);
+                setDialogProps(null);
+            }
+        });
+    };
+
 
     if (isLoading) {
         return (
@@ -259,10 +282,10 @@ export default function EditOrderItemPage() {
                             <CardTitle>Тээвэрлэлтийн мэдээлэл</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                             <div className="space-y-4">
+                            <div className="space-y-4">
                                 <h5 className="font-semibold mt-4">Тээврийн үйлчилгээ</h5>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <FormField control={form.control} name="serviceTypeId" render={({ field }) => (<FormItem><FormLabel>Үйлчилгээний төрөл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{serviceTypes.map((s) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                                    <FormField control={form.control} name="serviceTypeId" render={({ field }) => (<FormItem><FormLabel>Үйлчилгээний төрөл</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{serviceTypes.map((s) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('service_types', 'serviceTypeId')}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
                                     <FormField control={form.control} name="frequency" render={({ field }) => ( <FormItem><FormLabel>Давтамж</FormLabel><FormControl><Input type="number" placeholder="1" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                                 </div>
                             </div>
@@ -270,11 +293,11 @@ export default function EditOrderItemPage() {
                             <div className="space-y-4">
                                 <h5 className="font-semibold">Тээврийн чиглэл</h5>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <FormField control={form.control} name="startRegionId" render={({ field }) => ( <FormItem><FormLabel>Ачих бүс</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map((r) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                                    <FormField control={form.control} name="startRegionId" render={({ field }) => ( <FormItem><FormLabel>Ачих бүс</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map((r) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('regions', 'startRegionId')}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
                                     <FormField control={form.control} name="startWarehouseId" render={({ field }) => ( <FormItem><FormLabel>Ачих агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map((w) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <FormField control={form.control} name="endRegionId" render={({ field }) => ( <FormItem><FormLabel>Буулгах бүс</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map((r) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                                    <FormField control={form.control} name="endRegionId" render={({ field }) => ( <FormItem><FormLabel>Буулгах бүс</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map((r) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('regions', 'endRegionId')}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
                                     <FormField control={form.control} name="endWarehouseId" render={({ field }) => ( <FormItem><FormLabel>Буулгах агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map((w) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
                                 </div>
                                 <FormField control={form.control} name="totalDistance" render={({ field }) => ( <FormItem><FormLabel>Нийт зам (км)</FormLabel><FormControl><Input type="number" placeholder="500" {...field} /></FormControl><FormMessage /></FormItem>)}/>
@@ -289,8 +312,8 @@ export default function EditOrderItemPage() {
                             <div className="space-y-4">
                                 <h5 className="font-semibold">Тээврийн хэрэгсэл</h5>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <FormField control={form.control} name="vehicleTypeId" render={({ field }) => (<FormItem><FormLabel>Машин</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{vehicleTypes.map((s) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                                    <FormField control={form.control} name="trailerTypeId" render={({ field }) => (<FormItem><FormLabel>Тэвш</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{trailerTypes.map((s) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                                    <FormField control={form.control} name="vehicleTypeId" render={({ field }) => (<FormItem><FormLabel>Машин</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{vehicleTypes.map((s) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('vehicle_types', 'vehicleTypeId')}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
+                                    <FormField control={form.control} name="trailerTypeId" render={({ field }) => (<FormItem><FormLabel>Тэвш</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{trailerTypes.map((s) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('trailer_types', 'trailerTypeId')}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
                                 </div>
                             </div>
                             <Separator/>
@@ -301,7 +324,7 @@ export default function EditOrderItemPage() {
                                         <FormField control={form.control} name={`cargoItems.${cargoIndex}.name`} render={({ field }) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Нэр</FormLabel><FormControl><Input placeholder="Цемент" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                         <FormField control={form.control} name={`cargoItems.${cargoIndex}.quantity`} render={({ field }) => (<FormItem className="md:col-span-1"><FormLabel className="text-xs">Хэмжээ</FormLabel><FormControl><Input type="number" placeholder="25" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                         <FormField control={form.control} name={`cargoItems.${cargoIndex}.unit`} render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Нэгж</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Нэгж..." /></SelectTrigger></FormControl><SelectContent>{standardUnits.map(unit => (<SelectItem key={unit} value={unit}>{unit}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)} />
-                                        <FormField control={form.control} name={`cargoItems.${cargoIndex}.packagingTypeId`} render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Баглаа</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Сонгох..." /></SelectTrigger></FormControl><SelectContent>{packagingTypes.map((p) => ( <SelectItem key={p.id} value={p.id}> {p.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)} />
+                                        <FormField control={form.control} name={`cargoItems.${cargoIndex}.packagingTypeId`} render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Баглаа</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Сонгох..." /></SelectTrigger></FormControl><SelectContent>{packagingTypes.map((p) => ( <SelectItem key={p.id} value={p.id}> {p.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('packaging_types', `cargoItems.${cargoIndex}.packagingTypeId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)} />
                                         <FormField control={form.control} name={`cargoItems.${cargoIndex}.notes`} render={({ field }) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Input placeholder="..." {...field} /></FormControl><FormMessage /></FormItem>)} />
                                         <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive self-end" onClick={() => handleRemoveCargo(cargoIndex)}><Trash2 className="h-4 w-4" /></Button>
                                     </div>
@@ -323,8 +346,7 @@ export default function EditOrderItemPage() {
                     </div>
                 </form>
             </Form>
+            {dialogProps && <QuickAddDialog {...dialogProps} onClose={() => setDialogProps(null)} />}
         </div>
     );
 }
-
-  

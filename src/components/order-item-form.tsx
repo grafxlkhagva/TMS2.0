@@ -7,7 +7,7 @@ import { format } from "date-fns";
 
 import type { Warehouse, ServiceType, VehicleType, TrailerType, Region, PackagingType } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, CalendarIcon, Loader2 } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarIcon, Loader2, Plus } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import {
   Form,
@@ -23,10 +23,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { Textarea } from '@/components/ui/textarea';
+import QuickAddDialog, { type QuickAddDialogProps } from '@/components/quick-add-dialog';
 
 
-function CargoForm({ control, itemIndex, packagingTypes, onRemove, cargoIndex }: any) {
+function CargoForm({ control, itemIndex, packagingTypes, onRemove, cargoIndex, onQuickAdd }: any) {
     const standardUnits = ["кг", "тн", "м3", "литр", "ш", "боодол", "хайрцаг"];
     return (
         <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start p-2 border rounded-md">
@@ -52,14 +52,14 @@ function CargoForm({ control, itemIndex, packagingTypes, onRemove, cargoIndex }:
                   <FormMessage />
                 </FormItem>
               )} />
-             <FormField control={control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.packagingTypeId`} render={({ field }: any) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Баглаа</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Сонгох..." /></SelectTrigger></FormControl><SelectContent>{packagingTypes.map((p: any) => ( <SelectItem key={p.id} value={p.id}> {p.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)} />
+             <FormField control={control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.packagingTypeId`} render={({ field }: any) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Баглаа</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Сонгох..." /></SelectTrigger></FormControl><SelectContent>{packagingTypes.map((p: any) => ( <SelectItem key={p.id} value={p.id}> {p.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => onQuickAdd('packaging_types', `items.${itemIndex}.cargoItems.${cargoIndex}.packagingTypeId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)} />
              <FormField control={control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.notes`} render={({ field }: any) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Input placeholder="..." {...field} /></FormControl><FormMessage /></FormItem>)} />
              <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive self-end" onClick={onRemove}><Trash2 className="h-4 w-4" /></Button>
         </div>
     )
 }
 
-function ShipmentItemForm({ form, itemIndex, onRemove, serviceTypes, regions, warehouses, vehicleTypes, trailerTypes, packagingTypes }: any) {
+function ShipmentItemForm({ form, itemIndex, onRemove, onQuickAdd, allData }: any) {
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: `items.${itemIndex}.cargoItems`,
@@ -88,7 +88,7 @@ function ShipmentItemForm({ form, itemIndex, onRemove, serviceTypes, regions, wa
         <div className="space-y-4">
             <h5 className="font-semibold mt-4">Тээврийн үйлчилгээ</h5>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField control={form.control} name={`items.${itemIndex}.serviceTypeId`} render={({ field }: any) => (<FormItem><FormLabel>Үйлчилгээний төрөл</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{serviceTypes.map((s: any) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name={`items.${itemIndex}.serviceTypeId`} render={({ field }: any) => (<FormItem><FormLabel>Үйлчилгээний төрөл</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{allData.serviceTypes.map((s: any) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => onQuickAdd('service_types', `items.${itemIndex}.serviceTypeId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
                 <FormField control={form.control} name={`items.${itemIndex}.frequency`} render={({ field }: any) => ( <FormItem><FormLabel>Давтамж</FormLabel><FormControl><Input type="number" placeholder="1" {...field} /></FormControl><FormMessage /></FormItem>)}/>
              </div>
         </div>
@@ -98,12 +98,12 @@ function ShipmentItemForm({ form, itemIndex, onRemove, serviceTypes, regions, wa
         <div className="space-y-4">
             <h5 className="font-semibold">Тээврийн чиглэл</h5>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField control={form.control} name={`items.${itemIndex}.startRegionId`} render={({ field }: any) => ( <FormItem><FormLabel>Ачих бүс</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map((r: any) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                <FormField control={form.control} name={`items.${itemIndex}.startWarehouseId`} render={({ field }: any) => ( <FormItem><FormLabel>Ачих агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map((w: any) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name={`items.${itemIndex}.startRegionId`} render={({ field }: any) => ( <FormItem><FormLabel>Ачих бүс</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих бүс..." /></SelectTrigger></FormControl><SelectContent>{allData.regions.map((r: any) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => onQuickAdd('regions', `items.${itemIndex}.startRegionId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name={`items.${itemIndex}.startWarehouseId`} render={({ field }: any) => ( <FormItem><FormLabel>Ачих агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих агуулах..." /></SelectTrigger></FormControl><SelectContent>{allData.warehouses.map((w: any) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField control={form.control} name={`items.${itemIndex}.endRegionId`} render={({ field }: any) => ( <FormItem><FormLabel>Буулгах бүс</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map((r: any) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                <FormField control={form.control} name={`items.${itemIndex}.endWarehouseId`} render={({ field }: any) => ( <FormItem><FormLabel>Буулгах агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map((w: any) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name={`items.${itemIndex}.endRegionId`} render={({ field }: any) => ( <FormItem><FormLabel>Буулгах бүс</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах бүс..." /></SelectTrigger></FormControl><SelectContent>{allData.regions.map((r: any) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => onQuickAdd('regions', `items.${itemIndex}.endRegionId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name={`items.${itemIndex}.endWarehouseId`} render={({ field }: any) => ( <FormItem><FormLabel>Буулгах агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах агуулах..." /></SelectTrigger></FormControl><SelectContent>{allData.warehouses.map((w: any) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
             </div>
             <FormField control={form.control} name={`items.${itemIndex}.totalDistance`} render={({ field }: any) => ( <FormItem><FormLabel>Нийт зам (км)</FormLabel><FormControl><Input type="number" placeholder="500" {...field} /></FormControl><FormMessage /></FormItem>)}/>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -119,8 +119,8 @@ function ShipmentItemForm({ form, itemIndex, onRemove, serviceTypes, regions, wa
         <div className="space-y-4">
              <h5 className="font-semibold">Тээврийн хэрэгсэл</h5>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField control={form.control} name={`items.${itemIndex}.vehicleTypeId`} render={({ field }: any) => (<FormItem><FormLabel>Машин</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{vehicleTypes.map((s: any) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                <FormField control={form.control} name={`items.${itemIndex}.trailerTypeId`} render={({ field }: any) => (<FormItem><FormLabel>Тэвш</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{trailerTypes.map((s: any) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name={`items.${itemIndex}.vehicleTypeId`} render={({ field }: any) => (<FormItem><FormLabel>Машин</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{allData.vehicleTypes.map((s: any) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => onQuickAdd('vehicle_types', `items.${itemIndex}.vehicleTypeId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name={`items.${itemIndex}.trailerTypeId`} render={({ field }: any) => (<FormItem><FormLabel>Тэвш</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{allData.trailerTypes.map((s: any) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => onQuickAdd('trailer_types', `items.${itemIndex}.trailerTypeId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
             </div>
         </div>
         
@@ -134,8 +134,9 @@ function ShipmentItemForm({ form, itemIndex, onRemove, serviceTypes, regions, wa
                     control={form.control}
                     itemIndex={itemIndex}
                     cargoIndex={cargoIndex}
-                    packagingTypes={packagingTypes}
+                    packagingTypes={allData.packagingTypes}
                     onRemove={() => remove(cargoIndex)}
+                    onQuickAdd={onQuickAdd}
                 />
             ))}
             <Button type="button" variant="outline" size="sm" onClick={handleAddCargo}><PlusCircle className="mr-2 h-4 w-4" /> Ачаа нэмэх</Button>
@@ -145,7 +146,28 @@ function ShipmentItemForm({ form, itemIndex, onRemove, serviceTypes, regions, wa
   )
 }
 
-export default function OrderItemForm({ form, fields, append, remove, serviceTypes, regions, warehouses, vehicleTypes, trailerTypes, packagingTypes, isSubmitting, onSubmit, onAddNewItem }: any) {
+export default function OrderItemForm({ form, fields, remove, isSubmitting, onSubmit, onAddNewItem, allData, setAllData }: any) {
+    const [dialogProps, setDialogProps] = React.useState<Omit<QuickAddDialogProps, 'onClose'> | null>(null);
+
+    const handleQuickAdd = (type: 'regions' | 'service_types' | 'vehicle_types' | 'trailer_types' | 'packaging_types', formField: any) => {
+        setDialogProps({
+            open: true,
+            collectionName: type,
+            title: `Шинэ ${type} нэмэх`,
+            onSuccess: (newItem) => {
+                switch(type) {
+                    case 'regions': setAllData.setRegions((prev: Region[]) => [...prev, newItem as Region]); break;
+                    case 'service_types': setAllData.setServiceTypes((prev: ServiceType[]) => [...prev, newItem as ServiceType]); break;
+                    case 'vehicle_types': setAllData.setVehicleTypes((prev: VehicleType[]) => [...prev, newItem as VehicleType]); break;
+                    case 'trailer_types': setAllData.setTrailerTypes((prev: TrailerType[]) => [...prev, newItem as TrailerType]); break;
+                    case 'packaging_types': setAllData.setPackagingTypes((prev: PackagingType[]) => [...prev, newItem as PackagingType]); break;
+                }
+                form.setValue(formField, newItem.id);
+                setDialogProps(null);
+            }
+        });
+    };
+
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -155,12 +177,8 @@ export default function OrderItemForm({ form, fields, append, remove, serviceTyp
                 form={form}
                 itemIndex={index}
                 onRemove={() => remove(index)}
-                serviceTypes={serviceTypes}
-                regions={regions}
-                warehouses={warehouses}
-                vehicleTypes={vehicleTypes}
-                trailerTypes={trailerTypes}
-                packagingTypes={packagingTypes}
+                onQuickAdd={handleQuickAdd}
+                allData={allData}
               />
             ))}
             <div className="flex justify-between items-center">
@@ -175,6 +193,7 @@ export default function OrderItemForm({ form, fields, append, remove, serviceTyp
             </div>
             {form.formState.errors.items && (<p className="text-sm font-medium text-destructive">{form.formState.errors.items.message}</p>)}
             </form>
+            {dialogProps && <QuickAddDialog {...dialogProps} onClose={() => setDialogProps(null)} />}
         </Form>
     )
 }
