@@ -16,7 +16,7 @@ import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, CalendarIcon, Loader2 } from 'lucide-react';
+import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, CalendarIcon, Loader2, Edit } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -166,7 +166,7 @@ export default function OrderDetailPage() {
         const loadingEndDate = data.loadingEndDate instanceof Timestamp ? data.loadingEndDate.toDate() : data.loadingEndDate;
         const unloadingStartDate = data.unloadingStartDate instanceof Timestamp ? data.unloadingStartDate.toDate() : data.unloadingStartDate;
         const unloadingEndDate = data.unloadingEndDate instanceof Timestamp ? data.unloadingEndDate.toDate() : data.unloadingEndDate;
-        return {id: d.id, ...data, createdAt: data.createdAt.toDate(), loadingStartDate, loadingEndDate, unloadingStartDate, unloadingEndDate } as OrderItem
+        return {id: d.id, ...data, createdAt: data.createdAt ? data.createdAt.toDate() : new Date(), loadingStartDate, loadingEndDate, unloadingStartDate, unloadingEndDate } as OrderItem
       });
       // Sort by createdAt client-side
       itemsData.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
@@ -299,6 +299,10 @@ export default function OrderDetailPage() {
   }
   
   const getServiceName = (id: string) => serviceTypes.find(s => s.id === id)?.name || id;
+  const getWarehouseName = (id: string) => warehouses.find(w => w.id === id)?.name || 'N/A';
+  const getVehicleTypeName = (id: string) => vehicleTypes.find(v => v.id === id)?.name || 'N/A';
+  const getTrailerTypeName = (id: string) => trailerTypes.find(t => t.id === id)?.name || 'N/A';
+
 
   const handleAddNewItem = () => {
     append({
@@ -365,38 +369,54 @@ export default function OrderDetailPage() {
                     <CardDescription>Энэ захиалгад хамаарах тээвэрлэлтүүд.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Үйлчилгээ</TableHead>
-                                <TableHead>Давтамж</TableHead>
-                                <TableHead>Ачих огноо</TableHead>
-                                <TableHead>Буулгах огноо</TableHead>
-                                <TableHead className="text-right"></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {orderItems.length > 0 ? (
-                                orderItems.map(item => (
-                                    <TableRow key={item.id}>
-                                        <TableCell>{getServiceName(item.serviceTypeId)}</TableCell>
-                                        <TableCell>{item.frequency}</TableCell>
-                                        <TableCell>{format(item.loadingStartDate, "yyyy-MM-dd")}</TableCell>
-                                        <TableCell>{format(item.unloadingStartDate, "yyyy-MM-dd")}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => setItemToDelete(item)}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24">Тээвэрлэлт одоогоор алга.</TableCell>
+                                    <TableHead>Үйлчилгээ</TableHead>
+                                    <TableHead>Чиглэл</TableHead>
+                                    <TableHead>Хэрэгсэл</TableHead>
+                                    <TableHead>Ачих огноо</TableHead>
+                                    <TableHead className="text-right"></TableHead>
                                 </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {orderItems.length > 0 ? (
+                                    orderItems.map(item => (
+                                        <TableRow key={item.id}>
+                                            <TableCell>
+                                                <div className="font-medium">{getServiceName(item.serviceTypeId)}</div>
+                                                <div className="text-xs text-muted-foreground">x{item.frequency} удаа</div>
+                                            </TableCell>
+                                            <TableCell>
+                                                {getWarehouseName(item.startWarehouseId)} &rarr; {getWarehouseName(item.endWarehouseId)}
+                                            </TableCell>
+                                            <TableCell>
+                                                {getVehicleTypeName(item.vehicleTypeId)} / {getTrailerTypeName(item.trailerTypeId)}
+                                            </TableCell>
+                                            <TableCell>{format(item.loadingStartDate, "yyyy-MM-dd")}</TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex items-center justify-end gap-1">
+                                                     <Button variant="ghost" size="icon" asChild>
+                                                        <Link href={`/orders/${orderId}/items/${item.id}/edit`}>
+                                                            <Edit className="h-4 w-4" />
+                                                        </Link>
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" onClick={() => setItemToDelete(item)}>
+                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center h-24">Тээвэрлэлт одоогоор алга.</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -505,7 +525,7 @@ function OrderItemForm({ form, itemIndex, onRemove, serviceTypes, regions, wareh
                 <FormField control={form.control} name={`items.${itemIndex}.endRegionId`} render={({ field }: any) => ( <FormItem><FormLabel>Буулгах бүс</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map((r: any) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
                 <FormField control={form.control} name={`items.${itemIndex}.endWarehouseId`} render={({ field }: any) => ( <FormItem><FormLabel>Буулгах агуулах</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map((w: any) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
             </div>
-             <FormField control={form.control} name={`items.${itemIndex}.totalDistance`} render={({ field }: any) => ( <FormItem><FormLabel>Нийт зам (км)</FormLabel><FormControl><Input type="number" placeholder="500" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={form.control} name={`items.${itemIndex}.totalDistance`} render={({ field }: any) => ( <FormItem><FormLabel>Нийт зам (км)</FormLabel><FormControl><Input type="number" placeholder="500" {...field} /></FormControl><FormMessage /></FormItem>)}/>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField control={form.control} name={`items.${itemIndex}.loadingDateRange`} render={({ field }: any) => (
                     <FormItem className="flex flex-col">
