@@ -6,8 +6,9 @@ import { z } from 'zod';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDocs, collection, query, where } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Rocket } from 'lucide-react';
+import { Rocket, CheckCircle } from 'lucide-react';
 
 const formSchema = z.object({
   lastName: z.string().min(2, { message: 'Эцэг/эхийн нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
@@ -35,8 +36,11 @@ const formSchema = z.object({
 
 export default function SignupPage() {
   const { toast } = useToast();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [accountStatus, setAccountStatus] = useState<'pending' | 'checking' | 'active'>('pending');
+  const [userEmailForCheck, setUserEmailForCheck] = useState('');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -48,6 +52,37 @@ export default function SignupPage() {
       password: '',
     },
   });
+
+  async function checkUserStatus() {
+    if (!userEmailForCheck) return;
+    setAccountStatus('checking');
+
+    try {
+        const q = query(collection(db, 'users'), where('email', '==', userEmailForCheck));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            const userDoc = querySnapshot.docs[0];
+            if (userDoc.data().status === 'active') {
+                setAccountStatus('active');
+            } else {
+                 setAccountStatus('pending');
+                 toast({
+                    title: 'Хүсэлт хүлээгдэж байна',
+                    description: 'Таны бүртгэлийг админ хараахан баталгаажуулаагүй байна.',
+                });
+            }
+        }
+    } catch (error) {
+        setAccountStatus('pending');
+        toast({
+            variant: 'destructive',
+            title: 'Алдаа',
+            description: 'Статус шалгахад алдаа гарлаа. Та түр хүлээгээд дахин оролдоно уу.',
+        });
+    }
+  }
+
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -65,7 +100,10 @@ export default function SignupPage() {
         status: 'pending',
         createdAt: new Date(),
       });
-
+      
+      await auth.signOut();
+      
+      setUserEmailForCheck(values.email);
       setIsSubmitted(true);
     } catch (error: any) {
       console.error("Signup error:", error);
@@ -87,14 +125,33 @@ export default function SignupPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Alert className="max-w-md">
-            <Rocket className="h-4 w-4" />
-            <AlertTitle>Хүсэлт амжилттай илгээгдлээ!</AlertTitle>
-            <AlertDescription>
-                Таны бүртгэлийг админ зөвшөөрсний дараа та системд нэвтрэх боломжтой болно.
-                <Button variant="link" asChild className="p-0 h-auto mt-2">
-                    <Link href="/login">Нэвтрэх хуудас руу буцах</Link>
-                </Button>
-            </AlertDescription>
+            {accountStatus === 'active' ? (
+                <>
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <AlertTitle className="text-green-600">Баяр хүргэе!</AlertTitle>
+                    <AlertDescription>
+                        Таны бүртгэл амжилттай идэвхжлээ. Та одоо системд нэвтрэх боломжтой.
+                        <Button onClick={() => router.push('/login')} className="w-full mt-4">
+                            Нэвтрэх
+                        </Button>
+                    </AlertDescription>
+                </>
+            ) : (
+                <>
+                    <Rocket className="h-4 w-4" />
+                    <AlertTitle>Хүсэлт амжилттай илгээгдлээ!</AlertTitle>
+                    <AlertDescription>
+                        Таны бүртгэлийг админ зөвшөөрсний дараа та системд нэвтрэх боломжтой болно.
+                        <Button onClick={checkUserStatus} disabled={accountStatus === 'checking'} className="w-full mt-4">
+                            {accountStatus === 'checking' && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                            Статус шалгах
+                        </Button>
+                         <Button variant="link" asChild className="p-0 h-auto mt-2 -ml-1">
+                            <Link href="/login">Нэвтрэх хуудас руу буцах</Link>
+                        </Button>
+                    </AlertDescription>
+                </>
+            )}
         </Alert>
       </div>
     );
