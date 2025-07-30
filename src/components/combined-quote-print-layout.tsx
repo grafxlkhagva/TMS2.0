@@ -76,7 +76,7 @@ const CombinedQuotePrintLayout = ({ order, orderItems, allData }: CombinedQuoteP
                         </tr>
                     </thead>
                     <tbody>
-                        {acceptedItems.map((item, index) => (
+                        {acceptedItems.length > 0 ? acceptedItems.map((item, index) => (
                             <tr key={item.id} className="border-b">
                                 <td className="p-2 border">{index + 1}</td>
                                 <td className="p-2 border">{getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</td>
@@ -87,14 +87,20 @@ const CombinedQuotePrintLayout = ({ order, orderItems, allData }: CombinedQuoteP
                                 </td>
                                 <td className="p-2 border text-right font-medium">{item.finalPrice?.toLocaleString()}</td>
                             </tr>
-                        ))}
+                        )) : (
+                            <tr>
+                                <td colSpan={5} className="text-center p-4">Нэгдсэн үнийн саналд оруулахаар сонгогдсон тээвэрлэлт алга.</td>
+                            </tr>
+                        )}
                     </tbody>
-                    <tfoot>
-                        <tr className="font-bold bg-gray-100">
-                            <td colSpan={4} className="p-2 border text-right">Нийт дүн:</td>
-                            <td className="p-2 border text-right">{totalFinalPrice.toLocaleString()}</td>
-                        </tr>
-                    </tfoot>
+                    {acceptedItems.length > 0 && (
+                        <tfoot>
+                            <tr className="font-bold bg-gray-100">
+                                <td colSpan={4} className="p-2 border text-right">Нийт дүн:</td>
+                                <td className="p-2 border text-right">{totalFinalPrice.toLocaleString()}</td>
+                            </tr>
+                        </tfoot>
+                    )}
                 </table>
             </div>
             
@@ -109,3 +115,5 @@ const CombinedQuotePrintLayout = ({ order, orderItems, allData }: CombinedQuoteP
 CombinedQuotePrintLayout.displayName = 'CombinedQuotePrintLayout';
 
 export default CombinedQuotePrintLayout;
+
+    

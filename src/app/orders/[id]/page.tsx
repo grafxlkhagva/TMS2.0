@@ -54,6 +54,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import QuotePrintLayout from '@/components/quote-print-layout';
 import CombinedQuotePrintLayout from '@/components/combined-quote-print-layout';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 const quoteFormSchema = z.object({
@@ -136,6 +137,7 @@ export default function OrderDetailPage() {
   const [isPreviewing, setIsPreviewing] = React.useState(false);
   const [itemToDelete, setItemToDelete] = React.useState<OrderItem | null>(null);
   const [isUpdatingEmployee, setIsUpdatingEmployee] = React.useState(false);
+  const [selectedItemsForQuote, setSelectedItemsForQuote] = React.useState<Set<string>>(new Set());
   
   const printRefs = React.useRef<Map<string, HTMLDivElement | null>>(new Map());
   const combinedPrintRef = React.useRef<HTMLDivElement | null>(null);
@@ -204,11 +206,19 @@ export default function OrderDetailPage() {
       });
       itemsData.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       setOrderItems(itemsData);
+      
+      const initialSelectedItems = new Set<string>();
+      itemsData.forEach(item => {
+        if(item.acceptedQuoteId) {
+            initialSelectedItems.add(item.id);
+        }
+      });
+      setSelectedItemsForQuote(initialSelectedItems);
 
       // Fetch quotes for each item
       const quotesMap = new Map<string, DriverQuote[]>();
       for (const item of itemsData) {
-          const quotesQuery = query(collection(db, 'driver_quotes'), where('orderItemId', '==', item.id));
+          const quotesQuery = query(collection(db, 'driver_quotes'), where('orderItemId', '==', item.id), orderBy('createdAt', 'desc'));
           const quotesSnapshot = await getDocs(quotesQuery);
           let quotesData = quotesSnapshot.docs.map(d => {
             const data = d.data();
@@ -218,7 +228,6 @@ export default function OrderDetailPage() {
                 createdAt: data.createdAt.toDate()
             } as DriverQuote
           });
-          quotesData.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime());
           quotesMap.set(item.id, quotesData);
       }
       setQuotes(quotesMap);
@@ -536,6 +545,17 @@ export default function OrderDetailPage() {
   const getServiceName = (id: string) => serviceTypes.find(s => s.id === id)?.name || 'Тодорхойгүй';
   const getRegionName = (id: string) => regions.find(r => r.id === id)?.name || 'Тодорхойгүй';
 
+  const handleSelectItemForQuote = (itemId: string) => {
+    setSelectedItemsForQuote(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(itemId)) {
+            newSet.delete(itemId);
+        } else {
+            newSet.add(itemId);
+        }
+        return newSet;
+    });
+  };
 
   const handleAddNewItem = () => {
     const fromDate = new Date();
@@ -655,9 +675,9 @@ export default function OrderDetailPage() {
                     <OrderDetailItem icon={FileText} label="Бүртгэсэн огноо" value={order.createdAt.toLocaleString()} />
                   </CardContent>
                   <CardFooter>
-                      <Button onClick={() => setIsPreviewing(true)} disabled={isPrinting} className="w-full">
+                      <Button onClick={() => setIsPreviewing(true)} disabled={isPrinting || selectedItemsForQuote.size === 0} className="w-full">
                            {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
-                           Нэгдсэн үнийн санал хэвлэх
+                           Нэгдсэн үнийн санал хэвлэх ({selectedItemsForQuote.size})
                       </Button>
                   </CardFooter>
                 </Card>
@@ -675,18 +695,28 @@ export default function OrderDetailPage() {
                            {orderItems.map((item, index) => (
                                <AccordionItem value={`item-${index}`} key={item.id}>
                                    <AccordionTrigger>
-                                       <div className="flex justify-between w-full pr-4">
-                                           <div className="text-left">
-                                               <p className="font-semibold">Тээвэрлэлт #{index + 1}: {getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</p>
-                                               <p className="text-sm text-muted-foreground">{getServiceName(item.serviceTypeId)} | {format(new Date(item.loadingStartDate), "yyyy-MM-dd")}</p>
+                                        <div className="flex items-center gap-4 w-full pr-4">
+                                            <Checkbox
+                                                id={`select-item-${item.id}`}
+                                                checked={selectedItemsForQuote.has(item.id)}
+                                                onCheckedChange={() => handleSelectItemForQuote(item.id)}
+                                                onClick={(e) => e.stopPropagation()} 
+                                                disabled={!item.acceptedQuoteId}
+                                                aria-label="Нэгдсэн саналд нэмэх"
+                                            />
+                                            <div className="flex justify-between w-full">
+                                                <div className="text-left">
+                                                    <p className="font-semibold">Тээвэрлэлт #{index + 1}: {getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</p>
+                                                    <p className="text-sm text-muted-foreground">{getServiceName(item.serviceTypeId)} | {format(new Date(item.loadingStartDate), "yyyy-MM-dd")}</p>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    {item.finalPrice && (
+                                                        <p className="font-semibold text-primary">{item.finalPrice.toLocaleString()}₮</p>
+                                                    )}
+                                                <Badge variant={item.status === 'Assigned' ? 'default' : 'secondary'}>{item.status}</Badge>
+                                                </div>
                                            </div>
-                                            <div className="flex items-center gap-4">
-                                                {item.finalPrice && (
-                                                    <p className="font-semibold text-primary">{item.finalPrice.toLocaleString()}₮</p>
-                                                )}
-                                               <Badge variant={item.status === 'Assigned' ? 'default' : 'secondary'}>{item.status}</Badge>
-                                           </div>
-                                       </div>
+                                        </div>
                                    </AccordionTrigger>
                                    <AccordionContent className="space-y-4">
                                        <div className="flex items-center justify-end gap-2 px-4 pb-4 border-b">
@@ -831,7 +861,7 @@ export default function OrderDetailPage() {
                      <div ref={combinedPrintRef} className="p-4">
                         <CombinedQuotePrintLayout 
                             order={order}
-                            orderItems={orderItems}
+                            orderItems={orderItems.filter(item => selectedItemsForQuote.has(item.id))}
                             allData={allData}
                         />
                     </div>
@@ -866,3 +896,5 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+
+    
