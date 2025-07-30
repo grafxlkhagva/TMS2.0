@@ -53,7 +53,9 @@ const CombinedQuotePrintLayout = ({ order, orderItems, quotes, calculateFinalPri
                 <p><strong>Хариуцсан ажилтан:</strong> {order.employeeName}</p>
             </div>
 
-            {orderItems.map((item, index) => (
+            {orderItems.map((item, index) => {
+                 const acceptedQuote = (quotes.get(item.id) || []).find(q => q.id === item.acceptedQuoteId);
+                 return (
                  <div key={item.id} className="mb-8" style={{ pageBreakInside: 'avoid' }}>
                     <h3 className="text-lg font-semibold bg-gray-100 p-2 rounded-md">Тээвэрлэлт #{index + 1}</h3>
                      <table className="w-full text-sm text-left mt-2">
@@ -67,24 +69,23 @@ const CombinedQuotePrintLayout = ({ order, orderItems, quotes, calculateFinalPri
                             </tr>
                         </thead>
                         <tbody>
-                            {(quotes.get(item.id) || []).map(quote => (
-                                <tr key={quote.id} className="border-b">
-                                    <td className="p-2">{quote.driverName}</td>
-                                    <td className="p-2">{quote.driverPhone}</td>
-                                    <td className="p-2">{quote.price.toLocaleString()}</td>
-                                    <td className="p-2">{calculateFinalPrice(item, quote).toLocaleString()}</td>
-                                    <td className="p-2">{quote.notes || '-'}</td>
+                           {acceptedQuote ? (
+                                <tr className="border-b">
+                                    <td className="p-2">{acceptedQuote.driverName}</td>
+                                    <td className="p-2">{acceptedQuote.driverPhone}</td>
+                                    <td className="p-2">{acceptedQuote.price.toLocaleString()}</td>
+                                    <td className="p-2">{item.finalPrice?.toLocaleString() || '-'}</td>
+                                    <td className="p-2">{acceptedQuote.notes || '-'}</td>
                                 </tr>
-                            ))}
-                             {!(quotes.get(item.id) || []).length && (
+                           ) : (
                                 <tr>
-                                    <td colSpan={5} className="p-2 text-center text-gray-500">Үнийн санал олдсонгүй.</td>
+                                    <td colSpan={5} className="p-2 text-center text-gray-500">Жолооч сонгогдоогүй байна.</td>
                                 </tr>
-                            )}
+                           )}
                         </tbody>
                     </table>
                 </div>
-            ))}
+            )})}
             
              {/* Total Price */}
             <div className="flex justify-end mt-8">
