@@ -299,12 +299,14 @@ export default function OrderDetailPage() {
   }
   
   const getServiceName = (id: string) => serviceTypes.find(s => s.id === id)?.name || id;
-  const getWarehouseName = (id: string) => warehouses.find(w => w.id === id)?.name || 'N/A';
+  const getRegionName = (id: string) => regions.find(r => r.id === id)?.name || 'N/A';
   const getVehicleTypeName = (id: string) => vehicleTypes.find(v => v.id === id)?.name || 'N/A';
   const getTrailerTypeName = (id: string) => trailerTypes.find(t => t.id === id)?.name || 'N/A';
 
 
   const handleAddNewItem = () => {
+    const fromDate = new Date();
+    const toDate = new Date();
     append({
         serviceTypeId: '',
         frequency: 1,
@@ -312,8 +314,8 @@ export default function OrderDetailPage() {
         startWarehouseId: '',
         endRegionId: '',
         endWarehouseId: '',
-        loadingDateRange: { from: new Date(), to: new Date() },
-        unloadingDateRange: { from: new Date(), to: new Date() },
+        loadingDateRange: { from: fromDate, to: toDate },
+        unloadingDateRange: { from: new Date(fromDate), to: new Date(toDate) },
         vehicleTypeId: '',
         trailerTypeId: '',
         totalDistance: 0,
@@ -389,7 +391,7 @@ export default function OrderDetailPage() {
                                                 <div className="text-xs text-muted-foreground">x{item.frequency} удаа</div>
                                             </TableCell>
                                             <TableCell>
-                                                {getWarehouseName(item.startWarehouseId)} &rarr; {getWarehouseName(item.endWarehouseId)}
+                                                {getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}
                                             </TableCell>
                                             <TableCell>
                                                 {getVehicleTypeName(item.vehicleTypeId)} / {getTrailerTypeName(item.trailerTypeId)}
@@ -669,3 +671,5 @@ function OrderItemForm({ form, itemIndex, onRemove, serviceTypes, regions, wareh
     </div>
   )
 }
+
+    
