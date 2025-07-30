@@ -21,7 +21,7 @@ export type Vehicle = {
 };
 
 export type Driver = {
-  id: string;
+  id:string;
   name: string;
   avatarUrl: string;
 };
@@ -162,6 +162,8 @@ export type OrderItem = {
     status: OrderItemStatus;
     createdAt: Date;
     frequency: number;
+    acceptedQuoteId?: string;
+    finalPrice?: number;
 };
 
 export type OrderItemCargo = {
@@ -172,4 +174,15 @@ export type OrderItemCargo = {
     unit: string;
     packagingTypeId: string;
     notes?: string;
+};
+
+export type DriverQuote = {
+    id: string;
+    orderItemId: string;
+    driverName: string;
+    driverPhone: string;
+    price: number;
+    notes?: string;
+    createdAt: Date;
+    status: 'Pending' | 'Accepted' | 'Rejected';
 };
