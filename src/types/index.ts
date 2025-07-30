@@ -157,4 +157,7 @@ export type OrderItem = {
     cargoInfo: string;
     status: OrderItemStatus;
     createdAt: Date;
+    frequency: number;
 };
+
+    

@@ -67,6 +67,8 @@ function OrderDetailItem({ icon: Icon, label, value }: { icon: React.ElementType
 }
 
 const orderItemSchema = z.object({
+  serviceTypeId: z.string().min(1, "Үйлчилгээний төрөл сонгоно уу."),
+  frequency: z.coerce.number().min(1, "Давтамж дор хаяж 1 байх ёстой."),
   startRegionId: z.string().min(1, "Ачих бүс сонгоно уу."),
   startWarehouseId: z.string().min(1, "Ачих агуулах сонгоно уу."),
   endRegionId: z.string().min(1, "Буулгах бүс сонгоно уу."),
@@ -79,7 +81,6 @@ const orderItemSchema = z.object({
     from: z.date({ required_error: "Буулгах эхлэх огноо сонгоно уу." }),
     to: z.date({ required_error: "Буулгах дуусах огноо сонгоно уу." }),
   }),
-  serviceTypeId: z.string().min(1, "Үйлчилгээний төрөл сонгоно уу."),
   vehicleTypeId: z.string().min(1, "Машины төрөл сонгоно уу."),
   trailerTypeId: z.string().min(1, "Тэвшний төрөл сонгоно уу."),
   totalDistance: z.coerce.number().min(1, "Нийт зайг оруулна уу."),
@@ -273,6 +274,7 @@ export default function OrderDetailPage() {
   }
   
   const getWarehouseName = (id: string) => warehouses.find(w => w.id === id)?.name || id;
+  const getServiceName = (id: string) => serviceTypes.find(s => s.id === id)?.name || id;
 
   const handleAddNewItem = () => {
     const today = new Date();
@@ -280,13 +282,14 @@ export default function OrderDetailPage() {
     const to = new Date(today.setHours(23, 59, 59, 999));
   
     append({
+        serviceTypeId: '',
+        frequency: 1,
         startRegionId: '',
         startWarehouseId: '',
         endRegionId: '',
         endWarehouseId: '',
-        loadingDateRange: { from: new Date(from.getTime()), to: new Date(to.getTime()) },
-        unloadingDateRange: { from: new Date(from.getTime()), to: new Date(to.getTime()) },
-        serviceTypeId: '',
+        loadingDateRange: { from: new Date(), to: new Date() },
+        unloadingDateRange: { from: new Date(), to: new Date() },
         vehicleTypeId: '',
         trailerTypeId: '',
         totalDistance: 0,
@@ -346,10 +349,10 @@ export default function OrderDetailPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead>Үйлчилгээ</TableHead>
+                                <TableHead>Давтамж</TableHead>
                                 <TableHead>Ачих агуулах</TableHead>
                                 <TableHead>Буулгах агуулах</TableHead>
-                                <TableHead>Ачих огноо</TableHead>
-                                <TableHead>Буулгах огноо</TableHead>
                                 <TableHead className="text-right"></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -357,10 +360,10 @@ export default function OrderDetailPage() {
                             {orderItems.length > 0 ? (
                                 orderItems.map(item => (
                                     <TableRow key={item.id}>
+                                        <TableCell>{getServiceName(item.serviceTypeId)}</TableCell>
+                                        <TableCell>{item.frequency}</TableCell>
                                         <TableCell>{getWarehouseName(item.startWarehouseId)}</TableCell>
                                         <TableCell>{getWarehouseName(item.endWarehouseId)}</TableCell>
-                                        <TableCell>{`${format(item.loadingStartDate, "yy-MM-dd")} / ${format(item.loadingEndDate, "yy-MM-dd")}`}</TableCell>
-                                        <TableCell>{`${format(item.unloadingStartDate, "yy-MM-dd")} / ${format(item.unloadingEndDate, "yy-MM-dd")}`}</TableCell>
                                         <TableCell className="text-right">
                                             <Button variant="ghost" size="icon" onClick={() => setItemToDelete(item)}>
                                                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -395,6 +398,10 @@ export default function OrderDetailPage() {
                                 </Button>
                             </div>
                             <Separator/>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormField control={form.control} name={`items.${index}.serviceTypeId`} render={({ field }) => (<FormItem><FormLabel>Үйлчилгээний төрөл</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{serviceTypes.map(s => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                                <FormField control={form.control} name={`items.${index}.frequency`} render={({ field }) => ( <FormItem><FormLabel>Давтамж</FormLabel><FormControl><Input type="number" placeholder="1" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                             </div>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField control={form.control} name={`items.${index}.startRegionId`} render={({ field }) => ( <FormItem><FormLabel>Ачих бүс</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map(r => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
                                 <FormField control={form.control} name={`items.${index}.endRegionId`} render={({ field }) => ( <FormItem><FormLabel>Буулгах бүс</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map(r => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
@@ -495,8 +502,7 @@ export default function OrderDetailPage() {
                                     </FormItem>
                                 )}/>
                              </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <FormField control={form.control} name={`items.${index}.serviceTypeId`} render={({ field }) => (<FormItem><FormLabel>Үйлчилгээ</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{serviceTypes.map(s => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField control={form.control} name={`items.${index}.vehicleTypeId`} render={({ field }) => (<FormItem><FormLabel>Машин</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{vehicleTypes.map(s => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
                                 <FormField control={form.control} name={`items.${index}.trailerTypeId`} render={({ field }) => (<FormItem><FormLabel>Тэвш</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{trailerTypes.map(s => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>)}/>
                             </div>
@@ -542,3 +548,5 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+
+    
