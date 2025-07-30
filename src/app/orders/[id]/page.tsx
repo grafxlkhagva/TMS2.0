@@ -37,6 +37,15 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import OrderItemForm from '@/components/order-item-form';
@@ -125,6 +134,7 @@ export default function OrderDetailPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isPrinting, setIsPrinting] = React.useState(false);
+  const [isPreviewing, setIsPreviewing] = React.useState(false);
   const [itemToDelete, setItemToDelete] = React.useState<OrderItem | null>(null);
   const [isUpdatingEmployee, setIsUpdatingEmployee] = React.useState(false);
   
@@ -637,43 +647,11 @@ export default function OrderDetailPage() {
                     <OrderDetailItem icon={FileText} label="Бүртгэсэн огноо" value={order.createdAt.toLocaleString()} />
                   </CardContent>
                   <CardFooter>
-                      <Button onClick={handlePrintCombinedQuote} disabled={isPrinting} className="w-full">
+                      <Button onClick={() => setIsPreviewing(true)} disabled={isPrinting} className="w-full">
                            {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
                            Нэгдсэн үнийн санал хэвлэх
                       </Button>
                   </CardFooter>
-                </Card>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Шинэ тээвэрлэлт нэмэх</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <OrderItemForm 
-                            form={form}
-                            fields={fields}
-                            append={append}
-                            remove={remove}
-                            allData={{
-                              serviceTypes,
-                              regions,
-                              warehouses,
-                              vehicleTypes,
-                              trailerTypes,
-                              packagingTypes,
-                            }}
-                            setAllData={{
-                              setServiceTypes,
-                              setRegions,
-                              setWarehouses,
-                              setVehicleTypes,
-                              setTrailerTypes,
-                              setPackagingTypes,
-                            }}
-                            isSubmitting={isSubmitting}
-                            onSubmit={onNewItemSubmit}
-                            onAddNewItem={handleAddNewItem}
-                        />
-                    </CardContent>
                 </Card>
             </div>
         
@@ -787,6 +765,38 @@ export default function OrderDetailPage() {
                         )}
                     </CardContent>
                 </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Шинэ тээвэрлэлт нэмэх</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <OrderItemForm 
+                            form={form}
+                            fields={fields}
+                            append={append}
+                            remove={remove}
+                            allData={{
+                              serviceTypes,
+                              regions,
+                              warehouses,
+                              vehicleTypes,
+                              trailerTypes,
+                              packagingTypes,
+                            }}
+                            setAllData={{
+                              setServiceTypes,
+                              setRegions,
+                              setWarehouses,
+                              setVehicleTypes,
+                              setTrailerTypes,
+                              setPackagingTypes,
+                            }}
+                            isSubmitting={isSubmitting}
+                            onSubmit={onNewItemSubmit}
+                            onAddNewItem={handleAddNewItem}
+                        />
+                    </CardContent>
+                </Card>
 
             </div>
       </div>
@@ -808,6 +818,35 @@ export default function OrderDetailPage() {
             </AlertDialogContent>
         </AlertDialog>
 
+        <Dialog open={isPreviewing} onOpenChange={setIsPreviewing}>
+            <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+                <DialogHeader>
+                    <DialogTitle>Нэгдсэн үнийн санал</DialogTitle>
+                    <DialogDescription>
+                        Урьдчилан харах хэсэг. PDF татаж авахын тулд доорх товчийг дарна уу.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="flex-1 overflow-auto border bg-gray-50 rounded-md">
+                     <div ref={combinedPrintRef} className="p-4">
+                        <CombinedQuotePrintLayout 
+                            order={order}
+                            orderItems={orderItems}
+                            quotes={quotes}
+                            calculateFinalPrice={calculateFinalPrice}
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsPreviewing(false)}>Хаах</Button>
+                    <Button onClick={handlePrintCombinedQuote} disabled={isPrinting}>
+                         {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
+                         PDF татах
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+
         {/* Hidden printable components */}
         <div className="absolute -left-[9999px] top-auto">
              <div>
@@ -823,14 +862,6 @@ export default function OrderDetailPage() {
                     </div>
                 ))}
              </div>
-             <div ref={combinedPrintRef}>
-                <CombinedQuotePrintLayout 
-                    order={order}
-                    orderItems={orderItems}
-                    quotes={quotes}
-                    calculateFinalPrice={calculateFinalPrice}
-                />
-            </div>
         </div>
     </div>
   );
