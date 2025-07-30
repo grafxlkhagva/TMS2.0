@@ -12,11 +12,13 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from "date-fns"
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign } from 'lucide-react';
+import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Download } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -43,6 +45,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import QuotePrintLayout from '@/components/quote-print-layout';
 
 
 const quoteFormSchema = z.object({
@@ -121,8 +124,12 @@ export default function OrderDetailPage() {
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isPrinting, setIsPrinting] = React.useState(false);
   const [itemToDelete, setItemToDelete] = React.useState<OrderItem | null>(null);
   const [isUpdatingEmployee, setIsUpdatingEmployee] = React.useState(false);
+  
+  const printRef = React.useRef<HTMLDivElement>(null);
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -382,7 +389,7 @@ export default function OrderDetailPage() {
     }
   }
 
-  const handleRevertQuoteSelection = async (item: OrderItem, acceptedQuote: DriverQuote) => {
+  const handleRevertQuoteSelection = async (item: OrderItem) => {
     setIsSubmitting(true);
     try {
         const batch = writeBatch(db);
@@ -421,14 +428,47 @@ export default function OrderDetailPage() {
       }
   }
 
+  const handlePrint = async () => {
+    const input = printRef.current;
+    if (!input) {
+      toast({ variant: "destructive", title: "Алдаа", description: "Хэвлэх загвар олдсонгүй." });
+      return;
+    }
+    setIsPrinting(true);
+    try {
+        const canvas = await html2canvas(input, { scale: 2 });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+        const imgX = (pdfWidth - imgWidth * ratio) / 2;
+        const imgY = 10;
+        pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+        pdf.save(`uneyn-sanal-${order?.orderNumber}.pdf`);
+    } catch (error) {
+        console.error("Error generating PDF:", error);
+        toast({ variant: "destructive", title: "Алдаа", description: "PDF үүсгэхэд алдаа гарлаа." });
+    } finally {
+        setIsPrinting(false);
+    }
+  };
+
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-6 space-y-6">
         <Skeleton className="h-8 w-32" />
         <Skeleton className="h-10 w-48" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-1"><CardHeader><Skeleton className="h-40 w-full" /></CardHeader></Card>
-            <Card className="lg:col-span-2"><CardHeader><Skeleton className="h-64 w-full" /></CardHeader></Card>
+            <div className="lg:col-span-1 space-y-6">
+                <Card><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
+            </div>
+            <div className="lg:col-span-2 space-y-6">
+                <Card><CardContent className="pt-6"><Skeleton className="h-64 w-full" /></CardContent></Card>
+            </div>
         </div>
       </div>
     );
@@ -440,8 +480,6 @@ export default function OrderDetailPage() {
   
   const getServiceName = (id: string) => serviceTypes.find(s => s.id === id)?.name || 'Тодорхойгүй';
   const getRegionName = (id: string) => regions.find(r => r.id === id)?.name || 'Тодорхойгүй';
-  const getVehicleTypeName = (id: string) => vehicleTypes.find(v => v.id === id)?.name || 'Тодорхойгүй';
-  const getTrailerTypeName = (id: string) => trailerTypes.find(t => t.id === id)?.name || 'Тодорхойгүй';
 
 
   const handleAddNewItem = () => {
@@ -476,7 +514,7 @@ export default function OrderDetailPage() {
 
     return (
         <Form {...quoteForm}>
-            <form onSubmit={quoteForm.handleSubmit((values) => handleAddQuote(orderItemId, values))} className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 items-start p-3 border rounded-md bg-muted/50">
+             <form onSubmit={quoteForm.handleSubmit((values) => handleAddQuote(orderItemId, values))} className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 items-start p-3 border rounded-md bg-muted/50">
                 <FormField control={quoteForm.control} name="driverName" render={({ field }) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Жолоочийн нэр</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={quoteForm.control} name="driverPhone" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Утас</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={quoteForm.control} name="price" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Үнийн санал (₮)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -520,200 +558,205 @@ export default function OrderDetailPage() {
       </div>
 
        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-1 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Захиалгын мэдээлэл</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <OrderDetailItem icon={Building} label="Харилцагч" value={<Link href={`/customers/${order.customerId}`} className="hover:underline text-primary">{order.customerName}</Link>} />
-                <OrderDetailItem 
-                    icon={User} 
-                    label="Хариуцсан ажилтан" 
-                    value={
-                        <Select onValueChange={handleEmployeeChange} value={order.employeeId} disabled={isUpdatingEmployee || customerEmployees.length === 0}>
-                            <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Ажилтан сонгоно уу..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {customerEmployees.map(employee => (
-                                    <SelectItem key={employee.id} value={employee.id}>
-                                      {employee.lastName} {employee.firstName}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    } 
-                />
-                {totalOrderPrice > 0 && (
-                    <OrderDetailItem icon={CircleDollarSign} label="Нийт үнийн дүн" value={`${totalOrderPrice.toLocaleString()}₮`} />
-                )}
-                <OrderDetailItem icon={FileText} label="Статус" value={<Badge>{order.status}</Badge>} />
-                <OrderDetailItem icon={User} label="Бүртгэсэн хэрэглэгч" value={order.createdBy.name} />
-                <OrderDetailItem icon={FileText} label="Бүртгэсэн огноо" value={order.createdAt.toLocaleString()} />
-              </CardContent>
-            </Card>
-        </div>
-        
-        <div className="lg:col-span-2 space-y-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Тээвэрлэлтийн жагсаалт</CardTitle>
-                    <CardDescription>Энэ захиалгад хамаарах тээвэрлэлтүүд.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {orderItems.length > 0 ? (
-                    <Accordion type="multiple" className="w-full">
-                       {orderItems.map((item, index) => (
-                           <AccordionItem value={`item-${index}`} key={item.id}>
-                               <AccordionTrigger>
-                                   <div className="flex justify-between w-full pr-4">
-                                       <div className="text-left">
-                                           <p className="font-semibold">Тээвэрлэлт #{index + 1}: {getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</p>
-                                           <p className="text-sm text-muted-foreground">{getServiceName(item.serviceTypeId)} | {format(item.loadingStartDate, "yyyy-MM-dd")}</p>
-                                       </div>
-                                       <div className="flex items-center gap-4">
-                                            {item.finalPrice && (
-                                                <p className="font-semibold text-primary">{item.finalPrice.toLocaleString()}₮</p>
-                                            )}
-                                           <Badge variant={item.status === 'Assigned' ? 'default' : 'secondary'}>{item.status}</Badge>
-                                       </div>
-                                   </div>
-                               </AccordionTrigger>
-                               <AccordionContent className="space-y-4">
-                                   <div className="flex items-center justify-end gap-2 px-4">
-                                       <Button variant="outline" size="sm" asChild>
-                                           <Link href={`/orders/${orderId}/items/${item.id}/edit`}>
-                                               <Edit className="mr-2 h-4 w-4" />
-                                               Засах
-                                           </Link>
-                                       </Button>
-                                       <Button variant="destructive" size="sm" onClick={() => setItemToDelete(item)}>
-                                           <Trash2 className="mr-2 h-4 w-4" />
-                                           Устгах
-                                       </Button>
-                                   </div>
-                               </AccordionContent>
-                           </AccordionItem>
-                       ))}
-                    </Accordion>
-                    ) : (
-                        <div className="text-center h-24 flex items-center justify-center text-muted-foreground">Тээвэрлэлт одоогоор алга.</div>
+            <div className="lg:col-span-1 space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Захиалгын мэдээлэл</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <OrderDetailItem icon={Building} label="Харилцагч" value={<Link href={`/customers/${order.customerId}`} className="hover:underline text-primary">{order.customerName}</Link>} />
+                    <OrderDetailItem 
+                        icon={User} 
+                        label="Хариуцсан ажилтан" 
+                        value={
+                            <Select onValueChange={handleEmployeeChange} value={order.employeeId} disabled={isUpdatingEmployee || customerEmployees.length === 0}>
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Ажилтан сонгоно уу..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {customerEmployees.map(employee => (
+                                        <SelectItem key={employee.id} value={employee.id}>
+                                          {employee.lastName} {employee.firstName}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        } 
+                    />
+                    {totalOrderPrice > 0 && (
+                        <OrderDetailItem icon={CircleDollarSign} label="Нийт үнийн дүн" value={`${totalOrderPrice.toLocaleString()}₮`} />
                     )}
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Шинэ тээвэрлэлт нэмэх</CardTitle>
-                </CardHeader>
-                <CardContent>
-                <OrderItemForm 
-                    form={form}
-                    fields={fields}
-                    append={append}
-                    remove={remove}
-                    allData={{
-                      serviceTypes,
-                      regions,
-                      warehouses,
-                      vehicleTypes,
-                      trailerTypes,
-                      packagingTypes,
-                    }}
-                    setAllData={{
-                      setServiceTypes,
-                      setRegions,
-                      setWarehouses,
-                      setVehicleTypes,
-                      setTrailerTypes,
-                      setPackagingTypes,
-                    }}
-                    isSubmitting={isSubmitting}
-                    onSubmit={onNewItemSubmit}
-                    onAddNewItem={handleAddNewItem}
-                />
-                </CardContent>
-            </Card>
-
-            {orderItems.length > 0 && (
-                 <Card>
+                    <OrderDetailItem icon={FileText} label="Статус" value={<Badge>{order.status}</Badge>} />
+                    <OrderDetailItem icon={User} label="Бүртгэсэн хэрэглэгч" value={order.createdBy.name} />
+                    <OrderDetailItem icon={FileText} label="Бүртгэсэн огноо" value={order.createdAt.toLocaleString()} />
+                  </CardContent>
+                </Card>
+            </div>
+        
+            <div className="lg:col-span-2 space-y-6">
+                <Card>
                     <CardHeader>
-                        <CardTitle>Үнийн санал цуглуулах</CardTitle>
-                        <CardDescription>Тээвэрлэлт тус бүрээр үнийн санал авч, жолооч сонгох хэсэг.</CardDescription>
+                        <CardTitle>Тээвэрлэлтийн жагсаалт</CardTitle>
+                        <CardDescription>Энэ захиалгад хамаарах тээвэрлэлтүүд.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Tabs defaultValue={orderItems[0].id} className="w-full">
-                            <TabsList>
-                                {orderItems.map((item, index) => (
-                                    <TabsTrigger key={item.id} value={item.id}>Тээвэрлэлт #{index + 1}</TabsTrigger>
-                                ))}
-                            </TabsList>
-                            {orderItems.map((item) => (
-                                <TabsContent key={item.id} value={item.id} className="space-y-4">
-                                    <h4 className="font-semibold mt-4">Шинэ үнийн санал нэмэх</h4>
-                                    <QuoteForm orderItemId={item.id} />
-                                    <h4 className="font-semibold pt-4">Ирсэн саналууд</h4>
-                                     <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Жолооч</TableHead>
-                                                <TableHead>Үнийн санал</TableHead>
-                                                <TableHead>Статус</TableHead>
-                                                <TableHead className="text-right">Үйлдэл</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {quotes.get(item.id)?.length > 0 ? (
-                                                quotes.get(item.id)?.map(quote => (
-                                                    <TableRow key={quote.id} className={quote.status === 'Accepted' ? 'bg-green-100 dark:bg-green-900/50' : ''}>
-                                                        <TableCell>
-                                                            <p className="font-medium">{quote.driverName}</p>
-                                                            <p className="text-xs text-muted-foreground">{quote.driverPhone}</p>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <p className="font-medium text-primary">{calculateFinalPrice(item, quote).toLocaleString()}₮</p>
-                                                            <p className="text-xs text-muted-foreground">Жолооч: {quote.price.toLocaleString()}₮</p>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Badge variant={quote.status === 'Accepted' ? 'default' : quote.status === 'Rejected' ? 'destructive' : 'secondary'}>
-                                                                {quote.status}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <div className="flex gap-2 justify-end">
-                                                                {quote.status === 'Accepted' ? (
-                                                                     <Button size="sm" variant="destructive" onClick={() => handleRevertQuoteSelection(item, quote)} disabled={isSubmitting}>
-                                                                         <XCircle className="mr-2 h-4 w-4"/> Буцаах
-                                                                     </Button>
-                                                                ) : (
-                                                                    <Button size="sm" onClick={() => handleAcceptQuote(item, quote)} disabled={isSubmitting || !!item.acceptedQuoteId}>
-                                                                        <CheckCircle className="mr-2 h-4 w-4"/> Сонгох
-                                                                    </Button>
-                                                                )}
-
-                                                                {quote.status !== 'Accepted' && (
-                                                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteQuote(quote.id)} disabled={isSubmitting}>
-                                                                        <Trash2 className="h-4 w-4 text-destructive"/>
-                                                                    </Button>
-                                                                )}
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))
-                                            ) : (
-                                                <TableRow><TableCell colSpan={4} className="text-center h-24">Үнийн санал олдсонгүй.</TableCell></TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </TabsContent>
-                            ))}
-                        </Tabs>
+                        {orderItems.length > 0 ? (
+                        <Accordion type="multiple" className="w-full">
+                           {orderItems.map((item, index) => (
+                               <AccordionItem value={`item-${index}`} key={item.id}>
+                                   <AccordionTrigger>
+                                       <div className="flex justify-between w-full pr-4">
+                                           <div className="text-left">
+                                               <p className="font-semibold">Тээвэрлэлт #{index + 1}: {getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</p>
+                                               <p className="text-sm text-muted-foreground">{getServiceName(item.serviceTypeId)} | {format(item.loadingStartDate, "yyyy-MM-dd")}</p>
+                                           </div>
+                                            <div className="flex items-center gap-4">
+                                                {item.finalPrice && (
+                                                    <p className="font-semibold text-primary">{item.finalPrice.toLocaleString()}₮</p>
+                                                )}
+                                               <Badge variant={item.status === 'Assigned' ? 'default' : 'secondary'}>{item.status}</Badge>
+                                           </div>
+                                       </div>
+                                   </AccordionTrigger>
+                                   <AccordionContent className="space-y-4">
+                                       <div className="flex items-center justify-end gap-2 px-4">
+                                           <Button variant="outline" size="sm" asChild>
+                                               <Link href={`/orders/${orderId}/items/${item.id}/edit`}>
+                                                   <Edit className="mr-2 h-4 w-4" />
+                                                   Засах
+                                               </Link>
+                                           </Button>
+                                           <Button variant="destructive" size="sm" onClick={() => setItemToDelete(item)}>
+                                               <Trash2 className="mr-2 h-4 w-4" />
+                                               Устгах
+                                           </Button>
+                                       </div>
+                                   </AccordionContent>
+                               </AccordionItem>
+                           ))}
+                        </Accordion>
+                        ) : (
+                            <div className="text-center h-24 flex items-center justify-center text-muted-foreground">Тээвэрлэлт одоогоор алга.</div>
+                        )}
                     </CardContent>
                 </Card>
-            )}
 
-        </div>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Шинэ тээвэрлэлт нэмэх</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <OrderItemForm 
+                            form={form}
+                            fields={fields}
+                            append={append}
+                            remove={remove}
+                            allData={{
+                              serviceTypes,
+                              regions,
+                              warehouses,
+                              vehicleTypes,
+                              trailerTypes,
+                              packagingTypes,
+                            }}
+                            setAllData={{
+                              setServiceTypes,
+                              setRegions,
+                              setWarehouses,
+                              setVehicleTypes,
+                              setTrailerTypes,
+                              setPackagingTypes,
+                            }}
+                            isSubmitting={isSubmitting}
+                            onSubmit={onNewItemSubmit}
+                            onAddNewItem={handleAddNewItem}
+                        />
+                    </CardContent>
+                </Card>
+
+                {orderItems.length > 0 && (
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Үнийн санал цуглуулах</CardTitle>
+                            <CardDescription>Тээвэрлэлт тус бүрээр үнийн санал авч, жолооч сонгох хэсэг.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Tabs defaultValue={orderItems[0].id} className="w-full">
+                                <TabsList className="mb-4">
+                                    {orderItems.map((item, index) => (
+                                        <TabsTrigger key={item.id} value={item.id}>Тээвэрлэлт #{index + 1}</TabsTrigger>
+                                    ))}
+                                </TabsList>
+                                {orderItems.map((item) => (
+                                    <TabsContent key={item.id} value={item.id} className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <h4 className="font-semibold">Шинэ үнийн санал нэмэх</h4>
+                                            <Button variant="outline" size="sm" onClick={handlePrint} disabled={isPrinting}>
+                                                {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
+                                                PDF татах
+                                            </Button>
+                                        </div>
+                                        <QuoteForm orderItemId={item.id} />
+                                        <h4 className="font-semibold pt-4">Ирсэн саналууд</h4>
+                                         <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Жолооч</TableHead>
+                                                    <TableHead>Эцсийн үнэ</TableHead>
+                                                    <TableHead>Статус</TableHead>
+                                                    <TableHead className="text-right">Үйлдэл</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {quotes.get(item.id)?.length > 0 ? (
+                                                    quotes.get(item.id)?.map(quote => (
+                                                        <TableRow key={quote.id} className={quote.status === 'Accepted' ? 'bg-green-100 dark:bg-green-900/50' : ''}>
+                                                            <TableCell>
+                                                                <p className="font-medium">{quote.driverName}</p>
+                                                                <p className="text-xs text-muted-foreground">{quote.driverPhone}</p>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <p className="font-medium text-primary">{calculateFinalPrice(item, quote).toLocaleString()}₮</p>
+                                                                <p className="text-xs text-muted-foreground">Жолооч: {quote.price.toLocaleString()}₮</p>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Badge variant={quote.status === 'Accepted' ? 'default' : quote.status === 'Rejected' ? 'destructive' : 'secondary'}>
+                                                                    {quote.status}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <div className="flex gap-2 justify-end">
+                                                                    {quote.status === 'Accepted' ? (
+                                                                         <Button size="sm" variant="destructive" onClick={() => handleRevertQuoteSelection(item)} disabled={isSubmitting}>
+                                                                             <XCircle className="mr-2 h-4 w-4"/> Буцаах
+                                                                         </Button>
+                                                                    ) : (
+                                                                        <Button size="sm" onClick={() => handleAcceptQuote(item, quote)} disabled={isSubmitting || !!item.acceptedQuoteId}>
+                                                                            <CheckCircle className="mr-2 h-4 w-4"/> Сонгох
+                                                                        </Button>
+                                                                    )}
+
+                                                                    {quote.status !== 'Accepted' && (
+                                                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteQuote(quote.id)} disabled={isSubmitting}>
+                                                                            <Trash2 className="h-4 w-4 text-destructive"/>
+                                                                        </Button>
+                                                                    )}
+                                                                </div>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                ) : (
+                                                    <TableRow><TableCell colSpan={4} className="text-center h-24">Үнийн санал олдсонгүй.</TableCell></TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </TabsContent>
+                                ))}
+                            </Tabs>
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
       </div>
       
        <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
@@ -732,8 +775,22 @@ export default function OrderDetailPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+
+        {/* Hidden printable component */}
+        <div className="absolute -left-[9999px] top-auto">
+             <div ref={printRef}>
+                {orderItems.map((item, index) => (
+                    <QuotePrintLayout 
+                        key={item.id}
+                        order={order} 
+                        orderItem={item} 
+                        quotes={quotes.get(item.id) || []}
+                        itemIndex={index}
+                        calculateFinalPrice={calculateFinalPrice}
+                     />
+                ))}
+             </div>
+        </div>
     </div>
   );
 }
-
-    
