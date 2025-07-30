@@ -218,7 +218,7 @@ export default function OrderDetailPage() {
       // Fetch quotes for each item
       const quotesMap = new Map<string, DriverQuote[]>();
       for (const item of itemsData) {
-          const quotesQuery = query(collection(db, 'driver_quotes'), where('orderItemId', '==', item.id), orderBy('createdAt', 'desc'));
+          const quotesQuery = query(collection(db, 'driver_quotes'), where('orderItemId', '==', item.id));
           const quotesSnapshot = await getDocs(quotesQuery);
           let quotesData = quotesSnapshot.docs.map(d => {
             const data = d.data();
@@ -228,6 +228,7 @@ export default function OrderDetailPage() {
                 createdAt: data.createdAt.toDate()
             } as DriverQuote
           });
+          quotesData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
           quotesMap.set(item.id, quotesData);
       }
       setQuotes(quotesMap);
