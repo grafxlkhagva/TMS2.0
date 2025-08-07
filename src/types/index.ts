@@ -184,6 +184,7 @@ export type OrderItem = {
     finalPrice?: number;
     profitMargin?: number;
     withVAT?: boolean;
+    cargoItems?: OrderItemCargo[];
 };
 
 export type OrderItemCargo = {

@@ -6,7 +6,7 @@ import * as React from 'react';
 import { doc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, VehicleType, TrailerType, Region, PackagingType, DriverQuote } from '@/types';
+import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, VehicleType, TrailerType, Region, PackagingType, DriverQuote, OrderItemCargo } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -191,18 +191,25 @@ export default function OrderDetailPage() {
         getDocs(query(collection(db, "packaging_types"), orderBy("name"))),
       ]);
       
-      const itemsData: OrderItem[] = itemsSnap.docs.map(d => {
-        const data = d.data();
+      const itemsDataPromises: Promise<OrderItem>[] = itemsSnap.docs.map(async (d) => {
+        const itemData = d.data();
+        const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', d.id));
+        const cargoSnapshot = await getDocs(cargoQuery);
+        const cargoItems = cargoSnapshot.docs.map(cargoDoc => ({ id: cargoDoc.id, ...cargoDoc.data() } as OrderItemCargo));
+        
         return {
             id: d.id, 
-            ...data,
-            createdAt: data.createdAt.toDate(),
-            loadingStartDate: data.loadingStartDate instanceof Timestamp ? data.loadingStartDate.toDate() : new Date(data.loadingStartDate),
-            loadingEndDate: data.loadingEndDate instanceof Timestamp ? data.loadingEndDate.toDate() : new Date(data.loadingEndDate),
-            unloadingStartDate: data.unloadingStartDate instanceof Timestamp ? data.unloadingStartDate.toDate() : new Date(data.unloadingStartDate),
-            unloadingEndDate: data.unloadingEndDate instanceof Timestamp ? data.unloadingEndDate.toDate() : new Date(data.unloadingEndDate),
+            ...itemData,
+            createdAt: itemData.createdAt.toDate(),
+            loadingStartDate: itemData.loadingStartDate instanceof Timestamp ? itemData.loadingStartDate.toDate() : new Date(itemData.loadingStartDate),
+            loadingEndDate: itemData.loadingEndDate instanceof Timestamp ? itemData.loadingEndDate.toDate() : new Date(itemData.loadingEndDate),
+            unloadingStartDate: itemData.unloadingStartDate instanceof Timestamp ? itemData.unloadingStartDate.toDate() : new Date(itemData.unloadingStartDate),
+            unloadingEndDate: itemData.unloadingEndDate instanceof Timestamp ? itemData.unloadingEndDate.toDate() : new Date(itemData.unloadingEndDate),
+            cargoItems: cargoItems
         } as OrderItem
       });
+
+      const itemsData = await Promise.all(itemsDataPromises);
       itemsData.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       setOrderItems(itemsData);
       
@@ -866,6 +873,7 @@ export default function OrderDetailPage() {
                             order={order}
                             orderItems={orderItems.filter(item => selectedItemsForQuote.has(item.id))}
                             allData={allData}
+                            calculateFinalPrice={calculateFinalPrice}
                         />
                     </div>
                 </div>
