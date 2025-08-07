@@ -2,14 +2,6 @@
 
 export type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Delayed';
 
-export type Shipment = {
-  id: string;
-  destination: string;
-  recipient: string;
-  status: ShipmentStatus;
-  deliveryDate: Date;
-};
-
 export type VehicleStatus = 'Available' | 'In Use' | 'Maintenance';
 
 export type Vehicle = {
@@ -127,7 +119,7 @@ export type PackagingType = {
 };
 
 export type OrderStatus = 'Pending' | 'Processing' | 'Completed' | 'Cancelled';
-export type OrderItemStatus = 'Pending' | 'Assigned' | 'In Transit' | 'Delivered' | 'Cancelled';
+export type OrderItemStatus = 'Pending' | 'Assigned' | 'Shipped' | 'In Transit' | 'Delivered' | 'Cancelled';
 
 export type LoadingUnloadingResponsibility = 'Захиалагч хариуцах' | 'Тээвэрлэгч хариуцах';
 export type VehicleAvailability = '8 цаг' | '12 цаг' | '24 цаг' | '48 цаг' | '7 хоног' | '14 хоног';
@@ -206,4 +198,34 @@ export type DriverQuote = {
     notes?: string;
     createdAt: Date;
     status: 'Pending' | 'Accepted' | 'Rejected';
+};
+
+export type ShipmentStatusType = 'Preparing' | 'In Transit' | 'Delivered' | 'Delayed' | 'Cancelled';
+
+export type Shipment = {
+  id: string;
+  shipmentNumber: string;
+  orderId: string;
+  orderNumber: string;
+  orderItemId: string;
+  customerId: string;
+  customerName: string;
+  driverInfo: {
+    name: string;
+    phone: string;
+    quoteId: string;
+  };
+  route: {
+    startRegion: string;
+    endRegion: string;
+    startWarehouse: string;
+    endWarehouse: string;
+  };
+  vehicleInfo: {
+    vehicleType: string;
+    trailerType: string;
+  };
+  status: ShipmentStatusType;
+  createdAt: Date;
+  estimatedDeliveryDate: Date;
 };

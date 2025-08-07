@@ -3,10 +3,10 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, orderBy, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, VehicleType, TrailerType, Region, PackagingType, DriverQuote, OrderItemCargo } from '@/types';
+import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, VehicleType, TrailerType, Region, PackagingType, DriverQuote, OrderItemCargo, Shipment } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -19,7 +19,7 @@ import html2canvas from 'html2canvas';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Download, Info } from 'lucide-react';
+import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Download, Info, Truck, ExternalLink } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -114,6 +114,24 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+async function generateShipmentNumber() {
+    const counterRef = doc(db, 'counters', 'shipmentCounter');
+    const newCount = await runTransaction(db, async (transaction) => {
+        const counterDoc = await transaction.get(counterRef);
+        if (!counterDoc.exists()) {
+            transaction.set(counterRef, { current: 1 });
+            return 1;
+        }
+        const newCurrent = counterDoc.data().current + 1;
+        transaction.update(counterRef, { current: newCurrent });
+        return newCurrent;
+    });
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    return `SHP-${year}${month}-${String(newCount).padStart(4, '0')}`;
+}
+
 
 export default function OrderDetailPage() {
   const { id: orderId } = useParams<{ id: string }>();
@@ -123,6 +141,7 @@ export default function OrderDetailPage() {
   const [order, setOrder] = React.useState<Order | null>(null);
   const [orderItems, setOrderItems] = React.useState<OrderItem[]>([]);
   const [quotes, setQuotes] = React.useState<Map<string, DriverQuote[]>>(new Map());
+  const [shipments, setShipments] = React.useState<Map<string, Shipment>>(new Map());
   const [warehouses, setWarehouses] = React.useState<Warehouse[]>([]);
   const [regions, setRegions] = React.useState<Region[]>([]);
   const [serviceTypes, setServiceTypes] = React.useState<ServiceType[]>([]);
@@ -136,6 +155,7 @@ export default function OrderDetailPage() {
   const [isPrinting, setIsPrinting] = React.useState(false);
   const [isPreviewing, setIsPreviewing] = React.useState(false);
   const [itemToDelete, setItemToDelete] = React.useState<OrderItem | null>(null);
+  const [itemToShip, setItemToShip] = React.useState<OrderItem | null>(null);
   const [isUpdatingEmployee, setIsUpdatingEmployee] = React.useState(false);
   const [selectedItemsForQuote, setSelectedItemsForQuote] = React.useState<Set<string>>(new Set());
   
@@ -180,7 +200,7 @@ export default function OrderDetailPage() {
       } as Order;
       setOrder(currentOrder);
 
-      const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap, packagingTypeSnap] = await Promise.all([
+      const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap, packagingTypeSnap, shipmentsSnap] = await Promise.all([
         getDocs(query(collection(db, 'order_items'), where('orderId', '==', orderId))),
         getDocs(query(collection(db, "warehouses"), orderBy("name"))),
         getDocs(query(collection(db, "service_types"), orderBy("name"))),
@@ -189,6 +209,7 @@ export default function OrderDetailPage() {
         getDocs(query(collection(db, "trailer_types"), orderBy("name"))),
         getDocs(query(collection(db, "regions"), orderBy("name"))),
         getDocs(query(collection(db, "packaging_types"), orderBy("name"))),
+        getDocs(query(collection(db, 'shipments'), where('orderId', '==', orderId))),
       ]);
       
       const itemsDataPromises: Promise<OrderItem>[] = itemsSnap.docs.map(async (d) => {
@@ -238,6 +259,13 @@ export default function OrderDetailPage() {
           quotesMap.set(item.id, quotesData);
       }
       setQuotes(quotesMap);
+      
+      const shipmentsMap = new Map<string, Shipment>();
+      shipmentsSnap.forEach(doc => {
+          const shipment = {id: doc.id, ...doc.data()} as Shipment;
+          shipmentsMap.set(shipment.orderItemId, shipment);
+      });
+      setShipments(shipmentsMap);
 
       setWarehouses(warehouseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Warehouse)));
       setServiceTypes(serviceTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceType)));
@@ -457,6 +485,66 @@ export default function OrderDetailPage() {
           toast({ variant: 'destructive', title: 'Алдаа', description: 'Үнийн санал устгахад алдаа гарлаа.' });
       }
   }
+  
+  const handleCreateShipment = async () => {
+    if (!itemToShip || !order || !itemToShip.acceptedQuoteId) return;
+
+    setIsSubmitting(true);
+    try {
+        const acceptedQuote = (quotes.get(itemToShip.id) || []).find(q => q.id === itemToShip.acceptedQuoteId);
+        if (!acceptedQuote) {
+            toast({ variant: "destructive", title: "Алдаа", description: "Сонгогдсон үнийн санал олдсонгүй."});
+            return;
+        }
+        
+        const shipmentNumber = await generateShipmentNumber();
+        const batch = writeBatch(db);
+
+        // 1. Create new shipment document
+        const shipmentRef = doc(collection(db, 'shipments'));
+        batch.set(shipmentRef, {
+            shipmentNumber,
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            orderItemId: itemToShip.id,
+            customerId: order.customerId,
+            customerName: order.customerName,
+            driverInfo: {
+                name: acceptedQuote.driverName,
+                phone: acceptedQuote.driverPhone,
+                quoteId: acceptedQuote.id
+            },
+            route: {
+                startRegion: getRegionName(itemToShip.startRegionId),
+                endRegion: getRegionName(itemToShip.endRegionId),
+                startWarehouse: getWarehouseName(itemToShip.startWarehouseId),
+                endWarehouse: getWarehouseName(itemToShip.endWarehouseId),
+            },
+            vehicleInfo: {
+                vehicleType: getVehicleTypeName(itemToShip.vehicleTypeId),
+                trailerType: getTrailerTypeName(itemToShip.trailerTypeId),
+            },
+            status: 'Preparing',
+            createdAt: serverTimestamp(),
+            estimatedDeliveryDate: itemToShip.unloadingEndDate,
+        });
+
+        // 2. Update order item status
+        const orderItemRef = doc(db, 'order_items', itemToShip.id);
+        batch.update(orderItemRef, { status: 'Shipped' });
+
+        await batch.commit();
+
+        toast({ title: "Амжилттай", description: `${shipmentNumber} дугаартай шинэ тээвэрлэлт үүслээ.`});
+        fetchOrderData(); // Refresh data
+    } catch (error) {
+        console.error("Error creating shipment:", error);
+        toast({ variant: "destructive", title: "Алдаа", description: "Тээвэр үүсгэхэд алдаа гарлаа."});
+    } finally {
+        setIsSubmitting(false);
+        setItemToShip(null);
+    }
+  }
 
   const handlePrintCombinedQuote = async () => {
     const input = combinedPrintRef.current;
@@ -521,6 +609,9 @@ export default function OrderDetailPage() {
   
   const getServiceName = (id: string) => serviceTypes.find(s => s.id === id)?.name || 'Тодорхойгүй';
   const getRegionName = (id: string) => regions.find(r => r.id === id)?.name || 'Тодорхойгүй';
+  const getWarehouseName = (id: string) => warehouses.find(w => w.id === id)?.name || 'N/A';
+  const getVehicleTypeName = (id: string) => vehicleTypes.find(v => v.id === id)?.name || 'N/A';
+  const getTrailerTypeName = (id: string) => trailerTypes.find(t => t.id === id)?.name || 'N/A';
 
   const handleSelectItemForQuote = (itemId: string) => {
     setSelectedItemsForQuote(prev => {
@@ -696,13 +787,26 @@ export default function OrderDetailPage() {
                                                     {item.finalPrice && (
                                                         <p className="font-semibold text-primary">{item.finalPrice.toLocaleString()}₮</p>
                                                     )}
-                                                    <Badge variant={item.status === 'Assigned' ? 'default' : 'secondary'}>{item.status}</Badge>
+                                                    <Badge variant={item.status === 'Assigned' ? 'default' : item.status === 'Shipped' ? 'success' : 'secondary'}>{item.status}</Badge>
                                                 </div>
                                            </div>
                                        </AccordionTrigger>
                                    </div>
                                    <AccordionContent className="space-y-4">
                                        <div className="flex items-center justify-end gap-2 px-4 pb-4 border-b">
+                                           {shipments.has(item.id) ? (
+                                                <Button variant="outline" size="sm" asChild>
+                                                    <Link href={`/shipments/${shipments.get(item.id)?.id}`}>
+                                                        <ExternalLink className="mr-2 h-4 w-4" />
+                                                        Тээвэрлэлт рүү
+                                                    </Link>
+                                                </Button>
+                                            ) : (
+                                                <Button variant="default" size="sm" onClick={() => setItemToShip(item)} disabled={!item.acceptedQuoteId || item.status === 'Shipped'}>
+                                                    <Truck className="mr-2 h-4 w-4" />
+                                                    Тээвэр үүсгэх
+                                                </Button>
+                                            )}
                                            <Button variant="outline" size="sm" asChild>
                                                <Link href={`/orders/${orderId}/items/${item.id}/edit`}>
                                                    <Edit className="mr-2 h-4 w-4" />
@@ -753,11 +857,11 @@ export default function OrderDetailPage() {
                                                             <TableCell className="text-right">
                                                                 <div className="flex gap-2 justify-end">
                                                                     {item.acceptedQuoteId === quote.id ? (
-                                                                         <Button size="sm" variant="destructive" onClick={() => handleRevertQuoteSelection(item)} disabled={isSubmitting}>
+                                                                         <Button size="sm" variant="destructive" onClick={() => handleRevertQuoteSelection(item)} disabled={isSubmitting || item.status === 'Shipped'}>
                                                                              <XCircle className="mr-2 h-4 w-4"/> Буцаах
                                                                          </Button>
                                                                     ) : (
-                                                                        <Button size="sm" onClick={() => handleAcceptQuote(item, quote)} disabled={isSubmitting || !!item.acceptedQuoteId}>
+                                                                        <Button size="sm" onClick={() => handleAcceptQuote(item, quote)} disabled={isSubmitting || !!item.acceptedQuoteId || item.status === 'Shipped'}>
                                                                             <CheckCircle className="mr-2 h-4 w-4"/> Сонгох
                                                                         </Button>
                                                                     )}
@@ -854,6 +958,23 @@ export default function OrderDetailPage() {
                     <AlertDialogCancel>Цуцлах</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDeleteItem} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90">
                         {isSubmitting ? "Устгаж байна..." : "Устгах"}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        
+       <AlertDialog open={!!itemToShip} onOpenChange={(open) => !open && setItemToShip(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Тээвэрлэлт үүсгэх</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Та энэ тээвэрлэлтийг баталгаажуулж, шинэ тээвэр үүсгэхдээ итгэлтэй байна уу? Энэ үйлдлийг буцаах боломжгүй.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Цуцлах</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleCreateShipment} disabled={isSubmitting}>
+                        {isSubmitting ? "Үүсгэж байна..." : "Тийм, үүсгэх"}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
