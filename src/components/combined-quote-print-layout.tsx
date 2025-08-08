@@ -71,7 +71,7 @@ const CombinedQuotePrintLayout = ({ order, orderItems, quotesMap, allData }: Com
                     <h1 className="text-2xl font-bold mt-2">Tumen Tech TMS</h1>
                 </div>
                 <div className="text-right">
-                    <h2 className="text-xl font-bold uppercase">Үнийн санал</h2>
+                    <h2 className="text-xl font-bold uppercase">ҮНИЙН САНАЛ</h2>
                     <p className="mt-1">Огноо: {format(new Date(), 'yyyy-MM-dd')}</p>
                     <p className="mt-1">Захиалгын №: {order.orderNumber}</p>
                 </div>
@@ -106,7 +106,6 @@ const CombinedQuotePrintLayout = ({ order, orderItems, quotesMap, allData }: Com
                             const finalPrice = item.finalPrice || 0;
                             const priceBeforeVat = finalPrice / (item.withVAT ? 1.1 : 1);
                             const vatAmount = item.withVAT ? priceBeforeVat * 0.1 : 0;
-                            const unitPriceWithProfit = priceBeforeVat / (item.frequency || 1);
 
                             return (
                               <tr key={item.id} className="border-b">
@@ -133,7 +132,7 @@ const CombinedQuotePrintLayout = ({ order, orderItems, quotesMap, allData }: Com
                                   <p className="text-gray-600">{getWarehouseName(item.endWarehouseId)}</p>
                                 </td>
                                 <td className="p-1 border align-top">{item.totalDistance} км</td>
-                                <td className="p-1 border align-top">{getVehicleTypeName(item.vehicleTypeId)}, {getTrailerTypeName(item.trailerTypeId)}</td>
+                                <td className="p-1 border align-top">{`${getVehicleTypeName(item.vehicleTypeId)}, ${getTrailerTypeName(item.trailerTypeId)}`}</td>
                                 <td className="p-1 border text-right align-top">{priceBeforeVat.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                 <td className="p-1 border text-right align-top">{item.frequency}</td>
                                 <td className="p-1 border text-right align-top">{priceBeforeVat.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
@@ -172,11 +171,11 @@ const CombinedQuotePrintLayout = ({ order, orderItems, quotesMap, allData }: Com
                         <div className="col-span-2">
                             <strong>Зөвшөөрөл:</strong>
                             {(order.conditions.permits?.roadPermit || order.conditions.permits?.roadToll) ? (
-                                <ul className="list-disc list-inside">
+                                <ul className="list-disc list-inside ml-4">
                                     {order.conditions.permits.roadPermit && <li>Замын зөвшөөрөл авна</li>}
                                     {order.conditions.permits.roadToll && <li>Замын хураамж тушаана</li>}
                                 </ul>
-                            ) : "Тодорхойлоогүй"}
+                            ) : " Тодорхойлоогүй"}
                         </div>
                          {order.conditions.additionalConditions && (
                             <div className="col-span-2"><strong>Нэмэлт нөхцөл:</strong> {order.conditions.additionalConditions}</div>
