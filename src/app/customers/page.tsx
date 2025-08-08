@@ -154,9 +154,9 @@ export default function CustomersPage() {
               <TableRow>
                 <TableHead>Нэр</TableHead>
                 <TableHead>Регистрийн дугаар</TableHead>
-                <TableHead>И-мэйл</TableHead>
                 <TableHead>Утас</TableHead>
-                <TableHead>Бүртгэсэн ажилтан</TableHead>
+                <TableHead>Бүртгэсэн</TableHead>
+                <TableHead>Хариуцсан</TableHead>
                 <TableHead>Бүртгүүлсэн</TableHead>
                 <TableHead><span className="sr-only">Үйлдэл</span></TableHead>
               </TableRow>
@@ -167,8 +167,8 @@ export default function CustomersPage() {
                   <TableRow key={index}>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
@@ -183,9 +183,9 @@ export default function CustomersPage() {
                         </Link>
                       </TableCell>
                       <TableCell>{customer.registerNumber}</TableCell>
-                      <TableCell>{customer.email}</TableCell>
                       <TableCell>{customer.officePhone}</TableCell>
                       <TableCell>{customer.createdBy?.name || 'N/A'}</TableCell>
+                      <TableCell>{customer.assignedTo?.name || 'N/A'}</TableCell>
                       <TableCell>{customer.createdAt.toLocaleDateString()}</TableCell>
                       <TableCell className="text-right">
                          <DropdownMenu>

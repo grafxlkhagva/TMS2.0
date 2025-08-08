@@ -6,11 +6,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2, ArrowLeft } from 'lucide-react';
-import { doc, getDoc, updateDoc, serverTimestamp, collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, collection, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import type { Customer, Industry } from '@/types';
+import type { Customer, Industry, SystemUser } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -35,6 +35,7 @@ const formSchema = z.object({
   address: z.string().min(5, { message: 'Хаяг дор хаяж 5 тэмдэгттэй байх ёстой.' }),
   officePhone: z.string().min(8, { message: 'Утасны дугаар буруу байна.' }),
   email: z.string().email({ message: 'Хүчинтэй и-мэйл хаяг оруулна уу.' }),
+  assignedToUid: z.string().min(1, { message: 'Хариуцсан ажилтан сонгоно уу.' }),
   note: z.string().optional(),
 });
 
@@ -48,24 +49,35 @@ export default function EditCustomerPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [customerName, setCustomerName] = React.useState('');
   const [industries, setIndustries] = React.useState<Industry[]>([]);
+  const [systemUsers, setSystemUsers] = React.useState<SystemUser[]>([]);
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
   });
   
   React.useEffect(() => {
-    const fetchIndustries = async () => {
+    const fetchData = async () => {
       try {
-        const q = query(collection(db, "industries"), orderBy("name"));
-        const querySnapshot = await getDocs(q);
-        const industriesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Industry));
+        const industriesQuery = query(collection(db, "industries"), orderBy("name"));
+        const usersQuery = query(collection(db, "users"), where("status", "==", "active"), orderBy("firstName"));
+        
+        const [industriesSnapshot, usersSnapshot] = await Promise.all([
+            getDocs(industriesQuery),
+            getDocs(usersQuery),
+        ]);
+
+        const industriesData = industriesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Industry));
         setIndustries(industriesData);
+        
+        const usersData = usersSnapshot.docs.map(doc => doc.data() as SystemUser);
+        setSystemUsers(usersData);
       } catch (error) {
-        console.error("Error fetching industries:", error);
-        toast({ variant: 'destructive', title: 'Алдаа', description: 'Үйл ажиллагааны чиглэл татахад алдаа гарлаа.'});
+        console.error("Error fetching data:", error);
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Хамааралтай мэдээлэл татахад алдаа гарлаа.'});
       }
     };
-    fetchIndustries();
+    fetchData();
   }, [toast]);
 
   React.useEffect(() => {
@@ -76,7 +88,7 @@ export default function EditCustomerPage() {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 const data = docSnap.data() as Customer;
-                form.reset(data);
+                form.reset({ ...data, assignedToUid: data.assignedTo?.uid });
                 setCustomerName(data.name);
             } else {
                 toast({ variant: 'destructive', title: 'Алдаа', description: 'Харилцагч олдсонгүй.' });
@@ -96,8 +108,16 @@ export default function EditCustomerPage() {
     setIsSubmitting(true);
     try {
       const customerRef = doc(db, 'customers', id);
+      const assignedUser = systemUsers.find(u => u.uid === values.assignedToUid);
+      
+      const { assignedToUid, ...restOfValues } = values;
+
       await updateDoc(customerRef, {
-        ...values,
+        ...restOfValues,
+        assignedTo: {
+            uid: assignedUser?.uid,
+            name: `${assignedUser?.lastName} ${assignedUser?.firstName}`,
+        },
         updatedAt: serverTimestamp(),
       });
       
@@ -139,6 +159,7 @@ export default function EditCustomerPage() {
                         <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
                         <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
                     </div>
+                    <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
                     <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-20 w-full" /></div>
                     <div className="flex justify-end gap-2">
                         <Skeleton className="h-10 w-20" />
@@ -204,7 +225,7 @@ export default function EditCustomerPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Үйл ажиллагааны чиглэл</FormLabel>
-                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Чиглэл сонгоно уу..." />
@@ -265,6 +286,31 @@ export default function EditCustomerPage() {
                   )}
                 />
               </div>
+              
+               <FormField
+                control={form.control}
+                name="assignedToUid"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Хариуцсан ажилтан</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Хариуцсан ажилтан сонгоно уу..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {systemUsers.map(user => (
+                          <SelectItem key={user.uid} value={user.uid}>
+                            {user.lastName} {user.firstName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
                <FormField
                 control={form.control}

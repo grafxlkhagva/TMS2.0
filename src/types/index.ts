@@ -48,6 +48,10 @@ export type Customer = {
     uid: string;
     name: string;
   };
+  assignedTo?: {
+    uid: string;
+    name: string;
+  };
 };
 
 export type CustomerEmployee = {
