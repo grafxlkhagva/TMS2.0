@@ -60,7 +60,7 @@ export default function EditCustomerPage() {
     const fetchData = async () => {
       try {
         const industriesQuery = query(collection(db, "industries"), orderBy("name"));
-        const usersQuery = query(collection(db, "users"), where("status", "==", "active"), orderBy("firstName"));
+        const usersQuery = query(collection(db, "users"), orderBy("firstName"));
         
         const [industriesSnapshot, usersSnapshot] = await Promise.all([
             getDocs(industriesQuery),
