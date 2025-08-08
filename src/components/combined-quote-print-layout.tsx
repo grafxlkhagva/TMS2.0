@@ -134,7 +134,7 @@ const CombinedQuotePrintLayout = ({ order, orderItems, quotesMap, allData }: Com
                                 </td>
                                 <td className="p-1 border align-top">{item.totalDistance} км</td>
                                 <td className="p-1 border align-top">{getVehicleTypeName(item.vehicleTypeId)}, {getTrailerTypeName(item.trailerTypeId)}</td>
-                                <td className="p-1 border text-right align-top">{unitPriceWithProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                <td className="p-1 border text-right align-top">{priceBeforeVat.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                 <td className="p-1 border text-right align-top">{item.frequency}</td>
                                 <td className="p-1 border text-right align-top">{priceBeforeVat.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                 <td className="p-1 border text-right align-top">{vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
@@ -196,3 +196,5 @@ const CombinedQuotePrintLayout = ({ order, orderItems, quotesMap, allData }: Com
 CombinedQuotePrintLayout.displayName = 'CombinedQuotePrintLayout';
 
 export default CombinedQuotePrintLayout;
+
+    
