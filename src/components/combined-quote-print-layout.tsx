@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -30,6 +29,8 @@ const CombinedQuotePrintLayout = ({ order, orderItems, quotesMap, allData }: Com
     const getWarehouseName = (id: string) => allData.warehouses.find(w => w.id === id)?.name || 'N/A';
     const getVehicleTypeName = (id: string) => allData.vehicleTypes.find(v => v.id === id)?.name || 'N/A';
     const getTrailerTypeName = (id: string) => allData.trailerTypes.find(t => t.id === id)?.name || 'N/A';
+    const getPackagingTypeName = (id: string) => allData.packagingTypes.find(p => p.id === id)?.name || 'N/A';
+
 
     const acceptedItems = orderItems.filter(item => item.acceptedQuoteId && item.finalPrice);
 
@@ -93,7 +94,7 @@ const CombinedQuotePrintLayout = ({ order, orderItems, quotesMap, allData }: Com
                             <th className="p-1 border">Буулгах</th>
                             <th className="p-1 border">Нийт зам</th>
                             <th className="p-1 border">Тээврийн хэрэгсэл</th>
-                            <th className="p-1 border text-right">Нэгж машины төлбөр</th>
+                            <th className="p-1 border text-right">Тээврийн үнэ</th>
                             <th className="p-1 border text-right">Тээврийн тоо</th>
                             <th className="p-1 border text-right">Нийт төлбөр</th>
                             <th className="p-1 border text-right">НӨАТ</th>
@@ -105,15 +106,23 @@ const CombinedQuotePrintLayout = ({ order, orderItems, quotesMap, allData }: Com
                             const finalPrice = item.finalPrice || 0;
                             const priceBeforeVat = finalPrice / (item.withVAT ? 1.1 : 1);
                             const vatAmount = item.withVAT ? priceBeforeVat * 0.1 : 0;
-                            const unitPrice = priceBeforeVat / (item.frequency || 1);
+                            const unitPriceWithProfit = priceBeforeVat / (item.frequency || 1);
 
                             return (
                               <tr key={item.id} className="border-b">
                                 <td className="p-1 border align-top">{getServiceName(item.serviceTypeId)}</td>
                                 <td className="p-1 border align-top">
-                                    {(item.cargoItems || []).map((cargo, i) => (
-                                        <div key={i}>{cargo.name} - {cargo.quantity} {cargo.unit}</div>
-                                    ))}
+                                    <table className="w-full">
+                                        <tbody>
+                                            {(item.cargoItems || []).map((cargo, i) => (
+                                                <tr key={i}>
+                                                    <td className="pr-2">{cargo.name}</td>
+                                                    <td className="pr-2">{cargo.quantity} {cargo.unit}</td>
+                                                    <td>({getPackagingTypeName(cargo.packagingTypeId)})</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </td>
                                 <td className="p-1 border align-top">
                                   <p>{getRegionName(item.startRegionId)}</p>
@@ -125,7 +134,7 @@ const CombinedQuotePrintLayout = ({ order, orderItems, quotesMap, allData }: Com
                                 </td>
                                 <td className="p-1 border align-top">{item.totalDistance} км</td>
                                 <td className="p-1 border align-top">{getVehicleTypeName(item.vehicleTypeId)}, {getTrailerTypeName(item.trailerTypeId)}</td>
-                                <td className="p-1 border text-right align-top">{unitPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                <td className="p-1 border text-right align-top">{unitPriceWithProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                 <td className="p-1 border text-right align-top">{item.frequency}</td>
                                 <td className="p-1 border text-right align-top">{priceBeforeVat.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                 <td className="p-1 border text-right align-top">{vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
