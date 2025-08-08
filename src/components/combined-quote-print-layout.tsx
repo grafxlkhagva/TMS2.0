@@ -72,16 +72,16 @@ const CombinedQuotePrintLayout = React.forwardRef<HTMLDivElement, CombinedQuoteP
                 </div>
                 <div className="text-right">
                     <h2 className="text-xl font-bold uppercase">Үнийн санал</h2>
-                    <p className="mt-1"><strong>Огноо:&nbsp;</strong><span>{format(new Date(), 'yyyy-MM-dd')}</span></p>
-                    <p className="mt-1"><strong>Захиалгын №:&nbsp;</strong><span>{order.orderNumber}</span></p>
+                    <div className="flex justify-end mt-1"><p><strong>Огноо:</strong></p><p className="ml-1">{format(new Date(), 'yyyy-MM-dd')}</p></div>
+                    <div className="flex justify-end mt-1"><p><strong>Захиалгын №:</strong></p><p className="ml-1">{order.orderNumber}</p></div>
                 </div>
             </div>
 
             {/* Customer Info */}
             <div className="mb-6">
                 <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Захиалагчийн мэдээлэл</h3>
-                <p><strong>Байгууллага:&nbsp;</strong><span>{order.customerName}</span></p>
-                <p><strong>Хариуцсан ажилтан:&nbsp;</strong><span>{order.employeeName}</span></p>
+                <div className="flex"><p><strong>Байгууллага:</strong></p><p className="ml-1">{order.customerName}</p></div>
+                <div className="flex"><p><strong>Хариуцсан ажилтан:</strong></p><p className="ml-1">{order.employeeName}</p></div>
             </div>
 
              <div className="mb-4">
@@ -133,7 +133,7 @@ const CombinedQuotePrintLayout = React.forwardRef<HTMLDivElement, CombinedQuoteP
                                   <p className="text-gray-600">{getWarehouseName(item.endWarehouseId)}</p>
                                 </td>
                                 <td className="p-1 border align-top">{item.totalDistance} км</td>
-                                <td className="p-1 border align-top">{getVehicleTypeName(item.vehicleTypeId)}, {getTrailerTypeName(item.trailerTypeId)}</td>
+                                <td className="p-1 border align-top">{`${getVehicleTypeName(item.vehicleTypeId)}, ${getTrailerTypeName(item.trailerTypeId)}`}</td>
                                 <td className="p-1 border text-right align-top">{singleTransportPriceWithProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                 <td className="p-1 border text-right align-top">{item.frequency}</td>
                                 <td className="p-1 border text-right align-top">{priceBeforeVatWithProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
@@ -164,13 +164,13 @@ const CombinedQuotePrintLayout = React.forwardRef<HTMLDivElement, CombinedQuoteP
                  <div className="mb-6 mt-8">
                     <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Тээврийн нөхцөл</h3>
                     <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                        <div><strong>Ачилт:&nbsp;</strong><span>{order.conditions.loading}</span></div>
-                        <div><strong>Буулгалт:&nbsp;</strong><span>{order.conditions.unloading}</span></div>
-                        <div><strong>ТХ-н бэлэн байдал:&nbsp;</strong><span>{order.conditions.vehicleAvailability}</span></div>
-                        <div><strong>Төлбөрийн нөхцөл:&nbsp;</strong><span>{order.conditions.paymentTerm}</span></div>
-                        <div className="col-span-2"><strong>Даатгал:&nbsp;</strong><span>{order.conditions.insurance}</span></div>
+                        <div className="flex"><p><strong>Ачилт:</strong></p><p className="ml-1">{order.conditions.loading}</p></div>
+                        <div className="flex"><p><strong>Буулгалт:</strong></p><p className="ml-1">{order.conditions.unloading}</p></div>
+                        <div className="flex"><p><strong>ТХ-н бэлэн байдал:</strong></p><p className="ml-1">{order.conditions.vehicleAvailability}</p></div>
+                        <div className="flex"><p><strong>Төлбөрийн нөхцөл:</strong></p><p className="ml-1">{order.conditions.paymentTerm}</p></div>
+                        <div className="col-span-2 flex"><p><strong>Даатгал:</strong></p><p className="ml-1">{order.conditions.insurance}</p></div>
                         <div className="col-span-2">
-                            <strong>Зөвшөөрөл:&nbsp;</strong>
+                            <strong>Зөвшөөрөл:</strong>
                             {(order.conditions.permits?.roadPermit || order.conditions.permits?.roadToll) ? (
                                 <ul className="list-disc list-inside ml-4">
                                     {order.conditions.permits.roadPermit && <li>Замын зөвшөөрөл авна</li>}
@@ -179,7 +179,7 @@ const CombinedQuotePrintLayout = React.forwardRef<HTMLDivElement, CombinedQuoteP
                             ) : "Тодорхойлоогүй"}
                         </div>
                          {order.conditions.additionalConditions && (
-                            <div className="col-span-2"><strong>Нэмэлт нөхцөл:&nbsp;</strong><span>{order.conditions.additionalConditions}</span></div>
+                            <div className="col-span-2 flex"><p><strong>Нэмэлт нөхцөл:</strong></p><p className="ml-1">{order.conditions.additionalConditions}</p></div>
                         )}
                     </div>
                  </div>
