@@ -18,10 +18,11 @@ type CombinedQuotePrintLayoutProps = {
   order: Order | null;
   orderItems: OrderItem[];
   allData: AllData;
+  quotesMap: Map<string, any[]>;
 };
 
 const CombinedQuotePrintLayout = React.forwardRef<HTMLDivElement, CombinedQuotePrintLayoutProps>(
-  ({ order, orderItems, allData }, ref) => {
+  ({ order, orderItems, allData, quotesMap }, ref) => {
     if (!order) return null;
 
     const getServiceName = (id: string) => allData.serviceTypes.find(s => s.id === id)?.name || 'N/A';
@@ -71,16 +72,16 @@ const CombinedQuotePrintLayout = React.forwardRef<HTMLDivElement, CombinedQuoteP
                 </div>
                 <div className="text-right">
                     <h2 className="text-xl font-bold uppercase">Үнийн санал</h2>
-                    <p className="mt-1"><strong className="mr-1">Огноо:</strong><span>{format(new Date(), 'yyyy-MM-dd')}</span></p>
-                    <p className="mt-1"><strong className="mr-1">Захиалгын №:</strong><span>{order.orderNumber}</span></p>
+                    <p className="mt-1"><strong>Огноо:&nbsp;</strong><span>{format(new Date(), 'yyyy-MM-dd')}</span></p>
+                    <p className="mt-1"><strong>Захиалгын №:&nbsp;</strong><span>{order.orderNumber}</span></p>
                 </div>
             </div>
 
             {/* Customer Info */}
             <div className="mb-6">
                 <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Захиалагчийн мэдээлэл</h3>
-                <p><strong className="mr-1">Байгууллага:</strong><span>{order.customerName}</span></p>
-                <p><strong className="mr-1">Хариуцсан ажилтан:</strong><span>{order.employeeName}</span></p>
+                <p><strong>Байгууллага:&nbsp;</strong><span>{order.customerName}</span></p>
+                <p><strong>Хариуцсан ажилтан:&nbsp;</strong><span>{order.employeeName}</span></p>
             </div>
 
              <div className="mb-4">
@@ -163,13 +164,13 @@ const CombinedQuotePrintLayout = React.forwardRef<HTMLDivElement, CombinedQuoteP
                  <div className="mb-6 mt-8">
                     <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Тээврийн нөхцөл</h3>
                     <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                        <div><strong className="mr-1">Ачилт:</strong><span>{order.conditions.loading}</span></div>
-                        <div><strong className="mr-1">Буулгалт:</strong><span>{order.conditions.unloading}</span></div>
-                        <div><strong className="mr-1">ТХ-н бэлэн байдал:</strong><span>{order.conditions.vehicleAvailability}</span></div>
-                        <div><strong className="mr-1">Төлбөрийн нөхцөл:</strong><span>{order.conditions.paymentTerm}</span></div>
-                        <div className="col-span-2"><strong className="mr-1">Даатгал:</strong><span>{order.conditions.insurance}</span></div>
+                        <div><strong>Ачилт:&nbsp;</strong><span>{order.conditions.loading}</span></div>
+                        <div><strong>Буулгалт:&nbsp;</strong><span>{order.conditions.unloading}</span></div>
+                        <div><strong>ТХ-н бэлэн байдал:&nbsp;</strong><span>{order.conditions.vehicleAvailability}</span></div>
+                        <div><strong>Төлбөрийн нөхцөл:&nbsp;</strong><span>{order.conditions.paymentTerm}</span></div>
+                        <div className="col-span-2"><strong>Даатгал:&nbsp;</strong><span>{order.conditions.insurance}</span></div>
                         <div className="col-span-2">
-                            <strong className="mr-1">Зөвшөөрөл:</strong>
+                            <strong>Зөвшөөрөл:&nbsp;</strong>
                             {(order.conditions.permits?.roadPermit || order.conditions.permits?.roadToll) ? (
                                 <ul className="list-disc list-inside ml-4">
                                     {order.conditions.permits.roadPermit && <li>Замын зөвшөөрөл авна</li>}
@@ -178,7 +179,7 @@ const CombinedQuotePrintLayout = React.forwardRef<HTMLDivElement, CombinedQuoteP
                             ) : "Тодорхойлоогүй"}
                         </div>
                          {order.conditions.additionalConditions && (
-                            <div className="col-span-2"><strong className="mr-1">Нэмэлт нөхцөл:</strong><span>{order.conditions.additionalConditions}</span></div>
+                            <div className="col-span-2"><strong>Нэмэлт нөхцөл:&nbsp;</strong><span>{order.conditions.additionalConditions}</span></div>
                         )}
                     </div>
                  </div>
