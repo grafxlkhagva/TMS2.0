@@ -556,7 +556,12 @@ export default function OrderDetailPage() {
     try {
         const canvas = await html2canvas(input, { scale: 2 });
         const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdf = new jsPDF({
+          orientation: 'landscape',
+          unit: 'mm',
+          format: 'a4'
+        });
+
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
         const imgWidth = canvas.width;
@@ -750,7 +755,7 @@ export default function OrderDetailPage() {
                   <CardFooter>
                       <Button onClick={() => setIsPreviewing(true)} disabled={isPrinting || selectedItemsForQuote.size === 0} className="w-full">
                            {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
-                           Нэгдсэн үнийн санал хэвлэх ({selectedItemsForQuote.size})
+                           Үнийн санал хэвлэх ({selectedItemsForQuote.size})
                       </Button>
                   </CardFooter>
                 </Card>
@@ -981,20 +986,20 @@ export default function OrderDetailPage() {
         </AlertDialog>
 
         <Dialog open={isPreviewing} onOpenChange={setIsPreviewing}>
-            <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+            <DialogContent className="max-w-7xl h-[90vh] flex flex-col">
                 <DialogHeader>
-                    <DialogTitle>Нэгдсэн үнийн санал</DialogTitle>
+                    <DialogTitle>Үнийн санал</DialogTitle>
                     <DialogDescription>
                         Урьдчилан харах хэсэг. PDF татаж авахын тулд доорх товчийг дарна уу.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="flex-1 overflow-auto border bg-gray-50 rounded-md">
-                     <div ref={combinedPrintRef} className="p-4">
+                     <div ref={combinedPrintRef} className="p-4 bg-white transform scale-[.9] origin-top">
                         <CombinedQuotePrintLayout 
                             order={order}
                             orderItems={orderItems.filter(item => selectedItemsForQuote.has(item.id))}
+                            quotesMap={quotes}
                             allData={allData}
-                            calculateFinalPrice={calculateFinalPrice}
                         />
                     </div>
                 </div>

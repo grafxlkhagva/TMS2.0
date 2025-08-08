@@ -18,45 +18,38 @@ type AllData = {
 type CombinedQuotePrintLayoutProps = {
   order: Order | null;
   orderItems: OrderItem[];
+  quotesMap: Map<string, DriverQuote[]>;
   allData: AllData;
-  calculateFinalPrice: (item: OrderItem, quote: DriverQuote) => {
-    priceWithProfit: number;
-    vatAmount: number;
-    finalPrice: number;
-  };
 };
 
-const CombinedQuotePrintLayout = ({ order, orderItems, allData, calculateFinalPrice }: CombinedQuotePrintLayoutProps) => {
+const CombinedQuotePrintLayout = ({ order, orderItems, quotesMap, allData }: CombinedQuotePrintLayoutProps) => {
     if (!order) return null;
 
+    const getServiceName = (id: string) => allData.serviceTypes.find(s => s.id === id)?.name || 'N/A';
     const getRegionName = (id: string) => allData.regions.find(r => r.id === id)?.name || 'N/A';
     const getWarehouseName = (id: string) => allData.warehouses.find(w => w.id === id)?.name || 'N/A';
     const getVehicleTypeName = (id: string) => allData.vehicleTypes.find(v => v.id === id)?.name || 'N/A';
     const getTrailerTypeName = (id: string) => allData.trailerTypes.find(t => t.id === id)?.name || 'N/A';
-    const getPackagingTypeName = (id: string) => allData.packagingTypes.find(p => p.id === id)?.name || 'N/A';
 
     const acceptedItems = orderItems.filter(item => item.acceptedQuoteId && item.finalPrice);
 
+    let totalPayment = 0;
     let totalVat = 0;
     let totalFinalPrice = 0;
-    
-    // We need quotes to calculate final price, but quotes are not passed here.
-    // Let's assume finalPrice and withVAT are correctly populated on the items.
-    // The parent component should handle the logic of finding the accepted quote and calculating prices.
 
     acceptedItems.forEach(item => {
-        const price = item.finalPrice || 0;
-        const profit = item.profitMargin || 0;
-        const priceBeforeVat = price / (item.withVAT ? (1 + 0.1) : 1);
+        const finalPrice = item.finalPrice || 0;
+        const priceBeforeVat = finalPrice / (item.withVAT ? 1.1 : 1);
         const vat = item.withVAT ? priceBeforeVat * 0.1 : 0;
+        
+        totalPayment += priceBeforeVat;
         totalVat += vat;
-        totalFinalPrice += price;
+        totalFinalPrice += finalPrice;
     });
 
-
     return (
-        <div className="bg-white p-8 font-sans text-gray-800 text-xs" style={{ width: '210mm' }}>
-             {/* Header */}
+        <div className="bg-white p-8 font-sans text-gray-800 text-[10px]" style={{ width: '297mm', minHeight: '210mm' }}>
+            {/* Header */}
             <div className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
                 <div>
                      <svg
@@ -77,7 +70,7 @@ const CombinedQuotePrintLayout = ({ order, orderItems, allData, calculateFinalPr
                     <h1 className="text-2xl font-bold mt-2">Tumen Tech TMS</h1>
                 </div>
                 <div className="text-right">
-                    <h2 className="text-xl font-bold uppercase">Нэгдсэн үнийн санал</h2>
+                    <h2 className="text-xl font-bold uppercase">Үнийн санал</h2>
                     <p className="mt-1">Огноо: {format(new Date(), 'yyyy-MM-dd')}</p>
                     <p className="mt-1">Захиалгын №: {order.orderNumber}</p>
                 </div>
@@ -94,79 +87,64 @@ const CombinedQuotePrintLayout = ({ order, orderItems, allData, calculateFinalPr
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-gray-100 font-bold">
-                            <th className="p-2 border" rowSpan={2}>№</th>
-                            <th className="p-2 border" rowSpan={2}>Чиглэл/Агуулах</th>
-                            <th className="p-2 border" rowSpan={2}>Тээврийн хэрэгсэл</th>
-                            <th className="p-2 border" colSpan={4}>Ачааны мэдээлэл</th>
-                            <th className="p-2 border" rowSpan={2}>Огноо</th>
-                            <th className="p-2 border text-right" rowSpan={2}>НӨАТ дүн (₮)</th>
-                            <th className="p-2 border text-right" rowSpan={2}>Эцсийн үнэ (₮)</th>
-                        </tr>
-                        <tr className="bg-gray-100 font-bold">
-                           <th className="p-2 border">Нэр</th>
-                           <th className="p-2 border">Хэмжээ</th>
-                           <th className="p-2 border">Нэгж</th>
-                           <th className="p-2 border">Баглаа</th>
+                            <th className="p-1 border">Үйлчилгээний төрөл</th>
+                            <th className="p-1 border">Ачааны мэдээлэл</th>
+                            <th className="p-1 border">Ачих</th>
+                            <th className="p-1 border">Буулгах</th>
+                            <th className="p-1 border">Нийт зам</th>
+                            <th className="p-1 border">Тээврийн хэрэгсэл</th>
+                            <th className="p-1 border text-right">Нэгж машины төлбөр</th>
+                            <th className="p-1 border text-right">Тээврийн тоо</th>
+                            <th className="p-1 border text-right">Нийт төлбөр</th>
+                            <th className="p-1 border text-right">НӨАТ</th>
+                            <th className="p-1 border text-right">Нийт дүн</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {acceptedItems.length > 0 ? acceptedItems.map((item, index) => {
-                            const price = item.finalPrice || 0;
-                            const priceBeforeVat = price / (item.withVAT ? 1.1 : 1);
+                        {acceptedItems.length > 0 ? acceptedItems.map((item) => {
+                            const finalPrice = item.finalPrice || 0;
+                            const priceBeforeVat = finalPrice / (item.withVAT ? 1.1 : 1);
                             const vatAmount = item.withVAT ? priceBeforeVat * 0.1 : 0;
-                            const hasCargo = item.cargoItems && item.cargoItems.length > 0;
+                            const unitPrice = priceBeforeVat / (item.frequency || 1);
 
                             return (
-                              <React.Fragment key={item.id}>
-                                <tr className="border-b">
-                                    <td className="p-2 border align-top" rowSpan={hasCargo ? item.cargoItems.length : 1}>{index + 1}</td>
-                                    <td className="p-2 border align-top" rowSpan={hasCargo ? item.cargoItems.length : 1}>
-                                      <p>{getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</p>
-                                      <p className="text-gray-600 text-[10px]">Ачих: {getWarehouseName(item.startWarehouseId)}</p>
-                                      <p className="text-gray-600 text-[10px]">Буулгах: {getWarehouseName(item.endWarehouseId)}</p>
-                                    </td>
-                                    <td className="p-2 border align-top" rowSpan={hasCargo ? item.cargoItems.length : 1}>{getVehicleTypeName(item.vehicleTypeId)}, {getTrailerTypeName(item.trailerTypeId)}</td>
-                                    
-                                    {hasCargo ? (
-                                        <>
-                                            <td className="p-2 border">{item.cargoItems[0].name}</td>
-                                            <td className="p-2 border">{item.cargoItems[0].quantity}</td>
-                                            <td className="p-2 border">{item.cargoItems[0].unit}</td>
-                                            <td className="p-2 border">{getPackagingTypeName(item.cargoItems[0].packagingTypeId)}</td>
-                                        </>
-                                    ) : (
-                                        <td colSpan={4} className="p-2 border text-center">Ачааны мэдээлэл алга</td>
-                                    )}
-
-                                    <td className="p-2 border align-top" rowSpan={hasCargo ? item.cargoItems.length : 1}>
-                                        <p>Ачих: {format(new Date(item.loadingStartDate), 'yy/MM/dd')}-{format(new Date(item.loadingEndDate), 'yy/MM/dd')}</p>
-                                        <p>Буулгах: {format(new Date(item.unloadingStartDate), 'yy/MM/dd')}-{format(new Date(item.unloadingEndDate), 'yy/MM/dd')}</p>
-                                    </td>
-                                    <td className="p-2 border text-right align-top" rowSpan={hasCargo ? item.cargoItems.length : 1}>{vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                                    <td className="p-2 border text-right font-medium align-top" rowSpan={hasCargo ? item.cargoItems.length : 1}>{item.finalPrice?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                                </tr>
-                                {hasCargo && item.cargoItems.slice(1).map((cargo, cargoIndex) => (
-                                    <tr key={cargo.id || cargoIndex} className="border-b">
-                                        <td className="p-2 border">{cargo.name}</td>
-                                        <td className="p-2 border">{cargo.quantity}</td>
-                                        <td className="p-2 border">{cargo.unit}</td>
-                                        <td className="p-2 border">{getPackagingTypeName(cargo.packagingTypeId)}</td>
-                                    </tr>
-                                ))}
-                              </React.Fragment>
+                              <tr key={item.id} className="border-b">
+                                <td className="p-1 border align-top">{getServiceName(item.serviceTypeId)}</td>
+                                <td className="p-1 border align-top">
+                                    {(item.cargoItems || []).map((cargo, i) => (
+                                        <div key={i}>{cargo.name} - {cargo.quantity} {cargo.unit}</div>
+                                    ))}
+                                </td>
+                                <td className="p-1 border align-top">
+                                  <p>{getRegionName(item.startRegionId)}</p>
+                                  <p className="text-gray-600">{getWarehouseName(item.startWarehouseId)}</p>
+                                </td>
+                                <td className="p-1 border align-top">
+                                  <p>{getRegionName(item.endRegionId)}</p>
+                                  <p className="text-gray-600">{getWarehouseName(item.endWarehouseId)}</p>
+                                </td>
+                                <td className="p-1 border align-top">{item.totalDistance} км</td>
+                                <td className="p-1 border align-top">{getVehicleTypeName(item.vehicleTypeId)}, {getTrailerTypeName(item.trailerTypeId)}</td>
+                                <td className="p-1 border text-right align-top">{unitPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                <td className="p-1 border text-right align-top">{item.frequency}</td>
+                                <td className="p-1 border text-right align-top">{priceBeforeVat.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                <td className="p-1 border text-right align-top">{vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                <td className="p-1 border text-right font-medium align-top">{finalPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                              </tr>
                             )
                         }) : (
                             <tr>
-                                <td colSpan={10} className="text-center p-4">Нэгдсэн үнийн саналд оруулахаар сонгогдсон тээвэрлэлт алга.</td>
+                                <td colSpan={11} className="text-center p-4">Үнийн саналд оруулахаар сонгогдсон тээвэрлэлт алга.</td>
                             </tr>
                         )}
                     </tbody>
                     {acceptedItems.length > 0 && (
                         <tfoot>
                             <tr className="font-bold bg-gray-100">
-                                <td colSpan={8} className="p-2 border text-right">Нийт дүн:</td>
-                                <td className="p-2 border text-right">{totalVat.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                                <td className="p-2 border text-right">{totalFinalPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                <td colSpan={8} className="p-1 border text-right">Нийт дүн:</td>
+                                <td className="p-1 border text-right">{totalPayment.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                <td className="p-1 border text-right">{totalVat.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                <td className="p-1 border text-right">{totalFinalPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                             </tr>
                         </tfoot>
                     )}
