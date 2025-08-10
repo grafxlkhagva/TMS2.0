@@ -899,7 +899,7 @@ export default function OrderDetailPage() {
         </AlertDialog>
 
         {/* This div is hidden from the user but used for PDF generation */}
-        <div className="absolute -left-[9999px] top-0 opacity-0 pointer-events-none">
+        <div className="hidden">
             <div id="print-root">
                 <CombinedQuotePrintLayout 
                     order={order}
