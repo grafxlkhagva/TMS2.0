@@ -10,11 +10,15 @@ export async function POST(request: Request) {
       return new Response('Missing htmlContent or cssContent', { status: 400 });
     }
 
+    // Recommended setup for serverless environments
+    const executablePath = await chromium.executablePath();
+
     const browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
+      executablePath: executablePath,
       headless: chromium.headless,
+      ignoreHTTPSErrors: true,
     });
     
     const page = await browser.newPage();
@@ -52,7 +56,8 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error generating PDF:', error);
-    return new Response('Failed to generate PDF', { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    console.error('Error generating PDF:', errorMessage, error);
+    return new Response(`Failed to generate PDF: ${errorMessage}`, { status: 500 });
   }
 }
