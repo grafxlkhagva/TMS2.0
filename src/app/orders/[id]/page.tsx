@@ -898,15 +898,13 @@ export default function OrderDetailPage() {
             </AlertDialogContent>
         </AlertDialog>
 
-        {/* This div is hidden from the user but used for PDF generation */}
-        <div className="hidden">
-            <div id="print-root">
-                <CombinedQuotePrintLayout 
-                    order={order}
-                    orderItems={orderItems.filter(item => selectedItemsForQuote.has(item.id))}
-                    allData={allData}
-                />
-            </div>
+        {/* This div is for PDF generation and is not visible to the user */}
+        <div id="print-root">
+            <CombinedQuotePrintLayout 
+                order={order}
+                orderItems={orderItems.filter(item => selectedItemsForQuote.has(item.id))}
+                allData={allData}
+            />
         </div>
     </div>
   );
