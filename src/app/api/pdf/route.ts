@@ -1,5 +1,6 @@
 
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 
 export async function POST(request: Request) {
   try {
@@ -10,9 +11,12 @@ export async function POST(request: Request) {
     }
 
     const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
     });
+    
     const page = await browser.newPage();
     
     // Set the content with both HTML and CSS
