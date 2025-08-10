@@ -1,9 +1,10 @@
-
 'use client';
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
+import { captureElementToPdf } from '@/lib/print/pdf';
+
 
 export default function PrintQuoteButton({
   targetId,
@@ -32,26 +33,13 @@ export default function PrintQuoteButton({
     
     setBusy(true);
     try {
-      // Fetch the global CSS content
-      const cssResponse = await fetch('/globals.css');
-      const cssContent = await cssResponse.text();
-
-      const response = await fetch('/api/pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          htmlContent: el.innerHTML,
-          cssContent: cssContent,
-        }),
+      const pdfBlob = await captureElementToPdf({
+          element: el,
+          fileName: fileName,
+          orientation: orientation,
+          scale: 2,
       });
-
-      if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`);
-      }
       
-      const pdfBlob = await response.blob();
       const url = URL.createObjectURL(pdfBlob);
       onPreview(url);
       
@@ -65,7 +53,7 @@ export default function PrintQuoteButton({
     } finally {
       setBusy(false);
     }
-  }, [targetId, toast, onPreview]);
+  }, [targetId, fileName, orientation, toast, onPreview]);
 
   return (
     <Button

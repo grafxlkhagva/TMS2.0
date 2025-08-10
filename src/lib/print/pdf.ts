@@ -1,8 +1,7 @@
 /**
- * @fileoverview This file is no longer used for client-side PDF generation.
- * PDF generation is now handled by the /api/pdf server-side endpoint using Puppeteer.
- * The PrintQuoteButton component now sends a request to this endpoint.
- * This file is kept temporarily for reference but can be deleted.
+ * @fileoverview Client-side PDF generation utility using html2canvas and jsPDF.
+ * This function captures an HTML element, converts it to a canvas, and then
+ * generates a paginated A4 PDF document.
  */
 
 import html2canvas from 'html2canvas';
@@ -21,7 +20,7 @@ export async function captureElementToPdf(opts: {
   marginsMm?: Margins;
   background?: string;
   scale?: number; // integer 2..3
-}): Promise<void> {
+}): Promise<Blob> {
   const {
     element,
     fileName,
@@ -40,7 +39,6 @@ export async function captureElementToPdf(opts: {
     }
   }
 
-  // Force a fixed width during capture to avoid right-edge clipping
   const prevWidth = element.style.width;
   element.style.width = '1123px';
 
@@ -52,11 +50,10 @@ export async function captureElementToPdf(opts: {
     windowWidth: Math.max(element.scrollWidth, 1123),
     windowHeight: element.scrollHeight,
     foreignObjectRendering: true,
-    letterRendering: true, // Crucial for correct text spacing
+    letterRendering: true,
     removeContainer: true,
   });
   
-  // Restore original width after capture
   element.style.width = prevWidth;
 
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation, compress: true });
@@ -83,12 +80,11 @@ export async function captureElementToPdf(opts: {
     const ctx = sliceCanvas.getContext('2d');
     if (!ctx) throw new Error('Canvas 2D context not available');
     
-    // Draw the slice from the master canvas onto the temporary canvas.
     ctx.drawImage(
       canvas,
-      0, srcY, // Source rectangle (x, y, width, height)
+      0, srcY,
       sliceCanvas.width, sliceCanvas.height,
-      0, 0, // Destination rectangle (x, y, width, height)
+      0, 0,
       sliceCanvas.width, sliceCanvas.height
     );
 
@@ -105,5 +101,5 @@ export async function captureElementToPdf(opts: {
     srcY += sliceHeightPx;
   }
 
-  doc.save(fileName);
+  return doc.output('blob');
 }
