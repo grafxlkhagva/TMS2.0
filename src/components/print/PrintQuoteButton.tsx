@@ -9,7 +9,13 @@ export default function PrintQuoteButton({
   targetId,
   fileName,
   orientation = 'landscape',
-}: { targetId: string; fileName: string; orientation?: 'landscape'|'portrait' }) {
+  onPreview,
+}: { 
+  targetId: string; 
+  fileName: string; 
+  orientation?: 'landscape'|'portrait',
+  onPreview: (url: string) => void;
+}) {
   const [busy, setBusy] = useState(false);
   const { toast } = useToast();
 
@@ -47,8 +53,7 @@ export default function PrintQuoteButton({
       
       const pdfBlob = await response.blob();
       const url = URL.createObjectURL(pdfBlob);
-      window.open(url, '_blank');
-      // No need to revoke, as the new tab will handle it.
+      onPreview(url);
       
     } catch (e) {
       console.error('PDF export failed', e);
@@ -60,7 +65,7 @@ export default function PrintQuoteButton({
     } finally {
       setBusy(false);
     }
-  }, [targetId, toast]);
+  }, [targetId, toast, onPreview]);
 
   return (
     <Button

@@ -17,7 +17,7 @@ import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink } from 'lucide-react';
+import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink, Download } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -151,11 +151,11 @@ export default function OrderDetailPage() {
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [isPreviewing, setIsPreviewing] = React.useState(false);
   const [itemToDelete, setItemToDelete] = React.useState<OrderItem | null>(null);
   const [itemToShip, setItemToShip] = React.useState<OrderItem | null>(null);
   const [isUpdatingEmployee, setIsUpdatingEmployee] = React.useState(false);
   const [selectedItemsForQuote, setSelectedItemsForQuote] = React.useState<Set<string>>(new Set());
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -647,6 +647,19 @@ export default function OrderDetailPage() {
     packagingTypes,
   };
 
+  const pdfFileName = `Uneyn-sanal-${order.orderNumber}.pdf`;
+
+  const handleDownloadFromPreview = () => {
+    if (previewUrl) {
+      const a = document.createElement('a');
+      a.href = previewUrl;
+      a.download = pdfFileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
   return (
     <div className="container mx-auto py-6">
        <div className="mb-6">
@@ -668,8 +681,9 @@ export default function OrderDetailPage() {
                 </Button>
                  <PrintQuoteButton
                     targetId="print-root"
-                    fileName={`Uneyn-sanal-${order.orderNumber}.pdf`}
+                    fileName={pdfFileName}
                     orientation="landscape"
+                    onPreview={setPreviewUrl}
                 />
             </div>
         </div>
@@ -903,6 +917,27 @@ export default function OrderDetailPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+
+        <Dialog open={!!previewUrl} onOpenChange={(open) => !open && setPreviewUrl(null)}>
+            <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+                <DialogHeader>
+                    <DialogTitle>Үнийн санал</DialogTitle>
+                    <DialogDescription>
+                        Үүсгэсэн үнийн саналыг эндээс харж, татаж авах боломжтой.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="flex-1 -mx-6 -mb-6">
+                    {previewUrl && <iframe src={previewUrl} className="w-full h-full border-0" title="PDF Preview"/>}
+                </div>
+                <DialogFooter className="mt-4">
+                    <Button onClick={handleDownloadFromPreview}>
+                        <Download className="mr-2 h-4 w-4" />
+                        PDF татах
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
 
         {/* This div is hidden from the user but used for PDF generation */}
         <div className="absolute -left-[9999px] top-0 opacity-0 pointer-events-none">
