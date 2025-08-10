@@ -36,14 +36,6 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import OrderItemForm from '@/components/order-item-form';
@@ -155,7 +147,6 @@ export default function OrderDetailPage() {
   const [itemToShip, setItemToShip] = React.useState<OrderItem | null>(null);
   const [isUpdatingEmployee, setIsUpdatingEmployee] = React.useState(false);
   const [selectedItemsForQuote, setSelectedItemsForQuote] = React.useState<Set<string>>(new Set());
-  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -649,16 +640,6 @@ export default function OrderDetailPage() {
 
   const pdfFileName = `Uneyn-sanal-${order.orderNumber}.pdf`;
 
-  const handleDownloadFromPreview = () => {
-    if (previewUrl) {
-      const a = document.createElement('a');
-      a.href = previewUrl;
-      a.download = pdfFileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-  };
 
   return (
     <div className="container mx-auto py-6">
@@ -683,7 +664,6 @@ export default function OrderDetailPage() {
                     targetId="print-root"
                     fileName={pdfFileName}
                     orientation="landscape"
-                    onPreview={setPreviewUrl}
                 />
             </div>
         </div>
@@ -917,27 +897,6 @@ export default function OrderDetailPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-
-        <Dialog open={!!previewUrl} onOpenChange={(open) => !open && setPreviewUrl(null)}>
-            <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
-                <DialogHeader>
-                    <DialogTitle>Үнийн санал</DialogTitle>
-                    <DialogDescription>
-                        Үүсгэсэн үнийн саналыг эндээс харж, татаж авах боломжтой.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="flex-1 -mx-6 -mb-6">
-                    {previewUrl && <iframe src={previewUrl} className="w-full h-full border-0" title="PDF Preview"/>}
-                </div>
-                <DialogFooter className="mt-4">
-                    <Button onClick={handleDownloadFromPreview}>
-                        <Download className="mr-2 h-4 w-4" />
-                        PDF татах
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-
 
         {/* This div is hidden from the user but used for PDF generation */}
         <div className="absolute -left-[9999px] top-0 opacity-0 pointer-events-none">

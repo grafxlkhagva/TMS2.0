@@ -10,12 +10,10 @@ export default function PrintQuoteButton({
   targetId,
   fileName,
   orientation = 'landscape',
-  onPreview,
 }: { 
   targetId: string; 
   fileName: string; 
   orientation?: 'landscape'|'portrait',
-  onPreview: (url: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const { toast } = useToast();
@@ -41,7 +39,7 @@ export default function PrintQuoteButton({
       });
       
       const url = URL.createObjectURL(pdfBlob);
-      onPreview(url);
+      window.open(url, '_blank');
       
     } catch (e) {
       console.error('PDF export failed', e);
@@ -53,7 +51,7 @@ export default function PrintQuoteButton({
     } finally {
       setBusy(false);
     }
-  }, [targetId, fileName, orientation, toast, onPreview]);
+  }, [targetId, fileName, orientation, toast]);
 
   return (
     <Button
