@@ -659,12 +659,19 @@ export default function OrderDetailPage() {
                 <h1 className="text-3xl font-headline font-bold">Захиалгын дэлгэрэнгүй</h1>
                 <p className="text-muted-foreground font-mono">{order.orderNumber}</p>
             </div>
-            <Button asChild>
-                <Link href={`/orders/${order.id}/edit`}>
-                    <Edit className="mr-2 h-4 w-4"/>
-                    Захиалга засах
-                </Link>
-            </Button>
+             <div className="flex items-center gap-2">
+                <Button asChild>
+                    <Link href={`/orders/${order.id}/edit`}>
+                        <Edit className="mr-2 h-4 w-4"/>
+                        Захиалга засах
+                    </Link>
+                </Button>
+                 <PrintQuoteButton
+                    targetId="print-root"
+                    fileName={`Uneyn-sanal-${order.orderNumber}.pdf`}
+                    orientation="landscape"
+                />
+            </div>
         </div>
       </div>
 
@@ -701,11 +708,6 @@ export default function OrderDetailPage() {
                     <OrderDetailItem icon={User} label="Бүртгэсэн хэрэглэгч" value={order.createdBy.name} />
                     <OrderDetailItem icon={FileText} label="Бүртгэсэн огноо" value={order.createdAt.toLocaleString()} />
                   </CardContent>
-                  <CardFooter>
-                     <Button onClick={() => setIsPreviewing(true)} disabled={selectedItemsForQuote.size === 0}>
-                        Үнийн санал харах ({selectedItemsForQuote.size})
-                     </Button>
-                  </CardFooter>
                 </Card>
             </div>
         
@@ -902,34 +904,16 @@ export default function OrderDetailPage() {
             </AlertDialogContent>
         </AlertDialog>
 
-        <Dialog open={isPreviewing} onOpenChange={setIsPreviewing}>
-            <DialogContent className="max-w-7xl h-[90vh] flex flex-col">
-                <DialogHeader>
-                    <DialogTitle>Үнийн санал</DialogTitle>
-                    <DialogDescription>
-                       Урьдчилан харах хэсэг. PDF татаж авахын тулд доорх товчийг дарна уу.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="flex-1 overflow-auto border bg-gray-50 rounded-md p-4">
-                     <div id="print-root" className="print-smooth">
-                        <CombinedQuotePrintLayout 
-                            order={order}
-                            orderItems={orderItems.filter(item => selectedItemsForQuote.has(item.id))}
-                            allData={allData}
-                        />
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsPreviewing(false)}>Хаах</Button>
-                    <PrintQuoteButton
-                        targetId="print-root"
-                        fileName={`Uneyn-sanal-${order.orderNumber}.pdf`}
-                        orientation="landscape"
-                        disabled={selectedItemsForQuote.size === 0}
-                    />
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+        {/* This div is hidden from the user but used for PDF generation */}
+        <div className="absolute -left-[9999px] top-0 opacity-0 pointer-events-none">
+            <div id="print-root">
+                <CombinedQuotePrintLayout 
+                    order={order}
+                    orderItems={orderItems.filter(item => selectedItemsForQuote.has(item.id))}
+                    allData={allData}
+                />
+            </div>
+        </div>
     </div>
   );
 }

@@ -1,77 +1,67 @@
 'use client';
-
-import * as React from 'react';
+import { useState, useCallback } from 'react';
 import { captureElementToPdf } from '@/lib/print/pdf';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
 
-type PrintQuoteButtonProps = {
-  targetId: string;
-  fileName: string;
-  orientation?: 'landscape' | 'portrait';
-  disabled?: boolean;
-};
-
 export default function PrintQuoteButton({
   targetId,
   fileName,
   orientation = 'landscape',
-  disabled = false,
-}: PrintQuoteButtonProps) {
-  const [isPrinting, setIsPrinting] = React.useState(false);
+}: { targetId: string; fileName: string; orientation?: 'landscape'|'portrait' }) {
+  const [busy, setBusy] = useState(false);
   const { toast } = useToast();
 
-  const handlePrint = React.useCallback(async () => {
-    const element = document.getElementById(targetId);
-    if (!element) {
+  const onClick = useCallback(async () => {
+    const el = document.getElementById(targetId);
+    if (!el) {
       toast({
         variant: 'destructive',
         title: 'Алдаа',
-        description: `Хэвлэх элемент (#${targetId}) олдсонгүй.`,
+        description: `Хэвлэх элемент (#${targetId}) олдсонгүй.`
       });
       return;
     }
-
-    setIsPrinting(true);
     try {
+      setBusy(true);
       await captureElementToPdf({
-        element,
+        element: el,
         fileName,
         orientation,
         marginsMm: { top: 10, right: 10, bottom: 10, left: 10 },
         background: '#ffffff',
+        scale: 2, // integer scale for stable spacing
       });
-    } catch (error) {
-      console.error('PDF export failed:', error);
+    } catch (e) {
+      console.error('PDF export failed', e);
       toast({
         variant: 'destructive',
         title: 'PDF үүсгэхэд алдаа гарлаа',
-        description: error instanceof Error ? error.message : 'Дахин оролдоно уу.',
+        description: e instanceof Error ? e.message : 'Дахин оролдоно уу.',
       });
     } finally {
-      setIsPrinting(false);
+      setBusy(false);
     }
   }, [targetId, fileName, orientation, toast]);
 
   return (
     <Button
-      onClick={handlePrint}
-      disabled={isPrinting || disabled}
+      onClick={onClick}
+      disabled={busy}
       aria-label="Үнийн санал PDF болгон татах"
-      className="w-full"
     >
-      {isPrinting ? (
+      {busy ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Экспорт хийж байна...
+          Экспорт хийж байна…
         </>
-      ) : (
+       ) : (
         <>
           <Download className="mr-2 h-4 w-4" />
           Үнийн санал хэвлэх
         </>
-      )}
+       )}
     </Button>
   );
 }

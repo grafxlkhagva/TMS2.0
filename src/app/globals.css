@@ -108,3 +108,43 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* PDF Print Styles */
+#print-root {
+  width: 1123px; /* ~297mm @96dpi */
+  padding: 0;
+  margin: 0 auto;
+  background: #fff;
+  overflow: visible;
+  font-family: "Noto Sans","Roboto","Noto Sans Mongolian",system-ui,sans-serif !important;
+  letter-spacing: normal !important;
+  word-spacing: normal !important;
+  font-kerning: none !important;
+  font-variant-ligatures: none !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@page {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+@media print {
+  html, body {
+    width: 297mm;
+    height: 210mm;
+  }
+  tr, thead, tfoot, .print-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  table {
+    border-collapse: collapse;
+  }
+  * {
+    filter: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+}
