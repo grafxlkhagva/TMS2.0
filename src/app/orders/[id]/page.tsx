@@ -13,13 +13,11 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from "date-fns"
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Download, Info, Truck, ExternalLink } from 'lucide-react';
+import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -55,6 +53,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import CombinedQuotePrintLayout from '@/components/combined-quote-print-layout';
 import { Checkbox } from '@/components/ui/checkbox';
+import PrintQuoteButton from '@/components/print/PrintQuoteButton';
 
 
 const quoteFormSchema = z.object({
@@ -152,16 +151,12 @@ export default function OrderDetailPage() {
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [isPrinting, setIsPrinting] = React.useState(false);
   const [isPreviewing, setIsPreviewing] = React.useState(false);
   const [itemToDelete, setItemToDelete] = React.useState<OrderItem | null>(null);
   const [itemToShip, setItemToShip] = React.useState<OrderItem | null>(null);
   const [isUpdatingEmployee, setIsUpdatingEmployee] = React.useState(false);
   const [selectedItemsForQuote, setSelectedItemsForQuote] = React.useState<Set<string>>(new Set());
   
-  const combinedPrintRef = React.useRef<HTMLDivElement | null>(null);
-
-
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -546,51 +541,6 @@ export default function OrderDetailPage() {
     }
   }
 
-  const handlePrintCombinedQuote = async () => {
-    const input = combinedPrintRef.current;
-    if (!input) {
-      toast({ variant: "destructive", title: "Алдаа", description: "Хэвлэх загвар олдсонгүй." });
-      return;
-    }
-    setIsPrinting(true);
-    try {
-        const canvas = await html2canvas(input, { scale: 2 });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({
-          orientation: 'landscape',
-          unit: 'mm',
-          format: 'a4'
-        });
-
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
-        const ratio = pdfWidth / imgWidth;
-        const canvasHeight = imgHeight * ratio;
-        let heightLeft = canvasHeight;
-        let position = 0;
-
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, canvasHeight);
-        heightLeft -= pdfHeight;
-
-        while (heightLeft > 0) {
-            position = -heightLeft;
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, canvasHeight);
-            heightLeft -= pdfHeight;
-        }
-
-        pdf.save(`uneyn-sanal-${order?.orderNumber}-combined.pdf`);
-    } catch (error) {
-        console.error("Error generating PDF:", error);
-        toast({ variant: "destructive", title: "Алдаа", description: "PDF үүсгэхэд алдаа гарлаа." });
-    } finally {
-        setIsPrinting(false);
-    }
-  }
-
-
   if (isLoading) {
     return (
       <div className="container mx-auto py-6 space-y-6">
@@ -612,8 +562,7 @@ export default function OrderDetailPage() {
     return null;
   }
   
-  const getServiceName = (id: string) => serviceTypes.find(s => s.id === id)?.name || 'Тодорхойгүй';
-  const getRegionName = (id: string) => regions.find(r => r.id === id)?.name || 'Тодорхойгүй';
+  const getRegionName = (id: string) => regions.find(r => r.id === id)?.name || 'N/A';
   const getWarehouseName = (id: string) => warehouses.find(w => w.id === id)?.name || 'N/A';
   const getVehicleTypeName = (id: string) => vehicleTypes.find(v => v.id === id)?.name || 'N/A';
   const getTrailerTypeName = (id: string) => trailerTypes.find(t => t.id === id)?.name || 'N/A';
@@ -753,10 +702,9 @@ export default function OrderDetailPage() {
                     <OrderDetailItem icon={FileText} label="Бүртгэсэн огноо" value={order.createdAt.toLocaleString()} />
                   </CardContent>
                   <CardFooter>
-                      <Button onClick={() => setIsPreviewing(true)} disabled={isPrinting || selectedItemsForQuote.size === 0} className="w-full">
-                           {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
-                           Үнийн санал хэвлэх ({selectedItemsForQuote.size})
-                      </Button>
+                     <Button onClick={() => setIsPreviewing(true)} disabled={selectedItemsForQuote.size === 0}>
+                        Үнийн санал харах ({selectedItemsForQuote.size})
+                     </Button>
                   </CardFooter>
                 </Card>
             </div>
@@ -786,10 +734,10 @@ export default function OrderDetailPage() {
                                             <div className="flex justify-between items-center w-full gap-4">
                                                 <div className="text-left flex-1 min-w-0">
                                                     <p className="font-semibold truncate">Тээвэрлэлт #{index + 1}: {getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</p>
-                                                    <p className="text-sm text-muted-foreground">{getServiceName(item.serviceTypeId)} | {format(new Date(item.loadingStartDate), "yyyy-MM-dd")}</p>
+                                                    <p className="text-sm text-muted-foreground">{format(new Date(item.loadingStartDate), "yyyy-MM-dd")}</p>
                                                 </div>
                                                 <div className="flex items-center gap-4 flex-shrink-0">
-                                                    {item.finalPrice && (
+                                                    {item.finalPrice != null && (
                                                         <p className="font-semibold text-primary">{item.finalPrice.toLocaleString()}₮</p>
                                                     )}
                                                     <Badge variant={item.status === 'Assigned' ? 'default' : item.status === 'Shipped' ? 'success' : 'secondary'}>{item.status}</Badge>
@@ -839,20 +787,15 @@ export default function OrderDetailPage() {
                                             <TableBody>
                                                 {quotes.get(item.id)?.length > 0 ? (
                                                     quotes.get(item.id)?.map(quote => {
-                                                        const { priceWithProfit, vatAmount, finalPrice } = calculateFinalPrice(item, quote);
+                                                        const { finalPrice } = calculateFinalPrice(item, quote);
                                                         return (
                                                         <TableRow key={quote.id} className={quote.status === 'Accepted' ? 'bg-green-100 dark:bg-green-900/50' : ''}>
                                                             <TableCell>
                                                                 <p className="font-medium">{quote.driverName}</p>
                                                                 <p className="text-xs text-muted-foreground">{quote.driverPhone}</p>
                                                             </TableCell>
-                                                            <TableCell>
-                                                                <div className="text-xs space-y-0.5">
-                                                                    <p>Жолооч: {quote.price.toLocaleString()}₮</p>
-                                                                    <p>Ашиг ({item.profitMargin || 0}%): {priceWithProfit.toLocaleString()}₮</p>
-                                                                    {item.withVAT && <p>НӨАТ (10%): {vatAmount.toLocaleString()}₮</p>}
-                                                                    <p className="font-bold text-base text-primary pt-1">{finalPrice.toLocaleString()}₮</p>
-                                                                </div>
+                                                             <TableCell>
+                                                                <p className="font-bold text-base text-primary pt-1">{finalPrice.toLocaleString()}₮</p>
                                                             </TableCell>
                                                             <TableCell>
                                                                 <Badge variant={quote.status === 'Accepted' ? 'default' : quote.status === 'Rejected' ? 'destructive' : 'secondary'}>
@@ -895,32 +838,6 @@ export default function OrderDetailPage() {
                         )}
                     </CardContent>
                 </Card>
-
-                 {order.conditions && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Тээврийн нөхцөл</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                <OrderDetailItem icon={Info} label="Ачилт" value={order.conditions.loading} />
-                                <OrderDetailItem icon={Info} label="Буулгалт" value={order.conditions.unloading} />
-                                <OrderDetailItem icon={Info} label="ТХ-н бэлэн байдал" value={order.conditions.vehicleAvailability} />
-                                <OrderDetailItem icon={Info} label="Төлбөрийн нөхцөл" value={order.conditions.paymentTerm} />
-                            </div>
-                            <OrderDetailItem icon={Info} label="Даатгал" value={order.conditions.insurance} />
-                             <OrderDetailItem icon={Info} label="Нэмэлт нөхцөл" value={order.conditions.additionalConditions} />
-                             <div>
-                                <p className="text-sm text-muted-foreground flex items-center gap-3"><Info className="h-4 w-4"/>Зөвшөөрөл</p>
-                                <div className="font-medium mt-2 space-y-1 pl-7">
-                                    {order.conditions.permits.roadPermit && <p>&#x2713; Замын зөвшөөрөл авна</p>}
-                                    {order.conditions.permits.roadToll && <p>&#x2713; Замын хураамж тушаана</p>}
-                                    {!order.conditions.permits.roadPermit && !order.conditions.permits.roadToll && <p>Тодорхойлогдоогүй</p>}
-                                </div>
-                             </div>
-                        </CardContent>
-                    </Card>
-                )}
                  
                  <Card>
                     <CardHeader>
@@ -990,25 +907,26 @@ export default function OrderDetailPage() {
                 <DialogHeader>
                     <DialogTitle>Үнийн санал</DialogTitle>
                     <DialogDescription>
-                        Урьдчилан харах хэсэг. PDF татаж авахын тулд доорх товчийг дарна уу.
+                       Урьдчилан харах хэсэг. PDF татаж авахын тулд доорх товчийг дарна уу.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="flex-1 overflow-auto border bg-gray-50 rounded-md">
-                     <div ref={combinedPrintRef} className="p-4 bg-white transform scale-[.9] origin-top">
+                <div className="flex-1 overflow-auto border bg-gray-50 rounded-md p-4">
+                     <div id="print-root" className="print-smooth">
                         <CombinedQuotePrintLayout 
                             order={order}
                             orderItems={orderItems.filter(item => selectedItemsForQuote.has(item.id))}
-                            quotesMap={quotes}
                             allData={allData}
                         />
                     </div>
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsPreviewing(false)}>Хаах</Button>
-                    <Button onClick={handlePrintCombinedQuote} disabled={isPrinting}>
-                         {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
-                         PDF татах
-                    </Button>
+                    <PrintQuoteButton
+                        targetId="print-root"
+                        fileName={`Uneyn-sanal-${order.orderNumber}.pdf`}
+                        orientation="landscape"
+                        disabled={selectedItemsForQuote.size === 0}
+                    />
                 </DialogFooter>
             </DialogContent>
         </Dialog>

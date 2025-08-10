@@ -21,14 +21,12 @@ const roundCurrency = (value: number | undefined | null): number => {
   return Math.round(value * 100) / 100;
 };
 
-// Data-fetching functions should live in the page component, not the print layout.
-// This component now expects all necessary data to be passed in as props.
 type AllData = {
-  regions: Region[];
   serviceTypes: ServiceType[];
+  regions: Region[];
+  warehouses: Warehouse[];
   vehicleTypes: VehicleType[];
   trailerTypes: TrailerType[];
-  warehouses: Warehouse[];
   packagingTypes: PackagingType[];
 };
 
@@ -38,16 +36,12 @@ type CombinedQuotePrintLayoutProps = {
   allData: AllData;
 };
 
-// This is a dedicated print component. It's best practice to keep it pure and
-// focused on rendering data. Using React.forwardRef allows the parent to get a DOM ref if needed.
 const CombinedQuotePrintLayout = React.forwardRef<
   HTMLDivElement,
   CombinedQuotePrintLayoutProps
 >(({ order, orderItems, allData }, ref) => {
   if (!order) return null;
 
-  // Helper functions to find names from IDs.
-  // Memoizing them ensures they aren't recreated on every render.
   const getServiceName = React.useCallback((id: string) => allData.serviceTypes.find(s => s.id === id)?.name || 'N/A', [allData.serviceTypes]);
   const getRegionName = React.useCallback((id: string) => allData.regions.find(r => r.id === id)?.name || 'N/A', [allData.regions]);
   const getWarehouseName = React.useCallback((id: string) => allData.warehouses.find(w => w.id === id)?.name || 'N/A', [allData.warehouses]);
@@ -55,16 +49,14 @@ const CombinedQuotePrintLayout = React.forwardRef<
   const getTrailerTypeName = React.useCallback((id: string) => allData.trailerTypes.find(t => t.id === id)?.name || 'N/A', [allData.trailerTypes]);
   const getPackagingTypeName = React.useCallback((id: string) => allData.packagingTypes.find(p => p.id === id)?.name || 'N/A', [allData.packagingTypes]);
 
-  // Business Logic Fix: Filter for items with an accepted quote and where finalPrice is defined (can be 0).
+  // Rows with zero or positive price must not be filtered out. Check for null/undefined.
   const acceptedItems = orderItems.filter(
     (item) => item.acceptedQuoteId && item.finalPrice != null
   );
 
-  // Calculate totals safely
   const { totalPayment, totalVat, totalFinalPrice } = acceptedItems.reduce(
     (acc, item) => {
       const finalPrice = roundCurrency(item.finalPrice);
-      // Guard against falsy withVAT values
       const priceBeforeVat = item.withVAT ? finalPrice / 1.1 : finalPrice;
       const vat = finalPrice - priceBeforeVat;
       
@@ -76,13 +68,20 @@ const CombinedQuotePrintLayout = React.forwardRef<
     { totalPayment: 0, totalVat: 0, totalFinalPrice: 0 }
   );
   
-  // Stable SSR/Print Rendering: Use a stable date from the order data.
+  // Use a stable date from the order data to prevent hydration warnings.
   const quoteDate = order.createdAt ? format(new Date(order.createdAt), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
 
   return (
     <>
-      {/* Print-only CSS block */}
       <style jsx global>{`
+        :root { 
+          --print-font: "Inter", "Roboto", "Noto Sans", "Noto Sans Mongolian", system-ui, sans-serif; 
+        }
+        .print-smooth {
+          font-family: var(--print-font);
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
         @page {
           size: A4 landscape;
           margin: 12mm;
@@ -93,7 +92,7 @@ const CombinedQuotePrintLayout = React.forwardRef<
             print-color-adjust: exact;
             width: 297mm;
             height: 210mm;
-            font-family: "Inter", "Roboto", "Noto Sans", "Noto Sans Mongolian", system-ui, sans-serif;
+            font-family: var(--print-font);
           }
           tr, thead, tfoot, .print-avoid-break {
             break-inside: avoid;
@@ -104,8 +103,7 @@ const CombinedQuotePrintLayout = React.forwardRef<
           }
         }
       `}</style>
-      <div ref={ref} className="bg-white p-8 text-gray-800 text-[10px]" style={{ fontFamily: '"Inter", "Roboto", "Noto Sans", "Noto Sans Mongolian", system-ui, sans-serif', width: '297mm', minHeight: '210mm' }}>
-        {/* Header */}
+      <div ref={ref} className="bg-white p-8 text-gray-800 text-[10px] print-smooth" style={{ width: '297mm', minHeight: '210mm' }}>
         <header className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold">Tumen Tech TMS</h1>
@@ -117,14 +115,12 @@ const CombinedQuotePrintLayout = React.forwardRef<
           </div>
         </header>
 
-        {/* Customer Info */}
         <section className="mb-6 print-avoid-break">
           <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Захиалагчийн мэдээлэл</h3>
-          <div className="flex"><p className="font-bold">Байгууллага:</p><p className="ml-1">{order.customerName}</p></div>
-          <div className="flex"><p className="font-bold">Хариуцсан ажилтан:</p><p className="ml-1">{order.employeeName}</p></div>
+          <div className="flex"><p><strong>Байгууллага:</strong><span className="ml-1">{order.customerName}</span></p></div>
+          <div className="flex"><p><strong>Хариуцсан ажилтан:</strong><span className="ml-1">{order.employeeName}</span></p></div>
         </section>
 
-        {/* Main Table */}
         <table className="w-full text-left text-[9px]">
           <thead className="bg-gray-100 font-bold">
             <tr>
@@ -144,19 +140,17 @@ const CombinedQuotePrintLayout = React.forwardRef<
           <tbody>
             {acceptedItems.length > 0 ? (
               acceptedItems.map((item) => {
-                // Business Logic Fix: Guard against division by zero for frequency.
+                // Guard against division by zero for frequency.
                 const frequency = item.frequency && item.frequency > 0 ? item.frequency : 1;
                 const finalPrice = roundCurrency(item.finalPrice);
                 const priceBeforeVat = item.withVAT ? finalPrice / 1.1 : finalPrice;
                 const vatAmount = finalPrice - priceBeforeVat;
-                const singleTransportPrice = priceBeforeVat / frequency;
+                const singleTransportPriceWithProfit = priceBeforeVat / frequency;
 
                 return (
-                  // Stable SSR/Print Rendering: Use stable ID for key.
                   <tr key={item.id}>
                     <td className="p-1 border border-gray-400 align-top">{getServiceName(item.serviceTypeId)}</td>
                     <td className="p-1 border border-gray-400 align-top">
-                      {/* Using a definition list for semantic cargo details */}
                       <dl>
                         {(item.cargoItems || []).map((cargo: OrderItemCargo, i: number) => (
                           <React.Fragment key={cargo.id || `cargo-${i}`}>
@@ -176,7 +170,7 @@ const CombinedQuotePrintLayout = React.forwardRef<
                     </td>
                     <td className="p-1 border border-gray-400 text-right align-top">{item.totalDistance} км</td>
                     <td className="p-1 border border-gray-400 align-top">{`${getVehicleTypeName(item.vehicleTypeId)}, ${getTrailerTypeName(item.trailerTypeId)}`}</td>
-                    <td className="p-1 border border-gray-400 text-right align-top">{roundCurrency(singleTransportPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="p-1 border border-gray-400 text-right align-top">{roundCurrency(singleTransportPriceWithProfit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td className="p-1 border border-gray-400 text-right align-top">{frequency}</td>
                     <td className="p-1 border border-gray-400 text-right align-top">{roundCurrency(priceBeforeVat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td className="p-1 border border-gray-400 text-right align-top">{roundCurrency(vatAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -202,18 +196,17 @@ const CombinedQuotePrintLayout = React.forwardRef<
           )}
         </table>
         
-        {/* Transportation Conditions */}
         {order.conditions && (
           <section className="mb-6 mt-8 print-avoid-break">
             <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Тээврийн нөхцөл</h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-              <div className="flex"><p className="font-bold">Ачилт:</p><p className="ml-1">{order.conditions.loading}</p></div>
-              <div className="flex"><p className="font-bold">Буулгалт:</p><p className="ml-1">{order.conditions.unloading}</p></div>
-              <div className="flex"><p className="font-bold">ТХ-н бэлэн байдал:</p><p className="ml-1">{order.conditions.vehicleAvailability}</p></div>
-              <div className="flex"><p className="font-bold">Төлбөрийн нөхцөл:</p><p className="ml-1">{order.conditions.paymentTerm}</p></div>
-              <div className="col-span-2 flex"><p className="font-bold">Даатгал:</p><p className="ml-1">{order.conditions.insurance}</p></div>
+              <div className="flex"><p><strong>Ачилт:</strong><span className="ml-1">{order.conditions.loading}</span></p></div>
+              <div className="flex"><p><strong>Буулгалт:</strong><span className="ml-1">{order.conditions.unloading}</span></p></div>
+              <div className="flex"><p><strong>ТХ-н бэлэн байдал:</strong><span className="ml-1">{order.conditions.vehicleAvailability}</span></p></div>
+              <div className="flex"><p><strong>Төлбөрийн нөхцөл:</strong><span className="ml-1">{order.conditions.paymentTerm}</span></p></div>
+              <div className="col-span-2 flex"><p><strong>Даатгал:</strong><span className="ml-1">{order.conditions.insurance}</span></p></div>
               <div className="col-span-2">
-                <p className="font-bold">Зөвшөөрөл:</p>
+                <p><strong>Зөвшөөрөл:</strong></p>
                 {(order.conditions.permits?.roadPermit || order.conditions.permits?.roadToll) ? (
                   <ul className="list-disc list-inside ml-4">
                     {order.conditions.permits.roadPermit && <li>Замын зөвшөөрөл авна</li>}
@@ -222,13 +215,12 @@ const CombinedQuotePrintLayout = React.forwardRef<
                 ) : <p className="ml-1">Тодорхойлоогүй</p>}
               </div>
               {order.conditions.additionalConditions && (
-                <div className="col-span-2 flex"><p className="font-bold">Нэмэлт нөхцөл:</p><p className="ml-1">{order.conditions.additionalConditions}</p></div>
+                <div className="col-span-2 flex"><p><strong>Нэмэлт нөхцөл:</strong><span className="ml-1">{order.conditions.additionalConditions}</span></p></div>
               )}
             </div>
           </section>
         )}
 
-        {/* Footer */}
         <footer className="text-center text-gray-500 mt-10 pt-4 border-t">
           <p>Tumen Tech TMS - Тээвэр ложистикийн удирдлагын систем</p>
         </footer>
@@ -240,5 +232,3 @@ const CombinedQuotePrintLayout = React.forwardRef<
 CombinedQuotePrintLayout.displayName = 'CombinedQuotePrintLayout';
 
 export default CombinedQuotePrintLayout;
-
-    
