@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
-      headless: 'new',
+      headless: chromium.headless,
     });
     
     const page = await browser.newPage();
