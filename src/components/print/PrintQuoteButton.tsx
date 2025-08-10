@@ -1,6 +1,6 @@
+
 'use client';
 import { useState, useCallback } from 'react';
-import { captureElementToPdf } from '@/lib/print/pdf';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
@@ -23,16 +23,33 @@ export default function PrintQuoteButton({
       });
       return;
     }
+    
+    setBusy(true);
     try {
-      setBusy(true);
-      await captureElementToPdf({
-        element: el,
-        fileName,
-        orientation,
-        marginsMm: { top: 10, right: 10, bottom: 10, left: 10 },
-        background: '#ffffff',
-        scale: 2, // integer scale for stable spacing
+      // Fetch the global CSS content
+      const cssResponse = await fetch('/globals.css');
+      const cssContent = await cssResponse.text();
+
+      const response = await fetch('/api/pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          htmlContent: el.innerHTML,
+          cssContent: cssContent,
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
+      }
+      
+      const pdfBlob = await response.blob();
+      const url = URL.createObjectURL(pdfBlob);
+      window.open(url, '_blank');
+      // No need to revoke, as the new tab will handle it.
+      
     } catch (e) {
       console.error('PDF export failed', e);
       toast({
@@ -43,7 +60,7 @@ export default function PrintQuoteButton({
     } finally {
       setBusy(false);
     }
-  }, [targetId, fileName, orientation, toast]);
+  }, [targetId, toast]);
 
   return (
     <Button

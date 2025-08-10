@@ -1,7 +1,8 @@
 /**
- * @fileoverview PDF generation utility using html2canvas and jsPDF.
- * This file provides a robust function to capture an HTML element, convert it to a canvas,
- * and then generate a multi-page A4 PDF, handling content pagination automatically.
+ * @fileoverview This file is no longer used for client-side PDF generation.
+ * PDF generation is now handled by the /api/pdf server-side endpoint using Puppeteer.
+ * The PrintQuoteButton component now sends a request to this endpoint.
+ * This file is kept temporarily for reference but can be deleted.
  */
 
 import html2canvas from 'html2canvas';
