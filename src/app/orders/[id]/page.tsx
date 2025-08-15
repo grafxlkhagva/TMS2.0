@@ -43,9 +43,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import CombinedQuotePrintLayout from '@/components/combined-quote-print-layout';
 import { Checkbox } from '@/components/ui/checkbox';
-import PrintQuoteButton from '@/components/print/PrintQuoteButton';
 
 
 const quoteFormSchema = z.object({
@@ -638,8 +636,6 @@ export default function OrderDetailPage() {
     packagingTypes,
   };
 
-  const pdfFileName = `Uneyn-sanal-${order.orderNumber}.pdf`;
-
 
   return (
     <div className="container mx-auto py-6">
@@ -660,11 +656,6 @@ export default function OrderDetailPage() {
                         Захиалга засах
                     </Link>
                 </Button>
-                 <PrintQuoteButton
-                    targetId="print-root"
-                    fileName={pdfFileName}
-                    orientation="landscape"
-                />
             </div>
         </div>
       </div>
@@ -897,15 +888,6 @@ export default function OrderDetailPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-
-        {/* This div is for PDF generation and is not visible to the user */}
-        <div id="print-root">
-            <CombinedQuotePrintLayout 
-                order={order}
-                orderItems={orderItems.filter(item => selectedItemsForQuote.has(item.id))}
-                allData={allData}
-            />
-        </div>
     </div>
   );
 }
