@@ -370,7 +370,7 @@ export default function GenerateQuotePage() {
                 />
             </div>
         </div>
-        <div ref={componentRef} id="print-root" className="bg-white rounded-lg shadow-lg mx-auto" style={{ width: '1123px' }}>
+        <div ref={componentRef} id="print-root" className="bg-white rounded-lg shadow-lg mx-auto">
             <QuoteLayout order={order} orderItems={orderItems} allData={allData} />
         </div>
       </div>

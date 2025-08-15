@@ -29,9 +29,15 @@ export default function PrintQuoteButton({
         if ('fonts' in document) {
           await (document as any).fonts.ready;
         }
+        // Allow time for layout shifts
         await new Promise(resolve => requestAnimationFrame(resolve));
       } catch (e) {
         console.warn('Could not wait for fonts to load.', e);
+        toast({
+            variant: 'destructive',
+            title: 'Алдаа',
+            description: `Фонт ачаалахад алдаа гарлаа.`
+        });
       }
     },
     onAfterPrint: () => {
@@ -40,20 +46,25 @@ export default function PrintQuoteButton({
     pageStyle: `
       @page {
         size: A4 landscape;
-        margin: 12mm;
+        margin: 0;
       }
       @media print {
         .no-print {
           display: none !important;
         }
-        body {
+        html, body {
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
         #print-root {
+          margin: 0;
+          padding: 0;
           transform: none !important;
           overflow: visible !important;
           visibility: visible !important;
+          width: 100% !important;
+          box-shadow: none !important;
+          border-radius: 0 !important;
         }
         #print-root * {
           visibility: visible !important;
@@ -89,7 +100,7 @@ export default function PrintQuoteButton({
     <Button
       onClick={onClick}
       disabled={busy || disabled}
-      aria-label="Үнийн санал PDF болгон татах"
+      aria-label="Үнийн санал хэвлэх"
     >
       {busy ? (
         <>
@@ -99,7 +110,7 @@ export default function PrintQuoteButton({
        ) : (
         <>
           <Download className="mr-2 h-4 w-4" />
-          PDF татах
+          Хэвлэх
         </>
        )}
     </Button>
