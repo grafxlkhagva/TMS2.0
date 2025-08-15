@@ -21,24 +21,21 @@ import { format } from 'date-fns';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import Link from 'next/link';
 import PrintQuoteButton from '@/components/print/PrintQuoteButton';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 // --- HELPER FUNCTIONS ---
 
 const toDateSafe = (date: any): Date | undefined => {
-  if (date instanceof Timestamp) {
-    return date.toDate();
-  }
-  if (date instanceof Date) {
-    return date;
-  }
+  if (date instanceof Timestamp) return date.toDate();
+  if (date instanceof Date) return date;
   if (typeof date === 'string' || typeof date === 'number') {
     const parsedDate = new Date(date);
-    if (!isNaN(parsedDate.getTime())) {
-      return parsedDate;
-    }
+    if (!isNaN(parsedDate.getTime())) return parsedDate;
   }
   return undefined;
 };
@@ -84,11 +81,7 @@ const QuoteLayout = React.forwardRef<HTMLDivElement, { order: Order; orderItems:
   const getTrailerTypeName = (id: string) => maps.trailers[id] || 'N/A';
   const getPackagingTypeName = (id: string) => maps.packaging[id] || 'N/A';
 
-  const acceptedItems = orderItems.filter(
-    (item) => item.acceptedQuoteId && item.finalPrice != null
-  );
-
-  const { totalPayment, totalVat, totalFinalPrice } = acceptedItems.reduce(
+  const { totalPayment, totalVat, totalFinalPrice } = orderItems.reduce(
     (acc, item) => {
       const finalPrice = roundCurrency(item.finalPrice);
       const priceBeforeVat = item.withVAT ? finalPrice / 1.1 : finalPrice;
@@ -153,8 +146,8 @@ const QuoteLayout = React.forwardRef<HTMLDivElement, { order: Order; orderItems:
           </tr>
         </thead>
         <tbody>
-          {acceptedItems.length > 0 ? (
-            acceptedItems.map((item) => {
+          {orderItems.length > 0 ? (
+            orderItems.map((item) => {
               const frequency = item.frequency && item.frequency > 0 ? item.frequency : 1;
               const finalPrice = roundCurrency(item.finalPrice);
               const priceBeforeVat = item.withVAT ? finalPrice / 1.1 : finalPrice;
@@ -194,7 +187,7 @@ const QuoteLayout = React.forwardRef<HTMLDivElement, { order: Order; orderItems:
             })
           ) : (
             <tr>
-              <td colSpan={11} className="p-4 text-center">No accepted items.</td>
+              <td colSpan={11} className="p-4 text-center">Үнийн саналд оруулахаар сонгогдсон тээвэрлэлт алга.</td>
             </tr>
           )}
         </tbody>
@@ -230,9 +223,12 @@ export default function GenerateQuotePage() {
   const componentRef = React.useRef<HTMLDivElement>(null);
 
   const [order, setOrder] = React.useState<Order | null>(null);
-  const [orderItems, setOrderItems] = React.useState<OrderItem[]>([]);
   const [allData, setAllData] = React.useState<AllData | null>(null);
+  const [acceptedItems, setAcceptedItems] = React.useState<OrderItem[]>([]);
+  const [selectedItems, setSelectedItems] = React.useState<Map<string, OrderItem>>(new Map());
   const [isLoading, setIsLoading] = React.useState(true);
+  
+  const getRegionName = React.useCallback((id: string) => allData?.regions.find(r => r.id === id)?.name || 'N/A', [allData]);
 
   React.useEffect(() => {
     if (!orderId) return;
@@ -269,9 +265,12 @@ export default function GenerateQuotePage() {
             return { id: d.id, ...itemData, cargoItems, createdAt: toDateSafe(itemData.createdAt) } as OrderItem;
         });
 
-        const itemsData = await Promise.all(itemsDataPromises);
-        itemsData.sort((a,b) => (a.createdAt?.getTime?.() ?? 0) - (b.createdAt?.getTime?.() ?? 0));
-        setOrderItems(itemsData);
+        const allItems = await Promise.all(itemsDataPromises);
+        const filteredAcceptedItems = allItems.filter(item => item.acceptedQuoteId && item.finalPrice != null);
+        filteredAcceptedItems.sort((a,b) => (a.createdAt?.getTime?.() ?? 0) - (b.createdAt?.getTime?.() ?? 0));
+        
+        setAcceptedItems(filteredAcceptedItems);
+        setSelectedItems(new Map(filteredAcceptedItems.map(item => [item.id, item])));
 
         setAllData({
           warehouses: warehouseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Warehouse)),
@@ -293,6 +292,28 @@ export default function GenerateQuotePage() {
     fetchData();
   }, [orderId, router, toast]);
 
+  const handleSelectChange = (item: OrderItem) => {
+    setSelectedItems(prev => {
+      const newMap = new Map(prev);
+      if (newMap.has(item.id)) {
+        newMap.delete(item.id);
+      } else {
+        newMap.set(item.id, item);
+      }
+      return newMap;
+    });
+  };
+
+  const selectedItemsArray = Array.from(selectedItems.values()).sort((a,b) => (a.createdAt?.getTime?.() ?? 0) - (b.createdAt?.getTime?.() ?? 0));
+  
+  const { totalFinalPrice } = selectedItemsArray.reduce(
+    (acc, item) => {
+      acc.totalFinalPrice += roundCurrency(item.finalPrice);
+      return acc;
+    },
+    { totalFinalPrice: 0 }
+  );
+
   if (isLoading || !order || !allData) {
     return (
       <div className="container mx-auto py-6 space-y-4">
@@ -302,11 +323,9 @@ export default function GenerateQuotePage() {
     );
   }
 
-  const acceptedItems = orderItems.filter(item => item.acceptedQuoteId && item.finalPrice != null);
-
   return (
-    <div className="container mx-auto py-6">
-      <div className="mb-4 flex justify-between items-center no-print">
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" asChild>
             <Link href={`/orders/${orderId}`}>
@@ -315,36 +334,73 @@ export default function GenerateQuotePage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Үнийн санал</h1>
+            <h1 className="text-2xl font-bold">Үнийн санал үүсгэх</h1>
             <p className="text-muted-foreground">{order.orderNumber}</p>
           </div>
         </div>
         <PrintQuoteButton
           targetRef={componentRef}
           fileName={`Quote-${order.orderNumber}.pdf`}
-          disabled={acceptedItems.length === 0}
+          disabled={selectedItems.size === 0}
         />
       </div>
-      
-      {acceptedItems.length === 0 && (
-          <div className="text-center py-10 border-2 border-dashed rounded-lg">
-              <p className="text-muted-foreground">Үнийн саналд оруулахаар сонгогдсон тээвэрлэлт алга.</p>
-              <p className="text-sm text-muted-foreground mt-2">Та захиалгын дэлгэрэнгүй хуудаснаас жолоочийн саналыг баталгаажуулна уу.</p>
-          </div>
-      )}
 
-      {/* This component is for printing, it's not visible on the screen */}
-       <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
-         {acceptedItems.length > 0 && <QuoteLayout ref={componentRef} order={order} orderItems={acceptedItems} allData={allData} />}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-1 flex flex-col gap-6 sticky top-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Тээвэрлэлт сонгох</CardTitle>
+                    <CardDescription>Үнийн саналд оруулах тээвэрлэлтүүдээ сонгоно уу.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                    {acceptedItems.length > 0 ? (
+                        acceptedItems.map((item, index) => (
+                            <div key={item.id} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted">
+                                <Checkbox
+                                    id={`item-${item.id}`}
+                                    checked={selectedItems.has(item.id)}
+                                    onCheckedChange={() => handleSelectChange(item)}
+                                />
+                                <label htmlFor={`item-${item.id}`} className="text-sm font-medium leading-none cursor-pointer flex-1">
+                                    Тээвэрлэлт #{index + 1}: {getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}
+                                </label>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-sm text-muted-foreground p-2">Баталгаажсан үнийн саналтай тээвэрлэлт олдсонгүй.</p>
+                    )}
+                </CardContent>
+                {selectedItems.size > 0 && (
+                    <CardFooter className="flex-col items-start gap-2 pt-4 border-t">
+                        <div className="font-semibold">Нийт дүн: {fmt(totalFinalPrice)}₮</div>
+                        <p className="text-xs text-muted-foreground">{selectedItems.size} тээвэрлэлт сонгогдсон.</p>
+                    </CardFooter>
+                )}
+            </Card>
+        </div>
+        
+        <div className="lg:col-span-2">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-primary"/>
+                        Урьдчилан харах
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="border rounded-lg shadow-sm overflow-hidden">
+                       <QuoteLayout order={order} orderItems={selectedItemsArray} allData={allData} />
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
       </div>
       
-      {/* This is the visible preview on the screen */}
-       {acceptedItems.length > 0 && (
-         <div className="border rounded-lg shadow-sm overflow-hidden">
-            <QuoteLayout order={order} orderItems={acceptedItems} allData={allData} />
-         </div>
-       )}
-
+      {/* This component is for printing, it's hidden from the screen */}
+       <div style={{ position: 'absolute', left: '-9999px', top: 0, zIndex: -1 }}>
+         {selectedItemsArray.length > 0 && <QuoteLayout ref={componentRef} order={order} orderItems={selectedItemsArray} allData={allData} />}
+      </div>
     </div>
   );
 }
+
