@@ -40,6 +40,7 @@ export async function captureElementToPdf(opts: {
   }
 
   const prevWidth = element.style.width;
+  // Set a fixed width corresponding to landscape A4 at 96 DPI for consistent capture
   element.style.width = '1123px';
 
   const canvas = await html2canvas(element, {
@@ -54,6 +55,7 @@ export async function captureElementToPdf(opts: {
     removeContainer: true,
   });
   
+  // Restore original width after capture
   element.style.width = prevWidth;
 
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation, compress: true });

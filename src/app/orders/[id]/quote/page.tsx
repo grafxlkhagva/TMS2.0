@@ -73,7 +73,7 @@ function QuoteLayout({ order, orderItems, allData }: { order: Order; orderItems:
 
   return (
     <>
-      <div className="bg-white p-8 text-gray-800 text-[10px]" style={{ width: '297mm', minHeight: '210mm' }}>
+      <div className="bg-white p-8 text-gray-800 text-[10px]" style={{ fontFamily: 'Inter, "Noto Sans Mongolian", sans-serif' }}>
         <header className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold">Tumen Tech TMS</h1>
@@ -91,7 +91,20 @@ function QuoteLayout({ order, orderItems, allData }: { order: Order; orderItems:
           <div className="flex"><p><strong>Хариуцсан ажилтан:</strong><span className="ml-1">{order.employeeName}</span></p></div>
         </section>
 
-        <table className="w-full text-left text-[9px]">
+        <table className="w-full text-left text-[9px]" style={{ tableLayout: 'fixed', wordBreak: 'break-word' }}>
+          <colgroup>
+            <col style={{ width: '8%' }} />
+            <col style={{ width: '15%' }} />
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '6%' }} />
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '7%' }} />
+            <col style={{ width: '5%' }} />
+            <col style={{ width: '8%' }} />
+            <col style={{ width: '8%' }} />
+            <col style={{ width: '8%' }} />
+          </colgroup>
           <thead className="bg-gray-100 font-bold">
             <tr>
               <th scope="col" className="p-1 border border-gray-400">Үйлчилгээний төрөл</th>
@@ -101,7 +114,7 @@ function QuoteLayout({ order, orderItems, allData }: { order: Order; orderItems:
               <th scope="col" className="p-1 border border-gray-400 text-right">Нийт зам</th>
               <th scope="col" className="p-1 border border-gray-400">Тээврийн хэрэгсэл</th>
               <th scope="col" className="p-1 border border-gray-400 text-right">Тээврийн үнэ</th>
-              <th scope="col" className="p-1 border border-gray-400 text-right">Тээврийн тоо</th>
+              <th scope="col" className="p-1 border border-gray-400 text-right">Тоо</th>
               <th scope="col" className="p-1 border border-gray-400 text-right">Нийт төлбөр</th>
               <th scope="col" className="p-1 border border-gray-400 text-right">НӨАТ</th>
               <th scope="col" className="p-1 border border-gray-400 text-right">Нийт дүн</th>
