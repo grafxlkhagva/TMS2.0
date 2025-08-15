@@ -103,6 +103,12 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+const toDateSafe = (date: any): Date => {
+  if (date instanceof Timestamp) return date.toDate();
+  if (date instanceof Date) return date;
+  return new Date(date);
+};
+
 async function generateShipmentNumber() {
     const counterRef = doc(db, 'counters', 'shipmentCounter');
     const newCount = await runTransaction(db, async (transaction) => {
@@ -180,7 +186,7 @@ export default function OrderDetailPage() {
       const currentOrder = {
           id: orderDocSnap.id,
           ...data,
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt)
+          createdAt: toDateSafe(data.createdAt)
       } as Order;
       setOrder(currentOrder);
 
@@ -205,11 +211,11 @@ export default function OrderDetailPage() {
         return {
             id: d.id, 
             ...itemData,
-            createdAt: itemData.createdAt.toDate(),
-            loadingStartDate: itemData.loadingStartDate instanceof Timestamp ? itemData.loadingStartDate.toDate() : new Date(itemData.loadingStartDate),
-            loadingEndDate: itemData.loadingEndDate instanceof Timestamp ? itemData.loadingEndDate.toDate() : new Date(itemData.loadingEndDate),
-            unloadingStartDate: itemData.unloadingStartDate instanceof Timestamp ? itemData.unloadingStartDate.toDate() : new Date(itemData.unloadingStartDate),
-            unloadingEndDate: itemData.unloadingEndDate instanceof Timestamp ? itemData.unloadingEndDate.toDate() : new Date(itemData.unloadingEndDate),
+            createdAt: toDateSafe(itemData.createdAt),
+            loadingStartDate: toDateSafe(itemData.loadingStartDate),
+            loadingEndDate: toDateSafe(itemData.loadingEndDate),
+            unloadingStartDate: toDateSafe(itemData.unloadingStartDate),
+            unloadingEndDate: toDateSafe(itemData.unloadingEndDate),
             cargoItems: cargoItems
         } as OrderItem
       });
@@ -236,7 +242,7 @@ export default function OrderDetailPage() {
             return {
                 id: d.id, 
                 ...data, 
-                createdAt: data.createdAt.toDate()
+                createdAt: toDateSafe(data.createdAt)
             } as DriverQuote
           });
           quotesData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -626,6 +632,22 @@ export default function OrderDetailPage() {
         finalPrice,
     };
   }
+  
+  const getItemStatusBadgeVariant = (status: OrderItem['status']) => {
+    switch(status) {
+      case 'Delivered':
+        return 'success';
+      case 'Assigned':
+      case 'Shipped':
+      case 'In Transit':
+        return 'default';
+      case 'Cancelled':
+        return 'destructive';
+      case 'Pending':
+      default:
+        return 'secondary';
+    }
+  };
 
   const allData = {
     serviceTypes,
@@ -727,7 +749,7 @@ export default function OrderDetailPage() {
                                                     {item.finalPrice != null && (
                                                         <p className="font-semibold text-primary">{item.finalPrice.toLocaleString()}₮</p>
                                                     )}
-                                                    <Badge variant={item.status === 'Assigned' ? 'default' : item.status === 'Shipped' ? 'success' : 'secondary'}>{item.status}</Badge>
+                                                    <Badge variant={getItemStatusBadgeVariant(item.status)}>{item.status}</Badge>
                                                 </div>
                                            </div>
                                        </AccordionTrigger>

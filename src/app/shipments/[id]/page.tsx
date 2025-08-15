@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -118,6 +119,22 @@ export default function ShipmentDetailPage() {
         setIsUpdating(false);
     }
   }
+  
+  const getStatusBadgeVariant = (status: ShipmentStatusType) => {
+    switch(status) {
+      case 'Delivered':
+        return 'success';
+      case 'In Transit':
+        return 'default';
+      case 'Delayed':
+        return 'warning';
+      case 'Cancelled':
+        return 'destructive';
+      case 'Preparing':
+      default:
+        return 'secondary';
+    }
+  };
 
 
   if (isLoading) {
@@ -188,7 +205,7 @@ export default function ShipmentDetailPage() {
                 <DetailItem icon={Truck} label="Тээврийн дугаар" value={shipment.shipmentNumber} />
                 <DetailItem icon={FileText} label="Захиалгын дугаар" value={shipment.orderNumber} subValue="Захиалгын дэлгэрэнгүй рүү үсрэх" />
                 <DetailItem icon={User} label="Харилцагч" value={shipment.customerName} />
-                <DetailItem icon={Badge} label="Статус" value={statusTranslations[shipment.status]} />
+                <DetailItem icon={Badge} label="Статус" value={<Badge variant={getStatusBadgeVariant(shipment.status)}>{statusTranslations[shipment.status]}</Badge>} />
                 <DetailItem icon={Calendar} label="Үүсгэсэн огноо" value={format(shipment.createdAt, 'yyyy-MM-dd HH:mm')} />
                 <DetailItem icon={Calendar} label="Хүргэх огноо (төлөвлөсөн)" value={format(shipment.estimatedDeliveryDate, 'yyyy-MM-dd')} />
               </CardContent>
