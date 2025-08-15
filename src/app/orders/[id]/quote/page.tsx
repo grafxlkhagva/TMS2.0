@@ -17,13 +17,13 @@ import type {
   OrderItemCargo,
 } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { useReactToPrint } from 'react-to-print';
 import { format } from 'date-fns';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import PrintQuoteButton from '@/components/print/PrintQuoteButton';
 
 // Helper to safely round numbers to 2 decimal places.
 const roundCurrency = (value: number | undefined | null): number => {
@@ -204,17 +204,11 @@ export default function GenerateQuotePage() {
   const { id: orderId } = useParams<{ id: string }>();
   const router = useRouter();
   const { toast } = useToast();
-  const printRef = React.useRef<HTMLDivElement>(null);
-
+  
   const [order, setOrder] = React.useState<Order | null>(null);
   const [orderItems, setOrderItems] = React.useState<OrderItem[]>([]);
   const [allData, setAllData] = React.useState<AllData | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
-  
-  const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-    documentTitle: `Quote-${order?.orderNumber || 'details'}`,
-  });
   
   React.useEffect(() => {
     if (!orderId) return;
@@ -306,14 +300,6 @@ export default function GenerateQuotePage() {
 
   return (
     <div className="bg-gray-100 min-h-screen py-10">
-      <style>{`
-        @media print {
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .no-print { display: none !important; }
-          .print-area { box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
-        }
-        @page { size: A4 landscape; margin: 12mm; }
-      `}</style>
       <div className="container mx-auto">
         <div className="flex justify-between items-center mb-6 no-print">
             <h1 className="text-2xl font-bold">Үнийн санал</h1>
@@ -321,12 +307,13 @@ export default function GenerateQuotePage() {
                 <Button variant="outline" asChild>
                     <Link href={`/orders/${orderId}`}><ArrowLeft className="mr-2 h-4 w-4"/> Буцах</Link>
                 </Button>
-                <Button onClick={handlePrint}>
-                    <Printer className="mr-2 h-4 w-4"/> Хэвлэх
-                </Button>
+                <PrintQuoteButton
+                  targetId="print-root"
+                  fileName={`Quote-${order?.orderNumber || 'details'}.pdf`}
+                />
             </div>
         </div>
-        <div ref={printRef} className="print-area bg-white rounded-lg shadow-lg mx-auto">
+        <div id="print-root" className="bg-white rounded-lg shadow-lg mx-auto">
             <QuoteLayout order={order} orderItems={orderItems} allData={allData} />
         </div>
       </div>

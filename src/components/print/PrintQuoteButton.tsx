@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -39,7 +40,13 @@ export default function PrintQuoteButton({
       });
       
       const url = URL.createObjectURL(pdfBlob);
-      window.open(url, '_blank');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       
     } catch (e) {
       console.error('PDF export failed', e);
@@ -67,7 +74,7 @@ export default function PrintQuoteButton({
        ) : (
         <>
           <Download className="mr-2 h-4 w-4" />
-          Үнийн санал хэвлэх
+          PDF татах
         </>
        )}
     </Button>
