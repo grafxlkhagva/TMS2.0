@@ -325,7 +325,7 @@ export default function GenerateQuotePage() {
           </div>
         </div>
         <PrintQuoteButton
-          targetId="print-root"
+          targetRef={componentRef}
           fileName={`Quote-${order.orderNumber}.pdf`}
           disabled={acceptedItems.length === 0}
         />
@@ -339,10 +339,8 @@ export default function GenerateQuotePage() {
       )}
 
       {/* This component is only for printing, it's not visible on the screen */}
-      <div className="hidden">
-        <div className="absolute left-0 top-0">
-           <QuoteLayout ref={componentRef} order={order} orderItems={acceptedItems} allData={allData} />
-        </div>
+      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+         <QuoteLayout ref={componentRef} order={order} orderItems={acceptedItems} allData={allData} />
       </div>
       
       {/* This is the visible preview on the screen */}

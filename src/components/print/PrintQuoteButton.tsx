@@ -75,13 +75,13 @@ async function captureElementToPdf(element: HTMLElement, fileName: string): Prom
 
 
 type PrintQuoteButtonProps = {
-  targetId: string;
+  targetRef: React.RefObject<HTMLElement>;
   fileName: string;
   disabled?: boolean;
 };
 
 export default function PrintQuoteButton({
-  targetId,
+  targetRef,
   fileName,
   disabled = false,
 }: PrintQuoteButtonProps) {
@@ -91,7 +91,7 @@ export default function PrintQuoteButton({
   const handleCreatePdf = async () => {
     setBusy(true);
     try {
-      const element = document.getElementById(targetId);
+      const element = targetRef.current;
       if (!element) {
         throw new Error('Could not find element to print.');
       }
