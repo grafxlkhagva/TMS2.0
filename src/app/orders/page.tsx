@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { MoreHorizontal, PlusCircle, RefreshCw, Eye, Edit, Trash2, Search } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, RefreshCw, Eye, Edit, Trash2, Search, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -202,6 +202,12 @@ export default function OrdersPage() {
                                         <Edit className="mr-2 h-4 w-4"/>
                                         Засах
                                     </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/orders/${order.id}/quote`}>
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        Үнийн санал үүсгэх
+                                      </Link>
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem onClick={() => setOrderToDelete(order)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
