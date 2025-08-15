@@ -320,7 +320,7 @@ export default function GenerateQuotePage() {
           </div>
         </div>
         <PrintQuoteButton
-          targetId="print-root"
+          targetRef={componentRef}
           fileName={`Quote-${order.orderNumber}.pdf`}
           disabled={acceptedItems.length === 0}
         />
