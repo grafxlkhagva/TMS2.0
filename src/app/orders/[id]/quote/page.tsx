@@ -18,7 +18,6 @@ import type {
 } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import Image from 'next/image';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -109,12 +108,11 @@ const QuoteLayout = React.forwardRef<HTMLDivElement, { order: Order; orderItems:
     <div ref={ref} id="print-root" className="bg-white p-8 text-gray-800 text-[10px]" style={{ fontFamily: 'Inter, "Noto Sans Mongolian", sans-serif' }}>
       <header className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
         <div>
-          <Image
-            src="https://placehold.co/200x50.png"
+          <img
+            src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjUwIiB2aWV3Qm94PSIwIDAgMjAwIDUwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMCAwSDIwMFY1MEgwVjBaIiBmaWxsPSJ3aGl0ZSIvPgo8dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IidNYW5yb3BlJywgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iIzE3MjU1QSI+VHVtZW4gVGVjaDwvdGV4dD4KPC9zdmc+Cg=="
             alt="Company Logo"
-            width={200}
-            height={50}
-            data-ai-hint="logo tech"
+            width="200"
+            height="50"
           />
         </div>
         <div className="text-right">
@@ -195,61 +193,38 @@ const QuoteLayout = React.forwardRef<HTMLDivElement, { order: Order; orderItems:
                   <td className="p-1 border border-gray-400 text-right align-top">{frequency}</td>
                   <td className="p-1 border border-gray-400 text-right align-top">{fmt(priceBeforeVat)}</td>
                   <td className="p-1 border border-gray-400 text-right align-top">{fmt(vatAmount)}</td>
-                  <td className="p-1 border border-gray-400 text-right font-medium align-top">{fmt(finalPrice)}</td>
+                  <td className="p-1 border border-gray-400 text-right align-top">{fmt(finalPrice)}</td>
                 </tr>
               );
             })
           ) : (
             <tr>
-              <td colSpan={11} className="text-center p-4 border border-gray-400">Үнийн саналд оруулахаар сонгогдсон тээвэрлэлт алга.</td>
+              <td colSpan={11} className="p-4 text-center">No accepted items.</td>
             </tr>
           )}
         </tbody>
-        {acceptedItems.length > 0 && (
-          <tfoot className="font-bold bg-gray-100">
-            <tr>
-              <td colSpan={8} className="p-1 border border-gray-400 text-right">Нийт дүн:</td>
-              <td className="p-1 border border-gray-400 text-right">{fmt(totalPayment)}</td>
-              <td className="p-1 border border-gray-400 text-right">{fmt(totalVat)}</td>
-              <td className="p-1 border border-gray-400 text-right">{fmt(totalFinalPrice)}</td>
-            </tr>
-          </tfoot>
-        )}
+        <tfoot>
+          <tr>
+            <td colSpan={8} className="p-2 font-bold text-right border border-gray-400">Нийт төлбөр</td>
+            <td className="p-2 font-bold text-right border border-gray-400">{fmt(totalPayment)}</td>
+            <td className="p-2 font-bold text-right border border-gray-400">{fmt(totalVat)}</td>
+            <td className="p-2 font-bold text-right border border-gray-400">{fmt(totalFinalPrice)}</td>
+          </tr>
+        </tfoot>
       </table>
-      
-      {order.conditions && (
-        <section className="mb-6 mt-8">
-          <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Тээврийн нөхцөл</h3>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-            <div className="flex"><p><strong>Ачилт:</strong><span className="ml-1">{order.conditions.loading}</span></p></div>
-            <div className="flex"><p><strong>Буулгалт:</strong><span className="ml-1">{order.conditions.unloading}</span></p></div>
-            <div className="flex"><p><strong>ТХ-н бэлэн байдал:</strong><span className="ml-1">{order.conditions.vehicleAvailability}</span></p></div>
-            <div className="flex"><p><strong>Төлбөрийн нөхцөл:</strong><span className="ml-1">{order.conditions.paymentTerm}</span></p></div>
-            <div className="col-span-2 flex"><p><strong>Даатгал:</strong><span className="ml-1">{order.conditions.insurance}</span></p></div>
-            <div className="col-span-2">
-              <p><strong>Зөвшөөрөл:</strong></p>
-              {(order.conditions.permits?.roadPermit || order.conditions.permits?.roadToll) ? (
-                <ul className="list-disc list-inside ml-4">
-                  {order.conditions.permits.roadPermit && <li>Замын зөвшөөрөл авна</li>}
-                  {order.conditions.permits.roadToll && <li>Замын хураамж тушаана</li>}
-                </ul>
-              ) : <p className="ml-1">Тодорхойлоогүй</p>}
-            </div>
-            {order.conditions.additionalConditions && (
-              <div className="col-span-2 flex"><p><strong>Нэмэлт нөхцөл:</strong><span className="ml-1">{order.conditions.additionalConditions}</span></p></div>
-            )}
-          </div>
-        </section>
-      )}
 
-      <footer className="text-center text-gray-500 mt-10 pt-4 border-t">
-        <p>Tumen Tech TMS - Тээвэр ложистикийн удирдлагын систем</p>
-      </footer>
+      <section className="mt-6">
+        <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Тайлбар</h3>
+        <p className="text-gray-700">
+          Энэхүү үнийн санал нь зөвхөн энд дурдсан үйлчилгээ болон бараа бүтээгдэхүүнд хамаарна.
+        </p>
+      </section>
     </div>
-  )
+  );
 });
 
 QuoteLayout.displayName = "QuoteLayout";
+
 
 // --- MAIN PAGE COMPONENT ---
 
@@ -257,125 +232,124 @@ export default function GenerateQuotePage() {
   const { id: orderId } = useParams<{ id: string }>();
   const router = useRouter();
   const { toast } = useToast();
-  
+  const componentRef = React.useRef<HTMLDivElement>(null);
+
   const [order, setOrder] = React.useState<Order | null>(null);
   const [orderItems, setOrderItems] = React.useState<OrderItem[]>([]);
   const [allData, setAllData] = React.useState<AllData | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
-  const componentRef = React.useRef<HTMLDivElement>(null);
-  
+
   React.useEffect(() => {
     if (!orderId) return;
-    setIsLoading(true);
-    
+
     async function fetchData() {
-        try {
-            const orderDocRef = doc(db, 'orders', orderId);
-            const orderDocSnap = await getDoc(orderDocRef);
+      setIsLoading(true);
+      try {
+        const orderDocRef = doc(db, 'orders', orderId);
+        const orderDocSnap = await getDoc(orderDocRef);
 
-            if (!orderDocSnap.exists()) {
-                toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалга олдсонгүй.' });
-                router.push('/orders');
-                return;
-            }
-            const data = orderDocSnap.data();
-            const currentOrder = {
-                id: orderDocSnap.id, ...data,
-                createdAt: toDateSafe(data.createdAt),
-            } as Order;
-            setOrder(currentOrder);
-
-            const [itemsSnap, warehouseSnap, serviceTypeSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap, packagingTypeSnap] = await Promise.all([
-                getDocs(query(collection(db, 'order_items'), where('orderId', '==', orderId))),
-                getDocs(query(collection(db, "warehouses"), orderBy("name"))),
-                getDocs(query(collection(db, "service_types"), orderBy("name"))),
-                getDocs(query(collection(db, "vehicle_types"), orderBy("name"))),
-                getDocs(query(collection(db, "trailer_types"), orderBy("name"))),
-                getDocs(query(collection(db, "regions"), orderBy("name"))),
-                getDocs(query(collection(db, "packaging_types"), orderBy("name"))),
-            ]);
-
-            const itemsDataPromises = itemsSnap.docs.map(async (d) => {
-                const itemData = d.data();
-                const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', d.id));
-                const cargoSnapshot = await getDocs(cargoQuery);
-                const cargoItems = cargoSnapshot.docs.map(cargoDoc => ({ id: cargoDoc.id, ...cargoDoc.data() } as OrderItemCargo));
-                
-                return {
-                    id: d.id, ...itemData,
-                    createdAt: toDateSafe(itemData.createdAt),
-                    loadingStartDate: toDateSafe(itemData.loadingStartDate),
-                    loadingEndDate: toDateSafe(itemData.loadingEndDate),
-                    unloadingStartDate: toDateSafe(itemData.unloadingStartDate),
-                    unloadingEndDate: toDateSafe(itemData.unloadingEndDate),
-                    cargoItems: cargoItems
-                } as OrderItem;
-            });
-
-            const itemsData = await Promise.all(itemsDataPromises);
-            itemsData.sort((a,b) => (a.createdAt?.getTime?.() ?? 0) - (b.createdAt?.getTime?.() ?? 0));
-            setOrderItems(itemsData);
-
-            setAllData({
-                warehouses: warehouseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Warehouse)),
-                serviceTypes: serviceTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceType)),
-                vehicleTypes: vehicleTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as VehicleType)),
-                trailerTypes: trailerTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrailerType)),
-                regions: regionSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Region)),
-                packagingTypes: packagingTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as PackagingType)),
-            });
-
-        } catch (error) {
-            console.error("Error fetching data:", error);
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Мэдээлэл татахад алдаа гарлаа.' });
-        } finally {
-            setIsLoading(false);
+        if (!orderDocSnap.exists()) {
+          toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалга олдсонгүй.' });
+          router.push('/orders');
+          return;
         }
+        const orderData = orderDocSnap.data();
+        setOrder({ id: orderDocSnap.id, ...orderData } as Order);
+
+        const [itemsSnap, warehouseSnap, serviceTypeSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap, packagingTypeSnap] = await Promise.all([
+          getDocs(query(collection(db, 'order_items'), where('orderId', '==', orderId))),
+          getDocs(query(collection(db, "warehouses"), orderBy("name"))),
+          getDocs(query(collection(db, "service_types"), orderBy("name"))),
+          getDocs(query(collection(db, "vehicle_types"), orderBy("name"))),
+          getDocs(query(collection(db, "trailer_types"), orderBy("name"))),
+          getDocs(query(collection(db, "regions"), orderBy("name"))),
+          getDocs(query(collection(db, "packaging_types"), orderBy("name"))),
+        ]);
+        
+        const itemsDataPromises = itemsSnap.docs.map(async (d) => {
+            const itemData = d.data();
+            const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', d.id));
+            const cargoSnapshot = await getDocs(cargoQuery);
+            const cargoItems = cargoSnapshot.docs.map(cargoDoc => ({ id: cargoDoc.id, ...cargoDoc.data() } as OrderItemCargo));
+            return { id: d.id, ...itemData, cargoItems } as OrderItem;
+        });
+
+        const itemsData = await Promise.all(itemsDataPromises);
+        itemsData.sort((a,b) => (toDateSafe(a.createdAt)?.getTime() ?? 0) - (toDateSafe(b.createdAt)?.getTime() ?? 0));
+        setOrderItems(itemsData);
+
+        setAllData({
+          warehouses: warehouseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Warehouse)),
+          serviceTypes: serviceTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceType)),
+          vehicleTypes: vehicleTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as VehicleType)),
+          trailerTypes: trailerTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrailerType)),
+          regions: regionSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Region)),
+          packagingTypes: packagingTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as PackagingType)),
+        });
+
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Мэдээлэл татахад алдаа гарлаа.' });
+      } finally {
+        setIsLoading(false);
+      }
     }
+
     fetchData();
   }, [orderId, router, toast]);
-  
-  const acceptedItems = orderItems.filter(item => item.acceptedQuoteId && item.finalPrice != null);
-
 
   if (isLoading || !order || !allData) {
     return (
-      <div className="container mx-auto py-6">
-        <div className="flex justify-between items-center mb-6">
-          <Skeleton className="h-10 w-24" />
-          <div className="flex gap-2">
-            <Skeleton className="h-10 w-24" />
-            <Skeleton className="h-10 w-24" />
-          </div>
-        </div>
-        <div className="bg-white p-8 rounded-lg shadow-md">
-           <Skeleton className="h-[1000px] w-full" />
-        </div>
+      <div className="container mx-auto py-6 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-96 w-full" />
       </div>
     );
   }
 
+  const acceptedItems = orderItems.filter(item => item.acceptedQuoteId && item.finalPrice != null);
+
   return (
-    <div className="bg-gray-100 min-h-screen py-10">
-      <div className="container mx-auto">
-        <div className="flex justify-between items-center mb-6 no-print">
+    <div className="container mx-auto py-6">
+      <div className="mb-4 flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/orders/${orderId}`}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Захиалга руу буцах
+            </Link>
+          </Button>
+          <div>
             <h1 className="text-2xl font-bold">Үнийн санал</h1>
-            <div className="flex items-center gap-2">
-                <Button variant="outline" asChild>
-                    <Link href={`/orders/${orderId}`}><ArrowLeft className="mr-2 h-4 w-4"/> Буцах</Link>
-                </Button>
-                <PrintQuoteButton
-                  targetId="print-root"
-                  fileName={`Quote-${order?.orderNumber || 'details'}.pdf`}
-                  disabled={isLoading || !order || !allData || acceptedItems.length === 0}
-                />
-            </div>
+            <p className="text-muted-foreground">{order.orderNumber}</p>
+          </div>
         </div>
-        {/* This div is for preview purposes */}
-        <div className="bg-white rounded-lg shadow-lg mx-auto max-w-[1123px] overflow-x-auto">
-            <QuoteLayout ref={componentRef} order={order} orderItems={orderItems} allData={allData} />
+        <PrintQuoteButton
+          targetId="print-root"
+          fileName={`Quote-${order.orderNumber}.pdf`}
+          disabled={acceptedItems.length === 0}
+        />
+      </div>
+      
+      {acceptedItems.length === 0 && (
+          <div className="text-center py-10 border-2 border-dashed rounded-lg">
+              <p className="text-muted-foreground">Үнийн саналд оруулахаар сонгогдсон тээвэрлэлт алга.</p>
+              <p className="text-sm text-muted-foreground mt-2">Та захиалгын дэлгэрэнгүй хуудаснаас жолоочийн саналыг баталгаажуулна уу.</p>
+          </div>
+      )}
+
+      {/* This component is only for printing, it's not visible on the screen */}
+      <div className="hidden">
+        <div className="absolute left-0 top-0">
+           <QuoteLayout ref={componentRef} order={order} orderItems={acceptedItems} allData={allData} />
         </div>
       </div>
+      
+      {/* This is the visible preview on the screen */}
+      <div className="border rounded-lg shadow-sm overflow-hidden">
+        <QuoteLayout order={order} orderItems={acceptedItems} allData={allData} />
+      </div>
+
     </div>
   );
 }
