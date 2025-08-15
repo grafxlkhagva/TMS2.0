@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { A4_WIDTH_PX, pxToMm } from '@/lib/print/units';
+import { A4_WIDTH_PX } from '@/lib/print/units';
 
 
 async function captureElementToPdf(element: HTMLElement, fileName: string): Promise<void> {
@@ -34,6 +34,12 @@ async function captureElementToPdf(element: HTMLElement, fileName: string): Prom
     const pdfHeight = pdf.internal.pageSize.getHeight();
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
+    
+    // Prevent division by zero
+    if (canvasHeight === 0) {
+        throw new Error("Canvas height is zero, cannot generate PDF.");
+    }
+    
     const canvasAspectRatio = canvasWidth / canvasHeight;
     const pdfAspectRatio = pdfWidth / pdfHeight;
 
@@ -47,8 +53,21 @@ async function captureElementToPdf(element: HTMLElement, fileName: string): Prom
         finalWidth = pdfHeight * canvasAspectRatio;
     }
 
+    // Ensure final dimensions are valid numbers
+    if (!isFinite(finalWidth) || !isFinite(finalHeight) || finalWidth <= 0 || finalHeight <= 0) {
+       console.error("Invalid calculated dimensions for PDF. Using fallback.", { finalWidth, finalHeight });
+       // Fallback to simpler scaling
+       finalWidth = pdfWidth;
+       finalHeight = pdfHeight;
+    }
+
     const x = (pdfWidth - finalWidth) / 2;
     const y = (pdfHeight - finalHeight) / 2;
+    
+    // Ensure coordinates are valid numbers
+    if (!isFinite(x) || !isFinite(y)) {
+        throw new Error(`Invalid coordinates for PDF: x=${x}, y=${y}`);
+    }
 
     pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
     pdf.save(fileName);
