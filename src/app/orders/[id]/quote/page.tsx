@@ -108,12 +108,7 @@ const QuoteLayout = React.forwardRef<HTMLDivElement, { order: Order; orderItems:
     <div ref={ref} className="bg-white p-8 text-gray-800 text-[10px]" style={{ fontFamily: 'Inter, "Noto Sans Mongolian", sans-serif' }}>
       <header className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
         <div>
-           <img
-            src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjUwIiB2aWV3Qm94PSIwIDAgMjAwIDUwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMCAwSDIwMFY1MEgwVjBaIiBmaWxsPSJ3aGl0ZSIvPgo8dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IidNYW5yb3BlJywgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iIzE3MjU1QSI+VHVtZW4gVGVjaDwvdGV4dD4KPC9zdmc+Cg=="
-            alt="Company Logo"
-            width="200"
-            height="50"
-          />
+          <h1 className="text-2xl font-bold">Tumen Tech TMS</h1>
         </div>
         <div className="text-right">
           <h2 className="text-xl font-bold uppercase">Үнийн санал</h2>
