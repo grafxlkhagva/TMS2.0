@@ -261,6 +261,7 @@ export default function GenerateQuotePage() {
   const [orderItems, setOrderItems] = React.useState<OrderItem[]>([]);
   const [allData, setAllData] = React.useState<AllData | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const componentRef = React.useRef<HTMLDivElement>(null);
   
   React.useEffect(() => {
     if (!orderId) return;
@@ -332,6 +333,9 @@ export default function GenerateQuotePage() {
     }
     fetchData();
   }, [orderId, router, toast]);
+  
+  const acceptedItems = orderItems.filter(item => item.acceptedQuoteId && item.finalPrice != null);
+
 
   if (isLoading || !order || !allData) {
     return (
@@ -360,12 +364,13 @@ export default function GenerateQuotePage() {
                     <Link href={`/orders/${orderId}`}><ArrowLeft className="mr-2 h-4 w-4"/> Буцах</Link>
                 </Button>
                 <PrintQuoteButton
-                  targetId="print-root"
+                  getContent={() => componentRef.current}
                   fileName={`Quote-${order?.orderNumber || 'details'}.pdf`}
+                  disabled={isLoading || !order || !allData || acceptedItems.length === 0}
                 />
             </div>
         </div>
-        <div id="print-root" className="bg-white rounded-lg shadow-lg mx-auto" style={{ width: '1123px' }}>
+        <div ref={componentRef} id="print-root" className="bg-white rounded-lg shadow-lg mx-auto" style={{ width: '1123px' }}>
             <QuoteLayout order={order} orderItems={orderItems} allData={allData} />
         </div>
       </div>

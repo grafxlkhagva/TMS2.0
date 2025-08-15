@@ -4,72 +4,97 @@ import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
-import { captureElementToPdf } from '@/lib/print/pdf';
+import { useReactToPrint } from 'react-to-print';
 
+type PrintQuoteButtonProps = {
+  getContent: () => HTMLDivElement | null;
+  fileName: string;
+  disabled?: boolean;
+};
 
 export default function PrintQuoteButton({
-  targetId,
+  getContent,
   fileName,
-  orientation = 'landscape',
-}: { 
-  targetId: string; 
-  fileName: string; 
-  orientation?: 'landscape'|'portrait',
-}) {
+  disabled = false,
+}: PrintQuoteButtonProps) {
   const [busy, setBusy] = useState(false);
   const { toast } = useToast();
 
-  const onClick = useCallback(async () => {
-    const el = document.getElementById(targetId);
+  const handlePrint = useReactToPrint({
+    content: getContent,
+    documentTitle: fileName,
+    onBeforeGetContent: async () => {
+      setBusy(true);
+      try {
+        if ('fonts' in document) {
+          await (document as any).fonts.ready;
+        }
+        await new Promise(resolve => requestAnimationFrame(resolve));
+      } catch (e) {
+        console.warn('Could not wait for fonts to load.', e);
+      }
+    },
+    onAfterPrint: () => {
+      setBusy(false);
+    },
+    pageStyle: `
+      @page {
+        size: A4 landscape;
+        margin: 12mm;
+      }
+      @media print {
+        .no-print {
+          display: none !important;
+        }
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        #print-root {
+          transform: none !important;
+          overflow: visible !important;
+          visibility: visible !important;
+        }
+        #print-root * {
+          visibility: visible !important;
+        }
+      }
+    `,
+    removeAfterPrint: true,
+  });
+  
+  const onClick = useCallback(() => {
+    const el = getContent();
     if (!el) {
       toast({
         variant: 'destructive',
         title: 'Алдаа',
-        description: `Хэвлэх элемент (#${targetId}) олдсонгүй.`
+        description: `Хэвлэх элемент олдсонгүй.`
       });
       return;
     }
-    
-    setBusy(true);
-    try {
-      const pdfBlob = await captureElementToPdf({
-          element: el,
-          fileName: fileName,
-          orientation: orientation,
-          scale: 2,
-      });
-      
-      const url = URL.createObjectURL(pdfBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-    } catch (e) {
-      console.error('PDF export failed', e);
-      toast({
-        variant: 'destructive',
-        title: 'PDF үүсгэхэд алдаа гарлаа',
-        description: e instanceof Error ? e.message : 'Дахин оролдоно уу.',
-      });
-    } finally {
-      setBusy(false);
+     if (el.offsetHeight === 0) {
+        toast({
+            variant: 'destructive',
+            title: 'Алдаа',
+            description: 'Хэвлэх контент одоогоор хоосон байна. Түр хүлээнэ үү.'
+        });
+        return;
     }
-  }, [targetId, fileName, orientation, toast]);
+    handlePrint();
+  }, [getContent, handlePrint, toast]);
+
 
   return (
     <Button
       onClick={onClick}
-      disabled={busy}
+      disabled={busy || disabled}
       aria-label="Үнийн санал PDF болгон татах"
     >
       {busy ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Экспорт хийж байна…
+          Хэвлэж байна...
         </>
        ) : (
         <>
