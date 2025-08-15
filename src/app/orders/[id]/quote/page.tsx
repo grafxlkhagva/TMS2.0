@@ -105,7 +105,7 @@ const QuoteLayout = React.forwardRef<HTMLDivElement, { order: Order; orderItems:
   const quoteDate = toDateSafe(order.createdAt) ? format(toDateSafe(order.createdAt)!, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
 
   return (
-    <div ref={ref} className="bg-white p-8 text-gray-800 text-[10px]" style={{ fontFamily: 'Inter, "Noto Sans Mongolian", sans-serif' }}>
+    <div ref={ref} id="print-root" className="bg-white p-8 text-gray-800 text-[10px]" style={{ fontFamily: 'Inter, "Noto Sans Mongolian", sans-serif' }}>
       <header className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold">Tumen Tech TMS</h1>
@@ -320,7 +320,7 @@ export default function GenerateQuotePage() {
           </div>
         </div>
         <PrintQuoteButton
-          targetRef={componentRef}
+          targetId="print-root"
           fileName={`Quote-${order.orderNumber}.pdf`}
           disabled={acceptedItems.length === 0}
         />
