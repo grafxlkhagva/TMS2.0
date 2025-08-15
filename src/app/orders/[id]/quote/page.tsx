@@ -27,11 +27,6 @@ import PrintQuoteButton from '@/components/print/PrintQuoteButton';
 
 // --- HELPER FUNCTIONS ---
 
-/**
- * Safely converts various date-like types to a Date object.
- * @param date - The value to convert (Timestamp, Date, string, null, undefined).
- * @returns A valid Date object or undefined if conversion is not possible.
- */
 const toDateSafe = (date: any): Date | undefined => {
   if (date instanceof Timestamp) {
     return date.toDate();
@@ -48,15 +43,11 @@ const toDateSafe = (date: any): Date | undefined => {
   return undefined;
 };
 
-/**
- * Safely rounds a number to 2 decimal places. Returns 0 for invalid inputs.
- */
 const roundCurrency = (value: number | undefined | null): number => {
   if (value == null || isNaN(value)) return 0;
   return Math.round(value * 100) / 100;
 };
 
-/** Reusable number formatter for Mongolian Tugrik. */
 const nf = new Intl.NumberFormat('mn-MN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt = (n: number) => nf.format(roundCurrency(n));
 
@@ -74,7 +65,8 @@ type AllData = {
 
 // --- QUOTE LAYOUT COMPONENT ---
 
-function QuoteLayout({ order, orderItems, allData }: { order: Order; orderItems: OrderItem[], allData: AllData }) {
+const QuoteLayout = React.forwardRef<HTMLDivElement, { order: Order; orderItems: OrderItem[], allData: AllData }>(
+  ({ order, orderItems, allData }, ref) => {
     
   const maps = React.useMemo(() => ({
     services: Object.fromEntries(allData.serviceTypes.map(x => [x.id, x.name])),
@@ -113,7 +105,7 @@ function QuoteLayout({ order, orderItems, allData }: { order: Order; orderItems:
   const quoteDate = toDateSafe(order.createdAt) ? format(toDateSafe(order.createdAt)!, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
 
   return (
-    <div className="bg-white p-8 text-gray-800 text-[10px]" style={{ fontFamily: 'Inter, "Noto Sans Mongolian", sans-serif' }}>
+    <div ref={ref} className="bg-white p-8 text-gray-800 text-[10px]" style={{ fontFamily: 'Inter, "Noto Sans Mongolian", sans-serif' }}>
       <header className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold">Tumen Tech TMS</h1>
@@ -247,8 +239,10 @@ function QuoteLayout({ order, orderItems, allData }: { order: Order; orderItems:
         <p>Tumen Tech TMS - Тээвэр ложистикийн удирдлагын систем</p>
       </footer>
     </div>
-  );
-}
+  )
+});
+
+QuoteLayout.displayName = "QuoteLayout";
 
 // --- MAIN PAGE COMPONENT ---
 
@@ -370,10 +364,12 @@ export default function GenerateQuotePage() {
                 />
             </div>
         </div>
-        <div ref={componentRef} id="print-root" className="bg-white rounded-lg shadow-lg mx-auto">
-            <QuoteLayout order={order} orderItems={orderItems} allData={allData} />
+        <div className="bg-white rounded-lg shadow-lg mx-auto max-w-[1123px]">
+            <QuoteLayout ref={componentRef} order={order} orderItems={orderItems} allData={allData} />
         </div>
       </div>
     </div>
   );
 }
+
+    

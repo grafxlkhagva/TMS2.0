@@ -1,5 +1,6 @@
 
 'use client';
+
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -26,11 +27,12 @@ export default function PrintQuoteButton({
     onBeforeGetContent: async () => {
       setBusy(true);
       try {
+        // This helps ensure that web fonts have loaded before printing.
         if ('fonts' in document) {
-          await (document as any).fonts.ready;
+            await (document as any).fonts.ready;
         }
-        // Allow time for layout shifts
-        await new Promise(resolve => requestAnimationFrame(resolve));
+        // A short delay to allow for any final layout shifts.
+        await new Promise(resolve => setTimeout(resolve, 300));
       } catch (e) {
         console.warn('Could not wait for fonts to load.', e);
         toast({
@@ -46,28 +48,15 @@ export default function PrintQuoteButton({
     pageStyle: `
       @page {
         size: A4 landscape;
-        margin: 0;
+        margin: 12mm;
       }
       @media print {
         .no-print {
           display: none !important;
         }
-        html, body {
+        body {
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
-        }
-        #print-root {
-          margin: 0;
-          padding: 0;
-          transform: none !important;
-          overflow: visible !important;
-          visibility: visible !important;
-          width: 100% !important;
-          box-shadow: none !important;
-          border-radius: 0 !important;
-        }
-        #print-root * {
-          visibility: visible !important;
         }
       }
     `,
@@ -100,19 +89,22 @@ export default function PrintQuoteButton({
     <Button
       onClick={onClick}
       disabled={busy || disabled}
-      aria-label="Үнийн санал хэвлэх"
+      aria-label="Үнийн санал PDF-ээр татах"
+      className="no-print"
     >
       {busy ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Хэвлэж байна...
+          Боловсруулж байна...
         </>
        ) : (
         <>
           <Download className="mr-2 h-4 w-4" />
-          Хэвлэх
+          PDF татах
         </>
        )}
     </Button>
   );
 }
+
+    
