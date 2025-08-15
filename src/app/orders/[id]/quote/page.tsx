@@ -108,7 +108,7 @@ const QuoteLayout = React.forwardRef<HTMLDivElement, { order: Order; orderItems:
     <div ref={ref} id="print-root" className="bg-white p-8 text-gray-800 text-[10px]" style={{ fontFamily: 'Inter, "Noto Sans Mongolian", sans-serif' }}>
       <header className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
         <div>
-          <img
+           <img
             src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjUwIiB2aWV3Qm94PSIwIDAgMjAwIDUwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMCAwSDIwMFY1MEgwVjBaIiBmaWxsPSJ3aGl0ZSIvPgo8dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IidNYW5yb3BlJywgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iIzE3MjU1QSI+VHVtZW4gVGVjaDwvdGV4dD4KPC9zdmc+Cg=="
             alt="Company Logo"
             width="200"
@@ -271,11 +271,11 @@ export default function GenerateQuotePage() {
             const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', d.id));
             const cargoSnapshot = await getDocs(cargoQuery);
             const cargoItems = cargoSnapshot.docs.map(cargoDoc => ({ id: cargoDoc.id, ...cargoDoc.data() } as OrderItemCargo));
-            return { id: d.id, ...itemData, cargoItems } as OrderItem;
+            return { id: d.id, ...itemData, cargoItems, createdAt: toDateSafe(itemData.createdAt) } as OrderItem;
         });
 
         const itemsData = await Promise.all(itemsDataPromises);
-        itemsData.sort((a,b) => (toDateSafe(a.createdAt)?.getTime() ?? 0) - (toDateSafe(b.createdAt)?.getTime() ?? 0));
+        itemsData.sort((a,b) => (a.createdAt?.getTime?.() ?? 0) - (b.createdAt?.getTime?.() ?? 0));
         setOrderItems(itemsData);
 
         setAllData({
@@ -346,9 +346,11 @@ export default function GenerateQuotePage() {
       </div>
       
       {/* This is the visible preview on the screen */}
-      <div className="border rounded-lg shadow-sm overflow-hidden">
-        <QuoteLayout order={order} orderItems={acceptedItems} allData={allData} />
-      </div>
+       {acceptedItems.length > 0 && (
+         <div className="border rounded-lg shadow-sm overflow-hidden">
+            <QuoteLayout order={order} orderItems={acceptedItems} allData={allData} />
+         </div>
+       )}
 
     </div>
   );
