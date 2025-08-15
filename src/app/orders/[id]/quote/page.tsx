@@ -105,7 +105,7 @@ const QuoteLayout = React.forwardRef<HTMLDivElement, { order: Order; orderItems:
   const quoteDate = toDateSafe(order.createdAt) ? format(toDateSafe(order.createdAt)!, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
 
   return (
-    <div ref={ref} id="print-root" className="bg-white p-8 text-gray-800 text-[10px]" style={{ fontFamily: 'Inter, "Noto Sans Mongolian", sans-serif' }}>
+    <div ref={ref} className="bg-white p-8 text-gray-800 text-[10px]" style={{ fontFamily: 'Inter, "Noto Sans Mongolian", sans-serif' }}>
       <header className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
         <div>
            <img
@@ -311,7 +311,7 @@ export default function GenerateQuotePage() {
 
   return (
     <div className="container mx-auto py-6">
-      <div className="mb-4 flex justify-between items-center">
+      <div className="mb-4 flex justify-between items-center no-print">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" asChild>
             <Link href={`/orders/${orderId}`}>
@@ -338,9 +338,9 @@ export default function GenerateQuotePage() {
           </div>
       )}
 
-      {/* This component is only for printing, it's not visible on the screen */}
-      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
-         <QuoteLayout ref={componentRef} order={order} orderItems={acceptedItems} allData={allData} />
+      {/* This component is for printing, it's not visible on the screen */}
+       <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+         {acceptedItems.length > 0 && <QuoteLayout ref={componentRef} order={order} orderItems={acceptedItems} allData={allData} />}
       </div>
       
       {/* This is the visible preview on the screen */}
