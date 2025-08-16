@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -98,7 +99,7 @@ export default function ProfilePage() {
       let newAvatarUrl: string | undefined = user?.avatarUrl;
 
       if (selectedFile) {
-        const storageRef = ref(storage, `avatars/${user.uid}/${selectedFile.name}`);
+        const storageRef = ref(storage, `users/${user.uid}/${selectedFile.name}`);
         const snapshot = await uploadBytes(storageRef, selectedFile);
         newAvatarUrl = await getDownloadURL(snapshot.ref);
         dataToUpdate.avatarUrl = newAvatarUrl;
