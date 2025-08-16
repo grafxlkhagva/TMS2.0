@@ -38,6 +38,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 export default function CustomersPage() {
@@ -152,6 +153,7 @@ export default function CustomersPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Лого</TableHead>
                 <TableHead>Нэр</TableHead>
                 <TableHead>Регистрийн дугаар</TableHead>
                 <TableHead>Утас</TableHead>
@@ -165,6 +167,7 @@ export default function CustomersPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, index) => (
                   <TableRow key={index}>
+                    <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
@@ -177,6 +180,12 @@ export default function CustomersPage() {
               ) : filteredCustomers.length > 0 ? (
                 filteredCustomers.map((customer) => (
                     <TableRow key={customer.id}>
+                       <TableCell>
+                        <Avatar>
+                          <AvatarImage src={customer.logoUrl} alt={customer.name} />
+                          <AvatarFallback>{customer.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                      </TableCell>
                       <TableCell className="font-medium">
                         <Link href={`/customers/${customer.id}`} className="hover:underline">
                           {customer.name}
@@ -221,7 +230,7 @@ export default function CustomersPage() {
                 ))
               ) : (
                  <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={8} className="h-24 text-center">
                         Бүртгэлтэй харилцагч олдсонгүй.
                     </TableCell>
                  </TableRow>
