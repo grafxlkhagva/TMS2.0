@@ -1,23 +1,21 @@
 rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
-    // Default deny all
+    // General rule: By default, no one can read or write.
     match /{allPaths=**} {
       allow read, write: if false;
     }
 
-    // Allow users to read/write their own profile pictures
+    // Allow users to write to their own folder and read from it.
     match /users/{userId}/{allPaths=**} {
-      allow read: if true;
+      allow read;
       allow write: if request.auth.uid == userId;
     }
-
-    // Allow any authenticated user to read customer logos
-    // Allow only admin/manager to write customer logos
+    
+    // Allow authenticated users to upload customer logos. Anyone can read them.
     match /customer_logos/{customerId}/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.token.role in ['admin', 'manager'];
+      allow read;
+      allow write: if request.auth != null;
     }
   }
 }
