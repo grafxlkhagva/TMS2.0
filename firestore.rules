@@ -1,0 +1,79 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Allow logged-in users to read their own user data
+    match /users/{userId} {
+      allow get: if request.auth != null;
+      allow list: if request.auth != null && request.auth.token.role in ['admin', 'manager'];
+      allow update: if request.auth.uid == userId || request.auth.token.role in ['admin', 'manager'];
+    }
+
+    // Allow admins and managers to manage customers
+    match /customers/{customerId} {
+      allow read, list: if request.auth != null;
+      allow create, update, delete: if request.auth != null && request.auth.token.role in ['admin', 'manager'];
+    }
+
+    // Allow logged-in users to manage customer employees
+    match /customer_employees/{employeeId} {
+      allow read, list, create, update, delete: if request.auth != null;
+    }
+    
+    // Allow admins and managers to manage warehouses
+    match /warehouses/{warehouseId} {
+      allow read, list: if request.auth != null;
+      allow create, update, delete: if request.auth != null && request.auth.token.role in ['admin', 'manager'];
+    }
+    
+    // Allow admins and managers to manage reference data
+    match /industries/{industryId} {
+      allow read, list, create, update, delete: if request.auth != null && request.auth.token.role in ['admin', 'manager'];
+    }
+    match /regions/{regionId} {
+      allow read, list, create, update, delete: if request.auth != null && request.auth.token.role in ['admin', 'manager'];
+    }
+    match /service_types/{serviceTypeId} {
+      allow read, list, create, update, delete: if request.auth != null && request.auth.token.role in ['admin', 'manager'];
+    }
+    match /vehicle_types/{vehicleTypeId} {
+      allow read, list, create, update, delete: if request.auth != null && request.auth.token.role in ['admin', 'manager'];
+    }
+    match /trailer_types/{trailerTypeId} {
+      allow read, list, create, update, delete: if request.auth != null && request.auth.token.role in ['admin', 'manager'];
+    }
+    match /packaging_types/{packagingTypeId} {
+      allow read, list, create, update, delete: if request.auth != null && request.auth.token.role in ['admin', 'manager'];
+    }
+    
+    // Allow logged-in users to manage orders and their subcollections
+    match /orders/{orderId} {
+      allow read, list, create, update, delete: if request.auth != null;
+    }
+    match /order_items/{itemId} {
+      allow read, list, create, update, delete: if request.auth != null;
+    }
+    match /order_item_cargoes/{cargoId} {
+      allow read, list, create, update, delete: if request.auth != null;
+    }
+    match /driver_quotes/{quoteId} {
+      allow read, list, create, update, delete: if request.auth != null;
+    }
+
+    // Allow logged-in users to manage shipments
+    match /shipments/{shipmentId} {
+       allow read, list, create, update, delete: if request.auth != null;
+    }
+
+    // Allow read-only access for counters for logged-in users
+    match /counters/{counterId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null; // Allow transactions to update
+    }
+  }
+}
