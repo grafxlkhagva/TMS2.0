@@ -25,12 +25,6 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  experimental: {
-    // This is to allow the Next.js dev server to accept requests from the Studio editor.
-    allowedDevOrigins: [
-      '*.cluster-bg6uurscprhn6qxr6xwtrhvkf6.cloudworkstations.dev',
-    ],
-  },
 };
 
 export default nextConfig;
