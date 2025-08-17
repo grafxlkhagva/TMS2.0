@@ -180,6 +180,7 @@ export type OrderItem = {
     finalPrice?: number;
     profitMargin?: number;
     withVAT?: boolean;
+    tenderStatus?: 'Open' | 'Closed';
     cargoItems?: OrderItemCargo[];
 };
 
@@ -202,6 +203,7 @@ export type DriverQuote = {
     notes?: string;
     createdAt: Date;
     status: 'Pending' | 'Accepted' | 'Rejected';
+    channel: 'Phone' | 'App';
 };
 
 export type ShipmentStatusType = 'Preparing' | 'In Transit' | 'Delivered' | 'Delayed' | 'Cancelled';

@@ -66,6 +66,7 @@ const formSchema = z.object({
   trailerTypeId: z.string().min(1, "Тэвшний төрөл сонгоно уу."),
   profitMargin: z.coerce.number().min(0, "Ашгийн хувь 0-аас багагүй байна.").max(100, "Ашгийн хувь 100-аас ихгүй байна.").optional(),
   withVAT: z.boolean().optional(),
+  tenderStatus: z.enum(['Open', 'Closed']).optional(),
   cargoItems: z.array(cargoItemSchema).min(1, "Дор хаяж нэг ачаа нэмнэ үү."),
 });
 
@@ -142,6 +143,7 @@ export default function EditOrderItemPage() {
                         trailerTypeId: itemData.trailerTypeId,
                         profitMargin: itemData.profitMargin || 0,
                         withVAT: itemData.withVAT || false,
+                        tenderStatus: itemData.tenderStatus || 'Closed',
                         loadingDateRange: {
                             from: itemData.loadingStartDate instanceof Timestamp ? itemData.loadingStartDate.toDate() : itemData.loadingStartDate,
                             to: itemData.loadingEndDate instanceof Timestamp ? itemData.loadingEndDate.toDate() : itemData.loadingEndDate,
@@ -191,6 +193,7 @@ export default function EditOrderItemPage() {
                 loadingEndDate: loadingDateRange.to,
                 unloadingStartDate: unloadingDateRange.from,
                 unloadingEndDate: unloadingDateRange.to,
+                updatedAt: serverTimestamp(),
             });
 
             // 2. Delete cargo items marked for deletion
