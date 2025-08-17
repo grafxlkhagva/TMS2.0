@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -5,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2, ArrowLeft } from 'lucide-react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -59,6 +60,7 @@ export default function NewEmployeePage() {
       await addDoc(collection(db, 'customer_employees'), {
         ...values,
         customerId: customerId,
+        customerRef: doc(db, 'customers', customerId),
         createdAt: serverTimestamp(),
       });
       

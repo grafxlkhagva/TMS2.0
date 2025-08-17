@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -101,11 +101,16 @@ export default function NewWarehousePage() {
     try {
       const customerId = values.customerId === 'no-owner' ? undefined : values.customerId;
       const selectedCustomer = customers.find(c => c.id === customerId);
+      const customerRef = customerId ? doc(db, 'customers', customerId) : undefined;
+      const regionRef = doc(db, 'regions', values.regionId);
+
 
       await addDoc(collection(db, 'warehouses'), {
         ...values,
         customerId: customerId,
         customerName: selectedCustomer ? selectedCustomer.name : 'Эзэмшигчгүй',
+        customerRef: customerRef,
+        regionRef: regionRef,
         createdAt: serverTimestamp(),
       });
       

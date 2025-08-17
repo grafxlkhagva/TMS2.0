@@ -320,6 +320,7 @@ export default function OrderDetailPage() {
         await updateDoc(orderDocRef, {
             employeeId: newEmployeeId,
             employeeName: `${selectedEmployee.lastName} ${selectedEmployee.firstName}`,
+            employeeRef: doc(db, 'customer_employees', newEmployeeId),
         });
 
         setOrder(prevOrder => prevOrder ? {
@@ -342,6 +343,7 @@ export default function OrderDetailPage() {
     setIsSubmitting(true);
     try {
       const batch = writeBatch(db);
+      const orderRef = doc(db, 'orders', orderId);
 
       values.items.forEach((item: any) => {
         const { loadingDateRange, unloadingDateRange, cargoItems, ...rest } = item;
@@ -349,11 +351,19 @@ export default function OrderDetailPage() {
         const orderItemRef = doc(collection(db, 'order_items'));
         batch.set(orderItemRef, {
           ...rest,
+          orderId: orderId,
+          orderRef: orderRef,
+          startRegionRef: doc(db, 'regions', item.startRegionId),
+          startWarehouseRef: doc(db, 'warehouses', item.startWarehouseId),
+          endRegionRef: doc(db, 'regions', item.endRegionId),
+          endWarehouseRef: doc(db, 'warehouses', item.endWarehouseId),
+          serviceTypeRef: doc(db, 'service_types', item.serviceTypeId),
+          vehicleTypeRef: doc(db, 'vehicle_types', item.vehicleTypeId),
+          trailerTypeRef: doc(db, 'trailer_types', item.trailerTypeId),
           loadingStartDate: loadingDateRange.from,
           loadingEndDate: loadingDateRange.to,
           unloadingStartDate: unloadingDateRange.from,
           unloadingEndDate: unloadingDateRange.to,
-          orderId: orderId,
           status: 'Pending',
           tenderStatus: 'Closed',
           createdAt: serverTimestamp(),
@@ -364,6 +374,8 @@ export default function OrderDetailPage() {
           batch.set(cargoRef, {
             ...cargo,
             orderItemId: orderItemRef.id,
+            orderItemRef: orderItemRef,
+            packagingTypeRef: doc(db, 'packaging_types', cargo.packagingTypeId),
           });
         });
       });
@@ -387,6 +399,7 @@ export default function OrderDetailPage() {
         await addDoc(collection(db, 'driver_quotes'), {
             ...values,
             orderItemId: itemId,
+            orderItemRef: doc(db, 'order_items', itemId),
             status: 'Pending',
             channel: 'Phone',
             createdAt: serverTimestamp(),
@@ -498,9 +511,12 @@ export default function OrderDetailPage() {
         batch.set(shipmentRef, {
             shipmentNumber,
             orderId: order.id,
+            orderRef: doc(db, 'orders', order.id),
             orderNumber: order.orderNumber,
             orderItemId: itemToShip.id,
+            orderItemRef: doc(db, 'order_items', itemToShip.id),
             customerId: order.customerId,
+            customerRef: doc(db, 'customers', order.customerId),
             customerName: order.customerName,
             driverInfo: {
                 name: acceptedQuote.driverName,

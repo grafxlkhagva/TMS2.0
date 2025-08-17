@@ -126,8 +126,10 @@ export default function NewOrderPage() {
       const docRef = await addDoc(collection(db, 'orders'), {
         orderNumber: orderNumber,
         customerId: values.customerId,
+        customerRef: doc(db, 'customers', values.customerId),
         customerName: selectedCustomer?.name,
         employeeId: values.employeeId,
+        employeeRef: doc(db, 'customer_employees', values.employeeId),
         employeeName: `${selectedEmployee?.lastName} ${selectedEmployee?.firstName}`,
         status: 'Pending',
         createdAt: serverTimestamp(),

@@ -189,6 +189,13 @@ export default function EditOrderItemPage() {
             const orderItemRef = doc(db, 'order_items', itemId);
             batch.update(orderItemRef, {
                 ...rest,
+                startRegionRef: doc(db, 'regions', values.startRegionId),
+                startWarehouseRef: doc(db, 'warehouses', values.startWarehouseId),
+                endRegionRef: doc(db, 'regions', values.endRegionId),
+                endWarehouseRef: doc(db, 'warehouses', values.endWarehouseId),
+                serviceTypeRef: doc(db, 'service_types', values.serviceTypeId),
+                vehicleTypeRef: doc(db, 'vehicle_types', values.vehicleTypeId),
+                trailerTypeRef: doc(db, 'trailer_types', values.trailerTypeId),
                 loadingStartDate: loadingDateRange.from,
                 loadingEndDate: loadingDateRange.to,
                 unloadingStartDate: unloadingDateRange.from,
@@ -206,12 +213,18 @@ export default function EditOrderItemPage() {
                 const { id: cargoId, ...cargoData } = cargo;
                 const cargoRef = cargoId ? doc(db, 'order_item_cargoes', cargoId) : doc(collection(db, 'order_item_cargoes'));
                 
+                const dataToSave = {
+                  ...cargoData,
+                  packagingTypeRef: doc(db, 'packaging_types', cargoData.packagingTypeId),
+                }
+
                 if (cargoId) {
-                    batch.update(cargoRef, cargoData);
+                    batch.update(cargoRef, dataToSave);
                 } else {
                     batch.set(cargoRef, {
-                        ...cargoData,
+                        ...dataToSave,
                         orderItemId: itemId,
+                        orderItemRef: orderItemRef,
                     });
                 }
             });

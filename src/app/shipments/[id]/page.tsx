@@ -203,7 +203,7 @@ export default function ShipmentDetailPage() {
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                 <DetailItem icon={Truck} label="Тээврийн дугаар" value={shipment.shipmentNumber} />
-                <DetailItem icon={FileText} label="Захиалгын дугаар" value={shipment.orderNumber} subValue="Захиалгын дэлгэрэнгүй рүү үсрэх" />
+                <DetailItem icon={FileText} label="Захиалгын дугаар" value={<Link href={`/orders/${shipment.orderId}`} className="text-primary hover:underline">{shipment.orderNumber}</Link>} />
                 <DetailItem icon={User} label="Харилцагч" value={shipment.customerName} />
                 <DetailItem icon={Badge} label="Статус" value={<Badge variant={getStatusBadgeVariant(shipment.status)}>{statusTranslations[shipment.status]}</Badge>} />
                 <DetailItem icon={Calendar} label="Үүсгэсэн огноо" value={format(shipment.createdAt, 'yyyy-MM-dd HH:mm')} />

@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, where } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, where, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -102,6 +102,8 @@ export default function NewCustomerPage() {
     setIsSubmitting(true);
     try {
       const assignedUser = systemUsers.find(u => u.uid === values.assignedToUid);
+      const assignedToRef = assignedUser ? doc(db, 'users', assignedUser.uid) : undefined;
+
 
       await addDoc(collection(db, 'customers'), {
         name: values.name,
@@ -119,6 +121,7 @@ export default function NewCustomerPage() {
             uid: assignedUser?.uid,
             name: `${assignedUser?.lastName} ${assignedUser?.firstName}`,
         },
+        assignedToRef: assignedToRef,
         createdAt: serverTimestamp(),
       });
       

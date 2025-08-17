@@ -122,11 +122,15 @@ export default function EditWarehousePage() {
       const warehouseRef = doc(db, 'warehouses', id);
       const customerId = values.customerId === 'no-owner' ? undefined : values.customerId;
       const selectedCustomer = customers.find(c => c.id === customerId);
+      const customerRef = customerId ? doc(db, 'customers', customerId) : undefined;
+      const regionRef = doc(db, 'regions', values.regionId);
       
       await updateDoc(warehouseRef, {
         ...values,
         customerId: customerId,
         customerName: selectedCustomer ? selectedCustomer.name : 'Эзэмшигчгүй',
+        customerRef: customerRef,
+        regionRef: regionRef,
         updatedAt: serverTimestamp(),
       });
       

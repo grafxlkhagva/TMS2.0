@@ -1,5 +1,7 @@
 
 
+import type { DocumentReference } from 'firebase/firestore';
+
 export type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Delayed';
 
 export type VehicleStatus = 'Available' | 'In Use' | 'Maintenance';
@@ -52,11 +54,13 @@ export type Customer = {
     uid: string;
     name: string;
   };
+  assignedToRef?: DocumentReference;
 };
 
 export type CustomerEmployee = {
   id: string;
   customerId: string;
+  customerRef?: DocumentReference;
   lastName: string;
   firstName: string;
   phone: string;
@@ -77,6 +81,7 @@ export type Warehouse = {
     name: string;
     location: string;
     regionId: string;
+    regionRef?: DocumentReference;
     geolocation: {
         lat: number;
         lng: number;
@@ -88,6 +93,7 @@ export type Warehouse = {
     note?: string;
     customerId?: string;
     customerName?: string;
+    customerRef?: DocumentReference;
     createdAt: Date;
     updatedAt?: Date;
 };
@@ -147,8 +153,10 @@ export type Order = {
     orderNumber: string;
     customerId: string;
     customerName: string;
+    customerRef?: DocumentReference;
     employeeId: string;
     employeeName: string;
+    employeeRef?: DocumentReference;
     status: OrderStatus;
     createdAt: Date;
     createdBy: {
@@ -161,17 +169,25 @@ export type Order = {
 export type OrderItem = {
     id: string;
     orderId: string;
+    orderRef?: DocumentReference;
     startRegionId: string;
+    startRegionRef?: DocumentReference;
     startWarehouseId: string;
+    startWarehouseRef?: DocumentReference;
     endRegionId: string;
+    endRegionRef?: DocumentReference;
     endWarehouseId: string;
+    endWarehouseRef?: DocumentReference;
     loadingStartDate: Date;
     loadingEndDate: Date;
     unloadingStartDate: Date;
     unloadingEndDate: Date;
     serviceTypeId: string;
+    serviceTypeRef?: DocumentReference;
     vehicleTypeId: string;
+    vehicleTypeRef?: DocumentReference;
     trailerTypeId: string;
+    trailerTypeRef?: DocumentReference;
     totalDistance: number;
     status: OrderItemStatus;
     createdAt: Date;
@@ -187,16 +203,19 @@ export type OrderItem = {
 export type OrderItemCargo = {
     id: string;
     orderItemId: string;
+    orderItemRef?: DocumentReference;
     name: string;
     quantity: number;
     unit: string;
     packagingTypeId: string;
+    packagingTypeRef?: DocumentReference;
     notes?: string;
 };
 
 export type DriverQuote = {
     id: string;
     orderItemId: string;
+    orderItemRef?: DocumentReference;
     driverName: string;
     driverPhone: string;
     price: number;
@@ -212,9 +231,12 @@ export type Shipment = {
   id: string;
   shipmentNumber: string;
   orderId: string;
+  orderRef?: DocumentReference;
   orderNumber: string;
   orderItemId: string;
+  orderItemRef?: DocumentReference;
   customerId: string;
+  customerRef?: DocumentReference;
   customerName: string;
   driverInfo: {
     name: string;

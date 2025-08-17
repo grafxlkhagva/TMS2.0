@@ -109,6 +109,7 @@ export default function EditCustomerPage() {
     try {
       const customerRef = doc(db, 'customers', id);
       const assignedUser = systemUsers.find(u => u.uid === values.assignedToUid);
+      const assignedToRef = assignedUser ? doc(db, 'users', assignedUser.uid) : undefined;
       
       const { assignedToUid, ...restOfValues } = values;
 
@@ -118,6 +119,7 @@ export default function EditCustomerPage() {
             uid: assignedUser?.uid,
             name: `${assignedUser?.lastName} ${assignedUser?.firstName}`,
         },
+        assignedToRef: assignedToRef,
         updatedAt: serverTimestamp(),
       });
       
