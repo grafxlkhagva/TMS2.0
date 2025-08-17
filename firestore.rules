@@ -2,10 +2,8 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // TEMPORARILY allow read/write for data migration script.
-    // IMPORTANT: Change this back to `if request.auth != null;` after running the script.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if request.auth != null;
     }
   }
 }
