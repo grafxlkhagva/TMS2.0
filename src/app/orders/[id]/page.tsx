@@ -17,7 +17,7 @@ import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink, Download } from 'lucide-react';
+import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink, Download, Megaphone, MegaphoneOff } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -88,6 +88,7 @@ const orderItemSchema = z.object({
   trailerTypeId: z.string().min(1, "Тэвшний төрөл сонгоно уу."),
   profitMargin: z.coerce.number().min(0, "Ашгийн хувь 0-аас багагүй байна.").max(100, "Ашгийн хувь 100-аас ихгүй байна.").optional(),
   withVAT: z.boolean().optional(),
+  tenderStatus: z.enum(['Open', 'Closed']).optional(),
   cargoItems: z.array(z.object({
     name: z.string().min(2, "Ачааны нэр дор хаяж 2 тэмдэгттэй байх ёстой."),
     quantity: z.coerce.number().min(0.1, "Тоо хэмжээг оруулна уу."),
@@ -354,6 +355,7 @@ export default function OrderDetailPage() {
           unloadingEndDate: unloadingDateRange.to,
           orderId: orderId,
           status: 'Pending',
+          tenderStatus: 'Closed',
           createdAt: serverTimestamp(),
         });
 
@@ -386,6 +388,7 @@ export default function OrderDetailPage() {
             ...values,
             orderItemId: itemId,
             status: 'Pending',
+            channel: 'Phone',
             createdAt: serverTimestamp(),
         });
         toast({ title: 'Амжилттай', description: 'Шинэ үнийн санал нэмэгдлээ.' });
@@ -536,6 +539,19 @@ export default function OrderDetailPage() {
     }
   }
 
+  const handleToggleTenderStatus = async (item: OrderItem) => {
+    const newStatus = item.tenderStatus === 'Open' ? 'Closed' : 'Open';
+    try {
+      const itemRef = doc(db, 'order_items', item.id);
+      await updateDoc(itemRef, { tenderStatus: newStatus });
+      toast({ title: 'Амжилттай', description: `Тендерийн статус "${newStatus === 'Open' ? 'Нээлттэй' : 'Хаалттай'}" боллоо.`});
+      fetchOrderData(); // Refresh data to show new status
+    } catch (error) {
+      console.error("Error updating tender status:", error);
+      toast({ variant: 'destructive', title: 'Алдаа', description: 'Тендерийн статус шинэчлэхэд алдаа гарлаа.'});
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-6 space-y-6">
@@ -561,6 +577,7 @@ export default function OrderDetailPage() {
   const getWarehouseName = (id: string) => warehouses.find(w => w.id === id)?.name || 'N/A';
   const getVehicleTypeName = (id: string) => vehicleTypes.find(v => v.id === id)?.name || 'N/A';
   const getTrailerTypeName = (id: string) => trailerTypes.find(t => t.id === id)?.name || 'N/A';
+  const getChannelName = (channel: 'Phone' | 'App') => channel === 'Phone' ? 'Утсаар' : 'Апп-р';
 
   const handleSelectItemForQuote = (itemId: string) => {
     setSelectedItemsForQuote(prev => {
@@ -593,6 +610,7 @@ export default function OrderDetailPage() {
         totalDistance: 0,
         profitMargin: 0,
         withVAT: true,
+        tenderStatus: 'Closed',
         cargoItems: [],
     });
   };
@@ -746,6 +764,7 @@ export default function OrderDetailPage() {
                                                     <p className="text-sm text-muted-foreground">{format(new Date(item.loadingStartDate), "yyyy-MM-dd")}</p>
                                                 </div>
                                                 <div className="flex items-center gap-4 flex-shrink-0">
+                                                    <Badge variant={item.tenderStatus === 'Open' ? 'success' : 'secondary'}>{item.tenderStatus === 'Open' ? 'Нээлттэй' : 'Хаалттай'}</Badge>
                                                     {item.finalPrice != null && (
                                                         <p className="font-semibold text-primary">{item.finalPrice.toLocaleString()}₮</p>
                                                     )}
@@ -756,6 +775,10 @@ export default function OrderDetailPage() {
                                    </div>
                                    <AccordionContent className="space-y-4">
                                        <div className="flex items-center justify-end gap-2 px-4 pb-4 border-b">
+                                           <Button variant="outline" size="sm" onClick={() => handleToggleTenderStatus(item)}>
+                                                {item.tenderStatus === 'Open' ? <MegaphoneOff className="mr-2 h-4 w-4" /> : <Megaphone className="mr-2 h-4 w-4" />}
+                                                {item.tenderStatus === 'Open' ? 'Тендер хаах' : 'Тендер нээх'}
+                                           </Button>
                                            {shipments.has(item.id) ? (
                                                 <Button variant="outline" size="sm" asChild>
                                                     <Link href={`/shipments/${shipments.get(item.id)?.id}`}>
@@ -788,6 +811,7 @@ export default function OrderDetailPage() {
                                             <TableHeader>
                                                 <TableRow>
                                                     <TableHead>Жолооч</TableHead>
+                                                    <TableHead>Суваг</TableHead>
                                                     <TableHead>Эцсийн үнэ</TableHead>
                                                     <TableHead>Статус</TableHead>
                                                     <TableHead className="text-right">Үйлдэл</TableHead>
@@ -802,6 +826,9 @@ export default function OrderDetailPage() {
                                                             <TableCell>
                                                                 <p className="font-medium">{quote.driverName}</p>
                                                                 <p className="text-xs text-muted-foreground">{quote.driverPhone}</p>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                 <Badge variant="outline">{getChannelName(quote.channel)}</Badge>
                                                             </TableCell>
                                                              <TableCell>
                                                                 <p className="font-bold text-base text-primary pt-1">{finalPrice.toLocaleString()}₮</p>
@@ -833,7 +860,7 @@ export default function OrderDetailPage() {
                                                         </TableRow>
                                                     )})
                                                 ) : (
-                                                    <TableRow><TableCell colSpan={4} className="text-center h-24">Үнийн санал олдсонгүй.</TableCell></TableRow>
+                                                    <TableRow><TableCell colSpan={5} className="text-center h-24">Үнийн санал олдсонгүй.</TableCell></TableRow>
                                                 )}
                                             </TableBody>
                                         </Table>
