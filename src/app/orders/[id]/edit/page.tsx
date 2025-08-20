@@ -2,10 +2,10 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Order, OrderStatus, LoadingUnloadingResponsibility, VehicleAvailability, PaymentTerm } from '@/types';
+import type { Order, OrderStatus, LoadingUnloadingResponsibility, VehicleAvailability, PaymentTerm, CustomerEmployee } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -48,6 +48,7 @@ const formSchema = z.object({
     status: z.custom<OrderStatus>(val => orderStatuses.includes(val as OrderStatus), {
         message: "Хүчинтэй статус сонгоно уу."
     }),
+    employeeId: z.string().min(1, { message: 'Хариуцсан ажилтан сонгоно уу.' }),
     conditions: z.object({
         loading: z.custom<LoadingUnloadingResponsibility>(),
         unloading: z.custom<LoadingUnloadingResponsibility>(),
@@ -69,6 +70,7 @@ export default function EditOrderPage() {
     const router = useRouter();
     const { toast } = useToast();
     const [order, setOrder] = React.useState<Order | null>(null);
+    const [customerEmployees, setCustomerEmployees] = React.useState<CustomerEmployee[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -100,8 +102,17 @@ export default function EditOrderPage() {
                     setOrder(orderData);
                     form.reset({ 
                         status: orderData.status,
+                        employeeId: orderData.employeeId,
                         conditions: orderData.conditions || form.getValues('conditions'),
                     });
+                    
+                    if (orderData.customerId) {
+                        const employeesQuery = query(collection(db, 'customer_employees'), where('customerId', '==', orderData.customerId), orderBy('firstName'));
+                        const employeesSnapshot = await getDocs(employeesQuery);
+                        const employeesData = employeesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomerEmployee));
+                        setCustomerEmployees(employeesData);
+                    }
+
                 } else {
                     toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалга олдсонгүй.' });
                     router.push('/orders');
@@ -120,8 +131,15 @@ export default function EditOrderPage() {
         setIsSubmitting(true);
         try {
             const orderRef = doc(db, 'orders', id);
+            
+            const selectedEmployee = customerEmployees.find(e => e.id === values.employeeId);
+            const employeeRef = selectedEmployee ? doc(db, 'customer_employees', selectedEmployee.id) : undefined;
+            
             await updateDoc(orderRef, {
                 status: values.status,
+                employeeId: values.employeeId,
+                employeeName: selectedEmployee ? `${selectedEmployee.lastName} ${selectedEmployee.firstName}` : '',
+                employeeRef: employeeRef,
                 conditions: values.conditions,
                 updatedAt: serverTimestamp(),
             });
@@ -173,7 +191,7 @@ export default function EditOrderPage() {
                             <CardTitle>Захиалга засах</CardTitle>
                             <CardDescription>Захиалгын дугаар: {order?.orderNumber}</CardDescription>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="space-y-6">
                             <FormField
                                 control={form.control}
                                 name="status"
@@ -196,6 +214,30 @@ export default function EditOrderPage() {
                                         </Select>
                                         <FormMessage />
                                     </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="employeeId"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Хариуцсан ажилтан</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value} disabled={customerEmployees.length === 0}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Хариуцсан ажилтан сонгоно уу..." />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {customerEmployees.map(employee => (
+                                                <SelectItem key={employee.id} value={employee.id}>
+                                                {employee.lastName} {employee.firstName}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
                                 )}
                             />
                         </CardContent>
