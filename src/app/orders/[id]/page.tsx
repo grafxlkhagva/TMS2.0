@@ -192,20 +192,20 @@ export default function OrderDetailPage() {
       setOrder(currentOrder);
 
       const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap, packagingTypeSnap, shipmentsSnap] = await Promise.all([
-        getDocs(query(collection(db, 'order_items'), where('orderId', '==', orderId))),
+        getDocs(query(collection(db, 'order_items'), where('orderRef', '==', orderDocRef))),
         getDocs(query(collection(db, "warehouses"), orderBy("name"))),
         getDocs(query(collection(db, "service_types"), orderBy("name"))),
-        getDocs(query(collection(db, 'customer_employees'), where('customerId', '==', currentOrder.customerId))),
+        getDocs(query(collection(db, 'customer_employees'), where('customerRef', '==', currentOrder.customerRef))),
         getDocs(query(collection(db, "vehicle_types"), orderBy("name"))),
         getDocs(query(collection(db, "trailer_types"), orderBy("name"))),
         getDocs(query(collection(db, "regions"), orderBy("name"))),
         getDocs(query(collection(db, "packaging_types"), orderBy("name"))),
-        getDocs(query(collection(db, 'shipments'), where('orderId', '==', orderId))),
+        getDocs(query(collection(db, 'shipments'), where('orderRef', '==', orderDocRef))),
       ]);
       
       const itemsDataPromises: Promise<OrderItem>[] = itemsSnap.docs.map(async (d) => {
         const itemData = d.data();
-        const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', d.id));
+        const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemRef', '==', d.ref));
         const cargoSnapshot = await getDocs(cargoQuery);
         const cargoItems = cargoSnapshot.docs.map(cargoDoc => ({ id: cargoDoc.id, ...cargoDoc.data() } as OrderItemCargo));
         
@@ -236,7 +236,7 @@ export default function OrderDetailPage() {
       // Fetch quotes for each item
       const quotesMap = new Map<string, DriverQuote[]>();
       for (const item of itemsData) {
-          const quotesQuery = query(collection(db, 'driver_quotes'), where('orderItemId', '==', item.id));
+          const quotesQuery = query(collection(db, 'driver_quotes'), where('orderItemRef', '==', doc(db, 'order_items', item.id)));
           const quotesSnapshot = await getDocs(quotesQuery);
           let quotesData = quotesSnapshot.docs.map(d => {
             const data = d.data();
@@ -283,17 +283,17 @@ export default function OrderDetailPage() {
     setIsSubmitting(true);
     try {
       const batch = writeBatch(db);
-      // Delete quotes associated with the item
-      const quotesQuery = query(collection(db, 'driver_quotes'), where('orderItemId', '==', itemToDelete.id));
+      const itemRef = doc(db, 'order_items', itemToDelete.id);
+      
+      const quotesQuery = query(collection(db, 'driver_quotes'), where('orderItemRef', '==', itemRef));
       const quotesSnapshot = await getDocs(quotesQuery);
       quotesSnapshot.forEach(doc => batch.delete(doc.ref));
       
-      const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', itemToDelete.id));
+      const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemRef', '==', itemRef));
       const cargoSnapshot = await getDocs(cargoQuery);
       cargoSnapshot.forEach(doc => batch.delete(doc.ref));
 
-      // Delete the item itself
-      batch.delete(doc(db, 'order_items', itemToDelete.id));
+      batch.delete(itemRef);
       await batch.commit();
 
       setOrderItems(prev => prev.filter(i => i.id !== itemToDelete.id));
@@ -317,16 +317,18 @@ export default function OrderDetailPage() {
         }
 
         const orderDocRef = doc(db, 'orders', order.id);
+        const employeeRef = doc(db, 'customer_employees', newEmployeeId);
         await updateDoc(orderDocRef, {
             employeeId: newEmployeeId,
             employeeName: `${selectedEmployee.lastName} ${selectedEmployee.firstName}`,
-            employeeRef: doc(db, 'customer_employees', newEmployeeId),
+            employeeRef: employeeRef,
         });
 
         setOrder(prevOrder => prevOrder ? {
              ...prevOrder,
              employeeId: newEmployeeId,
-             employeeName: `${selectedEmployee.lastName} ${selectedEmployee.firstName}`
+             employeeName: `${selectedEmployee.lastName} ${selectedEmployee.firstName}`,
+             employeeRef: employeeRef
         } : null);
 
         toast({ title: 'Амжилттай', description: 'Хариуцсан ажилтан солигдлоо.' });
@@ -375,6 +377,7 @@ export default function OrderDetailPage() {
             ...cargo,
             orderItemId: orderItemRef.id,
             orderItemRef: orderItemRef,
+            packagingTypeId: cargo.packagingTypeId,
             packagingTypeRef: doc(db, 'packaging_types', cargo.packagingTypeId),
           });
         });
@@ -508,15 +511,19 @@ export default function OrderDetailPage() {
 
         // 1. Create new shipment document
         const shipmentRef = doc(collection(db, 'shipments'));
+        const orderRef = doc(db, 'orders', order.id);
+        const orderItemRef = doc(db, 'order_items', itemToShip.id);
+        const customerRef = doc(db, 'customers', order.customerId);
+
         batch.set(shipmentRef, {
             shipmentNumber,
             orderId: order.id,
-            orderRef: doc(db, 'orders', order.id),
+            orderRef: orderRef,
             orderNumber: order.orderNumber,
             orderItemId: itemToShip.id,
-            orderItemRef: doc(db, 'order_items', itemToShip.id),
+            orderItemRef: orderItemRef,
             customerId: order.customerId,
-            customerRef: doc(db, 'customers', order.customerId),
+            customerRef: customerRef,
             customerName: order.customerName,
             driverInfo: {
                 name: acceptedQuote.driverName,
@@ -539,7 +546,6 @@ export default function OrderDetailPage() {
         });
 
         // 2. Update order item status
-        const orderItemRef = doc(db, 'order_items', itemToShip.id);
         batch.update(orderItemRef, { status: 'Shipped' });
 
         await batch.commit();
@@ -780,7 +786,7 @@ export default function OrderDetailPage() {
                                                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-muted-foreground">
                                                         <div className="flex items-center gap-2">
                                                           <MapPin className="h-4 w-4"/> 
-                                                          <span>{getWarehouseName(item.startWarehouseId)} &rarr; {getWarehouseName(item.endWarehouseId)}</span>
+                                                          <span>{getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</span>
                                                         </div>
                                                         <div className="flex items-center gap-2">
                                                           <Calendar className="h-4 w-4"/> 
@@ -989,3 +995,4 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+
