@@ -118,6 +118,7 @@ export default function EditOrderPage() {
                     router.push('/orders');
                 }
             } catch (error) {
+                console.error("Error fetching order:", error);
                 toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалгын мэдээлэл татахад алдаа гарлаа.' });
             } finally {
                 setIsLoading(false);

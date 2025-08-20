@@ -192,15 +192,15 @@ export default function OrderDetailPage() {
       setOrder(currentOrder);
 
       const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap, packagingTypeSnap, shipmentsSnap] = await Promise.all([
-        getDocs(query(collection(db, 'order_items'), where('orderRef', '==', orderDocRef))),
+        getDocs(query(collection(db, 'order_items'), where('orderId', '==', orderId))),
         getDocs(query(collection(db, "warehouses"), orderBy("name"))),
         getDocs(query(collection(db, "service_types"), orderBy("name"))),
-        getDocs(query(collection(db, 'customer_employees'), where('customerRef', '==', currentOrder.customerRef))),
+        getDocs(query(collection(db, 'customer_employees'), where('customerId', '==', currentOrder.customerId))),
         getDocs(query(collection(db, "vehicle_types"), orderBy("name"))),
         getDocs(query(collection(db, "trailer_types"), orderBy("name"))),
         getDocs(query(collection(db, "regions"), orderBy("name"))),
         getDocs(query(collection(db, "packaging_types"), orderBy("name"))),
-        getDocs(query(collection(db, 'shipments'), where('orderRef', '==', orderDocRef))),
+        getDocs(query(collection(db, 'shipments'), where('orderId', '==', orderId))),
       ]);
       
       const itemsDataPromises: Promise<OrderItem>[] = itemsSnap.docs.map(async (d) => {
@@ -999,4 +999,3 @@ export default function OrderDetailPage() {
     </div>
   );
 }
-
