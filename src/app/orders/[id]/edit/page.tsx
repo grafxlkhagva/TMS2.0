@@ -5,7 +5,7 @@ import * as React from 'react';
 import { doc, getDoc, updateDoc, serverTimestamp, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Order, OrderStatus, LoadingUnloadingResponsibility, VehicleAvailability, PaymentTerm, CustomerEmployee } from '@/types';
+import type { Order, OrderStatus, LoadingUnloadingResponsibility, VehicleAvailability, PaymentTerm, CustomerEmployee, SystemUser } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -49,6 +49,7 @@ const formSchema = z.object({
         message: "Хүчинтэй статус сонгоно уу."
     }),
     employeeId: z.string().min(1, { message: 'Хариуцсан ажилтан сонгоно уу.' }),
+    transportManagerId: z.string().min(1, { message: 'Тээврийн менежер сонгоно уу.'}),
     conditions: z.object({
         loading: z.custom<LoadingUnloadingResponsibility>(),
         unloading: z.custom<LoadingUnloadingResponsibility>(),
@@ -71,6 +72,7 @@ export default function EditOrderPage() {
     const { toast } = useToast();
     const [order, setOrder] = React.useState<Order | null>(null);
     const [customerEmployees, setCustomerEmployees] = React.useState<CustomerEmployee[]>([]);
+    const [transportManagers, setTransportManagers] = React.useState<SystemUser[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -103,9 +105,14 @@ export default function EditOrderPage() {
                     form.reset({ 
                         status: orderData.status,
                         employeeId: orderData.employeeId,
+                        transportManagerId: orderData.transportManagerId,
                         conditions: orderData.conditions || form.getValues('conditions'),
                     });
                     
+                    const managersQuery = query(collection(db, "users"), where("role", "==", "transport_manager"));
+                    const managersSnapshot = await getDocs(managersQuery);
+                    setTransportManagers(managersSnapshot.docs.map(doc => doc.data() as SystemUser));
+
                     if (orderData.customerId) {
                         const employeesQuery = query(collection(db, 'customer_employees'), where('customerId', '==', orderData.customerId));
                         const employeesSnapshot = await getDocs(employeesQuery);
@@ -135,12 +142,17 @@ export default function EditOrderPage() {
             
             const selectedEmployee = customerEmployees.find(e => e.id === values.employeeId);
             const employeeRef = selectedEmployee ? doc(db, 'customer_employees', selectedEmployee.id) : undefined;
+            const selectedManager = transportManagers.find(m => m.uid === values.transportManagerId);
+            const managerRef = selectedManager ? doc(db, 'users', selectedManager.uid) : undefined;
             
             await updateDoc(orderRef, {
                 status: values.status,
                 employeeId: values.employeeId,
                 employeeName: selectedEmployee ? `${selectedEmployee.lastName} ${selectedEmployee.firstName}` : '',
                 employeeRef: employeeRef,
+                transportManagerId: values.transportManagerId,
+                transportManagerName: `${selectedManager?.lastName} ${selectedManager?.firstName}`,
+                transportManagerRef: managerRef,
                 conditions: values.conditions,
                 updatedAt: serverTimestamp(),
             });
@@ -222,7 +234,7 @@ export default function EditOrderPage() {
                                 name="employeeId"
                                 render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Хариуцсан ажилтан</FormLabel>
+                                    <FormLabel>Харилцагчийн ажилтан</FormLabel>
                                     <Select 
                                         onValueChange={field.onChange} 
                                         value={field.value} 
@@ -237,6 +249,33 @@ export default function EditOrderPage() {
                                             {customerEmployees.map(employee => (
                                                 <SelectItem key={employee.id} value={employee.id}>
                                                 {employee.lastName} {employee.firstName}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="transportManagerId"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Тээврийн менежер</FormLabel>
+                                    <Select 
+                                        onValueChange={field.onChange} 
+                                        value={field.value} 
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Тээврийн менежер сонгоно уу..." />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {transportManagers.map(manager => (
+                                                <SelectItem key={manager.uid} value={manager.uid}>
+                                                {manager.lastName} {manager.firstName}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>

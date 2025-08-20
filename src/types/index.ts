@@ -157,6 +157,9 @@ export type Order = {
     employeeId: string;
     employeeName: string;
     employeeRef?: DocumentReference;
+    transportManagerId?: string;
+    transportManagerName?: string;
+    transportManagerRef?: DocumentReference;
     status: OrderStatus;
     createdAt: Date;
     createdBy: {

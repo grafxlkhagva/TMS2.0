@@ -6,12 +6,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
-import { collection, getDocs, query, addDoc, serverTimestamp, where, runTransaction, doc } from 'firebase/firestore';
+import { collection, getDocs, query, addDoc, serverTimestamp, where, runTransaction, doc, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-import type { Customer, CustomerEmployee } from '@/types';
+import type { Customer, CustomerEmployee, SystemUser } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -29,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const formSchema = z.object({
   customerId: z.string().min(1, { message: 'Харилцагч байгууллага сонгоно уу.' }),
   employeeId: z.string().min(1, { message: 'Хариуцсан ажилтан сонгоно уу.' }),
+  transportManagerId: z.string().min(1, { message: 'Тээврийн менежер сонгоно уу.'}),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -64,6 +65,7 @@ export default function NewOrderPage() {
   // Data states
   const [customers, setCustomers] = React.useState<Customer[]>([]);
   const [employees, setEmployees] = React.useState<CustomerEmployee[]>([]);
+  const [transportManagers, setTransportManagers] = React.useState<SystemUser[]>([]);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
   
   const form = useForm<FormValues>({
@@ -71,23 +73,33 @@ export default function NewOrderPage() {
     defaultValues: {
       customerId: '',
       employeeId: '',
+      transportManagerId: '',
     },
   });
 
   const watchedCustomerId = form.watch('customerId');
 
   React.useEffect(() => {
-    async function fetchCustomers() {
+    async function fetchInitialData() {
       try {
-        const customerSnap = await getDocs(query(collection(db, "customers")));
+        const customersQuery = query(collection(db, "customers"), orderBy("name"));
+        const managersQuery = query(collection(db, "users"), where("role", "==", "transport_manager"));
+        
+        const [customerSnap, managersSnap] = await Promise.all([
+          getDocs(customersQuery),
+          getDocs(managersQuery),
+        ]);
+
         setCustomers(customerSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer)));
+        setTransportManagers(managersSnap.docs.map(doc => doc.data() as SystemUser));
+
       } catch (error) {
-        toast({ variant: 'destructive', title: 'Алдаа', description: 'Харилцагчдын мэдээлэл татахад алдаа гарлаа.'});
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Мэдээлэл татахад алдаа гарлаа.'});
       } finally {
         setIsLoadingData(false);
       }
     }
-    fetchCustomers();
+    fetchInitialData();
   }, [toast]);
   
   React.useEffect(() => {
@@ -120,6 +132,7 @@ export default function NewOrderPage() {
     try {
       const selectedCustomer = customers.find(c => c.id === values.customerId);
       const selectedEmployee = employees.find(e => e.id === values.employeeId);
+      const selectedManager = transportManagers.find(m => m.uid === values.transportManagerId);
       
       const orderNumber = await generateOrderNumber();
 
@@ -131,6 +144,9 @@ export default function NewOrderPage() {
         employeeId: values.employeeId,
         employeeRef: doc(db, 'customer_employees', values.employeeId),
         employeeName: `${selectedEmployee?.lastName} ${selectedEmployee?.firstName}`,
+        transportManagerId: values.transportManagerId,
+        transportManagerName: `${selectedManager?.lastName} ${selectedManager?.firstName}`,
+        transportManagerRef: doc(db, 'users', values.transportManagerId),
         status: 'Pending',
         createdAt: serverTimestamp(),
         createdBy: {
@@ -224,6 +240,30 @@ export default function NewOrderPage() {
                       )}
                     />
                  </div>
+                 <FormField
+                      control={form.control}
+                      name="transportManagerId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Тээврийн менежер</FormLabel>
+                           <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingData}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Тээврийн менежер сонгоно уу..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {transportManagers.map(manager => (
+                                <SelectItem key={manager.uid} value={manager.uid}>
+                                  {manager.lastName} {manager.firstName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
             </CardContent>
           </Card>
 

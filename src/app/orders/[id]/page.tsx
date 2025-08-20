@@ -730,24 +730,8 @@ export default function OrderDetailPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <OrderDetailItem icon={Building} label="Харилцагч" value={<Link href={`/customers/${order.customerId}`} className="hover:underline text-primary">{order.customerName}</Link>} />
-                    <OrderDetailItem 
-                        icon={User} 
-                        label="Хариуцсан ажилтан" 
-                        value={
-                            <Select onValueChange={handleEmployeeChange} value={order.employeeId} disabled={isUpdatingEmployee || customerEmployees.length === 0}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Ажилтан сонгоно уу..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {customerEmployees.map(employee => (
-                                        <SelectItem key={employee.id} value={employee.id}>
-                                          {employee.lastName} {employee.firstName}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        } 
-                    />
+                    <OrderDetailItem icon={User} label="Харилцагчийн ажилтан" value={order.employeeName} />
+                    <OrderDetailItem icon={User} label="Тээврийн менежер" value={order.transportManagerName} />
                     {totalOrderPrice > 0 && (
                         <OrderDetailItem icon={CircleDollarSign} label="Нийт үнийн дүн" value={`${totalOrderPrice.toLocaleString()}₮`} />
                     )}
