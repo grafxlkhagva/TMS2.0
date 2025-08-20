@@ -17,7 +17,7 @@ import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink, Download, Megaphone, MegaphoneOff } from 'lucide-react';
+import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink, Download, Megaphone, MegaphoneOff, Calendar, Package, MapPin } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -773,18 +773,37 @@ export default function OrderDetailPage() {
                                                 aria-label="Нэгдсэн саналд нэмэх"
                                             />
                                        </div>
-                                       <AccordionTrigger className="flex-1 py-4 pr-0 border-b-0">
-                                            <div className="flex justify-between items-center w-full gap-4">
-                                                <div className="text-left flex-1 min-w-0">
-                                                    <p className="font-semibold truncate">Тээвэрлэлт #{index + 1}: {getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</p>
-                                                    <p className="text-sm text-muted-foreground">{format(new Date(item.loadingStartDate), "yyyy-MM-dd")}</p>
+                                       <AccordionTrigger className="flex-1 py-4 pr-0 border-b-0 text-left">
+                                            <div className="flex justify-between items-start w-full gap-4">
+                                                <div className="flex-1 space-y-2">
+                                                    <p className="font-semibold text-base">Тээвэрлэлт #{index + 1}</p>
+                                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                                                        <div className="flex items-center gap-2">
+                                                          <MapPin className="h-4 w-4"/> 
+                                                          <span>{getWarehouseName(item.startWarehouseId)} &rarr; {getWarehouseName(item.endWarehouseId)}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                          <Calendar className="h-4 w-4"/> 
+                                                          <span>{format(new Date(item.loadingStartDate), "MM/dd")} - {format(new Date(item.unloadingEndDate), "MM/dd")}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <Truck className="h-4 w-4"/>
+                                                            <span>{getVehicleTypeName(item.vehicleTypeId)}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                          <Package className="h-4 w-4"/>
+                                                          <span>{item.cargoItems?.length || 0} төрлийн ачаа</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-4 flex-shrink-0">
+                                                <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                                                    <div className="flex items-center gap-2">
+                                                        {item.finalPrice != null && (
+                                                            <p className="font-semibold text-primary">{item.finalPrice.toLocaleString()}₮</p>
+                                                        )}
+                                                        <Badge variant={getItemStatusBadgeVariant(item.status)}>{item.status}</Badge>
+                                                    </div>
                                                     <Badge variant={item.tenderStatus === 'Open' ? 'success' : 'secondary'}>{item.tenderStatus === 'Open' ? 'Нээлттэй' : 'Хаалттай'}</Badge>
-                                                    {item.finalPrice != null && (
-                                                        <p className="font-semibold text-primary">{item.finalPrice.toLocaleString()}₮</p>
-                                                    )}
-                                                    <Badge variant={getItemStatusBadgeVariant(item.status)}>{item.status}</Badge>
                                                 </div>
                                            </div>
                                        </AccordionTrigger>
