@@ -712,6 +712,12 @@ export default function OrderDetailPage() {
                 <p className="text-muted-foreground font-mono">{order.orderNumber}</p>
             </div>
              <div className="flex items-center gap-2">
+                <Button variant="outline" asChild>
+                    <Link href={`/orders/${order.id}/quote`}>
+                        <FileText className="mr-2 h-4 w-4"/>
+                        Үнийн санал үүсгэх
+                    </Link>
+                </Button>
                 <Button asChild>
                     <Link href={`/orders/${order.id}/edit`}>
                         <Edit className="mr-2 h-4 w-4"/>
