@@ -783,22 +783,26 @@ export default function OrderDetailPage() {
                                             <div className="flex justify-between items-start w-full gap-4">
                                                 <div className="flex-1 space-y-2">
                                                     <p className="font-semibold text-base">Тээвэрлэлт #{index + 1}</p>
-                                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                                                    <div className="space-y-2 text-sm text-muted-foreground">
                                                         <div className="flex items-center gap-2">
-                                                          <MapPin className="h-4 w-4"/> 
-                                                          <span>{getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</span>
+                                                          <MapPin className="h-4 w-4 flex-shrink-0"/> 
+                                                          <span>{getRegionName(item.startRegionId)} ({getWarehouseName(item.startWarehouseId)}) &rarr; {getRegionName(item.endRegionId)} ({getWarehouseName(item.endWarehouseId)})</span>
                                                         </div>
                                                         <div className="flex items-center gap-2">
-                                                          <Calendar className="h-4 w-4"/> 
+                                                          <Calendar className="h-4 w-4 flex-shrink-0"/> 
                                                           <span>{format(new Date(item.loadingStartDate), "MM/dd")} - {format(new Date(item.unloadingEndDate), "MM/dd")}</span>
                                                         </div>
                                                         <div className="flex items-center gap-2">
-                                                            <Truck className="h-4 w-4"/>
+                                                            <Truck className="h-4 w-4 flex-shrink-0"/>
                                                             <span>{getVehicleTypeName(item.vehicleTypeId)}</span>
                                                         </div>
-                                                        <div className="flex items-center gap-2">
-                                                          <Package className="h-4 w-4"/>
-                                                          <span>{item.cargoItems?.length || 0} төрлийн ачаа</span>
+                                                         <div className="flex items-start gap-2">
+                                                          <Package className="h-4 w-4 flex-shrink-0 mt-0.5"/>
+                                                          <div className="flex flex-wrap gap-x-2 gap-y-1">
+                                                            {(item.cargoItems || []).map((cargo, idx) => (
+                                                                <span key={idx} className="text-xs bg-muted px-1.5 py-0.5 rounded">{cargo.name} ({cargo.quantity} {cargo.unit})</span>
+                                                            ))}
+                                                          </div>
                                                         </div>
                                                     </div>
                                                 </div>
