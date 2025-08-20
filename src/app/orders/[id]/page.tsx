@@ -205,7 +205,7 @@ export default function OrderDetailPage() {
       
       const itemsDataPromises: Promise<OrderItem>[] = itemsSnap.docs.map(async (d) => {
         const itemData = d.data();
-        const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemRef', '==', d.ref));
+        const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', d.id));
         const cargoSnapshot = await getDocs(cargoQuery);
         const cargoItems = cargoSnapshot.docs.map(cargoDoc => ({ id: cargoDoc.id, ...cargoDoc.data() } as OrderItemCargo));
         
@@ -236,7 +236,7 @@ export default function OrderDetailPage() {
       // Fetch quotes for each item
       const quotesMap = new Map<string, DriverQuote[]>();
       for (const item of itemsData) {
-          const quotesQuery = query(collection(db, 'driver_quotes'), where('orderItemRef', '==', doc(db, 'order_items', item.id)));
+          const quotesQuery = query(collection(db, 'driver_quotes'), where('orderItemId', '==', item.id));
           const quotesSnapshot = await getDocs(quotesQuery);
           let quotesData = quotesSnapshot.docs.map(d => {
             const data = d.data();
