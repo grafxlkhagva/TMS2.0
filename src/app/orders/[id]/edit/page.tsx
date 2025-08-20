@@ -107,7 +107,7 @@ export default function EditOrderPage() {
                     });
                     
                     if (orderData.customerId) {
-                        const employeesQuery = query(collection(db, 'customer_employees'), where('customerId', '==', orderData.customerId), orderBy('firstName'));
+                        const employeesQuery = query(collection(db, 'customer_employees'), where('customerId', '==', orderData.customerId));
                         const employeesSnapshot = await getDocs(employeesQuery);
                         const employeesData = employeesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomerEmployee));
                         setCustomerEmployees(employeesData);
