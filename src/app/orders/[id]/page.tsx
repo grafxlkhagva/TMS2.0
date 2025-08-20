@@ -285,6 +285,7 @@ export default function OrderDetailPage() {
       const batch = writeBatch(db);
       const itemRef = doc(db, 'order_items', itemToDelete.id);
       
+      // Delete related quotes, cargoes, and shipments
       const quotesQuery = query(collection(db, 'driver_quotes'), where('orderItemRef', '==', itemRef));
       const quotesSnapshot = await getDocs(quotesQuery);
       quotesSnapshot.forEach(doc => batch.delete(doc.ref));
@@ -292,7 +293,12 @@ export default function OrderDetailPage() {
       const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemRef', '==', itemRef));
       const cargoSnapshot = await getDocs(cargoQuery);
       cargoSnapshot.forEach(doc => batch.delete(doc.ref));
+      
+      const shipmentQuery = query(collection(db, 'shipments'), where('orderItemRef', '==', itemRef));
+      const shipmentSnapshot = await getDocs(shipmentQuery);
+      shipmentSnapshot.forEach(doc => batch.delete(doc.ref));
 
+      // Delete the item itself
       batch.delete(itemRef);
       await batch.commit();
 
@@ -958,7 +964,7 @@ export default function OrderDetailPage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Энэ тээвэрлэлтийг устгах гэж байна. Энэ үйлдэл нь холбогдох үнийн саналуудын хамт устгагдах болно.
+                        Энэ тээвэрлэлтийг устгах гэж байна. Энэ үйлдэл нь холбогдох үнийн санал, ачаа, тээврийн мэдээллийг хамт устгах болно.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

@@ -82,22 +82,41 @@ export default function OrdersPage() {
         if (!orderToDelete) return;
         setIsDeleting(true);
         try {
-            // Delete all order_items associated with the order
+            const batch = writeBatch(db);
+            const orderRef = doc(db, 'orders', orderToDelete.id);
+
+            // 1. Find all related order_items
             const itemsQuery = query(collection(db, 'order_items'), where('orderId', '==', orderToDelete.id));
             const itemsSnapshot = await getDocs(itemsQuery);
-            const batch = writeBatch(db);
-            itemsSnapshot.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-            await batch.commit();
 
-            // Delete the order itself
-            await deleteDoc(doc(db, 'orders', orderToDelete.id));
+            for (const itemDoc of itemsSnapshot.docs) {
+                // For each item, find and delete related quotes and cargoes
+                const quotesQuery = query(collection(db, 'driver_quotes'), where('orderItemRef', '==', itemDoc.ref));
+                const quotesSnapshot = await getDocs(quotesQuery);
+                quotesSnapshot.forEach(quoteDoc => batch.delete(quoteDoc.ref));
+
+                const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemRef', '==', itemDoc.ref));
+                const cargoSnapshot = await getDocs(cargoQuery);
+                cargoSnapshot.forEach(cargoDoc => batch.delete(cargoDoc.ref));
+                
+                // Delete the item itself
+                batch.delete(itemDoc.ref);
+            }
+            
+            // 2. Find and delete all related shipments
+            const shipmentsQuery = query(collection(db, 'shipments'), where('orderId', '==', orderToDelete.id));
+            const shipmentsSnapshot = await getDocs(shipmentsQuery);
+            shipmentsSnapshot.forEach(shipmentDoc => batch.delete(shipmentDoc.ref));
+
+            // 3. Delete the order itself
+            batch.delete(orderRef);
+
+            await batch.commit();
 
             setOrders(prev => prev.filter(o => o.id !== orderToDelete.id));
             toast({ title: 'Амжилттай', description: `${orderToDelete.orderNumber} дугаартай захиалгыг устгалаа.`});
         } catch (error) {
-            console.error("Error deleting order:", error);
+            console.error("Error deleting order and related data:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалга устгахад алдаа гарлаа.'});
         } finally {
             setIsDeleting(false);
@@ -235,7 +254,7 @@ export default function OrdersPage() {
             <AlertDialogHeader>
                 <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    "{orderToDelete?.orderNumber}" дугаартай захиалгыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй. Энэ захиалгатай холбоотой бүх тээвэрлэлтийн мэдээлэл мөн устгагдана.
+                    "{orderToDelete?.orderNumber}" дугаартай захиалгыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй. Энэ захиалгатай холбоотой бүх тээвэрлэлт, үнийн санал, ачаа болон тээврийн мэдээлэл хамт устгагдана.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
