@@ -828,7 +828,7 @@ export default function OrderDetailPage() {
                                                 <TableRow>
                                                     <TableHead>Жолооч</TableHead>
                                                     <TableHead>Суваг</TableHead>
-                                                    <TableHead>Эцсийн үнэ</TableHead>
+                                                    <TableHead>Үнийн задаргаа</TableHead>
                                                     <TableHead>Статус</TableHead>
                                                     <TableHead className="text-right">Үйлдэл</TableHead>
                                                 </TableRow>
@@ -836,7 +836,8 @@ export default function OrderDetailPage() {
                                             <TableBody>
                                                 {quotes.get(item.id)?.length > 0 ? (
                                                     quotes.get(item.id)?.map(quote => {
-                                                        const { finalPrice } = calculateFinalPrice(item, quote);
+                                                        const { finalPrice, priceWithProfit, vatAmount } = calculateFinalPrice(item, quote);
+                                                        const profitAmount = priceWithProfit - quote.price;
                                                         return (
                                                         <TableRow key={quote.id} className={quote.status === 'Accepted' ? 'bg-green-100 dark:bg-green-900/50' : ''}>
                                                             <TableCell>
@@ -846,8 +847,21 @@ export default function OrderDetailPage() {
                                                             <TableCell>
                                                                  <Badge variant="outline">{getChannelName(quote.channel)}</Badge>
                                                             </TableCell>
-                                                             <TableCell>
-                                                                <p className="font-bold text-base text-primary pt-1">{finalPrice.toLocaleString()}₮</p>
+                                                             <TableCell className="text-xs">
+                                                                <div className="grid grid-cols-2 gap-x-2">
+                                                                    <span className="font-medium text-muted-foreground">Жолоочийн санал:</span>
+                                                                    <span className="text-right font-mono">{quote.price.toLocaleString()}₮</span>
+                                                                    
+                                                                    <span className="font-medium text-muted-foreground">Ашиг ({item.profitMargin || 0}%):</span>
+                                                                    <span className="text-right font-mono">{profitAmount.toLocaleString()}₮</span>
+                                                                    
+                                                                    {item.withVAT && <>
+                                                                        <span className="font-medium text-muted-foreground">НӨАТ (10%):</span>
+                                                                        <span className="text-right font-mono">{vatAmount.toLocaleString()}₮</span>
+                                                                    </>}
+                                                                    
+                                                                    <span className="font-bold col-span-2 border-t mt-1 pt-1 text-base text-primary text-right">{finalPrice.toLocaleString()}₮</span>
+                                                                </div>
                                                             </TableCell>
                                                             <TableCell>
                                                                 <Badge variant={quote.status === 'Accepted' ? 'default' : quote.status === 'Rejected' ? 'destructive' : 'secondary'}>
