@@ -201,6 +201,31 @@ const QuoteLayout = React.forwardRef<HTMLDivElement, { order: Order; orderItems:
         </tfoot>
       </table>
 
+      {order.conditions && (
+        <section className="mt-8 mb-6">
+          <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Тээврийн нөхцөл</h3>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-[9px]">
+            <div className="flex"><p><strong>Ачилт:</strong><span className="ml-1">{order.conditions.loading}</span></p></div>
+            <div className="flex"><p><strong>Буулгалт:</strong><span className="ml-1">{order.conditions.unloading}</span></p></div>
+            <div className="flex"><p><strong>ТХ-н бэлэн байдал:</strong><span className="ml-1">{order.conditions.vehicleAvailability}</span></p></div>
+            <div className="flex"><p><strong>Төлбөрийн нөхцөл:</strong><span className="ml-1">{order.conditions.paymentTerm}</span></p></div>
+            <div className="col-span-2 flex"><p><strong>Даатгал:</strong><span className="ml-1">{order.conditions.insurance}</span></p></div>
+            <div className="col-span-2">
+              <p><strong>Зөвшөөрөл:</strong></p>
+              {(order.conditions.permits?.roadPermit || order.conditions.permits?.roadToll) ? (
+                <ul className="list-disc list-inside ml-4">
+                  {order.conditions.permits.roadPermit && <li>Замын зөвшөөрөл авна</li>}
+                  {order.conditions.permits.roadToll && <li>Замын хураамж тушаана</li>}
+                </ul>
+              ) : <p className="ml-1">Тодорхойлоогүй</p>}
+            </div>
+            {order.conditions.additionalConditions && (
+              <div className="col-span-2 flex"><p><strong>Нэмэлт нөхцөл:</strong><span className="ml-1">{order.conditions.additionalConditions}</span></p></div>
+            )}
+          </div>
+        </section>
+      )}
+
       <section className="mt-6">
         <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Тайлбар</h3>
         <p className="text-gray-700">
