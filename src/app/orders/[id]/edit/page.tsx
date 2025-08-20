@@ -222,7 +222,11 @@ export default function EditOrderPage() {
                                 render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Хариуцсан ажилтан</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value} disabled={customerEmployees.length === 0}>
+                                    <Select 
+                                        onValueChange={field.onChange} 
+                                        value={field.value} 
+                                        disabled={customerEmployees.length === 0}
+                                    >
                                         <FormControl>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Хариуцсан ажилтан сонгоно уу..." />
