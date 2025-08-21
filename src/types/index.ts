@@ -14,10 +14,16 @@ export type Vehicle = {
   driverId: string | null;
 };
 
+export type DriverStatus = 'Active' | 'Inactive' | 'On Leave';
+
 export type Driver = {
-  id:string;
-  name: string;
-  avatarUrl: string;
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  status: DriverStatus;
+  createdAt: Date;
+  avatarUrl?: string;
 };
 
 export type UserRole = 'admin' | 'transport_manager' | 'finance_manager' | 'customer_officer' | 'manager';
