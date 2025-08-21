@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -42,7 +43,7 @@ function CustomerDetailItem({ icon: Icon, label, value }: { icon: React.ElementT
         <Icon className="h-4 w-4 mt-1 text-muted-foreground" />
         <div>
             <p className="text-sm text-muted-foreground">{label}</p>
-            <p className="font-medium">{value}</p>
+            <div className="font-medium">{value}</div>
         </div>
     </div>
   );

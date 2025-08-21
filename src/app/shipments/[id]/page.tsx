@@ -30,14 +30,14 @@ const statusTranslations: Record<ShipmentStatusType, string> = {
 };
 
 
-function DetailItem({ icon: Icon, label, value, subValue }: { icon: React.ElementType, label: string, value?: string, subValue?: string }) {
+function DetailItem({ icon: Icon, label, value, subValue }: { icon: React.ElementType, label: string, value?: string | React.ReactNode, subValue?: string }) {
   if (!value) return null;
   return (
     <div className="flex items-start gap-3">
         <Icon className="h-4 w-4 mt-1 text-muted-foreground flex-shrink-0" />
         <div>
             <p className="text-sm text-muted-foreground">{label}</p>
-            <p className="font-medium whitespace-pre-wrap">{value}</p>
+            <div className="font-medium whitespace-pre-wrap">{value}</div>
             {subValue && <p className="text-xs text-muted-foreground">{subValue}</p>}
         </div>
     </div>
@@ -205,7 +205,7 @@ export default function ShipmentDetailPage() {
                 <DetailItem icon={Truck} label="Тээврийн дугаар" value={shipment.shipmentNumber} />
                 <DetailItem icon={FileText} label="Захиалгын дугаар" value={<Link href={`/orders/${shipment.orderId}`} className="text-primary hover:underline">{shipment.orderNumber}</Link>} />
                 <DetailItem icon={User} label="Харилцагч" value={shipment.customerName} />
-                <DetailItem icon={Badge} label="Статус" value={<Badge variant={getStatusBadgeVariant(shipment.status)}>{statusTranslations[shipment.status]}</Badge>} />
+                <DetailItem icon={Info} label="Статус" value={<Badge variant={getStatusBadgeVariant(shipment.status)}>{statusTranslations[shipment.status]}</Badge>} />
                 <DetailItem icon={Calendar} label="Үүсгэсэн огноо" value={format(shipment.createdAt, 'yyyy-MM-dd HH:mm')} />
                 <DetailItem icon={Calendar} label="Хүргэх огноо (төлөвлөсөн)" value={format(shipment.estimatedDeliveryDate, 'yyyy-MM-dd')} />
               </CardContent>
