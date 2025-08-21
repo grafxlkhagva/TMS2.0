@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -14,9 +15,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { vehicles as initialVehicles, drivers } from '@/lib/data';
 import type { Vehicle, VehicleStatus, Driver } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 function StatusBadge({ status }: { status: VehicleStatus }) {
   const variant = status === 'Available' ? 'default' : status === 'Maintenance' ? 'destructive' : 'outline';
@@ -28,11 +30,13 @@ function AssignDriverDialog({
   open,
   onOpenChange,
   onAssign,
+  drivers
 }: {
   vehicle: Vehicle | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAssign: (vehicleId: string, driverId: string) => void;
+  drivers: Driver[];
 }) {
   const [selectedDriver, setSelectedDriver] = React.useState('');
 
@@ -77,17 +81,25 @@ function AssignDriverDialog({
 
 
 export default function VehiclesPage() {
-  const [vehicles, setVehicles] = React.useState<Vehicle[]>(initialVehicles);
+  const [vehicles, setVehicles] = React.useState<Vehicle[]>([]);
+  const [drivers, setDrivers] = React.useState<Driver[]>([]);
   const [selectedVehicle, setSelectedVehicle] = React.useState<Vehicle | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const { toast } = useToast();
   
+  // In a real app, you would fetch vehicles and drivers from Firestore.
+  // For now, we'll use an empty array.
+  React.useEffect(() => {
+    //
+  }, []);
+
   const handleAssignClick = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle);
     setIsDialogOpen(true);
   };
 
   const handleAssignDriver = (vehicleId: string, driverId: string) => {
+    // This would be a Firestore update in a real app.
     setVehicles(prevVehicles =>
       prevVehicles.map(v =>
         v.id === vehicleId ? { ...v, driverId, status: 'In Use' } : v
@@ -127,36 +139,45 @@ export default function VehiclesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {vehicles.map((vehicle) => {
-                const driver = drivers.find(d => d.id === vehicle.driverId);
-                return (
-                  <TableRow key={vehicle.id}>
-                    <TableCell className="font-medium">{vehicle.id}</TableCell>
-                    <TableCell>{vehicle.model}</TableCell>
-                    <TableCell>{vehicle.licensePlate}</TableCell>
-                    <TableCell>
-                      <StatusBadge status={vehicle.status} />
-                    </TableCell>
-                    <TableCell>{driver?.name || 'N/A'}</TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        disabled={vehicle.status !== 'Available'}
-                        onClick={() => handleAssignClick(vehicle)}
-                      >
-                        Assign Driver
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {vehicles.length > 0 ? (
+                vehicles.map((vehicle) => {
+                  const driver = drivers.find(d => d.id === vehicle.driverId);
+                  return (
+                    <TableRow key={vehicle.id}>
+                      <TableCell className="font-medium">{vehicle.id}</TableCell>
+                      <TableCell>{vehicle.model}</TableCell>
+                      <TableCell>{vehicle.licensePlate}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={vehicle.status} />
+                      </TableCell>
+                      <TableCell>{driver?.name || 'N/A'}</TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          disabled={vehicle.status !== 'Available'}
+                          onClick={() => handleAssignClick(vehicle)}
+                        >
+                          Assign Driver
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center h-24">
+                    Тээврийн хэрэгсэл бүртгэлгүй байна.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
       <AssignDriverDialog 
         vehicle={selectedVehicle} 
+        drivers={drivers}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onAssign={handleAssignDriver}

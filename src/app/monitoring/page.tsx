@@ -1,13 +1,17 @@
+
+'use client';
+
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { MapPin, Clock, Flag } from 'lucide-react';
-import { drivers, vehicles } from '@/lib/data';
+import React from 'react';
+// Note: Real data fetching would be implemented here. For now, we show a placeholder state.
 
 export default function MonitoringPage() {
-  const monitoredVehicle = vehicles.find(v => v.status === 'In Use');
-  const monitoredDriver = drivers.find(d => d.id === monitoredVehicle?.driverId);
+  const [monitoredVehicle, setMonitoredVehicle] = React.useState(null);
+  const [monitoredDriver, setMonitoredDriver] = React.useState(null);
 
   return (
     <div className="container mx-auto py-6 h-full flex flex-col">
@@ -39,11 +43,15 @@ export default function MonitoringPage() {
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
                   <Avatar className="h-16 w-16 border">
+                    {/* @ts-ignore */}
                     <AvatarImage src={monitoredDriver.avatarUrl} data-ai-hint="person portrait" />
+                    {/* @ts-ignore */}
                     <AvatarFallback>{monitoredDriver.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div>
+                    {/* @ts-ignore */}
                     <p className="font-bold text-lg">{monitoredDriver.name}</p>
+                    {/* @ts-ignore */}
                     <p className="text-sm text-muted-foreground">{monitoredVehicle.model} ({monitoredVehicle.licensePlate})</p>
                   </div>
                 </div>
@@ -74,7 +82,7 @@ export default function MonitoringPage() {
               </div>
             ) : (
                 <div className="text-center text-muted-foreground py-8">
-                    <p>No active drivers being monitored.</p>
+                    <p>Хяналтад байгаа идэвхтэй жолооч алга.</p>
                 </div>
             )}
           </CardContent>
