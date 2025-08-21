@@ -18,8 +18,7 @@ export type DriverStatus = 'Active' | 'Inactive' | 'On Leave';
 
 export type Driver = {
   id: string;
-  firstName: string;
-  lastName: string;
+  name: string;
   phone: string;
   status: DriverStatus;
   createdAt: Date;

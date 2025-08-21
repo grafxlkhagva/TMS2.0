@@ -91,7 +91,7 @@ export default function DriversPage() {
     try {
       await deleteDoc(doc(db, 'drivers', driverToDelete.id));
       setDrivers(prev => prev.filter(c => c.id !== driverToDelete.id));
-      toast({ title: 'Амжилттай', description: `${driverToDelete.firstName} жолоочийг устгалаа.`});
+      toast({ title: 'Амжилттай', description: `${driverToDelete.name} жолоочийг устгалаа.`});
     } catch (error) {
       console.error("Error deleting driver:", error);
       toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч устгахад алдаа гарлаа.'});
@@ -102,7 +102,7 @@ export default function DriversPage() {
   };
 
   const filteredDrivers = drivers.filter(driver =>
-    `${driver.firstName} ${driver.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    driver.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     driver.phone.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -147,7 +147,7 @@ export default function DriversPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Зураг</TableHead>
-                <TableHead>Овог, нэр</TableHead>
+                <TableHead>Нэр</TableHead>
                 <TableHead>Утас</TableHead>
                 <TableHead>Статус</TableHead>
                 <TableHead>Бүртгүүлсэн</TableHead>
@@ -171,13 +171,13 @@ export default function DriversPage() {
                     <TableRow key={driver.id}>
                        <TableCell>
                         <Avatar>
-                          <AvatarImage src={driver.avatarUrl} alt={`${driver.firstName} ${driver.lastName}`} />
-                          <AvatarFallback>{driver.firstName?.charAt(0)}{driver.lastName?.charAt(0)}</AvatarFallback>
+                          <AvatarImage src={driver.avatarUrl} alt={driver.name} />
+                          <AvatarFallback>{driver.name?.charAt(0)}</AvatarFallback>
                         </Avatar>
                       </TableCell>
                       <TableCell className="font-medium">
                         <Link href={`/drivers/${driver.id}`} className="hover:underline">
-                          {driver.lastName} {driver.firstName}
+                          {driver.name}
                         </Link>
                       </TableCell>
                       <TableCell>{driver.phone}</TableCell>
@@ -231,7 +231,7 @@ export default function DriversPage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        "{driverToDelete?.firstName}" нэртэй жолоочийг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
+                        "{driverToDelete?.name}" нэртэй жолоочийг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

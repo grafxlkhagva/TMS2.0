@@ -116,13 +116,13 @@ export default function DriverDetailPage() {
         <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
                 <Avatar className="h-24 w-24 border">
-                    <AvatarImage src={driver.avatarUrl} alt={`${driver.firstName} ${driver.lastName}`} />
+                    <AvatarImage src={driver.avatarUrl} alt={driver.name} />
                     <AvatarFallback className="text-3xl">
-                        {driver.firstName?.charAt(0)}{driver.lastName?.charAt(0)}
+                        {driver.name?.charAt(0)}
                     </AvatarFallback>
                 </Avatar>
                 <div>
-                    <h1 className="text-3xl font-headline font-bold">{driver.lastName} {driver.firstName}</h1>
+                    <h1 className="text-3xl font-headline font-bold">{driver.name}</h1>
                     <p className="text-muted-foreground">
                         Жолоочийн дэлгэрэнгүй мэдээлэл.
                     </p>

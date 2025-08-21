@@ -32,8 +32,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 const driverStatuses: DriverStatus[] = ['Active', 'Inactive', 'On Leave'];
 
 const formSchema = z.object({
-  lastName: z.string().min(2, { message: 'Овог дор хаяж 2 үсэгтэй байх ёстой.' }),
-  firstName: z.string().min(2, { message: 'Нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
+  name: z.string().min(2, { message: 'Нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
   phone: z.string().min(8, { message: 'Утасны дугаар буруу байна.' }),
   status: z.custom<DriverStatus>(val => driverStatuses.includes(val as DriverStatus)),
 });
@@ -103,7 +102,7 @@ export default function EditDriverPage() {
       
       toast({
         title: 'Амжилттай шинэчиллээ',
-        description: `${values.firstName} жолоочийн мэдээллийг шинэчиллээ.`,
+        description: `${values.name} жолоочийн мэдээллийг шинэчиллээ.`,
       });
       
       router.push(`/drivers`);
@@ -127,10 +126,7 @@ export default function EditDriverPage() {
             <Card>
                 <CardContent className="pt-6 space-y-8">
                     <div className="space-y-2"><Skeleton className="h-24 w-24 rounded-full" /></div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
-                        <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
-                    </div>
+                    <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
                         <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
@@ -162,8 +158,7 @@ export default function EditDriverPage() {
                         <Avatar className="h-24 w-24 border">
                             <AvatarImage src={avatarPreview ?? undefined} />
                             <AvatarFallback className="text-3xl">
-                                {form.getValues('firstName')?.charAt(0)}
-                                {form.getValues('lastName')?.charAt(0)}
+                                {form.getValues('name')?.charAt(0)}
                             </AvatarFallback>
                         </Avatar>
                         <Input 
@@ -186,25 +181,12 @@ export default function EditDriverPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
                         <FormField
                         control={form.control}
-                        name="lastName"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Овог</FormLabel>
-                            <FormControl>
-                                <Input placeholder="Боржигон" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                        <FormField
-                        control={form.control}
-                        name="firstName"
+                        name="name"
                         render={({ field }) => (
                             <FormItem>
                             <FormLabel>Нэр</FormLabel>
                             <FormControl>
-                                <Input placeholder="Хулан" {...field} />
+                                <Input placeholder="Бат Болд" {...field} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>

@@ -32,8 +32,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 const driverStatuses: DriverStatus[] = ['Active', 'Inactive', 'On Leave'];
 
 const formSchema = z.object({
-  lastName: z.string().min(2, { message: 'Овог дор хаяж 2 үсэгтэй байх ёстой.' }),
-  firstName: z.string().min(2, { message: 'Нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
+  name: z.string().min(2, { message: 'Нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
   phone: z.string().min(8, { message: 'Утасны дугаар буруу байна.' }),
   status: z.custom<DriverStatus>(val => driverStatuses.includes(val as DriverStatus)),
 });
@@ -51,8 +50,7 @@ export default function NewDriverPage() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      lastName: '',
-      firstName: '',
+      name: '',
       phone: '',
       status: 'Active',
     },
@@ -84,7 +82,7 @@ export default function NewDriverPage() {
       
       toast({
         title: 'Амжилттай бүртгэлээ',
-        description: `${values.firstName} нэртэй жолоочийг системд бүртгэлээ.`,
+        description: `${values.name} нэртэй жолоочийг системд бүртгэлээ.`,
       });
       
       router.push('/drivers');
@@ -124,8 +122,7 @@ export default function NewDriverPage() {
                         <Avatar className="h-24 w-24 border">
                             <AvatarImage src={avatarPreview ?? undefined} />
                             <AvatarFallback className="text-3xl">
-                                {form.getValues('firstName')?.charAt(0)}
-                                {form.getValues('lastName')?.charAt(0)}
+                                {form.getValues('name')?.charAt(0)}
                             </AvatarFallback>
                         </Avatar>
                         <Input 
@@ -148,25 +145,12 @@ export default function NewDriverPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
                         <FormField
                         control={form.control}
-                        name="lastName"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Овог</FormLabel>
-                            <FormControl>
-                                <Input placeholder="Боржигон" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                        <FormField
-                        control={form.control}
-                        name="firstName"
+                        name="name"
                         render={({ field }) => (
                             <FormItem>
                             <FormLabel>Нэр</FormLabel>
                             <FormControl>
-                                <Input placeholder="Хулан" {...field} />
+                                <Input placeholder="Бат Болд" {...field} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
