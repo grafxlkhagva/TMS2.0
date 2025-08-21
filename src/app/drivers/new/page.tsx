@@ -74,7 +74,7 @@ export default function NewDriverPage() {
         avatarUrl = await getDownloadURL(snapshot.ref);
       }
 
-      await addDoc(collection(db, 'drivers'), {
+      await addDoc(collection(db, 'Drivers'), {
         ...values,
         avatarUrl,
         createdAt: serverTimestamp(),

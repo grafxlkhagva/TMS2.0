@@ -49,7 +49,7 @@ export default function DriverDetailPage() {
     setIsLoading(true);
     const fetchDriver = async () => {
       try {
-        const docRef = doc(db, 'drivers', id);
+        const docRef = doc(db, 'Drivers', id);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {

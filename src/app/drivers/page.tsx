@@ -58,7 +58,7 @@ export default function DriversPage() {
   const fetchDrivers = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const q = query(collection(db, "drivers"), orderBy("createdAt", "desc"));
+      const q = query(collection(db, "Drivers"), orderBy("createdAt", "desc"));
       const querySnapshot = await getDocs(q);
       const data = querySnapshot.docs.map(doc => {
         const docData = doc.data();
@@ -89,7 +89,7 @@ export default function DriversPage() {
     if (!driverToDelete) return;
     setIsDeleting(true);
     try {
-      await deleteDoc(doc(db, 'drivers', driverToDelete.id));
+      await deleteDoc(doc(db, 'Drivers', driverToDelete.id));
       setDrivers(prev => prev.filter(c => c.id !== driverToDelete.id));
       toast({ title: 'Амжилттай', description: `${driverToDelete.name} жолоочийг устгалаа.`});
     } catch (error) {

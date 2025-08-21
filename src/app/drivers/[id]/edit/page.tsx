@@ -57,7 +57,7 @@ export default function EditDriverPage() {
     if (!id) return;
     const fetchDriver = async () => {
         try {
-            const docRef = doc(db, 'drivers', id);
+            const docRef = doc(db, 'Drivers', id);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 const data = docSnap.data() as Driver;
@@ -89,7 +89,7 @@ export default function EditDriverPage() {
     if (!id) return;
     setIsSubmitting(true);
     try {
-      const driverRef = doc(db, 'drivers', id);
+      const driverRef = doc(db, 'Drivers', id);
       let dataToUpdate: any = { ...values };
 
       if (avatarFile) {
