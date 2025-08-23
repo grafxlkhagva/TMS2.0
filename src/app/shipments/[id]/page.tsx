@@ -5,10 +5,11 @@ import * as React from 'react';
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, OrderItem } from '@/types';
+import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, OrderItem, Warehouse } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
+import { useLoadScript, GoogleMap, Marker } from '@react-google-maps/api';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -76,6 +77,13 @@ function StatusTimeline({ currentStatus }: { currentStatus: ShipmentStatusType }
     )
 }
 
+const libraries: ('places')[] = ['places'];
+const mapContainerStyle = {
+  height: '400px',
+  width: '100%',
+  borderRadius: 'var(--radius)',
+};
+
 export default function ShipmentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -84,8 +92,30 @@ export default function ShipmentDetailPage() {
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
   const [cargo, setCargo] = React.useState<OrderItemCargo[]>([]);
   const [packagingTypes, setPackagingTypes] = React.useState<PackagingType[]>([]);
+  const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
+  const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
+  
+  const { isLoaded: isMapLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+    libraries,
+  });
+
+  const mapRef = React.useRef<google.maps.Map | null>(null);
+
+  const onMapLoad = React.useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+  }, []);
+
+  React.useEffect(() => {
+    if (mapRef.current && startWarehouse?.geolocation && endWarehouse?.geolocation) {
+      const bounds = new window.google.maps.LatLngBounds();
+      bounds.extend(startWarehouse.geolocation);
+      bounds.extend(endWarehouse.geolocation);
+      mapRef.current.fitBounds(bounds);
+    }
+  }, [startWarehouse, endWarehouse, isMapLoaded]);
 
   React.useEffect(() => {
     if (!id) return;
@@ -114,6 +144,15 @@ export default function ShipmentDetailPage() {
 
           const packagingData = packagingSnapshot.docs.map(d => ({id: d.id, ...d.data()} as PackagingType));
           setPackagingTypes(packagingData);
+          
+          if (shipmentData.routeRefs) {
+              const [startWarehouseDoc, endWarehouseDoc] = await Promise.all([
+                  getDoc(shipmentData.routeRefs.startWarehouseRef),
+                  getDoc(shipmentData.routeRefs.endWarehouseRef)
+              ]);
+              if(startWarehouseDoc.exists()) setStartWarehouse(startWarehouseDoc.data() as Warehouse);
+              if(endWarehouseDoc.exists()) setEndWarehouse(endWarehouseDoc.data() as Warehouse);
+          }
 
         } else {
           toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрлэлт олдсонгүй.' });
@@ -246,6 +285,31 @@ export default function ShipmentDetailPage() {
               </CardHeader>
               <CardContent>
                 <StatusTimeline currentStatus={shipment.status} />
+              </CardContent>
+            </Card>
+
+             <Card>
+              <CardHeader>
+                <CardTitle>Маршрутын зураглал</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[400px] w-full rounded-lg overflow-hidden border">
+                  {loadError && <div>Газрын зураг ачаалахад алдаа гарлаа.</div>}
+                  {!isMapLoaded ? (
+                      <Skeleton className="h-full w-full" />
+                  ) : (
+                      <GoogleMap
+                          mapContainerStyle={mapContainerStyle}
+                          center={startWarehouse?.geolocation || { lat: 47.91976, lng: 106.91763 }}
+                          zoom={10}
+                          onLoad={onMapLoad}
+                          options={{ streetViewControl: false, mapTypeControl: false }}
+                      >
+                          {startWarehouse?.geolocation && <Marker position={startWarehouse.geolocation} label="A" />}
+                          {endWarehouse?.geolocation && <Marker position={endWarehouse.geolocation} label="B" />}
+                      </GoogleMap>
+                  )}
+                </div>
               </CardContent>
             </Card>
             
