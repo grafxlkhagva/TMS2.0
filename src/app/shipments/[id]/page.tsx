@@ -100,13 +100,12 @@ export default function ShipmentDetailPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
 
-  const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY !== 'your-google-maps-api-key-here';
+  const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   const { isLoaded: isMapLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries,
     preventGoogleFontsLoading: true,
-    // Only attempt to load the script if an API key is provided.
     preventLoading: !hasApiKey,
   });
 
@@ -309,8 +308,8 @@ export default function ShipmentDetailPage() {
               <CardContent>
                 <div className="h-[400px] w-full rounded-lg overflow-hidden border">
                    {!hasApiKey ? (
-                     <div className="h-full w-full flex items-center justify-center bg-muted text-muted-foreground">
-                        Google Maps API түлхүүр олдсонгүй.
+                     <div className="h-full w-full flex items-center justify-center bg-muted text-muted-foreground p-4 text-center">
+                        Google Maps API түлхүүр тохируулагдаагүй байна. Газрын зургийг харуулах боломжгүй.
                      </div>
                    ) : loadError ? (
                      <div className="h-full w-full flex items-center justify-center bg-destructive/10 text-destructive-foreground">
