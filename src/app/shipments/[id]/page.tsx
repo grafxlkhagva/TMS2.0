@@ -9,7 +9,6 @@ import type { Shipment, OrderItemCargo, ShipmentStatusType, Warehouse } from '@/
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
-import { useLoadScript, GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -77,8 +76,6 @@ function StatusTimeline({ currentStatus }: { currentStatus: ShipmentStatusType }
     )
 }
 
-const defaultCenter = { lat: 47.91976, lng: 106.91763 };
-
 export default function ShipmentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -86,18 +83,8 @@ export default function ShipmentDetailPage() {
 
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
   const [cargo, setCargo] = React.useState<OrderItemCargo[]>([]);
-  const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
-  const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
-  const [activeMarker, setActiveMarker] = React.useState<'start' | 'end' | null>(null);
-  const [mapCenter, setMapCenter] = React.useState(defaultCenter);
-
-
-  const { isLoaded: isMapLoaded } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-    libraries: ['places'],
-  });
 
   React.useEffect(() => {
     if (!id) return;
@@ -120,21 +107,6 @@ export default function ShipmentDetailPage() {
           const cargoSnapshot = await getDocs(cargoQuery);
           const cargoData = cargoSnapshot.docs.map(d => d.data() as OrderItemCargo);
           setCargo(cargoData);
-
-           if (shipmentData.routeRefs) {
-            const [startWhSnap, endWhSnap] = await Promise.all([
-              getDoc(shipmentData.routeRefs.startWarehouseRef),
-              getDoc(shipmentData.routeRefs.endWarehouseRef),
-            ]);
-            if(startWhSnap.exists()) {
-                const wh = { id: startWhSnap.id, ...startWhSnap.data() } as Warehouse;
-                setStartWarehouse(wh);
-                if (wh.geolocation) {
-                    setMapCenter(wh.geolocation);
-                }
-            }
-            if(endWhSnap.exists()) setEndWarehouse({ id: endWhSnap.id, ...endWhSnap.data() } as Warehouse);
-          }
 
         } else {
           toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрлэлт олдсонгүй.' });
@@ -263,63 +235,6 @@ export default function ShipmentDetailPage() {
               </CardHeader>
               <CardContent>
                 <StatusTimeline currentStatus={shipment.status} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Маршрутын зураглал</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                 <div className="h-[400px] w-full rounded-lg overflow-hidden border">
-                   {isMapLoaded ? (
-                        <GoogleMap
-                            mapContainerClassName="w-full h-full"
-                            center={mapCenter}
-                            zoom={5}
-                            options={{
-                                streetViewControl: false,
-                                mapTypeControl: false,
-                            }}
-                        >
-                           {startWarehouse?.geolocation && (
-                                <Marker 
-                                    position={startWarehouse.geolocation} 
-                                    label="A"
-                                    onClick={() => setActiveMarker('start')}
-                                >
-                                {activeMarker === 'start' && (
-                                    <InfoWindow onCloseClick={() => setActiveMarker(null)}>
-                                        <div>
-                                            <p className="font-bold">{startWarehouse.name}</p>
-                                            <p>{startWarehouse.location}</p>
-                                        </div>
-                                    </InfoWindow>
-                                )}
-                                </Marker>
-                            )}
-
-                            {endWarehouse?.geolocation && (
-                                <Marker 
-                                    position={endWarehouse.geolocation} 
-                                    label="B"
-                                    onClick={() => setActiveMarker('end')}
-                                >
-                                {activeMarker === 'end' && (
-                                    <InfoWindow onCloseClick={() => setActiveMarker(null)}>
-                                        <div>
-                                            <p className="font-bold">{endWarehouse.name}</p>
-                                            <p>{endWarehouse.location}</p>
-                                        </div>
-                                    </InfoWindow>
-                                )}
-                                </Marker>
-                            )}
-                        </GoogleMap>
-                    ) : (
-                        <Skeleton className="h-full w-full" />
-                    )}
-                 </div>
               </CardContent>
             </Card>
             
