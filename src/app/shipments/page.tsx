@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Shipment } from '@/types';
+import type { Shipment, ShipmentStatusType } from '@/types';
 import {
   Table,
   TableBody,
@@ -21,6 +21,31 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+
+const statusTranslations: Record<ShipmentStatusType, string> = {
+    Preparing: 'Бэлтгэгдэж буй',
+    'In Transit': 'Тээвэрлэгдэж буй',
+    Delivered: 'Хүргэгдсэн',
+    Delayed: 'Саатсан',
+    Cancelled: 'Цуцлагдсан'
+};
+
+const getStatusBadgeVariant = (status: ShipmentStatusType) => {
+    switch(status) {
+      case 'Delivered':
+        return 'success';
+      case 'In Transit':
+        return 'default';
+      case 'Delayed':
+        return 'warning';
+      case 'Cancelled':
+        return 'destructive';
+      case 'Preparing':
+      default:
+        return 'secondary';
+    }
+};
+
 
 export default function ShipmentsPage() {
     const [shipments, setShipments] = React.useState<Shipment[]>([]);
@@ -124,7 +149,11 @@ export default function ShipmentsPage() {
                         </TableCell>
                         <TableCell className="font-medium">{shipment.customerName}</TableCell>
                         <TableCell>{shipment.route.startRegion} &rarr; {shipment.route.endRegion}</TableCell>
-                        <TableCell><Badge>{shipment.status}</Badge></TableCell>
+                        <TableCell>
+                            <Badge variant={getStatusBadgeVariant(shipment.status)}>
+                                {statusTranslations[shipment.status] || shipment.status}
+                            </Badge>
+                        </TableCell>
                         <TableCell>{shipment.createdAt.toLocaleDateString()}</TableCell>
                         </TableRow>
                     ))

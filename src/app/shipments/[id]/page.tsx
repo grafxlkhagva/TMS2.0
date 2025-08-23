@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -100,7 +99,7 @@ export default function ShipmentDetailPage() {
         
         // Also update order item status if needed
         const orderItemRef = doc(db, 'order_items', shipment.orderItemId);
-        let orderItemStatus = '';
+        let orderItemStatus: OrderItem['status'] | '' = '';
         if (newStatus === 'In Transit') orderItemStatus = 'In Transit';
         if (newStatus === 'Delivered') orderItemStatus = 'Delivered';
         if (newStatus === 'Cancelled') orderItemStatus = 'Cancelled';
