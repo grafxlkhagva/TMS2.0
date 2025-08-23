@@ -1,5 +1,4 @@
 
-
 import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Delayed';

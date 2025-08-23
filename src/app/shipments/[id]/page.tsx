@@ -5,7 +5,7 @@ import * as React from 'react';
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType } from '@/types';
+import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, OrderItem } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"

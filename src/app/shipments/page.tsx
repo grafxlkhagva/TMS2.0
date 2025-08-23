@@ -24,7 +24,9 @@ import { Input } from '@/components/ui/input';
 
 const statusTranslations: Record<ShipmentStatusType, string> = {
     Preparing: 'Бэлтгэгдэж буй',
+    Loading: 'Ачиж буй',
     'In Transit': 'Тээвэрлэгдэж буй',
+    Unloading: 'Буулгаж буй',
     Delivered: 'Хүргэгдсэн',
     Delayed: 'Саатсан',
     Cancelled: 'Цуцлагдсан'
@@ -35,6 +37,8 @@ const getStatusBadgeVariant = (status: ShipmentStatusType) => {
       case 'Delivered':
         return 'success';
       case 'In Transit':
+      case 'Loading':
+      case 'Unloading':
         return 'default';
       case 'Delayed':
         return 'warning';
