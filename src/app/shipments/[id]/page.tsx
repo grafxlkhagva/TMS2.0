@@ -100,7 +100,6 @@ export default function ShipmentDetailPage() {
   const [packagingTypes, setPackagingTypes] = React.useState<PackagingType[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
-  const [mapCenter, setMapCenter] = React.useState(defaultCenter);
 
   const { isLoaded: isMapLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
@@ -141,9 +140,6 @@ export default function ShipmentDetailPage() {
               if (startWarehouseSnap.exists()) {
                   const warehouseData = startWarehouseSnap.data() as Warehouse;
                   setStartWarehouse(warehouseData);
-                  if (warehouseData.geolocation) {
-                    setMapCenter(warehouseData.geolocation);
-                  }
               }
           }
           if (shipmentData.routeRefs?.endWarehouseRef) {
@@ -217,6 +213,8 @@ export default function ShipmentDetailPage() {
   const getPackagingTypeName = (id: string) => {
     return packagingTypes.find(p => p.id === id)?.name || id;
   }
+
+  const mapCenter = startWarehouse?.geolocation || defaultCenter;
 
   if (isLoading) {
     return (
@@ -364,5 +362,3 @@ export default function ShipmentDetailPage() {
     </div>
   );
 }
-
-    
