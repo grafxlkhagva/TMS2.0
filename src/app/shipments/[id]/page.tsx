@@ -83,12 +83,6 @@ const mapContainerStyle = {
   height: '400px',
   width: '100%',
   borderRadius: 'var(--radius)',
-  position: 'relative' as const,
-};
-
-const defaultCenter = {
-  lat: 47.91976,
-  lng: 106.91763,
 };
 
 export default function ShipmentDetailPage() {
@@ -101,15 +95,19 @@ export default function ShipmentDetailPage() {
   const [packagingTypes, setPackagingTypes] = React.useState<PackagingType[]>([]);
   const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
   const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
-  
   const [directions, setDirections] = React.useState<google.maps.DirectionsResult | null>(null);
-
+  
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
-  
+
+  const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY !== 'your-google-maps-api-key-here';
+
   const { isLoaded: isMapLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries,
+    preventGoogleFontsLoading: true,
+    // Only attempt to load the script if an API key is provided.
+    preventLoading: !hasApiKey,
   });
 
   React.useEffect(() => {
@@ -167,7 +165,6 @@ export default function ShipmentDetailPage() {
   React.useEffect(() => {
     if (isMapLoaded && startWarehouse && endWarehouse && !directions) {
       const directionsService = new window.google.maps.DirectionsService();
-
       directionsService.route(
         {
           origin: startWarehouse.geolocation,
@@ -304,19 +301,27 @@ export default function ShipmentDetailPage() {
                 <StatusTimeline currentStatus={shipment.status} />
               </CardContent>
             </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Маршрутын зураглал</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-[400px] w-full rounded-lg overflow-hidden border">
-                  {loadError && <div>Газрын зураг ачаалахад алдаа гарлаа.</div>}
-                  {!isMapLoaded ? (
+                   {!hasApiKey ? (
+                     <div className="h-full w-full flex items-center justify-center bg-muted text-muted-foreground">
+                        Google Maps API түлхүүр олдсонгүй.
+                     </div>
+                   ) : loadError ? (
+                     <div className="h-full w-full flex items-center justify-center bg-destructive/10 text-destructive-foreground">
+                        Газрын зураг ачаалахад алдаа гарлаа.
+                     </div>
+                   ) : !isMapLoaded ? (
                       <Skeleton className="h-full w-full" />
-                  ) : (
+                   ) : (
                       <GoogleMap
                           mapContainerStyle={mapContainerStyle}
-                          center={defaultCenter}
+                          center={{ lat: 47.91976, lng: 106.91763 }} // Default center
                           zoom={5}
                           options={{ streetViewControl: false, mapTypeControl: false }}
                       >
