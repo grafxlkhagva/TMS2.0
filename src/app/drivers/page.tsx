@@ -40,12 +40,19 @@ import {
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Timestamp } from 'firebase/firestore';
 
 function StatusBadge({ status }: { status: DriverStatus }) {
     const variant = status === 'Active' ? 'success' : status === 'On Leave' ? 'warning' : 'secondary';
     const text = status === 'Active' ? 'Идэвхтэй' : status === 'On Leave' ? 'Чөлөөнд' : 'Идэвхгүй';
     return <Badge variant={variant}>{text}</Badge>;
 }
+
+const toDateSafe = (date: any): Date => {
+  if (date instanceof Timestamp) return date.toDate();
+  if (date instanceof Date) return date;
+  return new Date(date);
+};
 
 export default function DriversPage() {
   const [drivers, setDrivers] = React.useState<Driver[]>([]);
@@ -65,7 +72,7 @@ export default function DriversPage() {
         return {
           id: doc.id,
           ...docData,
-          createdAt: docData.createdAt.toDate(),
+          createdAt: toDateSafe(docData.createdAt),
         } as Driver;
       });
       setDrivers(data);

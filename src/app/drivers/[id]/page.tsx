@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Phone, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Timestamp } from 'firebase/firestore';
 
 function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value?: string | React.ReactNode }) {
   if (!value) return null;
@@ -35,6 +36,13 @@ function StatusBadge({ status }: { status: DriverStatus }) {
     const Icon = status === 'Active' ? CheckCircle : status === 'On Leave' ? Clock : XCircle;
     return <Badge variant={variant}><Icon className="mr-1 h-3 w-3" />{text}</Badge>;
 }
+
+const toDateSafe = (date: any): Date => {
+  if (date instanceof Timestamp) return date.toDate();
+  if (date instanceof Date) return date;
+  return new Date(date);
+};
+
 
 export default function DriverDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -57,7 +65,7 @@ export default function DriverDetailPage() {
           setDriver({
             id: docSnap.id,
             ...data,
-            createdAt: data.createdAt.toDate(),
+            createdAt: toDateSafe(data.createdAt),
           } as Driver);
         } else {
           toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч олдсонгүй.' });

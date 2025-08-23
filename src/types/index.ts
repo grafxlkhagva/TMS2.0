@@ -1,6 +1,6 @@
 
 
-import type { DocumentReference } from 'firebase/firestore';
+import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Delayed';
 
@@ -21,7 +21,7 @@ export type Driver = {
   name: string;
   phone: string;
   status: DriverStatus;
-  createdAt: Date;
+  createdAt: Date | string | Timestamp;
   avatarUrl?: string;
 };
 

@@ -90,7 +90,10 @@ export default function EditDriverPage() {
     setIsSubmitting(true);
     try {
       const driverRef = doc(db, 'Drivers', id);
-      let dataToUpdate: any = { ...values };
+      let dataToUpdate: any = { 
+        ...values,
+        updatedAt: serverTimestamp(),
+      };
 
       if (avatarFile) {
         const storageRef = ref(storage, `driver_avatars/${id}/${avatarFile.name}`);
