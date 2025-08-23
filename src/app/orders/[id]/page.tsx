@@ -520,6 +520,8 @@ export default function OrderDetailPage() {
         const orderRef = doc(db, 'orders', order.id);
         const orderItemRef = doc(db, 'order_items', itemToShip.id);
         const customerRef = doc(db, 'customers', order.customerId);
+        const startWarehouseRef = doc(db, 'warehouses', itemToShip.startWarehouseId);
+        const endWarehouseRef = doc(db, 'warehouses', itemToShip.endWarehouseId);
 
         batch.set(shipmentRef, {
             shipmentNumber,
@@ -541,6 +543,10 @@ export default function OrderDetailPage() {
                 endRegion: getRegionName(itemToShip.endRegionId),
                 startWarehouse: getWarehouseName(itemToShip.startWarehouseId),
                 endWarehouse: getWarehouseName(itemToShip.endWarehouseId),
+            },
+            routeRefs: {
+                startWarehouseRef: startWarehouseRef,
+                endWarehouseRef: endWarehouseRef,
             },
             vehicleInfo: {
                 vehicleType: getVehicleTypeName(itemToShip.vehicleTypeId),

@@ -1,4 +1,5 @@
 
+
 import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Delayed';
@@ -256,7 +257,7 @@ export type Shipment = {
     startWarehouse: string;
     endWarehouse: string;
   };
-  routeRefs: {
+  routeRefs?: {
     startWarehouseRef: DocumentReference;
     endWarehouseRef: DocumentReference;
   };
