@@ -9,7 +9,7 @@ import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, Order
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
-import { useLoadScript, GoogleMap, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
+import { useLoadScript, GoogleMap, DirectionsRenderer, Marker } from '@react-google-maps/api';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -103,7 +103,6 @@ export default function ShipmentDetailPage() {
   const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
   
   const [directions, setDirections] = React.useState<google.maps.DirectionsResult | null>(null);
-  const [directionsRequest, setDirectionsRequest] = React.useState<google.maps.DirectionsRequest | null>(null);
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
@@ -166,26 +165,25 @@ export default function ShipmentDetailPage() {
   }, [id, router, toast]);
 
   React.useEffect(() => {
-    if (startWarehouse?.geolocation && endWarehouse?.geolocation) {
-        setDirectionsRequest({
-            origin: startWarehouse.geolocation,
-            destination: endWarehouse.geolocation,
-            travelMode: 'DRIVING' as google.maps.TravelMode
-        });
+    if (isMapLoaded && startWarehouse?.geolocation && endWarehouse?.geolocation && !directions) {
+      const directionsService = new window.google.maps.DirectionsService();
+      directionsService.route(
+        {
+          origin: startWarehouse.geolocation,
+          destination: endWarehouse.geolocation,
+          travelMode: window.google.maps.TravelMode.DRIVING,
+        },
+        (result, status) => {
+          if (status === window.google.maps.DirectionsStatus.OK && result) {
+            setDirections(result);
+          } else {
+            console.error(`Directions request failed due to ${status}`);
+            toast({ variant: "destructive", title: "Алдаа", description: "Маршрут тооцоолоход алдаа гарлаа." });
+          }
+        }
+      );
     }
-  }, [startWarehouse, endWarehouse]);
-  
-  const directionsCallback = React.useCallback((
-    response: google.maps.DirectionsResult | null,
-    status: google.maps.DirectionsStatus
-  ) => {
-    if (status === 'OK' && response) {
-        setDirections(response);
-    } else {
-        console.error(`Directions request failed due to ${status}`);
-        toast({ variant: "destructive", title: "Алдаа", description: "Маршрут тооцоолоход алдаа гарлаа." });
-    }
-  }, [toast]);
+  }, [isMapLoaded, startWarehouse, endWarehouse, directions, toast]);
   
   const handleStatusChange = async (newStatus: ShipmentStatusType) => {
     if (!shipment) return;
@@ -322,13 +320,7 @@ export default function ShipmentDetailPage() {
                           zoom={5}
                           options={{ streetViewControl: false, mapTypeControl: false }}
                       >
-                           {directionsRequest && !directions && (
-                            <DirectionsService
-                                options={directionsRequest}
-                                callback={directionsCallback}
-                            />
-                          )}
-                          {directions && (
+                           {directions && (
                             <DirectionsRenderer
                                 options={{
                                     directions: directions,
