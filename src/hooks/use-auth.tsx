@@ -41,7 +41,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const handleSignOut = React.useCallback(async () => {
-    await auth.signOut();
+    if (auth) {
+        await auth.signOut();
+    }
     setUser(null);
     setFirebaseUser(null);
     if (pathname !== '/login' && pathname !== '/signup') {
@@ -66,6 +68,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setFirebaseUser(fbUser);
 
     try {
+      if (!db) {
+          throw new Error("Firestore is not initialized");
+      }
       const userDocRef = doc(db, 'users', fbUser.uid);
       const userDoc = await getDoc(userDocRef);
 
@@ -98,18 +103,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [handleSignOut, pathname, router]);
 
   React.useEffect(() => {
+    if (!auth) {
+      setLoading(false);
+      const isAuthPage = pathname === '/login' || pathname === '/signup';
+      if (!isAuthPage) {
+        router.push('/login');
+      }
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
       fetchUserData(fbUser);
     });
     return () => unsubscribe();
-  }, [fetchUserData]);
+  }, [fetchUserData, auth, pathname, router]);
 
   const refreshUserData = React.useCallback(async () => {
-    const currentUser = auth.currentUser;
-    if (currentUser) {
+    if (auth && auth.currentUser) {
        setLoading(true);
        try {
-        const userDocRef = doc(db, 'users', currentUser.uid);
+        if (!db) throw new Error("Firestore is not initialized");
+        const userDocRef = doc(db, 'users', auth.currentUser.uid);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
             const freshData = fromFirestore(userDoc.data());
