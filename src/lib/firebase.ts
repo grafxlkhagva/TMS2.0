@@ -15,11 +15,20 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
-const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+// Initialize Firebase only if the config is valid
+let app: FirebaseApp;
+if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+} else {
+    console.warn("Firebase config is incomplete. Firebase services will be unavailable.");
+    // Create a dummy app object to avoid crashing the app
+    app = {} as FirebaseApp;
+}
 
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+
+const auth = app.name ? getAuth(app) : {};
+const db = app.name ? getFirestore(app) : {};
+const storage = app.name ? getStorage(app) : {};
+
 
 export { app, auth, db, storage, doc, updateDoc, deleteDoc };
