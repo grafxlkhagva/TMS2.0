@@ -88,7 +88,6 @@ export default function ShipmentDetailPage() {
   const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
   const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
   const [directions, setDirections] = React.useState<google.maps.DirectionsResult | null>(null);
-  
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
   
@@ -96,6 +95,30 @@ export default function ShipmentDetailPage() {
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries: ['places'],
   });
+  
+  const mapRef = React.useRef<google.maps.Map | null>(null);
+
+  const onMapLoad = React.useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+    if (startWarehouse?.geolocation && endWarehouse?.geolocation) {
+      const directionsService = new google.maps.DirectionsService();
+      directionsService.route(
+        {
+          origin: startWarehouse.geolocation,
+          destination: endWarehouse.geolocation,
+          travelMode: google.maps.TravelMode.DRIVING,
+        },
+        (result, status) => {
+          if (status === google.maps.DirectionsStatus.OK && result) {
+            setDirections(result);
+          } else {
+            console.error(`Error fetching directions ${status}`, result);
+             toast({ variant: 'destructive', title: 'Зам зурахад алдаа гарлаа', description: 'Directions API-г шалгана уу.'});
+          }
+        }
+      );
+    }
+  }, [startWarehouse, endWarehouse, toast]);
 
   React.useEffect(() => {
     if (!id) return;
@@ -189,26 +212,6 @@ export default function ShipmentDetailPage() {
     }
   };
 
-  const calculateRoute = React.useCallback(() => {
-    if (startWarehouse?.geolocation && endWarehouse?.geolocation) {
-        const directionsService = new google.maps.DirectionsService();
-        directionsService.route(
-            {
-                origin: startWarehouse.geolocation,
-                destination: endWarehouse.geolocation,
-                travelMode: google.maps.TravelMode.DRIVING,
-            },
-            (result, status) => {
-                if (status === google.maps.DirectionsStatus.OK && result) {
-                    setDirections(result);
-                } else {
-                    console.error(`Error fetching directions ${status}`, result);
-                }
-            }
-        );
-    }
-  }, [startWarehouse, endWarehouse]);
-
   if (isLoading) {
     return (
       <div className="container mx-auto py-6">
@@ -295,7 +298,7 @@ export default function ShipmentDetailPage() {
                                 streetViewControl: false,
                                 mapTypeControl: false,
                             }}
-                            onLoad={calculateRoute}
+                            onLoad={onMapLoad}
                         >
                            {directions ? (
                                 <DirectionsRenderer options={{ directions, suppressMarkers: true }} />
