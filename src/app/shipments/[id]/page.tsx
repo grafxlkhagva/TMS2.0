@@ -78,10 +78,16 @@ function StatusTimeline({ currentStatus }: { currentStatus: ShipmentStatusType }
 }
 
 const libraries: ('places')[] = ['places'];
+
 const mapContainerStyle = {
   height: '400px',
   width: '100%',
   borderRadius: 'var(--radius)',
+};
+
+const defaultCenter = {
+  lat: 47.91976,
+  lng: 106.91763,
 };
 
 export default function ShipmentDetailPage() {
@@ -234,6 +240,7 @@ export default function ShipmentDetailPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2 space-y-6">
                 <Card><CardContent className="pt-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
+                <Card><CardContent className="pt-6"><Skeleton className="h-96 w-full" /></CardContent></Card>
                 <Card><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
             </div>
             <Card className="h-fit"><CardContent className="pt-6"><Skeleton className="h-48 w-full" /></CardContent></Card>
@@ -287,8 +294,7 @@ export default function ShipmentDetailPage() {
                 <StatusTimeline currentStatus={shipment.status} />
               </CardContent>
             </Card>
-
-             <Card>
+            <Card>
               <CardHeader>
                 <CardTitle>Маршрутын зураглал</CardTitle>
               </CardHeader>
@@ -300,8 +306,8 @@ export default function ShipmentDetailPage() {
                   ) : (
                       <GoogleMap
                           mapContainerStyle={mapContainerStyle}
-                          center={startWarehouse?.geolocation || { lat: 47.91976, lng: 106.91763 }}
-                          zoom={10}
+                          center={defaultCenter}
+                          zoom={5}
                           onLoad={onMapLoad}
                           options={{ streetViewControl: false, mapTypeControl: false }}
                       >
