@@ -1,5 +1,4 @@
 
-
 import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Delayed';
@@ -18,18 +17,11 @@ export type DriverStatus = 'Active' | 'Inactive' | 'On Leave';
 
 export type Driver = {
   id: string;
-  uid: string;
   display_name: string;
-  email: string;
   phone_number: string;
   status: DriverStatus;
   created_time: Date | string | Timestamp;
-  edited_time: Date | string | Timestamp;
   photo_url?: string;
-  profile_image?: string;
-  bio?: string;
-  user_name?: string;
-  lastname?: string;
 };
 
 export type UserRole = 'admin' | 'transport_manager' | 'finance_manager' | 'customer_officer' | 'manager';
@@ -240,7 +232,7 @@ export type DriverQuote = {
     channel: 'Phone' | 'App';
 };
 
-export type ShipmentStatusType = 'Preparing' | 'In Transit' | 'Delivered' | 'Delayed' | 'Cancelled';
+export type ShipmentStatusType = 'Preparing' | 'Loading' | 'In Transit' | 'Unloading' | 'Delivered' | 'Delayed' | 'Cancelled';
 
 export type Shipment = {
   id: string;
@@ -263,6 +255,10 @@ export type Shipment = {
     endRegion: string;
     startWarehouse: string;
     endWarehouse: string;
+  };
+  routeRefs: {
+    startWarehouseRef: DocumentReference;
+    endWarehouseRef: DocumentReference;
   };
   vehicleInfo: {
     vehicleType: string;

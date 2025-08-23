@@ -2,32 +2,35 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, DocumentData, DocumentReference } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Shipment, OrderItem, OrderItemCargo, ShipmentStatusType } from '@/types';
+import type { Shipment, OrderItem, OrderItemCargo, ShipmentStatusType, Warehouse } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
+import { useLoadScript, GoogleMap, Marker } from '@react-google-maps/api';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package } from 'lucide-react';
+import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
-const shipmentStatuses: ShipmentStatusType[] = ['Preparing', 'In Transit', 'Delivered', 'Delayed', 'Cancelled'];
+const shipmentStatuses: ShipmentStatusType[] = ['Preparing', 'Loading', 'In Transit', 'Unloading', 'Delivered', 'Delayed', 'Cancelled'];
 
 const statusTranslations: Record<ShipmentStatusType, string> = {
     Preparing: 'Бэлтгэгдэж буй',
+    Loading: 'Ачиж буй',
     'In Transit': 'Тээвэрлэгдэж буй',
+    Unloading: 'Буулгаж буй',
     Delivered: 'Хүргэгдсэн',
     Delayed: 'Саатсан',
     Cancelled: 'Цуцлагдсан'
 };
-
 
 function DetailItem({ icon: Icon, label, value, subValue }: { icon: React.ElementType, label: string, value?: string | React.ReactNode, subValue?: string }) {
   if (!value) return null;
@@ -43,6 +46,38 @@ function DetailItem({ icon: Icon, label, value, subValue }: { icon: React.Elemen
   );
 }
 
+function StatusTimeline({ currentStatus }: { currentStatus: ShipmentStatusType }) {
+    const statuses: ShipmentStatusType[] = ['Preparing', 'Loading', 'In Transit', 'Unloading', 'Delivered'];
+    const currentIndex = statuses.indexOf(currentStatus);
+
+    return (
+        <div className="flex justify-between items-center px-4 pt-2">
+            {statuses.map((status, index) => (
+                <React.Fragment key={status}>
+                    <div className="flex flex-col items-center">
+                        <div className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center border-2",
+                            index <= currentIndex ? "bg-primary border-primary text-primary-foreground" : "bg-muted border-border"
+                        )}>
+                           {index < currentIndex ? <Check className="h-5 w-5" /> : <span className="text-xs font-bold">{index + 1}</span>}
+                        </div>
+                        <p className={cn("text-xs mt-2 text-center", index <= currentIndex ? "font-semibold text-primary" : "text-muted-foreground")}>
+                           {statusTranslations[status]}
+                        </p>
+                    </div>
+                    {index < statuses.length - 1 && (
+                         <div className={cn(
+                             "flex-1 h-1 mx-2",
+                             index < currentIndex ? "bg-primary" : "bg-border"
+                         )}></div>
+                    )}
+                </React.Fragment>
+            ))}
+        </div>
+    )
+}
+
+
 export default function ShipmentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -50,8 +85,16 @@ export default function ShipmentDetailPage() {
 
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
   const [cargo, setCargo] = React.useState<OrderItemCargo[]>([]);
+  const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
+  const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
+
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
+  
+  const { isLoaded: isMapLoaded } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+    libraries: ['places'],
+  });
 
   React.useEffect(() => {
     if (!id) return;
@@ -75,6 +118,15 @@ export default function ShipmentDetailPage() {
           const cargoData = cargoSnapshot.docs.map(d => d.data() as OrderItemCargo);
           setCargo(cargoData);
 
+           if (shipmentData.routeRefs) {
+            const [startWhSnap, endWhSnap] = await Promise.all([
+              getDoc(shipmentData.routeRefs.startWarehouseRef),
+              getDoc(shipmentData.routeRefs.endWarehouseRef),
+            ]);
+            if(startWhSnap.exists()) setStartWarehouse(startWhSnap.data() as Warehouse);
+            if(endWhSnap.exists()) setEndWarehouse(endWhSnap.data() as Warehouse);
+          }
+
         } else {
           toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрлэлт олдсонгүй.' });
           router.push('/shipments');
@@ -97,14 +149,13 @@ export default function ShipmentDetailPage() {
         const shipmentRef = doc(db, 'shipments', shipment.id);
         await updateDoc(shipmentRef, { status: newStatus });
         
-        // Also update order item status if needed
-        const orderItemRef = doc(db, 'order_items', shipment.orderItemId);
         let orderItemStatus: OrderItem['status'] | '' = '';
         if (newStatus === 'In Transit') orderItemStatus = 'In Transit';
         if (newStatus === 'Delivered') orderItemStatus = 'Delivered';
         if (newStatus === 'Cancelled') orderItemStatus = 'Cancelled';
         
         if (orderItemStatus) {
+            const orderItemRef = doc(db, 'order_items', shipment.orderItemId);
             await updateDoc(orderItemRef, { status: orderItemStatus });
         }
         
@@ -124,6 +175,8 @@ export default function ShipmentDetailPage() {
       case 'Delivered':
         return 'success';
       case 'In Transit':
+      case 'Loading':
+      case 'Unloading':
         return 'default';
       case 'Delayed':
         return 'warning';
@@ -162,6 +215,8 @@ export default function ShipmentDetailPage() {
   if (!shipment) {
     return null;
   }
+  
+  const mapCenter = startWarehouse?.geolocation || { lat: 47.91976, lng: 106.91763 };
 
   return (
     <div className="container mx-auto py-6">
@@ -180,7 +235,7 @@ export default function ShipmentDetailPage() {
              <div className="flex items-center gap-2">
                  <Select onValueChange={(value) => handleStatusChange(value as ShipmentStatusType)} value={shipment.status} disabled={isUpdating}>
                     <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Статус солих..." />
+                        {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <SelectValue placeholder="Статус солих..." />}
                     </SelectTrigger>
                     <SelectContent>
                         {shipmentStatuses.map(status => (
@@ -198,18 +253,39 @@ export default function ShipmentDetailPage() {
         <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Ерөнхий мэдээлэл</CardTitle>
+                <CardTitle>Тээврийн явц</CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                <DetailItem icon={Truck} label="Тээврийн дугаар" value={shipment.shipmentNumber} />
-                <DetailItem icon={FileText} label="Захиалгын дугаар" value={<Link href={`/orders/${shipment.orderId}`} className="text-primary hover:underline">{shipment.orderNumber}</Link>} />
-                <DetailItem icon={User} label="Харилцагч" value={shipment.customerName} />
-                <DetailItem icon={Info} label="Статус" value={<Badge variant={getStatusBadgeVariant(shipment.status)}>{statusTranslations[shipment.status]}</Badge>} />
-                <DetailItem icon={Calendar} label="Үүсгэсэн огноо" value={format(shipment.createdAt, 'yyyy-MM-dd HH:mm')} />
-                <DetailItem icon={Calendar} label="Хүргэх огноо (төлөвлөсөн)" value={format(shipment.estimatedDeliveryDate, 'yyyy-MM-dd')} />
+              <CardContent>
+                <StatusTimeline currentStatus={shipment.status} />
               </CardContent>
             </Card>
 
+            <Card>
+              <CardHeader>
+                <CardTitle>Маршрутын зураглал</CardTitle>
+              </CardHeader>
+              <CardContent>
+                 <div className="h-[400px] w-full rounded-lg overflow-hidden border">
+                   {isMapLoaded ? (
+                        <GoogleMap
+                            mapContainerClassName="w-full h-full"
+                            center={mapCenter}
+                            zoom={5}
+                             options={{
+                                streetViewControl: false,
+                                mapTypeControl: false,
+                            }}
+                        >
+                            {startWarehouse?.geolocation && <Marker position={startWarehouse.geolocation} label="A" />}
+                            {endWarehouse?.geolocation && <Marker position={endWarehouse.geolocation} label="B" />}
+                        </GoogleMap>
+                    ) : (
+                        <Skeleton className="h-full w-full" />
+                    )}
+                 </div>
+              </CardContent>
+            </Card>
+            
             <Card>
                 <CardHeader>
                     <CardTitle>Ачааны мэдээлэл</CardTitle>
@@ -231,9 +307,15 @@ export default function ShipmentDetailPage() {
         <div className="space-y-6 lg:sticky top-6">
              <Card>
               <CardHeader>
-                <CardTitle>Чиглэл ба жолоочийн мэдээлэл</CardTitle>
+                <CardTitle>Дэлгэрэнгүй</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <DetailItem icon={FileText} label="Захиалгын дугаар" value={<Link href={`/orders/${shipment.orderId}`} className="text-primary hover:underline">{shipment.orderNumber}</Link>} />
+                <DetailItem icon={User} label="Харилцагч" value={shipment.customerName} />
+                <DetailItem icon={Info} label="Статус" value={<Badge variant={getStatusBadgeVariant(shipment.status)}>{statusTranslations[shipment.status]}</Badge>} />
+                <DetailItem icon={Calendar} label="Үүсгэсэн огноо" value={format(shipment.createdAt, 'yyyy-MM-dd HH:mm')} />
+                <DetailItem icon={Calendar} label="Хүргэх огноо (төлөвлөсөн)" value={format(shipment.estimatedDeliveryDate, 'yyyy-MM-dd')} />
+                <Separator />
                 <DetailItem icon={MapPin} label="Ачих цэг" value={shipment.route.startRegion} subValue={shipment.route.startWarehouse} />
                 <DetailItem icon={MapPin} label="Буулгах цэг" value={shipment.route.endRegion} subValue={shipment.route.endWarehouse}/>
                 <Separator />
