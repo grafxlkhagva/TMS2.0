@@ -95,11 +95,8 @@ export default function ShipmentDetailPage() {
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries: ['places'],
   });
-  
-  const mapRef = React.useRef<google.maps.Map | null>(null);
 
   const onMapLoad = React.useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
     if (startWarehouse?.geolocation && endWarehouse?.geolocation) {
       const directionsService = new google.maps.DirectionsService();
       directionsService.route(
@@ -112,13 +109,13 @@ export default function ShipmentDetailPage() {
           if (status === google.maps.DirectionsStatus.OK && result) {
             setDirections(result);
           } else {
-            console.error(`Error fetching directions ${status}`, result);
-             toast({ variant: 'destructive', title: 'Зам зурахад алдаа гарлаа', description: 'Directions API-г шалгана уу.'});
+            console.error(`Error fetching directions: ${status}`);
           }
         }
       );
     }
-  }, [startWarehouse, endWarehouse, toast]);
+  }, [startWarehouse, endWarehouse]);
+
 
   React.useEffect(() => {
     if (!id) return;
@@ -302,9 +299,12 @@ export default function ShipmentDetailPage() {
                         >
                            {directions ? (
                                 <DirectionsRenderer options={{ directions, suppressMarkers: true }} />
-                            ) : null}
-                           {startWarehouse?.geolocation && <Marker position={startWarehouse.geolocation} label="A" />}
-                           {endWarehouse?.geolocation && <Marker position={endWarehouse.geolocation} label="B" />}
+                            ) : (
+                                <>
+                                    {startWarehouse?.geolocation && <Marker position={startWarehouse.geolocation} label="A" />}
+                                    {endWarehouse?.geolocation && <Marker position={endWarehouse.geolocation} label="B" />}
+                                </>
+                           )}
                         </GoogleMap>
                     ) : (
                         <Skeleton className="h-full w-full" />
