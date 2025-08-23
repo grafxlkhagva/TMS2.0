@@ -9,6 +9,7 @@ import type { Shipment, OrderItemCargo, ShipmentStatusType, Warehouse } from '@/
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
+import { useLoadScript, GoogleMap, Marker } from '@react-google-maps/api';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -76,6 +77,17 @@ function StatusTimeline({ currentStatus }: { currentStatus: ShipmentStatusType }
     )
 }
 
+const libraries: ('places')[] = ['places'];
+const mapContainerStyle = {
+  height: '400px',
+  width: '100%',
+  borderRadius: 'var(--radius)',
+};
+const defaultCenter = {
+  lat: 47.91976,
+  lng: 106.91763,
+};
+
 export default function ShipmentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -83,8 +95,15 @@ export default function ShipmentDetailPage() {
 
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
   const [cargo, setCargo] = React.useState<OrderItemCargo[]>([]);
+  const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
+  const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
+
+  const { isLoaded: isMapLoaded } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+    libraries,
+  });
 
   React.useEffect(() => {
     if (!id) return;
@@ -107,6 +126,20 @@ export default function ShipmentDetailPage() {
           const cargoSnapshot = await getDocs(cargoQuery);
           const cargoData = cargoSnapshot.docs.map(d => d.data() as OrderItemCargo);
           setCargo(cargoData);
+
+          // Fetch warehouse data
+          if (shipmentData.routeRefs?.startWarehouseRef) {
+              const startWarehouseSnap = await getDoc(shipmentData.routeRefs.startWarehouseRef);
+              if (startWarehouseSnap.exists()) {
+                  setStartWarehouse(startWarehouseSnap.data() as Warehouse);
+              }
+          }
+          if (shipmentData.routeRefs?.endWarehouseRef) {
+              const endWarehouseSnap = await getDoc(shipmentData.routeRefs.endWarehouseRef);
+              if (endWarehouseSnap.exists()) {
+                  setEndWarehouse(endWarehouseSnap.data() as Warehouse);
+              }
+          }
 
         } else {
           toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрлэлт олдсонгүй.' });
@@ -168,6 +201,8 @@ export default function ShipmentDetailPage() {
         return 'secondary';
     }
   };
+  
+  const mapCenter = startWarehouse?.geolocation || defaultCenter;
 
   if (isLoading) {
     return (
@@ -235,6 +270,38 @@ export default function ShipmentDetailPage() {
               </CardHeader>
               <CardContent>
                 <StatusTimeline currentStatus={shipment.status} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                  <CardTitle>Маршрутын зураглал</CardTitle>
+              </CardHeader>
+              <CardContent>
+                  <div className="h-[400px] w-full rounded-lg overflow-hidden border">
+                      {!isMapLoaded ? (
+                          <Skeleton className="h-full w-full" />
+                      ) : (
+                          <GoogleMap
+                              mapContainerStyle={mapContainerStyle}
+                              zoom={10}
+                              center={mapCenter}
+                          >
+                              {startWarehouse?.geolocation && (
+                                  <Marker
+                                      position={startWarehouse.geolocation}
+                                      label="A"
+                                  />
+                              )}
+                              {endWarehouse?.geolocation && (
+                                  <Marker
+                                      position={endWarehouse.geolocation}
+                                      label="B"
+                                  />
+                              )}
+                          </GoogleMap>
+                      )}
+                  </div>
               </CardContent>
             </Card>
             
