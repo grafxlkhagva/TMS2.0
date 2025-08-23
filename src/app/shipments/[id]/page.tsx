@@ -82,11 +82,13 @@ const mapContainerStyle = {
   height: '400px',
   width: '100%',
   borderRadius: 'var(--radius)',
+  position: 'relative' as 'relative',
 };
 const smallMapContainerStyle = {
   height: '200px',
   width: '100%',
   borderRadius: 'var(--radius)',
+  position: 'relative' as 'relative',
 };
 const defaultCenter = {
   lat: 47.91976,
@@ -317,13 +319,13 @@ export default function ShipmentDetailPage() {
                 <div>
                     <CardTitle className="mb-4">Ачих агуулах</CardTitle>
                     <Card className="overflow-hidden">
-                        <div className="h-[200px] w-full">
-                            {isMapLoaded && startWarehouse?.geolocation ? (
-                                <GoogleMap mapContainerStyle={smallMapContainerStyle} zoom={15} center={startWarehouse.geolocation}>
-                                    <Marker position={startWarehouse.geolocation} />
-                                </GoogleMap>
-                            ) : <Skeleton className="h-full w-full rounded-b-none" />}
-                        </div>
+                       <div className="h-[200px] w-full">
+                           {isMapLoaded && startWarehouse?.geolocation ? (
+                               <GoogleMap mapContainerStyle={smallMapContainerStyle} zoom={15} center={startWarehouse.geolocation}>
+                                   <Marker position={startWarehouse.geolocation} />
+                               </GoogleMap>
+                           ) : <Skeleton className="h-full w-full rounded-b-none" />}
+                       </div>
                     </Card>
                 </div>
                  <div>
