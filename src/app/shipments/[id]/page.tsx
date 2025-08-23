@@ -314,34 +314,30 @@ export default function ShipmentDetailPage() {
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Ачих агуулах</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                         <div className="h-[200px] w-full rounded-lg overflow-hidden border">
+                <div>
+                    <CardTitle className="mb-4">Ачих агуулах</CardTitle>
+                    <Card className="overflow-hidden">
+                        <div className="h-[200px] w-full">
                             {isMapLoaded && startWarehouse?.geolocation ? (
                                 <GoogleMap mapContainerStyle={smallMapContainerStyle} zoom={15} center={startWarehouse.geolocation}>
                                     <Marker position={startWarehouse.geolocation} />
                                 </GoogleMap>
-                            ) : <Skeleton className="h-full w-full" />}
-                         </div>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Буулгах агуулах</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                         <div className="h-[200px] w-full rounded-lg overflow-hidden border">
+                            ) : <Skeleton className="h-full w-full rounded-b-none" />}
+                        </div>
+                    </Card>
+                </div>
+                 <div>
+                    <CardTitle className="mb-4">Буулгах агуулах</CardTitle>
+                    <Card className="overflow-hidden">
+                        <div className="h-[200px] w-full">
                             {isMapLoaded && endWarehouse?.geolocation ? (
                                 <GoogleMap mapContainerStyle={smallMapContainerStyle} zoom={15} center={endWarehouse.geolocation}>
                                     <Marker position={endWarehouse.geolocation} />
                                 </GoogleMap>
-                            ) : <Skeleton className="h-full w-full" />}
-                         </div>
-                    </CardContent>
-                </Card>
+                            ) : <Skeleton className="h-full w-full rounded-b-none" />}
+                        </div>
+                    </Card>
+                </div>
             </div>
             
             <Card>
