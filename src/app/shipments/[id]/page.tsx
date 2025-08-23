@@ -79,17 +79,12 @@ function StatusTimeline({ currentStatus }: { currentStatus: ShipmentStatusType }
 
 const libraries: ('places')[] = ['places'];
 const mapContainerStyle = {
-  height: '400px',
+  height: '100%',
   width: '100%',
   borderRadius: 'var(--radius)',
   position: 'relative' as 'relative',
 };
-const smallMapContainerStyle = {
-  height: '200px',
-  width: '100%',
-  borderRadius: 'var(--radius)',
-  position: 'relative' as 'relative',
-};
+
 const defaultCenter = {
   lat: 47.91976,
   lng: 106.91763,
@@ -321,7 +316,7 @@ export default function ShipmentDetailPage() {
                     <Card className="overflow-hidden">
                        <div className="h-[200px] w-full">
                            {isMapLoaded && startWarehouse?.geolocation ? (
-                               <GoogleMap mapContainerStyle={smallMapContainerStyle} zoom={15} center={startWarehouse.geolocation}>
+                               <GoogleMap mapContainerStyle={mapContainerStyle} zoom={15} center={startWarehouse.geolocation}>
                                    <Marker position={startWarehouse.geolocation} />
                                </GoogleMap>
                            ) : <Skeleton className="h-full w-full rounded-b-none" />}
@@ -333,7 +328,7 @@ export default function ShipmentDetailPage() {
                     <Card className="overflow-hidden">
                         <div className="h-[200px] w-full">
                             {isMapLoaded && endWarehouse?.geolocation ? (
-                                <GoogleMap mapContainerStyle={smallMapContainerStyle} zoom={15} center={endWarehouse.geolocation}>
+                                <GoogleMap mapContainerStyle={mapContainerStyle} zoom={15} center={endWarehouse.geolocation}>
                                     <Marker position={endWarehouse.geolocation} />
                                 </GoogleMap>
                             ) : <Skeleton className="h-full w-full rounded-b-none" />}
