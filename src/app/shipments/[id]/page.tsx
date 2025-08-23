@@ -77,6 +77,7 @@ function StatusTimeline({ currentStatus }: { currentStatus: ShipmentStatusType }
     )
 }
 
+const defaultCenter = { lat: 47.91976, lng: 106.91763 };
 
 export default function ShipmentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -90,6 +91,8 @@ export default function ShipmentDetailPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
   const [activeMarker, setActiveMarker] = React.useState<'start' | 'end' | null>(null);
+  const [mapCenter, setMapCenter] = React.useState(defaultCenter);
+
 
   const { isLoaded: isMapLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
@@ -123,7 +126,13 @@ export default function ShipmentDetailPage() {
               getDoc(shipmentData.routeRefs.startWarehouseRef),
               getDoc(shipmentData.routeRefs.endWarehouseRef),
             ]);
-            if(startWhSnap.exists()) setStartWarehouse({ id: startWhSnap.id, ...startWhSnap.data() } as Warehouse);
+            if(startWhSnap.exists()) {
+                const wh = { id: startWhSnap.id, ...startWhSnap.data() } as Warehouse;
+                setStartWarehouse(wh);
+                if (wh.geolocation) {
+                    setMapCenter(wh.geolocation);
+                }
+            }
             if(endWhSnap.exists()) setEndWarehouse({ id: endWhSnap.id, ...endWhSnap.data() } as Warehouse);
           }
 
@@ -215,8 +224,6 @@ export default function ShipmentDetailPage() {
     return null;
   }
   
-  const mapCenter = startWarehouse?.geolocation || { lat: 47.91976, lng: 106.91763 };
-
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
