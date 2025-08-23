@@ -51,6 +51,15 @@ export default function CustomersPage() {
 
   const fetchCustomers = React.useCallback(async () => {
     setIsLoading(true);
+    if (!db) {
+      toast({
+        variant: 'destructive',
+        title: 'Алдаа',
+        description: 'Firebase-тэй холбогдож чадсангүй. Тохиргоогоо шалгана уу.',
+      });
+      setIsLoading(false);
+      return;
+    }
     try {
       const q = query(collection(db, "customers"), orderBy("createdAt", "desc"));
       const querySnapshot = await getDocs(q);
@@ -80,7 +89,7 @@ export default function CustomersPage() {
   }, [fetchCustomers]);
 
   const handleDeleteCustomer = async () => {
-    if (!customerToDelete) return;
+    if (!customerToDelete || !db) return;
     setIsDeleting(true);
     try {
       const batch = writeBatch(db);

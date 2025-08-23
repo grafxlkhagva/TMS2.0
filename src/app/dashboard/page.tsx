@@ -66,6 +66,16 @@ export default function DashboardPage() {
 
     React.useEffect(() => {
         async function fetchDashboardData() {
+            setIsLoading(true);
+             if (!db) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Алдаа',
+                    description: 'Firebase-тэй холбогдож чадсангүй. Тохиргоогоо шалгана уу.',
+                });
+                setIsLoading(false);
+                return;
+            }
             try {
                 // Fetch all orders for stats and charts
                 const ordersQuery = query(collection(db, "orders"));

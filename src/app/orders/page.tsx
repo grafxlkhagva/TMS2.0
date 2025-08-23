@@ -50,6 +50,15 @@ export default function OrdersPage() {
 
     const fetchOrders = React.useCallback(async () => {
         setIsLoading(true);
+        if (!db) {
+            toast({
+                variant: 'destructive',
+                title: 'Алдаа',
+                description: 'Firebase-тэй холбогдож чадсангүй. Тохиргоогоо шалгана уу.',
+            });
+            setIsLoading(false);
+            return;
+        }
         try {
             const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
             const querySnapshot = await getDocs(q);
@@ -79,7 +88,7 @@ export default function OrdersPage() {
     }, [fetchOrders]);
     
     const handleDeleteOrder = async () => {
-        if (!orderToDelete) return;
+        if (!orderToDelete || !db) return;
         setIsDeleting(true);
         try {
             const batch = writeBatch(db);

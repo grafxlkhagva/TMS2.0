@@ -65,6 +65,15 @@ export default function UsersPage() {
 
   const fetchUsers = React.useCallback(async () => {
     setIsLoading(true);
+    if (!db) {
+      toast({
+        variant: 'destructive',
+        title: 'Алдаа',
+        description: 'Firebase-тэй холбогдож чадсангүй. Тохиргоогоо шалгана уу.',
+      });
+      setIsLoading(false);
+      return;
+    }
     try {
       const querySnapshot = await getDocs(collection(db, "users"));
       const usersData = querySnapshot.docs.map(doc => {
@@ -92,6 +101,7 @@ export default function UsersPage() {
   }, [fetchUsers]);
   
   const handleStatusChange = async (userId: string, status: UserStatus) => {
+    if (!db) return;
     if (userId === currentUser?.uid) {
       toast({
         variant: 'destructive',
@@ -120,6 +130,7 @@ export default function UsersPage() {
   };
 
   const handleRoleChange = async (userId: string, role: UserRole) => {
+    if (!db) return;
     if (userId === currentUser?.uid) {
       toast({
         variant: 'destructive',
@@ -148,6 +159,7 @@ export default function UsersPage() {
   };
 
   const handleResetPassword = async (email: string) => {
+    if (!auth) return;
     try {
       await sendPasswordResetEmail(auth, email);
       toast({

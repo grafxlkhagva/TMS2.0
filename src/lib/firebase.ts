@@ -1,9 +1,11 @@
 
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore, doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
+import { doc, updateDoc, deleteDoc, collection } from "firebase/firestore";
+
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -16,19 +18,23 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase only if the config is valid
-let app: FirebaseApp;
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let db: Firestore | null = null;
+let storage: FirebaseStorage | null = null;
+
 if (firebaseConfig.apiKey && firebaseConfig.projectId) {
-    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    try {
+        app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+        storage = getStorage(app);
+    } catch (e) {
+        console.error("Failed to initialize Firebase", e);
+    }
 } else {
     console.warn("Firebase config is incomplete. Firebase services will be unavailable.");
-    // Create a dummy app object to avoid crashing the app
-    app = {} as FirebaseApp;
 }
 
 
-const auth = app.name ? getAuth(app) : {};
-const db = app.name ? getFirestore(app) : {};
-const storage = app.name ? getStorage(app) : {};
-
-
-export { app, auth, db, storage, doc, updateDoc, deleteDoc };
+export { app, auth, db, storage, doc, updateDoc, deleteDoc, collection };

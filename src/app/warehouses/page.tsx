@@ -50,6 +50,15 @@ export default function WarehousesPage() {
 
   const fetchWarehouses = React.useCallback(async () => {
     setIsLoading(true);
+    if (!db) {
+        toast({
+            variant: 'destructive',
+            title: 'Алдаа',
+            description: 'Firebase-тэй холбогдож чадсангүй. Тохиргоогоо шалгана уу.',
+        });
+        setIsLoading(false);
+        return;
+    }
     try {
         const warehousesQuery = query(collection(db, "warehouses"), orderBy("createdAt", "desc"));
         const regionsQuery = query(collection(db, "regions"));
@@ -89,7 +98,7 @@ export default function WarehousesPage() {
   }, [fetchWarehouses]);
   
   const handleDelete = async () => {
-    if (!itemToDelete) return;
+    if (!itemToDelete || !db) return;
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'warehouses', itemToDelete.id));

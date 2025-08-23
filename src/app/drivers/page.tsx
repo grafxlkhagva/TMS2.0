@@ -71,6 +71,15 @@ export default function DriversPage() {
 
   const fetchDrivers = React.useCallback(async () => {
     setIsLoading(true);
+    if (!db) {
+      toast({
+        variant: 'destructive',
+        title: 'Алдаа',
+        description: 'Firebase-тэй холбогдож чадсангүй. Тохиргоогоо шалгана уу.',
+      });
+      setIsLoading(false);
+      return;
+    }
     try {
       const q = query(collection(db, "Drivers"), orderBy("created_time", "desc"));
       const querySnapshot = await getDocs(q);
@@ -100,7 +109,7 @@ export default function DriversPage() {
   }, [fetchDrivers]);
 
   const handleDeleteDriver = async () => {
-    if (!driverToDelete) return;
+    if (!driverToDelete || !db) return;
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'Drivers', driverToDelete.id));
