@@ -2,10 +2,10 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Shipment, OrderItemCargo, ShipmentStatusType, Warehouse } from '@/types';
+import type { Shipment, OrderItemCargo, ShipmentStatusType, Warehouse, PackagingType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
@@ -97,6 +97,7 @@ export default function ShipmentDetailPage() {
   const [cargo, setCargo] = React.useState<OrderItemCargo[]>([]);
   const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
   const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
+  const [packagingTypes, setPackagingTypes] = React.useState<PackagingType[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
   const [mapCenter, setMapCenter] = React.useState(defaultCenter);
@@ -123,10 +124,16 @@ export default function ShipmentDetailPage() {
           } as Shipment;
           setShipment(shipmentData);
           
-          const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', shipmentData.orderItemId));
-          const cargoSnapshot = await getDocs(cargoQuery);
+          const [cargoSnapshot, packagingSnapshot] = await Promise.all([
+            getDocs(query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', shipmentData.orderItemId))),
+            getDocs(query(collection(db, 'packaging_types'), orderBy('name')))
+          ]);
+          
           const cargoData = cargoSnapshot.docs.map(d => d.data() as OrderItemCargo);
           setCargo(cargoData);
+
+          const packagingData = packagingSnapshot.docs.map(d => ({id: d.id, ...d.data()} as PackagingType));
+          setPackagingTypes(packagingData);
 
           // Fetch warehouse data
           if (shipmentData.routeRefs?.startWarehouseRef) {
@@ -209,6 +216,10 @@ export default function ShipmentDetailPage() {
         return 'secondary';
     }
   };
+
+  const getPackagingTypeName = (id: string) => {
+    return packagingTypes.find(p => p.id === id)?.name || id;
+  }
 
   if (isLoading) {
     return (
@@ -321,7 +332,7 @@ export default function ShipmentDetailPage() {
                         <div key={i} className="p-3 border rounded-md grid grid-cols-2 md:grid-cols-4 gap-4">
                             <DetailItem icon={Cuboid} label="Ачааны нэр" value={c.name} />
                             <DetailItem icon={Package} label="Тоо хэмжээ" value={`${c.quantity} ${c.unit}`} />
-                            <DetailItem icon={Info} label="Баглаа боодол" value={c.packagingTypeId} />
+                            <DetailItem icon={Info} label="Баглаа боодол" value={getPackagingTypeName(c.packagingTypeId)} />
                             <DetailItem icon={FileText} label="Тэмдэглэл" value={c.notes} />
                         </div>
                     ))}
