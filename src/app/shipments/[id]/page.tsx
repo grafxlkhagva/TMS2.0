@@ -2,10 +2,10 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, DocumentData, DocumentReference } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Shipment, OrderItem, OrderItemCargo, ShipmentStatusType, Warehouse } from '@/types';
+import type { Shipment, OrderItemCargo, ShipmentStatusType, Warehouse } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
@@ -91,38 +91,45 @@ export default function ShipmentDetailPage() {
   const [routeInfo, setRouteInfo] = React.useState<{ distance: string; duration: string } | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
+  const [activeMarker, setActiveMarker] = React.useState<'start' | 'end' | null>(null);
   
+  const [map, setMap] = React.useState<google.maps.Map | null>(null);
+
   const { isLoaded: isMapLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries: ['places'],
   });
+
+  const onMapLoad = React.useCallback((mapInstance: google.maps.Map) => {
+    setMap(mapInstance);
+  }, []);
   
-  const onMapLoad = React.useCallback((map: google.maps.Map) => {
-    if (startWarehouse?.geolocation && endWarehouse?.geolocation) {
-      const directionsService = new google.maps.DirectionsService();
-      directionsService.route(
-        {
-          origin: startWarehouse.geolocation,
-          destination: endWarehouse.geolocation,
-          travelMode: google.maps.TravelMode.DRIVING,
-        },
-        (result, status) => {
-          if (status === google.maps.DirectionsStatus.OK && result) {
-            setDirections(result);
-            const leg = result.routes[0]?.legs[0];
-            if (leg?.distance?.text && leg?.duration?.text) {
-              setRouteInfo({
-                distance: leg.distance.text,
-                duration: leg.duration.text,
-              });
+  React.useEffect(() => {
+    if (map && startWarehouse?.geolocation && endWarehouse?.geolocation) {
+        const directionsService = new google.maps.DirectionsService();
+        directionsService.route(
+            {
+                origin: startWarehouse.geolocation,
+                destination: endWarehouse.geolocation,
+                travelMode: google.maps.TravelMode.DRIVING,
+            },
+            (result, status) => {
+                if (status === google.maps.DirectionsStatus.OK && result) {
+                    setDirections(result);
+                    const leg = result.routes[0]?.legs[0];
+                    if (leg?.distance?.text && leg?.duration?.text) {
+                        setRouteInfo({
+                            distance: leg.distance.text,
+                            duration: leg.duration.text,
+                        });
+                    }
+                } else {
+                    console.error(`Error fetching directions: ${status}`);
+                }
             }
-          } else {
-            console.error(`Error fetching directions: ${status}`);
-          }
-        }
-      );
+        );
     }
-  }, [startWarehouse, endWarehouse]);
+  }, [map, startWarehouse, endWarehouse]);
 
 
   React.useEffect(() => {
@@ -299,20 +306,48 @@ export default function ShipmentDetailPage() {
                             mapContainerClassName="w-full h-full"
                             center={mapCenter}
                             zoom={5}
-                             options={{
+                            options={{
                                 streetViewControl: false,
                                 mapTypeControl: false,
                             }}
                             onLoad={onMapLoad}
                         >
-                           {directions ? (
-                                <DirectionsRenderer options={{ directions }} />
-                            ) : (
-                                <>
-                                    {startWarehouse?.geolocation && <Marker position={startWarehouse.geolocation} label="A" />}
-                                    {endWarehouse?.geolocation && <Marker position={endWarehouse.geolocation} label="B" />}
-                                </>
-                           )}
+                           {directions && <DirectionsRenderer options={{ directions, suppressMarkers: true }} />}
+                           
+                           {startWarehouse?.geolocation && (
+                                <Marker 
+                                    position={startWarehouse.geolocation} 
+                                    label="A"
+                                    onClick={() => setActiveMarker('start')}
+                                >
+                                {activeMarker === 'start' && (
+                                    <InfoWindow onCloseClick={() => setActiveMarker(null)}>
+                                        <div>
+                                            <p className="font-bold">{startWarehouse.name}</p>
+                                            <p>{startWarehouse.location}</p>
+                                        </div>
+                                    </InfoWindow>
+                                )}
+                                </Marker>
+                            )}
+
+                            {endWarehouse?.geolocation && (
+                                <Marker 
+                                    position={endWarehouse.geolocation} 
+                                    label="B"
+                                    onClick={() => setActiveMarker('end')}
+                                >
+                                {activeMarker === 'end' && (
+                                    <InfoWindow onCloseClick={() => setActiveMarker(null)}>
+                                        <div>
+                                            <p className="font-bold">{endWarehouse.name}</p>
+                                            <p>{endWarehouse.location}</p>
+                                        </div>
+                                    </InfoWindow>
+                                )}
+                                </Marker>
+                            )}
+
                         </GoogleMap>
                     ) : (
                         <Skeleton className="h-full w-full" />
