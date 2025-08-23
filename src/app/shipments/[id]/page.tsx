@@ -83,6 +83,11 @@ const mapContainerStyle = {
   width: '100%',
   borderRadius: 'var(--radius)',
 };
+const smallMapContainerStyle = {
+  height: '200px',
+  width: '100%',
+  borderRadius: 'var(--radius)',
+};
 const defaultCenter = {
   lat: 47.91976,
   lng: 106.91763,
@@ -139,13 +144,13 @@ export default function ShipmentDetailPage() {
               const startWarehouseSnap = await getDoc(shipmentData.routeRefs.startWarehouseRef);
               if (startWarehouseSnap.exists()) {
                   const warehouseData = startWarehouseSnap.data() as Warehouse;
-                  setStartWarehouse(warehouseData);
+                  setStartWarehouse({id: startWarehouseSnap.id, ...warehouseData});
               }
           }
           if (shipmentData.routeRefs?.endWarehouseRef) {
               const endWarehouseSnap = await getDoc(shipmentData.routeRefs.endWarehouseRef);
               if (endWarehouseSnap.exists()) {
-                  setEndWarehouse(endWarehouseSnap.data() as Warehouse);
+                  setEndWarehouse({id: endWarehouseSnap.id, ...endWarehouseSnap.data()} as Warehouse);
               }
           }
 
@@ -286,37 +291,58 @@ export default function ShipmentDetailPage() {
             </Card>
 
              <Card>
-              <CardHeader>
-                  <CardTitle>Маршрутын зураглал</CardTitle>
-              </CardHeader>
-              <CardContent>
-                  <div className="h-[400px] w-full rounded-lg overflow-hidden border">
-                      {loadError && <div>Газрын зураг ачаалахад алдаа гарлаа.</div>}
-                      {!isMapLoaded ? (
-                          <Skeleton className="h-full w-full" />
-                      ) : (
-                          <GoogleMap
-                              mapContainerStyle={mapContainerStyle}
-                              zoom={10}
-                              center={mapCenter}
-                          >
-                              {startWarehouse?.geolocation && (
-                                  <Marker
-                                      position={startWarehouse.geolocation}
-                                      label="A"
-                                  />
-                              )}
-                              {endWarehouse?.geolocation && (
-                                  <Marker
-                                      position={endWarehouse.geolocation}
-                                      label="B"
-                                  />
-                              )}
-                          </GoogleMap>
-                      )}
-                  </div>
-              </CardContent>
+                <CardHeader>
+                    <CardTitle>Маршрутын зураглал</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="h-[400px] w-full rounded-lg overflow-hidden border">
+                        {loadError && <div>Газрын зураг ачаалахад алдаа гарлаа.</div>}
+                        {isMapLoaded ? (
+                            <GoogleMap
+                                mapContainerStyle={mapContainerStyle}
+                                zoom={10}
+                                center={mapCenter}
+                            >
+                                {startWarehouse?.geolocation && <Marker position={startWarehouse.geolocation} label="A" />}
+                                {endWarehouse?.geolocation && <Marker position={endWarehouse.geolocation} label="B" />}
+                            </GoogleMap>
+                        ) : (
+                            <Skeleton className="h-full w-full" />
+                        )}
+                    </div>
+                </CardContent>
             </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Ачих агуулах</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                         <div className="h-[200px] w-full rounded-lg overflow-hidden border">
+                            {isMapLoaded && startWarehouse?.geolocation ? (
+                                <GoogleMap mapContainerStyle={smallMapContainerStyle} zoom={15} center={startWarehouse.geolocation}>
+                                    <Marker position={startWarehouse.geolocation} />
+                                </GoogleMap>
+                            ) : <Skeleton className="h-full w-full" />}
+                         </div>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Буулгах агуулах</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                         <div className="h-[200px] w-full rounded-lg overflow-hidden border">
+                            {isMapLoaded && endWarehouse?.geolocation ? (
+                                <GoogleMap mapContainerStyle={smallMapContainerStyle} zoom={15} center={endWarehouse.geolocation}>
+                                    <Marker position={endWarehouse.geolocation} />
+                                </GoogleMap>
+                            ) : <Skeleton className="h-full w-full" />}
+                         </div>
+                    </CardContent>
+                </Card>
+            </div>
             
             <Card>
                 <CardHeader>
