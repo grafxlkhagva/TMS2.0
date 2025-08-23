@@ -40,7 +40,13 @@ function StatusBadge({ status }: { status: DriverStatus }) {
 const toDateSafe = (date: any): Date => {
   if (date instanceof Timestamp) return date.toDate();
   if (date instanceof Date) return date;
-  return new Date(date);
+  if (typeof date === 'string' || typeof date === 'number') {
+      const parsed = new Date(date);
+      if (!isNaN(parsed.getTime())) {
+          return parsed;
+      }
+  }
+  return new Date(); 
 };
 
 
@@ -65,7 +71,7 @@ export default function DriverDetailPage() {
           setDriver({
             id: docSnap.id,
             ...data,
-            createdAt: toDateSafe(data.createdAt),
+            created_time: toDateSafe(data.created_time),
           } as Driver);
         } else {
           toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч олдсонгүй.' });
@@ -124,13 +130,13 @@ export default function DriverDetailPage() {
         <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
                 <Avatar className="h-24 w-24 border">
-                    <AvatarImage src={driver.avatarUrl} alt={driver.name} />
+                    <AvatarImage src={driver.photo_url} alt={driver.display_name} />
                     <AvatarFallback className="text-3xl">
-                        {driver.name?.charAt(0)}
+                        {driver.display_name?.charAt(0)}
                     </AvatarFallback>
                 </Avatar>
                 <div>
-                    <h1 className="text-3xl font-headline font-bold">{driver.name}</h1>
+                    <h1 className="text-3xl font-headline font-bold">{driver.display_name}</h1>
                     <p className="text-muted-foreground">
                         Жолоочийн дэлгэрэнгүй мэдээлэл.
                     </p>
@@ -150,7 +156,7 @@ export default function DriverDetailPage() {
             <CardTitle>Хувийн мэдээлэл</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <DetailItem icon={Phone} label="Утасны дугаар" value={driver.phone} />
+            <DetailItem icon={Phone} label="Утасны дугаар" value={driver.phone_number} />
             <DetailItem icon={CheckCircle} label="Статус" value={<StatusBadge status={driver.status} />} />
           </CardContent>
         </Card>

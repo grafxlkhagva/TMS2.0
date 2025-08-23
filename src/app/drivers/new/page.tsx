@@ -32,8 +32,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 const driverStatuses: DriverStatus[] = ['Active', 'Inactive', 'On Leave'];
 
 const formSchema = z.object({
-  name: z.string().min(2, { message: 'Нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
-  phone: z.string().min(8, { message: 'Утасны дугаар буруу байна.' }),
+  display_name: z.string().min(2, { message: 'Нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
+  phone_number: z.string().min(8, { message: 'Утасны дугаар буруу байна.' }),
   status: z.custom<DriverStatus>(val => driverStatuses.includes(val as DriverStatus)),
 });
 
@@ -50,8 +50,8 @@ export default function NewDriverPage() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      phone: '',
+      display_name: '',
+      phone_number: '',
       status: 'Active',
     },
   });
@@ -67,22 +67,24 @@ export default function NewDriverPage() {
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true);
     try {
-      let avatarUrl = '';
-      if (avatarFile) {
-        const storageRef = ref(storage, `driver_avatars/${Date.now()}_${avatarFile.name}`);
-        const snapshot = await uploadBytes(storageRef, avatarFile);
-        avatarUrl = await getDownloadURL(snapshot.ref);
-      }
-
-      await addDoc(collection(db, 'Drivers'), {
+      let photo_url = '';
+      const docRef = await addDoc(collection(db, 'Drivers'), {
         ...values,
-        avatarUrl,
-        createdAt: serverTimestamp(),
+        photo_url: '',
+        created_time: serverTimestamp(),
+        edited_time: serverTimestamp(),
       });
+
+      if (avatarFile) {
+        const storageRef = ref(storage, `driver_avatars/${docRef.id}/${avatarFile.name}`);
+        const snapshot = await uploadBytes(storageRef, avatarFile);
+        photo_url = await getDownloadURL(snapshot.ref);
+        await db.doc(`Drivers/${docRef.id}`).update({ photo_url });
+      }
       
       toast({
         title: 'Амжилттай бүртгэлээ',
-        description: `${values.name} нэртэй жолоочийг системд бүртгэлээ.`,
+        description: `${values.display_name} нэртэй жолоочийг системд бүртгэлээ.`,
       });
       
       router.push('/drivers');
@@ -122,7 +124,7 @@ export default function NewDriverPage() {
                         <Avatar className="h-24 w-24 border">
                             <AvatarImage src={avatarPreview ?? undefined} />
                             <AvatarFallback className="text-3xl">
-                                {form.getValues('name')?.charAt(0)}
+                                {form.getValues('display_name')?.charAt(0)}
                             </AvatarFallback>
                         </Avatar>
                         <Input 
@@ -145,7 +147,7 @@ export default function NewDriverPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
                         <FormField
                         control={form.control}
-                        name="name"
+                        name="display_name"
                         render={({ field }) => (
                             <FormItem>
                             <FormLabel>Нэр</FormLabel>
@@ -162,7 +164,7 @@ export default function NewDriverPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                     control={form.control}
-                    name="phone"
+                    name="phone_number"
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Утасны дугаар</FormLabel>

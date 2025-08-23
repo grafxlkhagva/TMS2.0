@@ -51,7 +51,14 @@ function StatusBadge({ status }: { status: DriverStatus }) {
 const toDateSafe = (date: any): Date => {
   if (date instanceof Timestamp) return date.toDate();
   if (date instanceof Date) return date;
-  return new Date(date);
+  if (typeof date === 'string' || typeof date === 'number') {
+      const parsed = new Date(date);
+      if (!isNaN(parsed.getTime())) {
+          return parsed;
+      }
+  }
+  // Return a default or invalid date if parsing fails, to avoid crashes.
+  return new Date(); 
 };
 
 export default function DriversPage() {
@@ -65,14 +72,14 @@ export default function DriversPage() {
   const fetchDrivers = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const q = query(collection(db, "Drivers"), orderBy("createdAt", "desc"));
+      const q = query(collection(db, "Drivers"), orderBy("created_time", "desc"));
       const querySnapshot = await getDocs(q);
       const data = querySnapshot.docs.map(doc => {
         const docData = doc.data();
         return {
           id: doc.id,
           ...docData,
-          createdAt: toDateSafe(docData.createdAt),
+          created_time: toDateSafe(docData.created_time),
         } as Driver;
       });
       setDrivers(data);
@@ -98,7 +105,7 @@ export default function DriversPage() {
     try {
       await deleteDoc(doc(db, 'Drivers', driverToDelete.id));
       setDrivers(prev => prev.filter(c => c.id !== driverToDelete.id));
-      toast({ title: 'Амжилттай', description: `${driverToDelete.name} жолоочийг устгалаа.`});
+      toast({ title: 'Амжилттай', description: `${driverToDelete.display_name} жолоочийг устгалаа.`});
     } catch (error) {
       console.error("Error deleting driver:", error);
       toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч устгахад алдаа гарлаа.'});
@@ -109,8 +116,8 @@ export default function DriversPage() {
   };
 
   const filteredDrivers = drivers.filter(driver =>
-    driver.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    driver.phone.toLowerCase().includes(searchTerm.toLowerCase())
+    (driver.display_name && driver.display_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (driver.phone_number && driver.phone_number.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -178,18 +185,18 @@ export default function DriversPage() {
                     <TableRow key={driver.id}>
                        <TableCell>
                         <Avatar>
-                          <AvatarImage src={driver.avatarUrl} alt={driver.name} />
-                          <AvatarFallback>{driver.name?.charAt(0)}</AvatarFallback>
+                          <AvatarImage src={driver.photo_url} alt={driver.display_name} />
+                          <AvatarFallback>{driver.display_name?.charAt(0)}</AvatarFallback>
                         </Avatar>
                       </TableCell>
                       <TableCell className="font-medium">
                         <Link href={`/drivers/${driver.id}`} className="hover:underline">
-                          {driver.name}
+                          {driver.display_name}
                         </Link>
                       </TableCell>
-                      <TableCell>{driver.phone}</TableCell>
+                      <TableCell>{driver.phone_number}</TableCell>
                       <TableCell><StatusBadge status={driver.status} /></TableCell>
-                      <TableCell>{driver.createdAt.toLocaleDateString()}</TableCell>
+                      <TableCell>{toDateSafe(driver.created_time).toLocaleDateString()}</TableCell>
                       <TableCell className="text-right">
                          <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -238,7 +245,7 @@ export default function DriversPage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        "{driverToDelete?.name}" нэртэй жолоочийг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
+                        "{driverToDelete?.display_name}" нэртэй жолоочийг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

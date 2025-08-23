@@ -18,11 +18,18 @@ export type DriverStatus = 'Active' | 'Inactive' | 'On Leave';
 
 export type Driver = {
   id: string;
-  name: string;
-  phone: string;
+  uid: string;
+  display_name: string;
+  email: string;
+  phone_number: string;
   status: DriverStatus;
-  createdAt: Date | string | Timestamp;
-  avatarUrl?: string;
+  created_time: Date | string | Timestamp;
+  edited_time: Date | string | Timestamp;
+  photo_url?: string;
+  profile_image?: string;
+  bio?: string;
+  user_name?: string;
+  lastname?: string;
 };
 
 export type UserRole = 'admin' | 'transport_manager' | 'finance_manager' | 'customer_officer' | 'manager';

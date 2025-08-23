@@ -28,16 +28,30 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Timestamp } from 'firebase/firestore';
 
 const driverStatuses: DriverStatus[] = ['Active', 'Inactive', 'On Leave'];
 
 const formSchema = z.object({
-  name: z.string().min(2, { message: 'Нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
-  phone: z.string().min(8, { message: 'Утасны дугаар буруу байна.' }),
+  display_name: z.string().min(2, { message: 'Нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
+  phone_number: z.string().min(8, { message: 'Утасны дугаар буруу байна.' }),
   status: z.custom<DriverStatus>(val => driverStatuses.includes(val as DriverStatus)),
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+const toDateSafe = (date: any): Date => {
+  if (date instanceof Timestamp) return date.toDate();
+  if (date instanceof Date) return date;
+  if (typeof date === 'string' || typeof date === 'number') {
+      const parsed = new Date(date);
+      if (!isNaN(parsed.getTime())) {
+          return parsed;
+      }
+  }
+  return new Date(); 
+};
+
 
 export default function EditDriverPage() {
   const { id } = useParams<{ id: string }>();
@@ -61,8 +75,12 @@ export default function EditDriverPage() {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 const data = docSnap.data() as Driver;
-                form.reset(data);
-                setAvatarPreview(data.avatarUrl || null);
+                form.reset({
+                  display_name: data.display_name,
+                  phone_number: data.phone_number,
+                  status: data.status || 'Active',
+                });
+                setAvatarPreview(data.photo_url || null);
             } else {
                 toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч олдсонгүй.' });
                 router.push(`/drivers`);
@@ -92,20 +110,20 @@ export default function EditDriverPage() {
       const driverRef = doc(db, 'Drivers', id);
       let dataToUpdate: any = { 
         ...values,
-        updatedAt: serverTimestamp(),
+        edited_time: serverTimestamp(),
       };
 
       if (avatarFile) {
         const storageRef = ref(storage, `driver_avatars/${id}/${avatarFile.name}`);
         const snapshot = await uploadBytes(storageRef, avatarFile);
-        dataToUpdate.avatarUrl = await getDownloadURL(snapshot.ref);
+        dataToUpdate.photo_url = await getDownloadURL(snapshot.ref);
       }
       
       await updateDoc(driverRef, dataToUpdate);
       
       toast({
         title: 'Амжилттай шинэчиллээ',
-        description: `${values.name} жолоочийн мэдээллийг шинэчиллээ.`,
+        description: `${values.display_name} жолоочийн мэдээллийг шинэчиллээ.`,
       });
       
       router.push(`/drivers`);
@@ -161,7 +179,7 @@ export default function EditDriverPage() {
                         <Avatar className="h-24 w-24 border">
                             <AvatarImage src={avatarPreview ?? undefined} />
                             <AvatarFallback className="text-3xl">
-                                {form.getValues('name')?.charAt(0)}
+                                {form.getValues('display_name')?.charAt(0)}
                             </AvatarFallback>
                         </Avatar>
                         <Input 
@@ -184,7 +202,7 @@ export default function EditDriverPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
                         <FormField
                         control={form.control}
-                        name="name"
+                        name="display_name"
                         render={({ field }) => (
                             <FormItem>
                             <FormLabel>Нэр</FormLabel>
@@ -201,7 +219,7 @@ export default function EditDriverPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                     control={form.control}
-                    name="phone"
+                    name="phone_number"
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Утасны дугаар</FormLabel>
