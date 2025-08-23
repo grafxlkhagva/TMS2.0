@@ -101,7 +101,10 @@ export default function ShipmentDetailPage() {
   const [packagingTypes, setPackagingTypes] = React.useState<PackagingType[]>([]);
   const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
   const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
+  
   const [directions, setDirections] = React.useState<google.maps.DirectionsResult | null>(null);
+  const [directionsRequest, setDirectionsRequest] = React.useState<google.maps.DirectionsRequest | null>(null);
+
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
   
@@ -161,6 +164,28 @@ export default function ShipmentDetailPage() {
 
     fetchShipment();
   }, [id, router, toast]);
+
+  React.useEffect(() => {
+    if (startWarehouse?.geolocation && endWarehouse?.geolocation) {
+        setDirectionsRequest({
+            origin: startWarehouse.geolocation,
+            destination: endWarehouse.geolocation,
+            travelMode: 'DRIVING' as google.maps.TravelMode
+        });
+    }
+  }, [startWarehouse, endWarehouse]);
+  
+  const directionsCallback = React.useCallback((
+    response: google.maps.DirectionsResult | null,
+    status: google.maps.DirectionsStatus
+  ) => {
+    if (status === 'OK' && response) {
+        setDirections(response);
+    } else {
+        console.error(`Directions request failed due to ${status}`);
+        toast({ variant: "destructive", title: "Алдаа", description: "Маршрут тооцоолоход алдаа гарлаа." });
+    }
+  }, [toast]);
   
   const handleStatusChange = async (newStatus: ShipmentStatusType) => {
     if (!shipment) return;
@@ -189,17 +214,6 @@ export default function ShipmentDetailPage() {
         setIsUpdating(false);
     }
   }
-
-  const directionsCallback = React.useCallback((
-    response: google.maps.DirectionsResult | null,
-    status: google.maps.DirectionsStatus
-  ) => {
-    if (status === 'OK' && response) {
-      setDirections(response);
-    } else {
-      console.error(`Directions request failed due to ${status}`);
-    }
-  }, []);
   
   const getStatusBadgeVariant = (status: ShipmentStatusType) => {
     switch(status) {
@@ -308,13 +322,9 @@ export default function ShipmentDetailPage() {
                           zoom={5}
                           options={{ streetViewControl: false, mapTypeControl: false }}
                       >
-                          {startWarehouse?.geolocation && endWarehouse?.geolocation && !directions && (
+                           {directionsRequest && !directions && (
                             <DirectionsService
-                                options={{
-                                    destination: endWarehouse.geolocation,
-                                    origin: startWarehouse.geolocation,
-                                    travelMode: 'DRIVING' as google.maps.TravelMode,
-                                }}
+                                options={directionsRequest}
                                 callback={directionsCallback}
                             />
                           )}
