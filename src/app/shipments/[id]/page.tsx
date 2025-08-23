@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -10,7 +9,7 @@ import type { Shipment, OrderItem, OrderItemCargo, ShipmentStatusType, Warehouse
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
-import { useLoadScript, GoogleMap, Marker, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
+import { useLoadScript, GoogleMap, Marker, DirectionsRenderer } from '@react-google-maps/api';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -89,8 +88,7 @@ export default function ShipmentDetailPage() {
   const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
   const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
   const [directions, setDirections] = React.useState<google.maps.DirectionsResult | null>(null);
-  const directionsService = React.useRef<google.maps.DirectionsService | null>(null);
-
+  
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
   
@@ -147,10 +145,8 @@ export default function ShipmentDetailPage() {
 
   React.useEffect(() => {
     if (isMapLoaded && startWarehouse?.geolocation && endWarehouse?.geolocation && !directions) {
-      if (!directionsService.current) {
-        directionsService.current = new google.maps.DirectionsService();
-      }
-      directionsService.current.route(
+      const directionsService = new google.maps.DirectionsService();
+      directionsService.route(
         {
           origin: startWarehouse.geolocation,
           destination: endWarehouse.geolocation,
