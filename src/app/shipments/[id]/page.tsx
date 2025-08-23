@@ -9,7 +9,7 @@ import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, Order
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
-import { useLoadScript, GoogleMap, Marker, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
+import { useLoadScript, GoogleMap, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -143,8 +143,8 @@ export default function ShipmentDetailPage() {
                   getDoc(shipmentData.routeRefs.startWarehouseRef),
                   getDoc(shipmentData.routeRefs.endWarehouseRef)
               ]);
-              if(startWarehouseDoc.exists()) setStartWarehouse(startWarehouseDoc.data() as Warehouse);
-              if(endWarehouseDoc.exists()) setEndWarehouse(endWarehouseDoc.data() as Warehouse);
+              if(startWarehouseDoc.exists()) setStartWarehouse({id: startWarehouseDoc.id, ...startWarehouseDoc.data()} as Warehouse);
+              if(endWarehouseDoc.exists()) setEndWarehouse({id: endWarehouseDoc.id, ...endWarehouseDoc.data()} as Warehouse);
           }
 
         } else {
@@ -375,5 +375,3 @@ export default function ShipmentDetailPage() {
     </div>
   );
 }
-
-    
