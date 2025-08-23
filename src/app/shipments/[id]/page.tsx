@@ -9,7 +9,7 @@ import type { Shipment, OrderItemCargo, ShipmentStatusType, Warehouse } from '@/
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
-import { useLoadScript, GoogleMap, Marker, DirectionsRenderer, InfoWindow } from '@react-google-maps/api';
+import { useLoadScript, GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -87,50 +87,14 @@ export default function ShipmentDetailPage() {
   const [cargo, setCargo] = React.useState<OrderItemCargo[]>([]);
   const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
   const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
-  const [directions, setDirections] = React.useState<google.maps.DirectionsResult | null>(null);
-  const [routeInfo, setRouteInfo] = React.useState<{ distance: string; duration: string } | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
   const [activeMarker, setActiveMarker] = React.useState<'start' | 'end' | null>(null);
-  
-  const [map, setMap] = React.useState<google.maps.Map | null>(null);
 
   const { isLoaded: isMapLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries: ['places'],
   });
-
-  const onMapLoad = React.useCallback((mapInstance: google.maps.Map) => {
-    setMap(mapInstance);
-  }, []);
-  
-  React.useEffect(() => {
-    if (map && startWarehouse?.geolocation && endWarehouse?.geolocation) {
-        const directionsService = new google.maps.DirectionsService();
-        directionsService.route(
-            {
-                origin: startWarehouse.geolocation,
-                destination: endWarehouse.geolocation,
-                travelMode: google.maps.TravelMode.DRIVING,
-            },
-            (result, status) => {
-                if (status === google.maps.DirectionsStatus.OK && result) {
-                    setDirections(result);
-                    const leg = result.routes[0]?.legs[0];
-                    if (leg?.distance?.text && leg?.duration?.text) {
-                        setRouteInfo({
-                            distance: leg.distance.text,
-                            duration: leg.duration.text,
-                        });
-                    }
-                } else {
-                    console.error(`Error fetching directions: ${status}`);
-                }
-            }
-        );
-    }
-  }, [map, startWarehouse, endWarehouse]);
-
 
   React.useEffect(() => {
     if (!id) return;
@@ -310,10 +274,7 @@ export default function ShipmentDetailPage() {
                                 streetViewControl: false,
                                 mapTypeControl: false,
                             }}
-                            onLoad={onMapLoad}
                         >
-                           {directions && <DirectionsRenderer options={{ directions, suppressMarkers: true }} />}
-                           
                            {startWarehouse?.geolocation && (
                                 <Marker 
                                     position={startWarehouse.geolocation} 
@@ -347,18 +308,11 @@ export default function ShipmentDetailPage() {
                                 )}
                                 </Marker>
                             )}
-
                         </GoogleMap>
                     ) : (
                         <Skeleton className="h-full w-full" />
                     )}
                  </div>
-                 {routeInfo && (
-                  <div className="grid grid-cols-2 gap-4 pt-2">
-                    <DetailItem icon={Milestone} label="Нийт зам" value={routeInfo.distance} />
-                    <DetailItem icon={ClockIcon} label="Зарцуулах хугацаа" value={routeInfo.duration} />
-                  </div>
-                 )}
               </CardContent>
             </Card>
             
