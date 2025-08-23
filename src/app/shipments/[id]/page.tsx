@@ -134,9 +134,6 @@ export default function ShipmentDetailPage() {
               if (startWarehouseSnap.exists()) {
                   const warehouseData = startWarehouseSnap.data() as Warehouse;
                   setStartWarehouse(warehouseData);
-                  if(warehouseData.geolocation) {
-                      setMapCenter(warehouseData.geolocation);
-                  }
               }
           }
           if (shipmentData.routeRefs?.endWarehouseRef) {
