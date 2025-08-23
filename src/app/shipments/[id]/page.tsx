@@ -10,7 +10,7 @@ import type { Shipment, OrderItem, OrderItemCargo, ShipmentStatusType, Warehouse
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
-import { useLoadScript, GoogleMap, Marker } from '@react-google-maps/api';
+import { useLoadScript, GoogleMap, Marker, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -88,6 +88,8 @@ export default function ShipmentDetailPage() {
   const [cargo, setCargo] = React.useState<OrderItemCargo[]>([]);
   const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
   const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
+  const [directions, setDirections] = React.useState<google.maps.DirectionsResult | null>(null);
+
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
@@ -189,6 +191,17 @@ export default function ShipmentDetailPage() {
     }
   };
 
+  const directionsCallback = React.useCallback((
+    response: google.maps.DirectionsResult | null,
+    status: google.maps.DirectionsStatus
+  ) => {
+    if (status === 'OK' && response) {
+      setDirections(response);
+    } else {
+      console.error(`error fetching directions ${status}`);
+    }
+  }, []);
+
 
   if (isLoading) {
     return (
@@ -277,8 +290,24 @@ export default function ShipmentDetailPage() {
                                 mapTypeControl: false,
                             }}
                         >
-                            {startWarehouse?.geolocation && <Marker position={startWarehouse.geolocation} label="A" />}
-                            {endWarehouse?.geolocation && <Marker position={endWarehouse.geolocation} label="B" />}
+                           {startWarehouse?.geolocation && endWarehouse?.geolocation && !directions && (
+                                <DirectionsService
+                                    options={{
+                                        destination: endWarehouse.geolocation,
+                                        origin: startWarehouse.geolocation,
+                                        travelMode: google.maps.TravelMode.DRIVING,
+                                    }}
+                                    callback={directionsCallback}
+                                />
+                            )}
+                            {directions ? (
+                                <DirectionsRenderer options={{ directions }} />
+                            ) : (
+                                <>
+                                    {startWarehouse?.geolocation && <Marker position={startWarehouse.geolocation} label="A" />}
+                                    {endWarehouse?.geolocation && <Marker position={endWarehouse.geolocation} label="B" />}
+                                </>
+                            )}
                         </GoogleMap>
                     ) : (
                         <Skeleton className="h-full w-full" />
