@@ -9,12 +9,12 @@ import type { Shipment, OrderItem, OrderItemCargo, ShipmentStatusType, Warehouse
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
-import { useLoadScript, GoogleMap, Marker, DirectionsRenderer } from '@react-google-maps/api';
+import { useLoadScript, GoogleMap, Marker, DirectionsRenderer, InfoWindow } from '@react-google-maps/api';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2, Milestone, ClockIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -88,6 +88,7 @@ export default function ShipmentDetailPage() {
   const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
   const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
   const [directions, setDirections] = React.useState<google.maps.DirectionsResult | null>(null);
+  const [routeInfo, setRouteInfo] = React.useState<{ distance: string; duration: string } | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
   
@@ -95,7 +96,7 @@ export default function ShipmentDetailPage() {
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries: ['places'],
   });
-
+  
   const onMapLoad = React.useCallback((map: google.maps.Map) => {
     if (startWarehouse?.geolocation && endWarehouse?.geolocation) {
       const directionsService = new google.maps.DirectionsService();
@@ -108,6 +109,13 @@ export default function ShipmentDetailPage() {
         (result, status) => {
           if (status === google.maps.DirectionsStatus.OK && result) {
             setDirections(result);
+            const leg = result.routes[0]?.legs[0];
+            if (leg?.distance?.text && leg?.duration?.text) {
+              setRouteInfo({
+                distance: leg.distance.text,
+                duration: leg.duration.text,
+              });
+            }
           } else {
             console.error(`Error fetching directions: ${status}`);
           }
@@ -144,8 +152,8 @@ export default function ShipmentDetailPage() {
               getDoc(shipmentData.routeRefs.startWarehouseRef),
               getDoc(shipmentData.routeRefs.endWarehouseRef),
             ]);
-            if(startWhSnap.exists()) setStartWarehouse(startWhSnap.data() as Warehouse);
-            if(endWhSnap.exists()) setEndWarehouse(endWhSnap.data() as Warehouse);
+            if(startWhSnap.exists()) setStartWarehouse({ id: startWhSnap.id, ...startWhSnap.data() } as Warehouse);
+            if(endWhSnap.exists()) setEndWarehouse({ id: endWhSnap.id, ...endWhSnap.data() } as Warehouse);
           }
 
         } else {
@@ -284,7 +292,7 @@ export default function ShipmentDetailPage() {
               <CardHeader>
                 <CardTitle>Маршрутын зураглал</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                  <div className="h-[400px] w-full rounded-lg overflow-hidden border">
                    {isMapLoaded ? (
                         <GoogleMap
@@ -298,7 +306,7 @@ export default function ShipmentDetailPage() {
                             onLoad={onMapLoad}
                         >
                            {directions ? (
-                                <DirectionsRenderer options={{ directions, suppressMarkers: true }} />
+                                <DirectionsRenderer options={{ directions }} />
                             ) : (
                                 <>
                                     {startWarehouse?.geolocation && <Marker position={startWarehouse.geolocation} label="A" />}
@@ -310,6 +318,12 @@ export default function ShipmentDetailPage() {
                         <Skeleton className="h-full w-full" />
                     )}
                  </div>
+                 {routeInfo && (
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <DetailItem icon={Milestone} label="Нийт зам" value={routeInfo.distance} />
+                    <DetailItem icon={ClockIcon} label="Зарцуулах хугацаа" value={routeInfo.duration} />
+                  </div>
+                 )}
               </CardContent>
             </Card>
             
