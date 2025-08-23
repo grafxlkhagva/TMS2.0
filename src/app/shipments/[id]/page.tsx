@@ -89,7 +89,7 @@ export default function ShipmentDetailPage() {
   const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
   const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
   const [directions, setDirections] = React.useState<google.maps.DirectionsResult | null>(null);
-
+  const directionsService = React.useRef<google.maps.DirectionsService | null>(null);
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
@@ -144,6 +144,28 @@ export default function ShipmentDetailPage() {
 
     fetchShipment();
   }, [id, router, toast]);
+
+  React.useEffect(() => {
+    if (isMapLoaded && startWarehouse?.geolocation && endWarehouse?.geolocation && !directions) {
+      if (!directionsService.current) {
+        directionsService.current = new google.maps.DirectionsService();
+      }
+      directionsService.current.route(
+        {
+          origin: startWarehouse.geolocation,
+          destination: endWarehouse.geolocation,
+          travelMode: google.maps.TravelMode.DRIVING,
+        },
+        (result, status) => {
+          if (status === google.maps.DirectionsStatus.OK && result) {
+            setDirections(result);
+          } else {
+            console.error(`error fetching directions ${result}`);
+          }
+        }
+      );
+    }
+  }, [isMapLoaded, startWarehouse, endWarehouse, directions]);
   
   const handleStatusChange = async (newStatus: ShipmentStatusType) => {
     if (!shipment) return;
@@ -190,18 +212,6 @@ export default function ShipmentDetailPage() {
         return 'secondary';
     }
   };
-
-  const directionsCallback = React.useCallback((
-    response: google.maps.DirectionsResult | null,
-    status: google.maps.DirectionsStatus
-  ) => {
-    if (status === 'OK' && response) {
-      setDirections(response);
-    } else {
-      console.error(`error fetching directions ${status}`);
-    }
-  }, []);
-
 
   if (isLoading) {
     return (
@@ -290,17 +300,7 @@ export default function ShipmentDetailPage() {
                                 mapTypeControl: false,
                             }}
                         >
-                           {startWarehouse?.geolocation && endWarehouse?.geolocation && !directions && (
-                                <DirectionsService
-                                    options={{
-                                        destination: endWarehouse.geolocation,
-                                        origin: startWarehouse.geolocation,
-                                        travelMode: google.maps.TravelMode.DRIVING,
-                                    }}
-                                    callback={directionsCallback}
-                                />
-                            )}
-                            {directions ? (
+                           {directions ? (
                                 <DirectionsRenderer options={{ directions }} />
                             ) : (
                                 <>
