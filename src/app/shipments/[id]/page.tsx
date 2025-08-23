@@ -142,26 +142,6 @@ export default function ShipmentDetailPage() {
 
     fetchShipment();
   }, [id, router, toast]);
-
-  React.useEffect(() => {
-    if (isMapLoaded && startWarehouse?.geolocation && endWarehouse?.geolocation && !directions) {
-      const directionsService = new google.maps.DirectionsService();
-      directionsService.route(
-        {
-          origin: startWarehouse.geolocation,
-          destination: endWarehouse.geolocation,
-          travelMode: google.maps.TravelMode.DRIVING,
-        },
-        (result, status) => {
-          if (status === google.maps.DirectionsStatus.OK && result) {
-            setDirections(result);
-          } else {
-            console.error(`error fetching directions ${result}`);
-          }
-        }
-      );
-    }
-  }, [isMapLoaded, startWarehouse, endWarehouse, directions]);
   
   const handleStatusChange = async (newStatus: ShipmentStatusType) => {
     if (!shipment) return;
@@ -208,6 +188,26 @@ export default function ShipmentDetailPage() {
         return 'secondary';
     }
   };
+
+  const calculateRoute = React.useCallback(() => {
+    if (startWarehouse?.geolocation && endWarehouse?.geolocation) {
+        const directionsService = new google.maps.DirectionsService();
+        directionsService.route(
+            {
+                origin: startWarehouse.geolocation,
+                destination: endWarehouse.geolocation,
+                travelMode: google.maps.TravelMode.DRIVING,
+            },
+            (result, status) => {
+                if (status === google.maps.DirectionsStatus.OK && result) {
+                    setDirections(result);
+                } else {
+                    console.error(`Error fetching directions ${status}`, result);
+                }
+            }
+        );
+    }
+  }, [startWarehouse, endWarehouse]);
 
   if (isLoading) {
     return (
@@ -295,15 +295,13 @@ export default function ShipmentDetailPage() {
                                 streetViewControl: false,
                                 mapTypeControl: false,
                             }}
+                            onLoad={calculateRoute}
                         >
                            {directions ? (
-                                <DirectionsRenderer options={{ directions }} />
-                            ) : (
-                                <>
-                                    {startWarehouse?.geolocation && <Marker position={startWarehouse.geolocation} label="A" />}
-                                    {endWarehouse?.geolocation && <Marker position={endWarehouse.geolocation} label="B" />}
-                                </>
-                            )}
+                                <DirectionsRenderer options={{ directions, suppressMarkers: true }} />
+                            ) : null}
+                           {startWarehouse?.geolocation && <Marker position={startWarehouse.geolocation} label="A" />}
+                           {endWarehouse?.geolocation && <Marker position={endWarehouse.geolocation} label="B" />}
                         </GoogleMap>
                     ) : (
                         <Skeleton className="h-full w-full" />
