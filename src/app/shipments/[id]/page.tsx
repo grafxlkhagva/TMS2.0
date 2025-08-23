@@ -9,7 +9,7 @@ import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, Order
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
-import { useLoadScript, GoogleMap, Marker } from '@react-google-maps/api';
+import { useLoadScript, GoogleMap, Marker, DirectionsService, DirectionsRenderer } from '@react-google-maps/api';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -83,6 +83,7 @@ const mapContainerStyle = {
   height: '400px',
   width: '100%',
   borderRadius: 'var(--radius)',
+  position: 'relative' as const,
 };
 
 const defaultCenter = {
@@ -100,6 +101,7 @@ export default function ShipmentDetailPage() {
   const [packagingTypes, setPackagingTypes] = React.useState<PackagingType[]>([]);
   const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
   const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
+  const [directions, setDirections] = React.useState<google.maps.DirectionsResult | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
   
@@ -107,21 +109,6 @@ export default function ShipmentDetailPage() {
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries,
   });
-
-  const mapRef = React.useRef<google.maps.Map | null>(null);
-
-  const onMapLoad = React.useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-  }, []);
-
-  React.useEffect(() => {
-    if (mapRef.current && startWarehouse?.geolocation && endWarehouse?.geolocation) {
-      const bounds = new window.google.maps.LatLngBounds();
-      bounds.extend(startWarehouse.geolocation);
-      bounds.extend(endWarehouse.geolocation);
-      mapRef.current.fitBounds(bounds);
-    }
-  }, [startWarehouse, endWarehouse, isMapLoaded]);
 
   React.useEffect(() => {
     if (!id) return;
@@ -202,6 +189,17 @@ export default function ShipmentDetailPage() {
         setIsUpdating(false);
     }
   }
+
+  const directionsCallback = React.useCallback((
+    response: google.maps.DirectionsResult | null,
+    status: google.maps.DirectionsStatus
+  ) => {
+    if (status === 'OK' && response) {
+      setDirections(response);
+    } else {
+      console.error(`Directions request failed due to ${status}`);
+    }
+  }, []);
   
   const getStatusBadgeVariant = (status: ShipmentStatusType) => {
     switch(status) {
@@ -308,11 +306,25 @@ export default function ShipmentDetailPage() {
                           mapContainerStyle={mapContainerStyle}
                           center={defaultCenter}
                           zoom={5}
-                          onLoad={onMapLoad}
                           options={{ streetViewControl: false, mapTypeControl: false }}
                       >
-                          {startWarehouse?.geolocation && <Marker position={startWarehouse.geolocation} label="A" />}
-                          {endWarehouse?.geolocation && <Marker position={endWarehouse.geolocation} label="B" />}
+                          {startWarehouse?.geolocation && endWarehouse?.geolocation && !directions && (
+                            <DirectionsService
+                                options={{
+                                    destination: endWarehouse.geolocation,
+                                    origin: startWarehouse.geolocation,
+                                    travelMode: 'DRIVING' as google.maps.TravelMode,
+                                }}
+                                callback={directionsCallback}
+                            />
+                          )}
+                          {directions && (
+                            <DirectionsRenderer
+                                options={{
+                                    directions: directions,
+                                }}
+                            />
+                          )}
                       </GoogleMap>
                   )}
                 </div>
@@ -363,3 +375,5 @@ export default function ShipmentDetailPage() {
     </div>
   );
 }
+
+    
