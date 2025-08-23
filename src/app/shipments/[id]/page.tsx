@@ -99,8 +99,9 @@ export default function ShipmentDetailPage() {
   const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
+  const [mapCenter, setMapCenter] = React.useState(defaultCenter);
 
-  const { isLoaded: isMapLoaded } = useLoadScript({
+  const { isLoaded: isMapLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries,
   });
@@ -131,7 +132,11 @@ export default function ShipmentDetailPage() {
           if (shipmentData.routeRefs?.startWarehouseRef) {
               const startWarehouseSnap = await getDoc(shipmentData.routeRefs.startWarehouseRef);
               if (startWarehouseSnap.exists()) {
-                  setStartWarehouse(startWarehouseSnap.data() as Warehouse);
+                  const warehouseData = startWarehouseSnap.data() as Warehouse;
+                  setStartWarehouse(warehouseData);
+                  if(warehouseData.geolocation) {
+                      setMapCenter(warehouseData.geolocation);
+                  }
               }
           }
           if (shipmentData.routeRefs?.endWarehouseRef) {
@@ -201,8 +206,6 @@ export default function ShipmentDetailPage() {
         return 'secondary';
     }
   };
-  
-  const mapCenter = startWarehouse?.geolocation || defaultCenter;
 
   if (isLoading) {
     return (
@@ -273,12 +276,13 @@ export default function ShipmentDetailPage() {
               </CardContent>
             </Card>
 
-            <Card>
+             <Card>
               <CardHeader>
                   <CardTitle>Маршрутын зураглал</CardTitle>
               </CardHeader>
               <CardContent>
                   <div className="h-[400px] w-full rounded-lg overflow-hidden border">
+                      {loadError && <div>Газрын зураг ачаалахад алдаа гарлаа.</div>}
                       {!isMapLoaded ? (
                           <Skeleton className="h-full w-full" />
                       ) : (
@@ -349,3 +353,5 @@ export default function ShipmentDetailPage() {
     </div>
   );
 }
+
+    

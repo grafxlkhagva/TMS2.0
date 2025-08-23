@@ -28,6 +28,8 @@ function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, lab
   );
 }
 
+const libraries: ('places')[] = ['places'];
+
 export default function WarehouseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -37,9 +39,9 @@ export default function WarehouseDetailPage() {
   const [regionName, setRegionName] = React.useState<string>('');
   const [isLoading, setIsLoading] = React.useState(true);
   
-  const { isLoaded: isMapLoaded } = useLoadScript({
+  const { isLoaded: isMapLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-    libraries: ['places'],
+    libraries,
   });
 
   React.useEffect(() => {
@@ -156,7 +158,10 @@ export default function WarehouseDetailPage() {
         </Card>
         
         <div className="h-[400px] w-full rounded-lg overflow-hidden border">
-           {isMapLoaded && warehouse.geolocation ? (
+           {loadError && <div>Газрын зураг ачаалахад алдаа гарлаа.</div>}
+           {!isMapLoaded ? (
+                <Skeleton className="h-full w-full" />
+           ) : warehouse.geolocation ? (
                 <GoogleMap
                     mapContainerClassName="w-full h-full"
                     center={warehouse.geolocation}
@@ -165,10 +170,14 @@ export default function WarehouseDetailPage() {
                     <Marker position={warehouse.geolocation} />
                 </GoogleMap>
             ) : (
-                 <Skeleton className="h-full w-full" />
+                <div className="h-full w-full flex items-center justify-center bg-muted text-muted-foreground">
+                    Байршлын мэдээлэл олдсонгүй.
+                </div>
             )}
         </div>
       </div>
     </div>
   );
 }
+
+    
