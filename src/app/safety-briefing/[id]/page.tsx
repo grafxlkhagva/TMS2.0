@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, DocumentReference } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
 import type { SafetyBriefing, Shipment, OrderItem } from '@/types';
