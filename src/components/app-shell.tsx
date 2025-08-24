@@ -131,11 +131,11 @@ function Nav() {
                 <SidebarMenuSub>
                     {item.subItems.map(subItem => (
                         <li key={subItem.href}>
-                           <Link href={subItem.href}>
-                            <SidebarMenuSubButton isActive={pathname === subItem.href}>
+                            <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                               <Link href={subItem.href}>
                                 <span>{subItem.label}</span>
+                               </Link>
                             </SidebarMenuSubButton>
-                           </Link>
                         </li>
                     ))}
                 </SidebarMenuSub>
