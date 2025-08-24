@@ -16,6 +16,7 @@ import {
   Briefcase,
   Truck,
   UserSquare,
+  ChevronDown,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -32,6 +33,8 @@ import {
   SidebarTrigger,
   SidebarInset,
   useSidebar,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -44,6 +47,8 @@ import {
   DropdownMenuLabel, 
   DropdownMenuSeparator 
 } from './ui/dropdown-menu';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -51,11 +56,28 @@ const navItems = [
   { href: '/shipments', icon: Truck, label: 'Тээвэрлэлт' },
   { href: '/customers', icon: Building2, label: 'Харилцагчид' },
   { href: '/warehouses', icon: Warehouse, label: 'Агуулах' },
-  { href: '/drivers', icon: UserSquare, label: 'Тээвэрчин' },
+  { 
+    href: '/drivers', 
+    icon: UserSquare, 
+    label: 'Тээвэрчин',
+    subItems: [
+        { href: '/drivers', label: 'Жолооч нарын жагсаалт' },
+        { href: '/drivers/reconciliation', label: 'Бүртгэл цэгцлэх' },
+    ]
+  },
 ];
 
 const adminNavItems = [
-  ...navItems,
+  ...navItems.filter(item => item.href !== '/drivers'),
+  { 
+    href: '/drivers', 
+    icon: UserSquare, 
+    label: 'Тээвэрчин',
+    subItems: [
+        { href: '/drivers', label: 'Жолооч нарын жагсаалт' },
+        { href: '/drivers/reconciliation', label: 'Бүртгэл цэгцлэх' },
+    ]
+  },
   { href: '/users', icon: Users, label: 'Системийн хэрэглэгчид' },
   { href: '/settings', icon: Settings, label: 'Тохиргоо' },
 ];
@@ -66,6 +88,10 @@ function Nav() {
   const { user } = useAuth();
   const [items, setItems] = React.useState(navItems);
   const [mounted, setMounted] = React.useState(false);
+  
+  const isSubItemActive = (subItems: any[]) => {
+    return subItems.some(item => pathname === item.href);
+  }
 
   React.useEffect(() => {
     setMounted(true);
@@ -73,67 +99,59 @@ function Nav() {
 
   React.useEffect(() => {
     if (user?.role) {
-      let newItems;
-      if (user.role === 'admin') {
-        newItems = [...adminNavItems];
-      } else {
-        newItems = [...navItems];
-        // For development, show settings to non-admins, but check for existence first.
-        if (process.env.NODE_ENV === 'development') {
-          const settingsItem = adminNavItems.find(item => item.href === '/settings');
-          const hasSettings = newItems.some(item => item.href === '/settings');
-          if (settingsItem && !hasSettings) {
-            newItems.push(settingsItem);
-          }
-        }
-      }
-      setItems(newItems);
+      setItems(user.role === 'admin' ? adminNavItems : navItems);
     }
   }, [user?.role]);
 
   if (!mounted) {
-    // To prevent hydration mismatch, we can render a skeleton or null on the server.
-    // Let's render the basic nav items to avoid layout shift.
-    return (
-        <SidebarMenu>
-          {navItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <Link href={item.href}>
-                <SidebarMenuButton
-                  isActive={item.href === '/orders' ? pathname.includes(item.href) : pathname.startsWith(item.href)}
-                  tooltip={
-                    state === 'collapsed'
-                      ? { children: item.label, side: 'right' }
-                      : undefined
-                  }
-                >
-                  <item.icon />
-                  <span>{item.label}</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          ))}
-      </SidebarMenu>
-    );
+    // Basic render to avoid layout shift
+    return <SidebarMenu>{navItems.map(item => <SidebarMenuItem key={item.href}><SidebarMenuButton><item.icon/><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu>;
   }
 
   return (
     <SidebarMenu>
       {items.map((item) => (
         <SidebarMenuItem key={item.href}>
-          <Link href={item.href}>
-            <SidebarMenuButton
-              isActive={pathname.startsWith(item.href)}
-              tooltip={
-                state === 'collapsed'
-                  ? { children: item.label, side: 'right' }
-                  : undefined
-              }
-            >
-              <item.icon />
-              <span>{item.label}</span>
-            </SidebarMenuButton>
-          </Link>
+          {item.subItems ? (
+            <Collapsible defaultOpen={pathname.startsWith(item.href)}>
+              <CollapsibleTrigger asChild>
+                <SidebarMenuButton
+                    isActive={pathname.startsWith(item.href)}
+                    className="justify-between"
+                    tooltip={state === 'collapsed' ? { children: item.label, side: 'right' } : undefined}
+                >
+                    <div className="flex items-center gap-2">
+                        <item.icon />
+                        <span>{item.label}</span>
+                    </div>
+                    <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform duration-200", state === 'collapsed' && "hidden", "group-data-[state=open]:rotate-180")} />
+                </SidebarMenuButton>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <SidebarMenuSub>
+                    {item.subItems.map(subItem => (
+                        <li key={subItem.href}>
+                           <Link href={subItem.href}>
+                            <SidebarMenuSubButton isActive={pathname === subItem.href}>
+                                <span>{subItem.label}</span>
+                            </SidebarMenuSubButton>
+                           </Link>
+                        </li>
+                    ))}
+                </SidebarMenuSub>
+              </CollapsibleContent>
+            </Collapsible>
+          ) : (
+            <Link href={item.href}>
+              <SidebarMenuButton
+                isActive={pathname === item.href}
+                tooltip={state === 'collapsed' ? { children: item.label, side: 'right' } : undefined}
+              >
+                <item.icon />
+                <span>{item.label}</span>
+              </SidebarMenuButton>
+            </Link>
+          )}
         </SidebarMenuItem>
       ))}
     </SidebarMenu>

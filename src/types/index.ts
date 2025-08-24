@@ -1,4 +1,5 @@
 
+
 import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Delayed';
@@ -22,9 +23,10 @@ export type Driver = {
   status: DriverStatus;
   created_time: Date | string | Timestamp;
   photo_url?: string;
+  authUid?: string; // To link with Firebase Auth user
 };
 
-export type UserRole = 'admin' | 'transport_manager' | 'finance_manager' | 'customer_officer' | 'manager';
+export type UserRole = 'admin' | 'transport_manager' | 'finance_manager' | 'customer_officer' | 'manager' | 'driver';
 export type UserStatus = 'pending' | 'active' | 'inactive';
 
 export type SystemUser = {
