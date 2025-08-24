@@ -115,7 +115,7 @@ export default function ShipmentDetailPage() {
         const [cargoSnapshot, packagingSnapshot, contractSnapshot] = await Promise.all([
           getDocs(query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', shipmentData.orderItemId))),
           getDocs(query(collection(db, 'packaging_types'), orderBy('name'))),
-          getDocs(query(collection(db, 'contracts'), where('shipmentId', '==', shipmentData.id), orderBy('createdAt', 'desc')))
+          getDocs(query(collection(db, 'contracts'), where('shipmentId', '==', shipmentData.id)))
         ]);
         
         const cargoData = cargoSnapshot.docs.map(d => d.data() as OrderItemCargo);
@@ -123,19 +123,22 @@ export default function ShipmentDetailPage() {
 
         const packagingData = packagingSnapshot.docs.map(d => ({id: d.id, ...d.data()} as PackagingType));
         setPackagingTypes(packagingData);
-
+        
         if (!contractSnapshot.empty) {
-            const latestContract = contractSnapshot.docs[0];
-            const contractData = {
-              id: latestContract.id,
-              ...latestContract.data(),
-              createdAt: latestContract.data().createdAt.toDate(),
-              signedAt: latestContract.data().signedAt ? latestContract.data().signedAt.toDate() : undefined,
-              estimatedDeliveryDate: latestContract.data().estimatedDeliveryDate.toDate(),
-            } as Contract;
-            setContract(contractData);
+            const contractsData = contractSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                createdAt: doc.data().createdAt.toDate(),
+                signedAt: doc.data().signedAt ? doc.data().signedAt.toDate() : undefined,
+                estimatedDeliveryDate: doc.data().estimatedDeliveryDate.toDate(),
+            } as Contract));
 
-            if (contractData.status === 'signed' && !shipmentData.checklist.contractSigned) {
+            contractsData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+            
+            const latestContract = contractsData[0];
+            setContract(latestContract);
+
+            if (latestContract.status === 'signed' && !shipmentData.checklist.contractSigned) {
               const shipmentRef = doc(db, 'shipments', shipmentData.id);
               await updateDoc(shipmentRef, { 'checklist.contractSigned': true });
               setShipment(prev => prev ? ({ ...prev, checklist: { ...prev.checklist, contractSigned: true }}) : null);
