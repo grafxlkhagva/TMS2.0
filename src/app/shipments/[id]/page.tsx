@@ -19,6 +19,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
 
 const statusTranslations: Record<ShipmentStatusType, string> = {
     Preparing: 'Бэлтгэл',
@@ -30,6 +32,9 @@ const statusTranslations: Record<ShipmentStatusType, string> = {
     Delayed: 'Саатсан',
     Cancelled: 'Цуцлагдсан'
 };
+
+const shipmentStatuses: ShipmentStatusType[] = ['Preparing', 'Ready For Loading', 'Loading', 'In Transit', 'Unloading', 'Delivered'];
+
 
 function DetailItem({ icon: Icon, label, value, subValue }: { icon: React.ElementType, label: string, value?: string | React.ReactNode, subValue?: string }) {
   if (!value) return null;
@@ -69,6 +74,8 @@ export default function ShipmentDetailPage() {
   
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
+  const [statusChange, setStatusChange] = React.useState<{ newStatus: ShipmentStatusType; oldStatus: ShipmentStatusType; } | null>(null);
+
 
   const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
@@ -95,7 +102,6 @@ export default function ShipmentDetailPage() {
           orderItemRef: docSnap.data().orderItemRef as DocumentReference | undefined,
         } as Shipment;
         
-        // Initialize checklist if it doesn't exist
         if (!shipmentData.checklist) {
           shipmentData.checklist = {
             contractSigned: false,
@@ -240,8 +246,10 @@ export default function ShipmentDetailPage() {
     }
   }
 
-  const handleStatusUpdate = async (newStatus: ShipmentStatusType) => {
-     if (!shipment) return;
+  const confirmStatusUpdate = async () => {
+    if (!shipment || !statusChange) return;
+    const { newStatus } = statusChange;
+
     setIsUpdating(true);
     try {
       const shipmentRef = doc(db, 'shipments', shipment.id);
@@ -252,6 +260,7 @@ export default function ShipmentDetailPage() {
        toast({ variant: 'destructive', title: 'Алдаа', description: 'Төлөв шинэчлэхэд алдаа гарлаа.'});
     } finally {
       setIsUpdating(false);
+      setStatusChange(null);
     }
   }
   
@@ -270,75 +279,52 @@ export default function ShipmentDetailPage() {
     return packagingTypes.find(p => p.id === id)?.name || id;
   }
   
-  const renderDispatchControls = () => {
-    if (!shipment) return null;
-    const { status, checklist } = shipment;
-    
-    switch (status) {
-      case 'Preparing':
-        const canMoveToLoading = checklist.contractSigned && checklist.safetyBriefingCompleted;
-        return (
-          <Card>
-            <CardHeader><CardTitle>Бэлтгэл үе шат</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2 p-3 border rounded-md">
-                {checklist.contractSigned ? <CheckCircle className="h-5 w-5 text-green-500" /> : <div className="h-5 w-5 rounded-full border-2 border-muted-foreground" />}
-                <label className="flex-1 text-sm font-medium">Гэрээ баталгаажуулах</label>
-                {contract?.status === 'signed' ? (
-                  <Button variant="outline" size="sm" asChild><Link href={`/contracts/${contract.id}`}><ExternalLink className="mr-2 h-4 w-4" /> Гэрээ харах</Link></Button>
-                ) : (
-                  <Button size="sm" onClick={handleCreateContract} disabled={isUpdating || !orderItem}>{isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />} Гэрээ илгээх</Button>
-                )}
-              </div>
-               <div className="flex items-center space-x-2 p-3 border rounded-md">
-                <Checkbox id="safetyBriefing" checked={checklist.safetyBriefingCompleted} onCheckedChange={(checked) => handleUpdateChecklist('safetyBriefingCompleted', !!checked)} disabled={isUpdating} />
-                <label htmlFor="safetyBriefing" className="text-sm font-medium leading-none">Аюулгүй ажиллагааны зааварчилгаатай танилцсан</label>
-              </div>
-              <Button className="w-full" disabled={!canMoveToLoading || isUpdating} onClick={() => handleStatusUpdate('Ready For Loading')}>
-                 {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} Ачихад бэлэн болгох
-              </Button>
-            </CardContent>
-          </Card>
-        );
-      case 'Ready For Loading':
-         const canStartLoading = checklist.loadingChecklistCompleted;
-        return (
-           <Card>
-             <CardHeader><CardTitle>Ачихад бэлэн</CardTitle></CardHeader>
-             <CardContent className="space-y-4">
-               <div className="flex items-center space-x-2 p-3 border rounded-md">
-                <Checkbox id="loadingChecklist" checked={checklist.loadingChecklistCompleted} onCheckedChange={(checked) => handleUpdateChecklist('loadingChecklistCompleted', !!checked)} disabled={isUpdating} />
-                <label htmlFor="loadingChecklist" className="text-sm font-medium leading-none">Ачилтын үеийн чеклисттэй танилцсан</label>
-              </div>
-               <Button className="w-full" disabled={!canStartLoading || isUpdating} onClick={() => handleStatusUpdate('Loading')}>
-                 {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Truck className="mr-2 h-4 w-4" />} Ачилт эхлүүлэх
-              </Button>
-             </CardContent>
-           </Card>
-        );
-      case 'Loading':
-        return (
-          <Card>
-            <CardHeader><CardTitle>Ачиж байна</CardTitle></CardHeader>
-            <CardContent>
-              <Button className="w-full" onClick={() => handleStatusUpdate('In Transit')} disabled={isUpdating}>
-                 {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Truck className="mr-2 h-4 w-4" />} Тээвэр эхлүүлэх
-              </Button>
-            </CardContent>
-          </Card>
-        );
-      // Add other statuses here...
-      default:
-        return (
-            <Card>
-                <CardHeader><CardTitle>Тээврийн явц</CardTitle></CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground">Одоогийн төлөв: <span className="font-semibold">{statusTranslations[status]}</span></p>
-                </CardContent>
-            </Card>
-        );
-    }
-  }
+  function StatusTimeline({ 
+    currentStatus,
+    onStatusClick
+  }: { 
+    currentStatus: ShipmentStatusType;
+    onStatusClick: (newStatus: ShipmentStatusType) => void;
+  }) {
+    const currentIndex = shipmentStatuses.indexOf(currentStatus);
+
+    return (
+        <div className="flex justify-between items-start px-4 pt-2">
+            {shipmentStatuses.map((status, index) => (
+                <React.Fragment key={status}>
+                    <div 
+                        className={cn("flex flex-col items-center cursor-pointer group", (index === currentIndex + 1 || index <= currentIndex) && "cursor-pointer")}
+                        onClick={() => {
+                            if (index === currentIndex + 1 || index < currentIndex) {
+                                onStatusClick(status);
+                            }
+                        }}
+                    >
+                        <div className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors",
+                            index <= currentIndex ? "bg-primary border-primary text-primary-foreground" : "bg-muted border-border group-hover:border-primary"
+                        )}>
+                           {index < currentIndex ? <Check className="h-5 w-5" /> : <span className="text-xs font-bold">{index + 1}</span>}
+                        </div>
+                        <p className={cn(
+                           "text-xs mt-2 text-center w-20 transition-colors", 
+                           index <= currentIndex ? "font-semibold text-primary" : "text-muted-foreground group-hover:text-primary"
+                        )}>
+                           {statusTranslations[status]}
+                        </p>
+                    </div>
+                    {index < shipmentStatuses.length - 1 && (
+                         <div className={cn(
+                             "flex-1 h-1 mt-4 transition-colors",
+                             index < currentIndex ? "bg-primary" : "bg-border",
+                             index === currentIndex && "bg-gradient-to-r from-primary to-border",
+                         )}></div>
+                    )}
+                </React.Fragment>
+            ))}
+        </div>
+    )
+}
 
   if (isLoading) {
     return (
@@ -355,7 +341,7 @@ export default function ShipmentDetailPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2 space-y-6">
                 <Card><CardContent className="pt-6"><Skeleton className="h-96 w-full" /></CardContent></Card>
-                <Card><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
+                <Card><CardContent className="pt-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
             </div>
             <div className="space-y-6"><Card className="h-fit"><CardContent className="pt-6"><Skeleton className="h-48 w-full" /></CardContent></Card></div>
         </div>
@@ -416,7 +402,14 @@ export default function ShipmentDetailPage() {
               </CardContent>
             </Card>
 
-            {renderDispatchControls()}
+             <Card>
+              <CardHeader>
+                <CardTitle>Тээврийн явц</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <StatusTimeline currentStatus={shipment.status} onStatusClick={(newStatus) => setStatusChange({ newStatus, oldStatus: shipment.status })}/>
+              </CardContent>
+            </Card>
         </div>
         
         <div className="space-y-6 lg:sticky top-6">
@@ -458,6 +451,25 @@ export default function ShipmentDetailPage() {
             </Card>
         </div>
       </div>
+      
+       <AlertDialog open={!!statusChange} onOpenChange={() => setStatusChange(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Та статусыг өөрчлөхдөө итгэлтэй байна уу?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Та тээврийн явцыг "{statusTranslations[statusChange?.oldStatus || 'Preparing']}" төлвөөс 
+                    "{statusTranslations[statusChange?.newStatus || 'Preparing']}" төлөв рүү шилжүүлэх гэж байна.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setStatusChange(null)}>Цуцлах</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmStatusUpdate} disabled={isUpdating}>
+                    {isUpdating ? "Шинэчилж байна..." : "Тийм, шилжүүлэх"}
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </div>
   );
 }
+
