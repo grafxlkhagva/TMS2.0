@@ -354,7 +354,6 @@ export default function ShipmentDetailPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2 space-y-6">
-                <Card><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
                 <Card><CardContent className="pt-6"><Skeleton className="h-96 w-full" /></CardContent></Card>
                 <Card><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
             </div>
@@ -416,27 +415,11 @@ export default function ShipmentDetailPage() {
                 </div>
               </CardContent>
             </Card>
-            
-            <Card>
-                <CardHeader>
-                    <CardTitle>Ачааны мэдээлэл</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {cargo.map((c, i) => (
-                        <div key={i} className="p-3 border rounded-md grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <DetailItem icon={Cuboid} label="Ачааны нэр" value={c.name} />
-                            <DetailItem icon={Package} label="Тоо хэмжээ" value={`${c.quantity} ${c.unit}`} />
-                            <DetailItem icon={Info} label="Баглаа боодол" value={getPackagingTypeName(c.packagingTypeId)} />
-                            <DetailItem icon={FileText} label="Тэмдэглэл" value={c.notes} />
-                        </div>
-                    ))}
-                </CardContent>
-            </Card>
 
+            {renderDispatchControls()}
         </div>
         
         <div className="space-y-6 lg:sticky top-6">
-             {renderDispatchControls()}
              <Card>
               <CardHeader>
                 <CardTitle>Дэлгэрэнгүй</CardTitle>
@@ -456,6 +439,22 @@ export default function ShipmentDetailPage() {
                 <DetailItem icon={User} label="Жолоочийн нэр" value={shipment.driverInfo.name} />
                 <DetailItem icon={Phone} label="Жолоочийн утас" value={shipment.driverInfo.phone} />
               </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Ачааны мэдээлэл</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {cargo.map((c, i) => (
+                        <div key={i} className="p-3 border rounded-md grid grid-cols-1 gap-4">
+                            <DetailItem icon={Cuboid} label="Ачааны нэр" value={c.name} />
+                            <DetailItem icon={Package} label="Тоо хэмжээ" value={`${c.quantity} ${c.unit}`} />
+                            <DetailItem icon={Info} label="Баглаа боодол" value={getPackagingTypeName(c.packagingTypeId)} />
+                            <DetailItem icon={FileText} label="Тэмдэглэл" value={c.notes} />
+                        </div>
+                    ))}
+                </CardContent>
             </Card>
         </div>
       </div>
