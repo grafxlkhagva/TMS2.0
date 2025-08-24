@@ -232,7 +232,7 @@ export type DriverQuote = {
     channel: 'Phone' | 'App';
 };
 
-export type ShipmentStatusType = 'Preparing' | 'Loading' | 'In Transit' | 'Unloading' | 'Delivered' | 'Delayed' | 'Cancelled';
+export type ShipmentStatusType = 'Preparing' | 'Ready For Loading' | 'Loading' | 'In Transit' | 'Unloading' | 'Delivered' | 'Delayed' | 'Cancelled';
 
 export type Shipment = {
   id: string;
@@ -267,6 +267,11 @@ export type Shipment = {
   status: ShipmentStatusType;
   createdAt: Date;
   estimatedDeliveryDate: Date;
+  checklist: {
+    contractSigned: boolean;
+    safetyBriefingCompleted: boolean;
+    loadingChecklistCompleted: boolean;
+  };
 };
 
 export type ContractStatus = 'pending' | 'signed' | 'declined' | 'expired';

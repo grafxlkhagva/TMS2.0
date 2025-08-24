@@ -14,18 +14,17 @@ import { useLoadScript, GoogleMap, DirectionsRenderer } from '@react-google-maps
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2, FileSignature, Send } from 'lucide-react';
+import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2, FileSignature, Send, ExternalLink, ShieldCheck, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-
-const shipmentStatuses: ShipmentStatusType[] = ['Preparing', 'Loading', 'In Transit', 'Unloading', 'Delivered', 'Delayed', 'Cancelled'];
+import { Checkbox } from '@/components/ui/checkbox';
 
 const statusTranslations: Record<ShipmentStatusType, string> = {
-    Preparing: 'Бэлтгэгдэж буй',
+    Preparing: 'Бэлтгэл',
+    'Ready For Loading': 'Ачихад бэлэн',
     Loading: 'Ачиж буй',
-    'In Transit': 'Тээвэрлэгдэж буй',
+    'In Transit': 'Тээвэрлэж буй',
     Unloading: 'Буулгаж буй',
     Delivered: 'Хүргэгдсэн',
     Delayed: 'Саатсан',
@@ -44,37 +43,6 @@ function DetailItem({ icon: Icon, label, value, subValue }: { icon: React.Elemen
         </div>
     </div>
   );
-}
-
-function StatusTimeline({ currentStatus }: { currentStatus: ShipmentStatusType }) {
-    const statuses: ShipmentStatusType[] = ['Preparing', 'Loading', 'In Transit', 'Unloading', 'Delivered'];
-    const currentIndex = statuses.indexOf(currentStatus);
-
-    return (
-        <div className="flex justify-between items-center px-4 pt-2">
-            {statuses.map((status, index) => (
-                <React.Fragment key={status}>
-                    <div className="flex flex-col items-center">
-                        <div className={cn(
-                            "w-8 h-8 rounded-full flex items-center justify-center border-2",
-                            index <= currentIndex ? "bg-primary border-primary text-primary-foreground" : "bg-muted border-border"
-                        )}>
-                           {index < currentIndex ? <Check className="h-5 w-5" /> : <span className="text-xs font-bold">{index + 1}</span>}
-                        </div>
-                        <p className={cn("text-xs mt-2 text-center", index <= currentIndex ? "font-semibold text-primary" : "text-muted-foreground")}>
-                           {statusTranslations[status]}
-                        </p>
-                    </div>
-                    {index < statuses.length - 1 && (
-                         <div className={cn(
-                             "flex-1 h-1 mx-2",
-                             index < currentIndex ? "bg-primary" : "bg-border"
-                         )}></div>
-                    )}
-                </React.Fragment>
-            ))}
-        </div>
-    )
 }
 
 const libraries: ('places')[] = ['places'];
@@ -110,7 +78,7 @@ export default function ShipmentDetailPage() {
     preventGoogleFontsLoading: true,
     preventLoading: !hasApiKey,
   });
-
+  
   const fetchShipmentData = React.useCallback(async () => {
     if (!id || !db) return;
     setIsLoading(true);
@@ -126,6 +94,15 @@ export default function ShipmentDetailPage() {
           estimatedDeliveryDate: docSnap.data().estimatedDeliveryDate.toDate(),
           orderItemRef: docSnap.data().orderItemRef as DocumentReference | undefined,
         } as Shipment;
+        
+        // Initialize checklist if it doesn't exist
+        if (!shipmentData.checklist) {
+          shipmentData.checklist = {
+            contractSigned: false,
+            safetyBriefingCompleted: false,
+            loadingChecklistCompleted: false,
+          }
+        }
         setShipment(shipmentData);
 
         if (shipmentData.orderItemRef) {
@@ -138,7 +115,7 @@ export default function ShipmentDetailPage() {
         const [cargoSnapshot, packagingSnapshot, contractSnapshot] = await Promise.all([
           getDocs(query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', shipmentData.orderItemId))),
           getDocs(query(collection(db, 'packaging_types'), orderBy('name'))),
-          getDocs(query(collection(db, 'contracts'), where('shipmentId', '==', shipmentData.id)))
+          getDocs(query(collection(db, 'contracts'), where('shipmentId', '==', shipmentData.id), orderBy('createdAt', 'desc')))
         ]);
         
         const cargoData = cargoSnapshot.docs.map(d => d.data() as OrderItemCargo);
@@ -148,15 +125,21 @@ export default function ShipmentDetailPage() {
         setPackagingTypes(packagingData);
 
         if (!contractSnapshot.empty) {
-            const contracts = contractSnapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data(),
-              createdAt: doc.data().createdAt.toDate(),
-              signedAt: doc.data().signedAt ? doc.data().signedAt.toDate() : undefined,
-              estimatedDeliveryDate: doc.data().estimatedDeliveryDate.toDate(),
-            } as Contract));
+            const latestContract = contractSnapshot.docs[0];
+            const contractData = {
+              id: latestContract.id,
+              ...latestContract.data(),
+              createdAt: latestContract.data().createdAt.toDate(),
+              signedAt: latestContract.data().signedAt ? latestContract.data().signedAt.toDate() : undefined,
+              estimatedDeliveryDate: latestContract.data().estimatedDeliveryDate.toDate(),
+            } as Contract;
+            setContract(contractData);
 
-            setContract(contracts[0]);
+            if (contractData.status === 'signed' && !shipmentData.checklist.contractSigned) {
+              const shipmentRef = doc(db, 'shipments', shipmentData.id);
+              await updateDoc(shipmentRef, { 'checklist.contractSigned': true });
+              setShipment(prev => prev ? ({ ...prev, checklist: { ...prev.checklist, contractSigned: true }}) : null);
+            }
         }
         
         if (shipmentData.routeRefs) {
@@ -204,33 +187,6 @@ export default function ShipmentDetailPage() {
     }
   }, [isMapLoaded, startWarehouse, endWarehouse, directions]);
   
-  const handleStatusChange = async (newStatus: ShipmentStatusType) => {
-    if (!shipment || !db) return;
-    setIsUpdating(true);
-    try {
-        const shipmentRef = doc(db, 'shipments', shipment.id);
-        await updateDoc(shipmentRef, { status: newStatus });
-        
-        let orderItemStatus: OrderItem['status'] | '' = '';
-        if (newStatus === 'In Transit') orderItemStatus = 'In Transit';
-        if (newStatus === 'Delivered') orderItemStatus = 'Delivered';
-        if (newStatus === 'Cancelled') orderItemStatus = 'Cancelled';
-        
-        if (orderItemStatus && shipment.orderItemRef) {
-            await updateDoc(shipment.orderItemRef, { status: orderItemStatus });
-        }
-        
-        setShipment(prev => prev ? { ...prev, status: newStatus } : null);
-        toast({ title: "Амжилттай", description: "Тээврийн статус шинэчлэгдлээ."})
-
-    } catch (error) {
-        console.error("Error updating status:", error);
-        toast({ variant: "destructive", title: "Алдаа", description: "Статус шинэчлэхэд алдаа гарлаа."});
-    } finally {
-        setIsUpdating(false);
-    }
-  }
-
   const handleCreateContract = async () => {
     if (!shipment || !orderItem || !db) return;
     setIsUpdating(true);
@@ -265,27 +221,120 @@ export default function ShipmentDetailPage() {
         setIsUpdating(false);
     }
   }
+
+  const handleUpdateChecklist = async (key: keyof Shipment['checklist'], value: boolean) => {
+    if (!shipment) return;
+    setIsUpdating(true);
+    try {
+      const shipmentRef = doc(db, 'shipments', shipment.id);
+      await updateDoc(shipmentRef, { [`checklist.${key}`]: value });
+      setShipment(prev => prev ? ({ ...prev, checklist: { ...prev.checklist, [key]: value }}) : null);
+      toast({ title: 'Амжилттай', description: 'Үйлдэл тэмдэглэгдлээ.'});
+    } catch (error) {
+       toast({ variant: 'destructive', title: 'Алдаа', description: 'Чеклист шинэчлэхэд алдаа гарлаа.'});
+    } finally {
+      setIsUpdating(false);
+    }
+  }
+
+  const handleStatusUpdate = async (newStatus: ShipmentStatusType) => {
+     if (!shipment) return;
+    setIsUpdating(true);
+    try {
+      const shipmentRef = doc(db, 'shipments', shipment.id);
+      await updateDoc(shipmentRef, { status: newStatus });
+      setShipment(prev => prev ? ({ ...prev, status: newStatus }) : null);
+      toast({ title: 'Амжилттай', description: `Тээврийн явц '${statusTranslations[newStatus]}' төлөвт шилжлээ.`});
+    } catch (error) {
+       toast({ variant: 'destructive', title: 'Алдаа', description: 'Төлөв шинэчлэхэд алдаа гарлаа.'});
+    } finally {
+      setIsUpdating(false);
+    }
+  }
   
   const getStatusBadgeVariant = (status: ShipmentStatusType) => {
     switch(status) {
-      case 'Delivered':
-        return 'success';
-      case 'In Transit':
-      case 'Loading':
-      case 'Unloading':
-        return 'default';
-      case 'Delayed':
-        return 'warning';
-      case 'Cancelled':
-        return 'destructive';
-      case 'Preparing':
-      default:
-        return 'secondary';
+      case 'Delivered': return 'success';
+      case 'In Transit': case 'Loading': case 'Unloading': return 'default';
+      case 'Delayed': return 'warning';
+      case 'Cancelled': return 'destructive';
+      case 'Preparing': case 'Ready For Loading':
+      default: return 'secondary';
     }
   };
 
   const getPackagingTypeName = (id: string) => {
     return packagingTypes.find(p => p.id === id)?.name || id;
+  }
+  
+  const renderDispatchControls = () => {
+    if (!shipment) return null;
+    const { status, checklist } = shipment;
+    
+    switch (status) {
+      case 'Preparing':
+        const canMoveToLoading = checklist.contractSigned && checklist.safetyBriefingCompleted;
+        return (
+          <Card>
+            <CardHeader><CardTitle>Бэлтгэл үе шат</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2 p-3 border rounded-md">
+                {checklist.contractSigned ? <CheckCircle className="h-5 w-5 text-green-500" /> : <div className="h-5 w-5 rounded-full border-2 border-muted-foreground" />}
+                <label className="flex-1 text-sm font-medium">Гэрээ баталгаажуулах</label>
+                {contract?.status === 'signed' ? (
+                  <Button variant="outline" size="sm" asChild><Link href={`/contracts/${contract.id}`}><ExternalLink className="mr-2 h-4 w-4" /> Гэрээ харах</Link></Button>
+                ) : (
+                  <Button size="sm" onClick={handleCreateContract} disabled={isUpdating || !orderItem}>{isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />} Гэрээ илгээх</Button>
+                )}
+              </div>
+               <div className="flex items-center space-x-2 p-3 border rounded-md">
+                <Checkbox id="safetyBriefing" checked={checklist.safetyBriefingCompleted} onCheckedChange={(checked) => handleUpdateChecklist('safetyBriefingCompleted', !!checked)} disabled={isUpdating} />
+                <label htmlFor="safetyBriefing" className="text-sm font-medium leading-none">Аюулгүй ажиллагааны зааварчилгаатай танилцсан</label>
+              </div>
+              <Button className="w-full" disabled={!canMoveToLoading || isUpdating} onClick={() => handleStatusUpdate('Ready For Loading')}>
+                 {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} Ачихад бэлэн болгох
+              </Button>
+            </CardContent>
+          </Card>
+        );
+      case 'Ready For Loading':
+         const canStartLoading = checklist.loadingChecklistCompleted;
+        return (
+           <Card>
+             <CardHeader><CardTitle>Ачихад бэлэн</CardTitle></CardHeader>
+             <CardContent className="space-y-4">
+               <div className="flex items-center space-x-2 p-3 border rounded-md">
+                <Checkbox id="loadingChecklist" checked={checklist.loadingChecklistCompleted} onCheckedChange={(checked) => handleUpdateChecklist('loadingChecklistCompleted', !!checked)} disabled={isUpdating} />
+                <label htmlFor="loadingChecklist" className="text-sm font-medium leading-none">Ачилтын үеийн чеклисттэй танилцсан</label>
+              </div>
+               <Button className="w-full" disabled={!canStartLoading || isUpdating} onClick={() => handleStatusUpdate('Loading')}>
+                 {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Truck className="mr-2 h-4 w-4" />} Ачилт эхлүүлэх
+              </Button>
+             </CardContent>
+           </Card>
+        );
+      case 'Loading':
+        return (
+          <Card>
+            <CardHeader><CardTitle>Ачиж байна</CardTitle></CardHeader>
+            <CardContent>
+              <Button className="w-full" onClick={() => handleStatusUpdate('In Transit')} disabled={isUpdating}>
+                 {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Truck className="mr-2 h-4 w-4" />} Тээвэр эхлүүлэх
+              </Button>
+            </CardContent>
+          </Card>
+        );
+      // Add other statuses here...
+      default:
+        return (
+            <Card>
+                <CardHeader><CardTitle>Тээврийн явц</CardTitle></CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground">Одоогийн төлөв: <span className="font-semibold">{statusTranslations[status]}</span></p>
+                </CardContent>
+            </Card>
+        );
+    }
   }
 
   if (isLoading) {
@@ -302,11 +351,11 @@ export default function ShipmentDetailPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2 space-y-6">
-                <Card><CardContent className="pt-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
+                <Card><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
                 <Card><CardContent className="pt-6"><Skeleton className="h-96 w-full" /></CardContent></Card>
                 <Card><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
             </div>
-            <Card className="h-fit"><CardContent className="pt-6"><Skeleton className="h-48 w-full" /></CardContent></Card>
+            <div className="space-y-6"><Card className="h-fit"><CardContent className="pt-6"><Skeleton className="h-48 w-full" /></CardContent></Card></div>
         </div>
       </div>
     );
@@ -330,34 +379,11 @@ export default function ShipmentDetailPage() {
                 Тээвэрлэлтийн дэлгэрэнгүй мэдээлэл.
                 </p>
             </div>
-             <div className="flex items-center gap-2">
-                 <Select onValueChange={(value) => handleStatusChange(value as ShipmentStatusType)} value={shipment.status} disabled={isUpdating}>
-                    <SelectTrigger className="w-[180px]">
-                        {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <SelectValue placeholder="Статус солих..." />}
-                    </SelectTrigger>
-                    <SelectContent>
-                        {shipmentStatuses.map(status => (
-                            <SelectItem key={status} value={status}>
-                                {statusTranslations[status]}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
         </div>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Тээврийн явц</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <StatusTimeline currentStatus={shipment.status} />
-              </CardContent>
-            </Card>
-
             <Card>
               <CardHeader>
                 <CardTitle>Маршрутын зураглал</CardTitle>
@@ -407,6 +433,7 @@ export default function ShipmentDetailPage() {
         </div>
         
         <div className="space-y-6 lg:sticky top-6">
+             {renderDispatchControls()}
              <Card>
               <CardHeader>
                 <CardTitle>Дэлгэрэнгүй</CardTitle>
@@ -426,34 +453,6 @@ export default function ShipmentDetailPage() {
                 <DetailItem icon={User} label="Жолоочийн нэр" value={shipment.driverInfo.name} />
                 <DetailItem icon={Phone} label="Жолоочийн утас" value={shipment.driverInfo.phone} />
               </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Гэрээ</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {contract ? (
-                        <div className="space-y-3">
-                            <DetailItem icon={Info} label="Статус" value={<Badge variant={contract.status === 'signed' ? 'success' : 'secondary'}>{contract.status === 'signed' ? 'Гарын үсэг зурсан' : 'Хүлээгдэж буй'}</Badge>} />
-                            {contract.signedAt && (
-                                <DetailItem icon={Calendar} label="Зурсан огноо" value={format(contract.signedAt, 'yyyy-MM-dd HH:mm')} />
-                            )}
-                            <Button variant="outline" className="w-full" asChild>
-                                <Link href={`/contracts/${contract.id}`}>
-                                    <FileSignature className="mr-2 h-4 w-4"/> Гэрээг харах
-                                </Link>
-                            </Button>
-                        </div>
-                    ) : (
-                        <div className="text-center text-sm text-muted-foreground space-y-3">
-                            <p>Энэ тээвэрлэлтэд гэрээ үүсээгүй байна.</p>
-                            <Button onClick={handleCreateContract} disabled={isUpdating || !orderItem} className="w-full">
-                                {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                                Гэрээ үүсгэж илгээх
-                            </Button>
-                        </div>
-                    )}
-                </CardContent>
             </Card>
         </div>
       </div>
