@@ -5,7 +5,7 @@ import * as React from 'react';
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, orderBy, addDoc, serverTimestamp, DocumentReference } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, OrderItem, Warehouse, Contract } from '@/types';
+import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, OrderItem, Warehouse, Contract, SafetyBriefing } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
@@ -67,6 +67,7 @@ export default function ShipmentDetailPage() {
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
   const [orderItem, setOrderItem] = React.useState<OrderItem | null>(null);
   const [contract, setContract] = React.useState<Contract | null>(null);
+  const [safetyBriefing, setSafetyBriefing] = React.useState<SafetyBriefing | null>(null);
   const [cargo, setCargo] = React.useState<OrderItemCargo[]>([]);
   const [packagingTypes, setPackagingTypes] = React.useState<PackagingType[]>([]);
   const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
@@ -122,10 +123,11 @@ export default function ShipmentDetailPage() {
             }
         }
         
-        const [cargoSnapshot, packagingSnapshot, contractSnapshot] = await Promise.all([
+        const [cargoSnapshot, packagingSnapshot, contractSnapshot, safetyBriefingSnapshot] = await Promise.all([
           getDocs(query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', shipmentData.orderItemId))),
           getDocs(query(collection(db, 'packaging_types'), orderBy('name'))),
-          getDocs(query(collection(db, 'contracts'), where('shipmentId', '==', shipmentData.id)))
+          getDocs(query(collection(db, 'contracts'), where('shipmentId', '==', shipmentData.id))),
+          getDocs(query(collection(db, 'safety_briefings'), where('shipmentId', '==', shipmentData.id)))
         ]);
         
         const cargoData = cargoSnapshot.docs.map(d => d.data() as OrderItemCargo);
@@ -153,6 +155,26 @@ export default function ShipmentDetailPage() {
               const shipmentRef = doc(db, 'shipments', shipmentData.id);
               await updateDoc(shipmentRef, { 'checklist.contractSigned': true });
               setShipment(prev => prev ? ({ ...prev, checklist: { ...prev.checklist, contractSigned: true }}) : null);
+            }
+        }
+
+        if (!safetyBriefingSnapshot.empty) {
+            const briefingsData = safetyBriefingSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                createdAt: doc.data().createdAt.toDate(),
+                signedAt: doc.data().signedAt ? doc.data().signedAt.toDate() : undefined,
+            } as SafetyBriefing));
+
+            briefingsData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+            
+            const latestBriefing = briefingsData[0];
+            setSafetyBriefing(latestBriefing);
+
+             if (latestBriefing.status === 'signed' && !shipmentData.checklist.safetyBriefingCompleted) {
+              const shipmentRef = doc(db, 'shipments', shipmentData.id);
+              await updateDoc(shipmentRef, { 'checklist.safetyBriefingCompleted': true });
+              setShipment(prev => prev ? ({ ...prev, checklist: { ...prev.checklist, safetyBriefingCompleted: true }}) : null);
             }
         }
         
@@ -235,6 +257,27 @@ export default function ShipmentDetailPage() {
         setIsUpdating(false);
     }
   }
+
+  const handleCreateSafetyBriefing = async () => {
+    if (!shipment) return;
+    setIsUpdating(true);
+    try {
+      const briefingRef = await addDoc(collection(db, 'safety_briefings'), {
+        shipmentId: shipment.id,
+        shipmentRef: doc(db, 'shipments', shipment.id),
+        driverInfo: shipment.driverInfo,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+      });
+      toast({ title: "Заавар үүслээ", description: "Зааврын хуудас руу шилжиж байна." });
+      router.push(`/safety-briefing/${briefingRef.id}`);
+    } catch (error) {
+       console.error("Error creating safety briefing", error);
+       toast({ variant: "destructive", title: "Алдаа", description: "Аюулгүй ажиллагааны заавар үүсгэхэд алдаа гарлаа."});
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const handleUpdateChecklist = async (key: keyof Shipment['checklist'], value: boolean) => {
     if (!shipment) return;
@@ -363,8 +406,19 @@ export default function ShipmentDetailPage() {
                 )}
             </div>
              <div className="flex items-center space-x-2">
-                <Checkbox id="safetyBriefingCompleted" checked={checklist.safetyBriefingCompleted} onCheckedChange={(checked) => handleUpdateChecklist('safetyBriefingCompleted', !!checked)} disabled={isUpdating}/>
-                <label htmlFor="safetyBriefingCompleted" className="text-sm font-medium leading-none">Аюулгүй ажиллагааны зааварчилгаатай танилцсан</label>
+                <Checkbox id="safetyBriefingCompleted" checked={checklist.safetyBriefingCompleted} disabled={true}/>
+                 <label htmlFor="safetyBriefingCompleted" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                   Аюулгүй ажиллагааны зааварчилгаатай танилцсан
+                </label>
+                {safetyBriefing ? (
+                     <Button variant="outline" size="sm" asChild>
+                        <Link href={`/safety-briefing/${safetyBriefing.id}`} target="_blank"><ExternalLink className="mr-2 h-3 w-3" /> Заавар харах</Link>
+                    </Button>
+                ) : (
+                     <Button size="sm" onClick={handleCreateSafetyBriefing} disabled={isUpdating}>
+                        {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ShieldCheck className="mr-2 h-4 w-4"/>} Заавар үүсгэх
+                    </Button>
+                )}
             </div>
             <Button onClick={() => handleStatusChange('Ready For Loading')} disabled={!isPreparingComplete || isUpdating}>
                 Ачихад бэлэн болгох
