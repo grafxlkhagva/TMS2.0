@@ -9,7 +9,7 @@ import type { Contract, Shipment, OrderItem } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { format } from "date-fns"
 
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, FileSignature } from 'lucide-react';
@@ -43,7 +43,7 @@ export default function ContractDetailPage() {
   const [contractPublicUrl, setContractPublicUrl] = React.useState('');
 
   React.useEffect(() => {
-    if (!id) return;
+    if (!id || !db) return;
     setIsLoading(true);
 
     const fetchContract = async () => {
@@ -51,38 +51,52 @@ export default function ContractDetailPage() {
         const docRef = doc(db, 'contracts', id);
         const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists()) {
-          const contractData = {
-            id: docSnap.id,
-            ...docSnap.data(),
-            createdAt: docSnap.data().createdAt.toDate(),
-            signedAt: docSnap.data().signedAt ? docSnap.data().signedAt.toDate() : undefined,
-          } as Contract;
-          setContract(contractData);
-
-          if (contractData.shipmentRef) {
-            const shipmentSnap = await getDoc(contractData.shipmentRef as DocumentReference);
-            if (shipmentSnap.exists()) {
-               const shipmentData = shipmentSnap.data() as Shipment;
-               setShipment(shipmentData);
-
-               if (shipmentData.orderItemRef) {
-                  const orderItemSnap = await getDoc(shipmentData.orderItemRef as DocumentReference);
-                  if (orderItemSnap.exists()) {
-                      setOrderItem(orderItemSnap.data() as OrderItem);
-                  } else {
-                       toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалгын мэдээлэл олдсонгүй.' });
-                  }
-               } else {
-                  toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрт холбогдох захиалгын мэдээлэл олдсонгүй.' });
-               }
-            }
-          }
-
-        } else {
+        if (!docSnap.exists()) {
           toast({ variant: 'destructive', title: 'Алдаа', description: 'Гэрээ олдсонгүй.' });
           router.push('/shipments');
+          return;
         }
+
+        const contractData = {
+          id: docSnap.id,
+          ...docSnap.data(),
+          createdAt: docSnap.data().createdAt.toDate(),
+          signedAt: docSnap.data().signedAt ? docSnap.data().signedAt.toDate() : undefined,
+        } as Contract;
+        setContract(contractData);
+
+        if (!contractData.shipmentRef) {
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Гэрээнд холбогдох тээвэрлэлтийн мэдээлэл олдсонгүй.' });
+            setIsLoading(false);
+            return;
+        }
+
+        const shipmentSnap = await getDoc(contractData.shipmentRef as DocumentReference);
+        if (!shipmentSnap.exists()) {
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрлэлтийн мэдээлэл олдсонгүй.' });
+            setIsLoading(false);
+            return;
+        }
+        
+        const shipmentData = {
+            ...shipmentSnap.data(),
+            orderItemRef: shipmentSnap.data().orderItemRef as DocumentReference
+        } as Shipment;
+        setShipment(shipmentData);
+
+        if (!shipmentData.orderItemRef) {
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрт холбогдох захиалгын мэдээлэл олдсонгүй.' });
+            setIsLoading(false);
+            return;
+        }
+        
+        const orderItemSnap = await getDoc(shipmentData.orderItemRef);
+        if (orderItemSnap.exists()) {
+            setOrderItem(orderItemSnap.data() as OrderItem);
+        } else {
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалгын дэлгэрэнгүй мэдээлэл олдсонгүй.' });
+        }
+
       } catch (error) {
         console.error("Error fetching contract:", error);
         toast({ variant: 'destructive', title: 'Алдаа', description: 'Мэдээлэл татахад алдаа гарлаа.' });
@@ -119,7 +133,22 @@ export default function ContractDetailPage() {
   }
 
   if (!contract || !shipment || !orderItem) {
-    return null;
+    return (
+        <div className="container mx-auto py-6">
+            <Button variant="outline" size="sm" onClick={() => router.back()} className="mb-4">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Буцах
+            </Button>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Алдаа</CardTitle>
+                    <CardDescription>
+                        Гэрээний мэдээллийг дуудахад алдаа гарлаа. Шаардлагатай тээвэрлэлт эсвэл захиалгын мэдээлэл олдсонгүй.
+                    </CardDescription>
+                </CardHeader>
+            </Card>
+        </div>
+    );
   }
   
   return (
@@ -213,3 +242,5 @@ export default function ContractDetailPage() {
     </div>
   );
 }
+
+    
