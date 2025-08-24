@@ -271,6 +271,8 @@ export type Shipment = {
     contractSigned: boolean;
     safetyBriefingCompleted: boolean;
     loadingChecklistCompleted: boolean;
+    unloadingChecklistCompleted: boolean;
+    deliveryDocumentsSigned: boolean;
   };
 };
 

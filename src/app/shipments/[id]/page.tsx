@@ -102,11 +102,14 @@ export default function ShipmentDetailPage() {
           orderItemRef: docSnap.data().orderItemRef as DocumentReference | undefined,
         } as Shipment;
         
+        // Initialize checklist if it doesn't exist
         if (!shipmentData.checklist) {
           shipmentData.checklist = {
             contractSigned: false,
             safetyBriefingCompleted: false,
             loadingChecklistCompleted: false,
+            unloadingChecklistCompleted: false,
+            deliveryDocumentsSigned: false,
           }
         }
         setShipment(shipmentData);
@@ -144,6 +147,7 @@ export default function ShipmentDetailPage() {
             const latestContract = contractsData[0];
             setContract(latestContract);
 
+            // Auto-check if contract is signed
             if (latestContract.status === 'signed' && !shipmentData.checklist.contractSigned) {
               const shipmentRef = doc(db, 'shipments', shipmentData.id);
               await updateDoc(shipmentRef, { 'checklist.contractSigned': true });
@@ -295,9 +299,10 @@ export default function ShipmentDetailPage() {
                     <div 
                         className={cn("flex flex-col items-center cursor-pointer group", (index === currentIndex + 1 || index <= currentIndex) && "cursor-pointer")}
                         onClick={() => {
-                            if (index === currentIndex + 1 || index < currentIndex) {
-                                onStatusClick(status);
-                            }
+                           // Allow moving forward and backward
+                           if (index !== currentIndex) {
+                               onStatusClick(status);
+                           }
                         }}
                     >
                         <div className={cn(
@@ -325,6 +330,105 @@ export default function ShipmentDetailPage() {
         </div>
     )
 }
+
+ const renderCurrentStageChecklist = () => {
+    if (!shipment) return null;
+    
+    const checklist = shipment.checklist;
+
+    switch (shipment.status) {
+      case 'Preparing':
+        const isPreparingComplete = checklist.contractSigned && checklist.safetyBriefingCompleted;
+        return (
+          <div className="space-y-4">
+            <h3 className="font-semibold">Бэлтгэл ажлын чеклист</h3>
+            <div className="flex items-center space-x-2">
+                <Checkbox id="contractSigned" checked={checklist.contractSigned} disabled={true}/>
+                 <label htmlFor="contractSigned" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                   Гэрээ баталгаажсан
+                </label>
+                {contract ? (
+                    <Button variant="outline" size="sm" asChild>
+                        <Link href={`/contracts/${contract.id}`} target="_blank"><ExternalLink className="mr-2 h-3 w-3" /> Гэрээ харах</Link>
+                    </Button>
+                ) : (
+                    <Button size="sm" onClick={handleCreateContract} disabled={isUpdating}>
+                        {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <FileSignature className="mr-2 h-4 w-4"/>} Гэрээ үүсгэх
+                    </Button>
+                )}
+            </div>
+             <div className="flex items-center space-x-2">
+                <Checkbox id="safetyBriefingCompleted" checked={checklist.safetyBriefingCompleted} onCheckedChange={(checked) => handleUpdateChecklist('safetyBriefingCompleted', !!checked)} disabled={isUpdating}/>
+                <label htmlFor="safetyBriefingCompleted" className="text-sm font-medium leading-none">Аюулгүй ажиллагааны зааварчилгаатай танилцсан</label>
+            </div>
+            <Button onClick={() => handleStatusChange('Ready For Loading')} disabled={!isPreparingComplete || isUpdating}>
+                Ачихад бэлэн болгох
+            </Button>
+          </div>
+        );
+
+        case 'Ready For Loading':
+            const isLoadingReadyComplete = checklist.loadingChecklistCompleted;
+            return (
+                <div className="space-y-4">
+                    <h3 className="font-semibold">Ачихад бэлтгэх чеклист</h3>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="loadingChecklistCompleted" checked={checklist.loadingChecklistCompleted} onCheckedChange={(checked) => handleUpdateChecklist('loadingChecklistCompleted', !!checked)} disabled={isUpdating}/>
+                        <label htmlFor="loadingChecklistCompleted" className="text-sm font-medium leading-none">Ачилтын үеийн санамжтай танилцсан</label>
+                    </div>
+                    <Button onClick={() => handleStatusChange('Loading')} disabled={!isLoadingReadyComplete || isUpdating}>
+                        Ачилт эхлүүлэх
+                    </Button>
+                </div>
+            )
+
+        case 'Loading':
+            return (
+                 <div className="space-y-4">
+                     <h3 className="font-semibold">Ачилт хийгдэж байна</h3>
+                     <Button onClick={() => handleStatusChange('In Transit')} disabled={isUpdating}>
+                        Тээвэр эхлүүлэх
+                     </Button>
+                 </div>
+            )
+
+        case 'Unloading':
+             const isUnloadingComplete = checklist.unloadingChecklistCompleted;
+             return (
+                <div className="space-y-4">
+                    <h3 className="font-semibold">Буулгалтын чеклист</h3>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="unloadingChecklistCompleted" checked={checklist.unloadingChecklistCompleted} onCheckedChange={(checked) => handleUpdateChecklist('unloadingChecklistCompleted', !!checked)} disabled={isUpdating}/>
+                        <label htmlFor="unloadingChecklistCompleted" className="text-sm font-medium leading-none">Буулгалтын чеклисттэй танилцсан</label>
+                    </div>
+                    <Button onClick={() => handleStatusChange('Delivered')} disabled={!isUnloadingComplete || isUpdating}>
+                        Хүргэлт дууссан
+                    </Button>
+                </div>
+            )
+        
+        case 'Delivered':
+            const isDeliveryComplete = checklist.deliveryDocumentsSigned;
+            return (
+                 <div className="space-y-4">
+                    <h3 className="font-semibold">Хүргэлтийн баталгаажуулалт</h3>
+                     <div className="flex items-center space-x-2">
+                        <Checkbox id="deliveryDocumentsSigned" checked={checklist.deliveryDocumentsSigned} onCheckedChange={(checked) => handleUpdateChecklist('deliveryDocumentsSigned', !!checked)} disabled={isUpdating}/>
+                        <label htmlFor="deliveryDocumentsSigned" className="text-sm font-medium leading-none">Хүргэлтийн баримт баталгаажсан</label>
+                    </div>
+                     <Alert variant="success">
+                        <CheckCircle className="h-4 w-4"/>
+                        <AlertTitle>Тээвэрлэлт амжилттай</AlertTitle>
+                        <AlertDescription>Энэ тээвэрлэлт амжилттай дууссан байна.</AlertDescription>
+                    </Alert>
+                 </div>
+            )
+
+      default:
+        return <p className="text-sm text-muted-foreground">Энэ үе шатанд хийх үйлдэл алга.</p>;
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -405,10 +509,23 @@ export default function ShipmentDetailPage() {
              <Card>
               <CardHeader>
                 <CardTitle>Тээврийн явц</CardTitle>
+                <CardDescription>Статус дээр дарж явцыг урагшлуулах эсвэл буцаах боломжтой.</CardDescription>
               </CardHeader>
               <CardContent>
                 <StatusTimeline currentStatus={shipment.status} onStatusClick={(newStatus) => setStatusChange({ newStatus, oldStatus: shipment.status })}/>
               </CardContent>
+            </Card>
+
+             <Card>
+                <CardHeader>
+                    <CardTitle>Диспач удирдлага</CardTitle>
+                    <CardDescription>
+                       Одоогийн "{statusTranslations[shipment.status]}" үе шатанд хийгдэх үйлдлүүд.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {renderCurrentStageChecklist()}
+                </CardContent>
             </Card>
         </div>
         
@@ -472,4 +589,3 @@ export default function ShipmentDetailPage() {
     </div>
   );
 }
-
