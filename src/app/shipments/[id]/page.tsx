@@ -5,7 +5,7 @@ import * as React from 'react';
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, orderBy, addDoc, serverTimestamp, DocumentReference } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, OrderItem, Warehouse, Contract, SafetyBriefing } from '@/types';
+import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, OrderItem, Warehouse, Contract, SafetyBriefing, Driver } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
@@ -325,6 +325,43 @@ export default function ShipmentDetailPage() {
     }
   }
   
+  const handleAssignDriverToShipment = async () => {
+    if (!shipment || !db) return;
+    setIsUpdating(true);
+    try {
+        const phone = shipment.driverInfo.phone;
+        const q = query(collection(db, 'Drivers'), where('phone_number', '==', phone));
+        const driverSnapshot = await getDocs(q);
+
+        if (driverSnapshot.empty) {
+            toast({
+                variant: 'destructive',
+                title: 'Жолооч олдсонгүй',
+                description: 'Энэ утасны дугаартай жолооч системд бүртгэлгүй байна. Захиалгын дэлгэрэнгүйгээс жолоочийг бүртгэнэ үү.',
+            });
+            return;
+        }
+
+        const driverDoc = driverSnapshot.docs[0];
+        const driver = { id: driverDoc.id, ...driverDoc.data() } as Driver;
+
+        const shipmentRef = doc(db, 'shipments', shipment.id);
+        await updateDoc(shipmentRef, {
+            driverId: driver.id,
+            driverRef: doc(db, 'Drivers', driver.id),
+        });
+
+        setShipment(prev => prev ? { ...prev, driverId: driver.id, driverRef: doc(db, 'Drivers', driver.id) } : null);
+        toast({ title: 'Амжилттай', description: `${driver.display_name} жолоочийг тээвэрт оноолоо.` });
+
+    } catch (error) {
+        console.error("Error assigning driver:", error);
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч онооход алдаа гарлаа.' });
+    } finally {
+        setIsUpdating(false);
+    }
+  };
+
   const getStatusBadgeVariant = (status: ShipmentStatusType) => {
     switch(status) {
       case 'Delivered': return 'success';
@@ -448,6 +485,29 @@ export default function ShipmentDetailPage() {
                     ) : (
                         <Button size="sm" onClick={handleCreateSafetyBriefing} disabled={isUpdating}>
                             {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ShieldCheck className="mr-2 h-4 w-4"/>} Заавар үүсгэх
+                        </Button>
+                    )}
+                </CardFooter>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-base">Жолоочид ажил үүсгэх</CardTitle>
+                </CardHeader>
+                 <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                        Жолоочийг системд бүртгэсний дараа энэ товчийг дарж тээвэрт онооно.
+                    </p>
+                </CardContent>
+                <CardFooter>
+                     {shipment.driverId ? (
+                        <Button size="sm" disabled={true} variant="success">
+                           <CheckCircle className="mr-2 h-4 w-4"/> Амжилттай үүслээ
+                        </Button>
+                    ) : (
+                         <Button size="sm" onClick={handleAssignDriverToShipment} disabled={isUpdating}>
+                            {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>} 
+                            Жолоочид ажил үүсгэх
                         </Button>
                     )}
                 </CardFooter>
@@ -680,5 +740,3 @@ export default function ShipmentDetailPage() {
     </div>
   );
 }
-
-    

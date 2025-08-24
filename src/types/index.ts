@@ -1,5 +1,4 @@
 
-
 import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Delayed';
@@ -139,7 +138,7 @@ export type OrderItemStatus = 'Pending' | 'Assigned' | 'Shipped' | 'In Transit' 
 
 export type LoadingUnloadingResponsibility = 'Захиалагч хариуцах' | 'Тээвэрлэгч хариуцах';
 export type VehicleAvailability = '8 цаг' | '12 цаг' | '24 цаг' | '48 цаг' | '7 хоног' | '14 хоног';
-export type PaymentTerm = 'Урьдчилгаа 30%' | 'Урьдчилгаа 40%' | 'Урьдчилгаа 50%' | 'Тээвэрлэлт дуусаад' | 'Гэрээгээр тохиролцоно';
+export type PaymentTerm = 'Урьдчилгаа 30%' | 'Урьдчилгаа 40%' | 'Урьдчилгаа 50%' | 'Тээвэрлэлт дууссаад' | 'Гэрээгээр тохиролцоно';
 
 export type TransportationConditions = {
     loading: LoadingUnloadingResponsibility;
@@ -252,6 +251,8 @@ export type Shipment = {
     phone: string;
     quoteId: string;
   };
+  driverId?: string;
+  driverRef?: DocumentReference;
   route: {
     startRegion: string;
     endRegion: string;
