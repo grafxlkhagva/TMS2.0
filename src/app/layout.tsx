@@ -20,9 +20,10 @@ const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAuthPage = pathname === '/login' || pathname === '/signup';
+  const isPublicPage = pathname.startsWith('/sign/') || pathname === '/login' || pathname === '/signup';
 
-  if (isAuthPage) {
+
+  if (isPublicPage) {
     return <>{children}</>;
   }
 

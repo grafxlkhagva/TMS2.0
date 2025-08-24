@@ -268,3 +268,24 @@ export type Shipment = {
   createdAt: Date;
   estimatedDeliveryDate: Date;
 };
+
+export type ContractStatus = 'pending' | 'signed' | 'declined' | 'expired';
+
+export type Contract = {
+    id: string;
+    shipmentId: string;
+    shipmentRef: DocumentReference;
+    orderId: string;
+    orderRef: DocumentReference;
+    driverInfo: {
+        name: string;
+        phone: string;
+    };
+    status: ContractStatus;
+    createdAt: Date;
+    content?: string;
+    signedAt?: Date;
+    signatureDataUrl?: string;
+    ipAddress?: string;
+    userAgent?: string;
+};

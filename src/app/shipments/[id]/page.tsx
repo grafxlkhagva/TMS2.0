@@ -2,10 +2,10 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, OrderItem, Warehouse } from '@/types';
+import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, OrderItem, Warehouse, Contract } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
@@ -14,7 +14,7 @@ import { useLoadScript, GoogleMap, DirectionsRenderer } from '@react-google-maps
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2, FileSignature, Send } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -91,6 +91,7 @@ export default function ShipmentDetailPage() {
   const { toast } = useToast();
 
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
+  const [contract, setContract] = React.useState<Contract | null>(null);
   const [cargo, setCargo] = React.useState<OrderItemCargo[]>([]);
   const [packagingTypes, setPackagingTypes] = React.useState<PackagingType[]>([]);
   const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
@@ -109,57 +110,68 @@ export default function ShipmentDetailPage() {
     preventLoading: !hasApiKey,
   });
 
-  React.useEffect(() => {
+  const fetchShipmentData = React.useCallback(async () => {
     if (!id) return;
     setIsLoading(true);
-    const fetchShipment = async () => {
-      try {
-        const docRef = doc(db, 'shipments', id);
-        const docSnap = await getDoc(docRef);
+    try {
+      const docRef = doc(db, 'shipments', id);
+      const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists()) {
-          const shipmentData = {
-            id: docSnap.id,
-            ...docSnap.data(),
-            createdAt: docSnap.data().createdAt.toDate(),
-            estimatedDeliveryDate: docSnap.data().estimatedDeliveryDate.toDate(),
-          } as Shipment;
-          setShipment(shipmentData);
-          
-          const [cargoSnapshot, packagingSnapshot] = await Promise.all([
-            getDocs(query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', shipmentData.orderItemId))),
-            getDocs(query(collection(db, 'packaging_types'), orderBy('name')))
-          ]);
-          
-          const cargoData = cargoSnapshot.docs.map(d => d.data() as OrderItemCargo);
-          setCargo(cargoData);
+      if (docSnap.exists()) {
+        const shipmentData = {
+          id: docSnap.id,
+          ...docSnap.data(),
+          createdAt: docSnap.data().createdAt.toDate(),
+          estimatedDeliveryDate: docSnap.data().estimatedDeliveryDate.toDate(),
+        } as Shipment;
+        setShipment(shipmentData);
+        
+        const [cargoSnapshot, packagingSnapshot, contractSnapshot] = await Promise.all([
+          getDocs(query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', shipmentData.orderItemId))),
+          getDocs(query(collection(db, 'packaging_types'), orderBy('name'))),
+          getDocs(query(collection(db, 'contracts'), where('shipmentId', '==', shipmentData.id), orderBy('createdAt', 'desc')))
+        ]);
+        
+        const cargoData = cargoSnapshot.docs.map(d => d.data() as OrderItemCargo);
+        setCargo(cargoData);
 
-          const packagingData = packagingSnapshot.docs.map(d => ({id: d.id, ...d.data()} as PackagingType));
-          setPackagingTypes(packagingData);
-          
-          if (shipmentData.routeRefs) {
-              const [startWarehouseDoc, endWarehouseDoc] = await Promise.all([
-                  getDoc(shipmentData.routeRefs.startWarehouseRef),
-                  getDoc(shipmentData.routeRefs.endWarehouseRef)
-              ]);
-              if(startWarehouseDoc.exists()) setStartWarehouse({id: startWarehouseDoc.id, ...startWarehouseDoc.data()} as Warehouse);
-              if(endWarehouseDoc.exists()) setEndWarehouse({id: endWarehouseDoc.id, ...endWarehouseDoc.data()} as Warehouse);
-          }
+        const packagingData = packagingSnapshot.docs.map(d => ({id: d.id, ...d.data()} as PackagingType));
+        setPackagingTypes(packagingData);
 
-        } else {
-          toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрлэлт олдсонгүй.' });
-          router.push('/shipments');
+        if (!contractSnapshot.empty) {
+            const contractData = contractSnapshot.docs[0].data();
+            setContract({
+                id: contractSnapshot.docs[0].id,
+                ...contractData,
+                createdAt: contractData.createdAt.toDate(),
+                signedAt: contractData.signedAt ? contractData.signedAt.toDate() : undefined
+            } as Contract);
         }
-      } catch (error) {
-        console.error("Error fetching shipment:", error);
-        toast({ variant: 'destructive', title: 'Алдаа', description: 'Мэдээлэл татахад алдаа гарлаа.' });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+        
+        if (shipmentData.routeRefs) {
+            const [startWarehouseDoc, endWarehouseDoc] = await Promise.all([
+                getDoc(shipmentData.routeRefs.startWarehouseRef),
+                getDoc(shipmentData.routeRefs.endWarehouseRef)
+            ]);
+            if(startWarehouseDoc.exists()) setStartWarehouse({id: startWarehouseDoc.id, ...startWarehouseDoc.data()} as Warehouse);
+            if(endWarehouseDoc.exists()) setEndWarehouse({id: endWarehouseDoc.id, ...endWarehouseDoc.data()} as Warehouse);
+        }
 
-    fetchShipment();
+      } else {
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрлэлт олдсонгүй.' });
+        router.push('/shipments');
+      }
+    } catch (error) {
+      console.error("Error fetching shipment:", error);
+      toast({ variant: 'destructive', title: 'Алдаа', description: 'Мэдээлэл татахад алдаа гарлаа.' });
+    } finally {
+      setIsLoading(false);
+    }
   }, [id, router, toast]);
+  
+  React.useEffect(() => {
+    fetchShipmentData();
+  }, [fetchShipmentData]);
 
   React.useEffect(() => {
     if (isMapLoaded && startWarehouse && endWarehouse && !directions) {
@@ -204,6 +216,30 @@ export default function ShipmentDetailPage() {
     } catch (error) {
         console.error("Error updating status:", error);
         toast({ variant: "destructive", title: "Алдаа", description: "Статус шинэчлэхэд алдаа гарлаа."});
+    } finally {
+        setIsUpdating(false);
+    }
+  }
+
+  const handleCreateContract = async () => {
+    if (!shipment) return;
+    setIsUpdating(true);
+    try {
+        const contractRef = await addDoc(collection(db, 'contracts'), {
+            shipmentId: shipment.id,
+            shipmentRef: doc(db, 'shipments', shipment.id),
+            orderId: shipment.orderId,
+            orderRef: doc(db, 'orders', shipment.orderId),
+            driverInfo: shipment.driverInfo,
+            status: 'pending',
+            createdAt: serverTimestamp(),
+        });
+        toast({ title: "Гэрээ үүслээ", description: "Гэрээний хуудас руу шилжиж байна." });
+        router.push(`/contracts/${contractRef.id}`);
+
+    } catch (error) {
+        console.error("Error creating contract", error);
+        toast({ variant: "destructive", title: "Алдаа", description: "Гэрээ үүсгэхэд алдаа гарлаа."});
     } finally {
         setIsUpdating(false);
     }
@@ -369,6 +405,34 @@ export default function ShipmentDetailPage() {
                 <DetailItem icon={User} label="Жолоочийн нэр" value={shipment.driverInfo.name} />
                 <DetailItem icon={Phone} label="Жолоочийн утас" value={shipment.driverInfo.phone} />
               </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Гэрээ</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {contract ? (
+                        <div className="space-y-3">
+                            <DetailItem icon={Info} label="Статус" value={<Badge variant={contract.status === 'signed' ? 'success' : 'secondary'}>{contract.status === 'signed' ? 'Гарын үсэг зурсан' : 'Хүлээгдэж буй'}</Badge>} />
+                            {contract.signedAt && (
+                                <DetailItem icon={Calendar} label="Зурсан огноо" value={format(contract.signedAt, 'yyyy-MM-dd HH:mm')} />
+                            )}
+                            <Button variant="outline" className="w-full" asChild>
+                                <Link href={`/contracts/${contract.id}`}>
+                                    <FileSignature className="mr-2 h-4 w-4"/> Гэрээг харах
+                                </Link>
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="text-center text-sm text-muted-foreground space-y-3">
+                            <p>Энэ тээвэрлэлтэд гэрээ үүсээгүй байна.</p>
+                            <Button onClick={handleCreateContract} disabled={isUpdating} className="w-full">
+                                {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                                Гэрээ үүсгэж илгээх
+                            </Button>
+                        </div>
+                    )}
+                </CardContent>
             </Card>
         </div>
       </div>
