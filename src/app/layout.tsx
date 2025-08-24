@@ -2,7 +2,6 @@
 import type { Metadata } from 'next';
 import { Inter, Manrope } from 'next/font/google';
 import './globals.css';
-import { AppShell } from '@/components/app-shell';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/hooks/use-auth';
 import { ProtectedLayout } from '@/components/protected-layout';
