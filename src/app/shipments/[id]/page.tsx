@@ -153,7 +153,8 @@ export default function ShipmentDetailPage() {
               ...doc.data(),
               createdAt: doc.data().createdAt.toDate(),
               signedAt: doc.data().signedAt ? doc.data().signedAt.toDate() : undefined,
-            } as Contract)).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+              estimatedDeliveryDate: doc.data().estimatedDeliveryDate.toDate(),
+            } as Contract));
 
             setContract(contracts[0]);
         }
@@ -215,9 +216,8 @@ export default function ShipmentDetailPage() {
         if (newStatus === 'Delivered') orderItemStatus = 'Delivered';
         if (newStatus === 'Cancelled') orderItemStatus = 'Cancelled';
         
-        if (orderItemStatus) {
-            const orderItemRef = doc(db, 'order_items', shipment.orderItemId);
-            await updateDoc(orderItemRef, { status: orderItemStatus });
+        if (orderItemStatus && shipment.orderItemRef) {
+            await updateDoc(shipment.orderItemRef, { status: orderItemStatus });
         }
         
         setShipment(prev => prev ? { ...prev, status: newStatus } : null);
@@ -238,6 +238,7 @@ export default function ShipmentDetailPage() {
         const contractRef = await addDoc(collection(db, 'contracts'), {
             shipmentId: shipment.id,
             shipmentRef: doc(db, 'shipments', shipment.id),
+            shipmentNumber: shipment.shipmentNumber,
             orderId: shipment.orderId,
             orderRef: doc(db, 'orders', shipment.orderId),
             driverInfo: shipment.driverInfo,

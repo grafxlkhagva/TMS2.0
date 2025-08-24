@@ -275,6 +275,7 @@ export type Contract = {
     id: string;
     shipmentId: string;
     shipmentRef: DocumentReference;
+    shipmentNumber: string;
     orderId: string;
     orderRef: DocumentReference;
     // Snapshot of key information at time of creation
