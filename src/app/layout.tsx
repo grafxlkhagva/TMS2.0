@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Metadata } from 'next';
@@ -20,7 +21,7 @@ const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isPublicPage = pathname.startsWith('/sign/') || pathname === '/login' || pathname === '/signup';
+  const isPublicPage = pathname.startsWith('/sign/') || pathname.startsWith('/safety-briefing/') || pathname === '/login' || pathname === '/signup';
 
 
   if (isPublicPage) {
