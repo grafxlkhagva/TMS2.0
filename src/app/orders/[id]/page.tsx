@@ -17,7 +17,7 @@ import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink, Download, Megaphone, MegaphoneOff, Calendar, Package, MapPin } from 'lucide-react';
+import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink, Download, Megaphone, MegaphoneOff, Calendar, Package, MapPin, UserPlus } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -586,6 +586,48 @@ export default function OrderDetailPage() {
     }
   }
 
+  const handleRegisterDriver = async (quote: DriverQuote) => {
+    setIsSubmitting(true);
+    try {
+        // Check if driver with this phone number already exists
+        const driversQuery = query(collection(db, 'Drivers'), where('phone_number', '==', quote.driverPhone));
+        const existingDrivers = await getDocs(driversQuery);
+
+        if (!existingDrivers.empty) {
+            toast({
+                variant: 'default',
+                title: 'Бүртгэлтэй жолооч',
+                description: `${quote.driverName} (${quote.driverPhone}) дугаартай жолооч системд бүртгэлтэй байна.`,
+            });
+            return;
+        }
+
+        // Add new driver
+        const newDriverRef = await addDoc(collection(db, 'Drivers'), {
+            display_name: quote.driverName,
+            phone_number: quote.driverPhone,
+            status: 'Active',
+            created_time: serverTimestamp(),
+        });
+        
+        toast({
+            title: 'Амжилттай',
+            description: `${quote.driverName} нэртэй жолоочийг системд бүртгэлээ.`,
+        });
+
+    } catch (error) {
+        console.error('Error registering driver:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Алдаа',
+            description: 'Жолооч бүртгэхэд алдаа гарлаа.',
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
+};
+
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-6 space-y-6">
@@ -900,7 +942,12 @@ export default function OrderDetailPage() {
                                                                 </Badge>
                                                             </TableCell>
                                                             <TableCell className="text-right">
-                                                                <div className="flex gap-2 justify-end">
+                                                                <div className="flex gap-1 justify-end items-center">
+                                                                     {quote.channel === 'Phone' && (
+                                                                        <Button size="sm" variant="outline" onClick={() => handleRegisterDriver(quote)} disabled={isSubmitting}>
+                                                                            <UserPlus className="mr-2 h-4 w-4" /> Тээвэрчин болгох
+                                                                        </Button>
+                                                                    )}
                                                                     {item.acceptedQuoteId === quote.id ? (
                                                                          <Button size="sm" variant="destructive" onClick={() => handleRevertQuoteSelection(item)} disabled={isSubmitting || item.status === 'Shipped'}>
                                                                              <XCircle className="mr-2 h-4 w-4"/> Буцаах
