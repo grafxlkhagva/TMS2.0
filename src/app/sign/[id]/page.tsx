@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, Eraser } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import ContractPrintLayout from '@/components/contract-print-layout';
 
 export default function SignContractPage() {
   const { id } = useParams<{ id: string }>();
@@ -29,7 +30,7 @@ export default function SignContractPage() {
   const sigCanvas = React.useRef<SignatureCanvas>(null);
 
   React.useEffect(() => {
-    if (!id) return;
+    if (!id || !db) return;
     document.body.classList.add('bg-muted');
 
     const fetchContract = async () => {
@@ -39,17 +40,40 @@ export default function SignContractPage() {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          const contractData = { id: docSnap.id, ...docSnap.data() } as Contract;
+          const contractData = { 
+            id: docSnap.id, 
+            ...docSnap.data(),
+            createdAt: docSnap.data().createdAt.toDate(),
+            signedAt: docSnap.data().signedAt ? docSnap.data().signedAt.toDate() : undefined,
+          } as Contract;
           setContract(contractData);
+          
+          if (!contractData.shipmentId) {
+             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гэрээнд холбогдох тээвэрлэлтийн мэдээлэл олдсонгүй.' });
+             setIsLoading(false);
+             return;
+          }
 
-          const shipmentSnap = await getDoc(contractData.shipmentRef);
+          const shipmentRef = doc(db, 'shipments', contractData.shipmentId);
+          const shipmentSnap = await getDoc(shipmentRef);
+          
           if (shipmentSnap.exists()) {
              const shipmentData = shipmentSnap.data() as Shipment;
              setShipment(shipmentData);
+
+             if (!shipmentData.orderItemRef) {
+                toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрт холбогдох захиалгын мэдээлэл олдсонгүй.' });
+                setIsLoading(false);
+                return;
+             }
              const orderItemSnap = await getDoc(shipmentData.orderItemRef);
              if (orderItemSnap.exists()) {
                 setOrderItem(orderItemSnap.data() as OrderItem);
+             } else {
+                toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалгын дэлгэрэнгүй мэдээлэл олдсонгүй.' });
              }
+          } else {
+             toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрлэлтийн мэдээлэл олдсонгүй.' });
           }
         } else {
           toast({ variant: 'destructive', title: 'Алдаа', description: 'Гэрээ олдсонгүй.' });
@@ -77,6 +101,7 @@ export default function SignContractPage() {
         toast({ variant: 'destructive', title: 'Алдаа', description: 'Гарын үсгээ зурна уу.'});
         return;
     }
+    if (!id || !db) return;
     setIsSubmitting(true);
     try {
         const signatureDataUrl = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
@@ -85,19 +110,19 @@ export default function SignContractPage() {
             status: 'signed',
             signedAt: serverTimestamp(),
             signatureDataUrl: signatureDataUrl,
-            // In a real app, you would collect IP and User Agent from the backend
-            // for security and audit purposes.
         });
         
         // Refetch to show signed state
         const updatedDoc = await getDoc(contractRef);
         const updatedData = updatedDoc.data();
-        setContract({
-            id: updatedDoc.id,
-            ...updatedData,
-            createdAt: updatedData?.createdAt.toDate(),
-            signedAt: updatedData?.signedAt.toDate()
-        } as Contract)
+        if (updatedData) {
+            setContract({
+                id: updatedDoc.id,
+                ...updatedData,
+                createdAt: updatedData.createdAt.toDate(),
+                signedAt: updatedData.signedAt.toDate()
+            } as Contract)
+        }
         
         toast({ title: 'Баярлалаа!', description: 'Гэрээг амжилттай баталгаажууллаа.'});
 
@@ -129,16 +154,14 @@ export default function SignContractPage() {
     )
   }
   
-  const finalPrice = orderItem.finalPrice || 0;
-
-  if (contract.status === 'signed') {
+  if (contract.status === 'signed' && contract.signedAt) {
     return (
          <div className="flex min-h-screen items-center justify-center p-4">
              <Alert className="max-w-md">
                 <CheckCircle className="h-4 w-4" />
                 <AlertTitle>Гэрээ баталгаажсан</AlertTitle>
                 <AlertDescription>
-                    Та энэхүү гэрээг {format(contract.signedAt!, 'yyyy-MM-dd HH:mm')} цагт амжилттай баталгаажуулсан байна.
+                    Та энэхүү гэрээг {format(contract.signedAt, 'yyyy-MM-dd HH:mm')} цагт амжилттай баталгаажуулсан байна.
                 </AlertDescription>
             </Alert>
         </div>
@@ -152,30 +175,14 @@ export default function SignContractPage() {
                 <CardTitle>Тээвэрлэлтийн гэрээ</CardTitle>
                 <CardDescription>Доорх гэрээний нөхцөлтэй танилцаж, зөвшөөрч байвал гарын үсгээ зурж баталгаажуулна уу.</CardDescription>
             </CardHeader>
-            <CardContent className="prose prose-sm max-w-none">
-                 <h2 className="text-center">Тээвэрлэлтийн гэрээ №{shipment.shipmentNumber}</h2>
-                 <p className="text-right">Огноо: {format(contract.createdAt.toDate(), 'yyyy-MM-dd')}</p>
-                 <p>
-                    Энэхүү гэрээг нэг талаас "Түмэн Тех ТМС" (цаашид "Захиалагч" гэх), нөгөө талаас 
-                    жолооч <strong>{contract.driverInfo.name}</strong> (Утас: {contract.driverInfo.phone}) 
-                    (цаашид "Гүйцэтгэгч" гэх) нар дараах нөхцлөөр харилцан тохиролцож байгуулав.
-                </p>
-                <h3>1. Гэрээний зүйл</h3>
-                <p>
-                    Захиалагч нь дор дурдсан ачааг, заасан чиглэлийн дагуу тээвэрлүүлэх ажлыг Гүйцэтгэгчид даалгаж,
-                    Гүйцэтгэгч нь уг ажлыг хэлэлцэн тохирсон үнээр, хугацаанд нь чанартай гүйцэтгэх үүргийг хүлээнэ.
-                </p>
-                <ul>
-                    <li><strong>Чиглэл:</strong> {shipment.route.startWarehouse} &rarr; {shipment.route.endWarehouse}</li>
-                    <li><strong>Хүргэх хугацаа:</strong> {format(shipment.estimatedDeliveryDate, 'yyyy-MM-dd')}</li>
-                </ul>
-                <h3>2. Гэрээний үнэ, төлбөрийн нөхцөл</h3>
-                <p>
-                    Тээвэрлэлтийн нийт хөлс нь <strong>{finalPrice.toLocaleString()}₮</strong> байна. 
-                    Төлбөрийг тээвэрлэлт дууссаны дараа ажлын 3 хоногт багтаан Гүйцэтгэгчийн данс руу шилжүүлнэ.
-                </p>
-                <h3>3. Талуудын үүрэг</h3>
-                <p>...</p>
+            <CardContent>
+                <div className="prose prose-sm max-w-none border rounded-md p-6 bg-white">
+                     <ContractPrintLayout 
+                        contract={contract}
+                        shipment={shipment}
+                        orderItem={orderItem}
+                     />
+                </div>
             </CardContent>
             <CardFooter className="flex flex-col items-stretch gap-4">
                 <div className="w-full">
