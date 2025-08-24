@@ -309,3 +309,20 @@ export type Contract = {
     ipAddress?: string;
     userAgent?: string;
 };
+
+export type SafetyBriefingStatus = 'pending' | 'signed';
+
+export type SafetyBriefing = {
+    id: string;
+    shipmentId: string;
+    shipmentRef: DocumentReference;
+    driverInfo: {
+        name: string;
+        phone: string;
+    };
+    status: SafetyBriefingStatus;
+    createdAt: Date;
+    signedAt?: Date;
+    signatureDataUrl?: string;
+    userAgent?: string;
+};

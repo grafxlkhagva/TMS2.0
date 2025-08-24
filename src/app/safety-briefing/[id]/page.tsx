@@ -5,7 +5,7 @@ import * as React from 'react';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { SafetyBriefing, Shipment } from '@/types';
+import type { SafetyBriefing, Shipment, OrderItem } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { format } from "date-fns"
 import SignatureCanvas from 'react-signature-canvas'
@@ -13,7 +13,7 @@ import SignatureCanvas from 'react-signature-canvas'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, Eraser, ArrowLeft } from 'lucide-react';
+import { Loader2, CheckCircle, Eraser } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import SafetyBriefingLayout from '@/components/safety-briefing-layout';
 
@@ -24,6 +24,7 @@ export default function SignSafetyBriefingPage() {
 
   const [briefing, setBriefing] = React.useState<SafetyBriefing | null>(null);
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
+  const [orderItem, setOrderItem] = React.useState<OrderItem | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   
@@ -48,13 +49,24 @@ export default function SignSafetyBriefingPage() {
           } as SafetyBriefing;
           setBriefing(briefingData);
           
-          if (briefingData.shipmentRef) {
+           if (briefingData.shipmentRef) {
              const shipmentSnap = await getDoc(briefingData.shipmentRef);
              if (shipmentSnap.exists()) {
-                 setShipment({
+                 const shipmentData = {
                      id: shipmentSnap.id,
                      ...shipmentSnap.data()
-                 } as Shipment);
+                 } as Shipment;
+                 setShipment(shipmentData);
+
+                 if(shipmentData.orderItemRef){
+                    const orderItemSnap = await getDoc(shipmentData.orderItemRef);
+                    if(orderItemSnap.exists()){
+                        setOrderItem(orderItemSnap.data() as OrderItem);
+                    } else {
+                        toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалгын дэлгэрэнгүй мэдээлэл олдсонгүй.' });
+                    }
+                 }
+
              } else {
                  toast({ variant: 'destructive', title: 'Алдаа', description: 'Холбогдох тээвэрлэлтийн мэдээлэл олдсонгүй.' });
              }
@@ -157,12 +169,6 @@ export default function SignSafetyBriefingPage() {
 
   return (
     <div className="min-h-screen p-4 md:p-8">
-        <div className="max-w-4xl mx-auto mb-4">
-            <Button variant="outline" size="sm" onClick={() => router.push(`/shipments/${briefing.shipmentId}`)}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Тээвэрлэлт рүү буцах
-            </Button>
-        </div>
         <Card className="max-w-4xl mx-auto">
             <CardHeader>
                 <CardTitle>Аюулгүй ажиллагааны зааварчилгаа</CardTitle>
