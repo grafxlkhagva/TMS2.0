@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { format } from "date-fns"
 import { useLoadScript, GoogleMap, DirectionsRenderer } from '@react-google-maps/api';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2, FileSignature, Send, ExternalLink, ShieldCheck, CheckCircle } from 'lucide-react';
@@ -20,6 +20,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 const statusTranslations: Record<ShipmentStatusType, string> = {
@@ -297,9 +298,8 @@ export default function ShipmentDetailPage() {
             {shipmentStatuses.map((status, index) => (
                 <React.Fragment key={status}>
                     <div 
-                        className={cn("flex flex-col items-center cursor-pointer group", (index === currentIndex + 1 || index <= currentIndex) && "cursor-pointer")}
+                        className={cn("flex flex-col items-center cursor-pointer group")}
                         onClick={() => {
-                           // Allow moving forward and backward
                            if (index !== currentIndex) {
                                onStatusClick(status);
                            }
@@ -330,6 +330,11 @@ export default function ShipmentDetailPage() {
         </div>
     )
 }
+
+ const handleStatusChange = (newStatus: ShipmentStatusType) => {
+    if (!shipment) return;
+    setStatusChange({ newStatus, oldStatus: shipment.status });
+ }
 
  const renderCurrentStageChecklist = () => {
     if (!shipment) return null;
@@ -506,7 +511,7 @@ export default function ShipmentDetailPage() {
               </CardContent>
             </Card>
 
-             <Card>
+            <Card>
               <CardHeader>
                 <CardTitle>Тээврийн явц</CardTitle>
                 <CardDescription>Статус дээр дарж явцыг урагшлуулах эсвэл буцаах боломжтой.</CardDescription>
