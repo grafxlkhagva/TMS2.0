@@ -113,6 +113,17 @@ body {
   .no-print {
     display: none !important;
   }
+  .print-only {
+    display: block !important;
+    position: static !important;
+    visibility: visible !important;
+  }
 }
 
-    
+.print-only {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  visibility: hidden;
+  display: block;
+}

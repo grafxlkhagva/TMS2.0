@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -224,7 +225,7 @@ export default function SafetyBriefingDetailPage() {
       </div>
       
        {/* Hidden component for printing */}
-      <div className="hidden">
+      <div className="print-only">
         <div ref={printRef}>
             <SafetyBriefingLayout 
                 briefing={briefing}

@@ -233,7 +233,7 @@ export default function ContractDetailPage() {
       </div>
       
        {/* Hidden component for printing */}
-      <div className="hidden">
+      <div className="print-only">
         <div ref={printRef}>
             <ContractPrintLayout 
                 contract={contract}

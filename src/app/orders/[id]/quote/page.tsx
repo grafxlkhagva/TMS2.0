@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -422,10 +423,9 @@ export default function GenerateQuotePage() {
       </div>
       
       {/* This component is for printing, it's hidden from the screen */}
-       <div style={{ position: 'absolute', left: '-9999px', top: 0, zIndex: -1 }}>
+       <div className="print-only">
          {selectedItemsArray.length > 0 && <QuoteLayout ref={componentRef} order={order} orderItems={selectedItemsArray} allData={allData} />}
       </div>
     </div>
   );
 }
-
