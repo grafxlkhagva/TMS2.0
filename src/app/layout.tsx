@@ -1,34 +1,19 @@
 
-'use client';
-
 import type { Metadata } from 'next';
 import { Inter, Manrope } from 'next/font/google';
 import './globals.css';
 import { AppShell } from '@/components/app-shell';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/hooks/use-auth';
-import { usePathname } from 'next/navigation';
+import { ProtectedLayout } from '@/components/protected-layout';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });
 
-// Since we are using 'use client', metadata should be handled differently if needed,
-// but for this case, we will keep it simple. Note that static metadata is not supported in client components.
-// export const metadata: Metadata = {
-//   title: 'Tumen Tech TMS',
-//   description: 'Transportation Management System by Tumen Tech',
-// };
-
-function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const isPublicPage = pathname.startsWith('/sign/') || pathname.startsWith('/safety-briefing/') || pathname === '/login' || pathname === '/signup';
-
-  if (isPublicPage) {
-    return <>{children}</>;
-  }
-
-  return <AppShell>{children}</AppShell>;
-}
+export const metadata: Metadata = {
+  title: 'Tumen Tech TMS',
+  description: 'Transportation Management System by Tumen Tech',
+};
 
 export default function RootLayout({
   children,
