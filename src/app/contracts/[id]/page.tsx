@@ -2,22 +2,22 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, updateDoc, serverTimestamp, type DocumentReference } from 'firebase/firestore';
+import { doc, getDoc, type DocumentReference } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
 import type { Contract, Shipment, OrderItem } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { format } from "date-fns"
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Download, FileSignature } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import { ArrowLeft, Edit, FileSignature } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
-
+import PrintButton from '@/components/print/PrintButton';
+import ContractPrintLayout from '@/components/contract-print-layout';
 
 function DetailItem({ label, value }: { label: string, value?: string | React.ReactNode }) {
   if (!value) return null;
@@ -34,6 +34,7 @@ export default function ContractDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { toast } = useToast();
+  const printRef = React.useRef<HTMLDivElement>(null);
 
   const [contract, setContract] = React.useState<Contract | null>(null);
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
@@ -44,7 +45,6 @@ export default function ContractDetailPage() {
   React.useEffect(() => {
     if (!id) return;
     setIsLoading(true);
-    setContractPublicUrl(`${window.location.origin}/sign/${id}`);
 
     const fetchContract = async () => {
       try {
@@ -56,24 +56,27 @@ export default function ContractDetailPage() {
             id: docSnap.id,
             ...docSnap.data(),
             createdAt: docSnap.data().createdAt.toDate(),
+            signedAt: docSnap.data().signedAt ? docSnap.data().signedAt.toDate() : undefined,
           } as Contract;
           setContract(contractData);
 
-          const shipmentSnap = await getDoc(contractData.shipmentRef as DocumentReference);
-          if (shipmentSnap.exists()) {
-             const shipmentData = shipmentSnap.data() as Shipment;
-             setShipment(shipmentData);
+          if (contractData.shipmentRef) {
+            const shipmentSnap = await getDoc(contractData.shipmentRef as DocumentReference);
+            if (shipmentSnap.exists()) {
+               const shipmentData = shipmentSnap.data() as Shipment;
+               setShipment(shipmentData);
 
-             if (shipmentData.orderItemRef) {
-                const orderItemSnap = await getDoc(shipmentData.orderItemRef as DocumentReference);
-                if (orderItemSnap.exists()) {
-                    setOrderItem(orderItemSnap.data() as OrderItem);
-                } else {
-                     toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалгын мэдээлэл олдсонгүй.' });
-                }
-             } else {
-                toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрт холбогдох захиалгын мэдээлэл олдсонгүй.' });
-             }
+               if (shipmentData.orderItemRef) {
+                  const orderItemSnap = await getDoc(shipmentData.orderItemRef as DocumentReference);
+                  if (orderItemSnap.exists()) {
+                      setOrderItem(orderItemSnap.data() as OrderItem);
+                  } else {
+                       toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалгын мэдээлэл олдсонгүй.' });
+                  }
+               } else {
+                  toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрт холбогдох захиалгын мэдээлэл олдсонгүй.' });
+               }
+            }
           }
 
         } else {
@@ -90,6 +93,13 @@ export default function ContractDetailPage() {
 
     fetchContract();
   }, [id, router, toast]);
+  
+   React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setContractPublicUrl(`${window.location.origin}/sign/${id}`);
+    }
+  }, [id]);
+
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(contractPublicUrl);
@@ -112,8 +122,6 @@ export default function ContractDetailPage() {
     return null;
   }
   
-  const finalPrice = orderItem.finalPrice || 0;
-
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
@@ -129,7 +137,10 @@ export default function ContractDetailPage() {
                 </p>
             </div>
              <div className="flex items-center gap-2">
-                <Button variant="outline"><Download className="mr-2 h-4 w-4"/> PDF Татах</Button>
+                <PrintButton 
+                    targetRef={printRef} 
+                    fileName={`Contract-${shipment.shipmentNumber}.pdf`}
+                />
                 <Button><Edit className="mr-2 h-4 w-4"/> Загвар засах</Button>
             </div>
         </div>
@@ -141,42 +152,14 @@ export default function ContractDetailPage() {
                 <CardHeader>
                     <CardTitle>Гэрээний урьдчилсан харагдац</CardTitle>
                 </CardHeader>
-                <CardContent className="prose prose-sm max-w-none">
-                    <h2 className="text-center">Тээвэрлэлтийн гэрээ №{shipment.shipmentNumber}</h2>
-                    <p className="text-right">Огноо: {format(contract.createdAt, 'yyyy-MM-dd')}</p>
-                    <p>
-                        Энэхүү гэрээг нэг талаас "Түмэн Тех ТМС" (цаашид "Захиалагч" гэх), нөгөө талаас 
-                        жолооч <strong>{contract.driverInfo.name}</strong> (Утас: {contract.driverInfo.phone}) 
-                        (цаашид "Гүйцэтгэгч" гэх) нар дараах нөхцлөөр харилцан тохиролцож байгуулав.
-                    </p>
-                    <h3>1. Гэрээний зүйл</h3>
-                    <p>
-                        Захиалагч нь дор дурдсан ачааг, заасан чиглэлийн дагуу тээвэрлүүлэх ажлыг Гүйцэтгэгчид даалгаж,
-                        Гүйцэтгэгч нь уг ажлыг хэлэлцэн тохирсон үнээр, хугацаанд нь чанартай гүйцэтгэх үүргийг хүлээнэ.
-                    </p>
-                    <ul>
-                        <li><strong>Чиглэл:</strong> {shipment.route.startWarehouse} &rarr; {shipment.route.endWarehouse}</li>
-                        <li><strong>Хүргэх хугацаа:</strong> {format(shipment.estimatedDeliveryDate, 'yyyy-MM-dd')}</li>
-                    </ul>
-                    <h3>2. Гэрээний үнэ, төлбөрийн нөхцөл</h3>
-                    <p>
-                       Тээвэрлэлтийн нийт хөлс нь <strong>{finalPrice.toLocaleString()}₮</strong> (НӨАТ орсон / ороогүй) байна. 
-                       Төлбөрийг тээвэрлэлт дууссаны дараа ажлын 3 хоногт багтаан Гүйцэтгэгчийн данс руу шилжүүлнэ.
-                    </p>
-                    <h3>3. Талуудын үүрэг</h3>
-                    <p>...</p>
-
-                    {contract.status === 'signed' && contract.signedAt && (
-                        <div>
-                            <h3>4. Баталгаажилт</h3>
-                            <p>Гүйцэтгэгч нь дээрх нөхцлүүдийг зөвшөөрч, цахим хэлбэрээр гарын үсэг зурж баталгаажуулав.</p>
-                            <div className="border p-4 rounded-md bg-muted mt-4">
-                                <p className="font-semibold">Цахим гарын үсэг:</p>
-                                {contract.signatureDataUrl && <img src={contract.signatureDataUrl} alt="Signature" className="h-24 w-auto bg-white mix-blend-darken" />}
-                                <p className="text-xs text-muted-foreground mt-2">Огноо: {format(contract.signedAt, 'yyyy-MM-dd HH:mm:ss')}</p>
-                            </div>
-                        </div>
-                    )}
+                <CardContent>
+                   <div className="prose prose-sm max-w-none border rounded-md p-6 bg-muted/20">
+                     <ContractPrintLayout 
+                        contract={contract}
+                        shipment={shipment}
+                        orderItem={orderItem}
+                     />
+                   </div>
                 </CardContent>
             </Card>
         </div>
@@ -214,6 +197,17 @@ export default function ContractDetailPage() {
                     </Button>
                 </CardFooter>
             </Card>
+        </div>
+      </div>
+      
+       {/* Hidden component for printing */}
+      <div className="hidden">
+        <div ref={printRef}>
+            <ContractPrintLayout 
+                contract={contract}
+                shipment={shipment}
+                orderItem={orderItem}
+            />
         </div>
       </div>
     </div>
