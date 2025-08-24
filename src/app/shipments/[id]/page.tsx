@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, orderBy, addDoc, serverTimestamp, DocumentReference } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
 import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, OrderItem, Warehouse, Contract } from '@/types';
@@ -91,6 +91,7 @@ export default function ShipmentDetailPage() {
   const { toast } = useToast();
 
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
+  const [orderItem, setOrderItem] = React.useState<OrderItem | null>(null);
   const [contract, setContract] = React.useState<Contract | null>(null);
   const [cargo, setCargo] = React.useState<OrderItemCargo[]>([]);
   const [packagingTypes, setPackagingTypes] = React.useState<PackagingType[]>([]);
@@ -123,8 +124,16 @@ export default function ShipmentDetailPage() {
           ...docSnap.data(),
           createdAt: docSnap.data().createdAt.toDate(),
           estimatedDeliveryDate: docSnap.data().estimatedDeliveryDate.toDate(),
+          orderItemRef: docSnap.data().orderItemRef as DocumentReference | undefined,
         } as Shipment;
         setShipment(shipmentData);
+
+        if (shipmentData.orderItemRef) {
+            const orderItemSnap = await getDoc(shipmentData.orderItemRef);
+            if (orderItemSnap.exists()) {
+                setOrderItem(orderItemSnap.data() as OrderItem);
+            }
+        }
         
         const [cargoSnapshot, packagingSnapshot, contractSnapshot] = await Promise.all([
           getDocs(query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', shipmentData.orderItemId))),
@@ -223,7 +232,7 @@ export default function ShipmentDetailPage() {
   }
 
   const handleCreateContract = async () => {
-    if (!shipment || !db) return;
+    if (!shipment || !orderItem || !db) return;
     setIsUpdating(true);
     try {
         const contractRef = await addDoc(collection(db, 'contracts'), {
@@ -232,6 +241,16 @@ export default function ShipmentDetailPage() {
             orderId: shipment.orderId,
             orderRef: doc(db, 'orders', shipment.orderId),
             driverInfo: shipment.driverInfo,
+            routeInfo: {
+                start: `${shipment.route.startRegion}, ${shipment.route.startWarehouse}`,
+                end: `${shipment.route.endRegion}, ${shipment.route.endWarehouse}`
+            },
+            vehicleInfo: {
+                type: `${shipment.vehicleInfo.vehicleType}, ${shipment.vehicleInfo.trailerType}`
+            },
+            price: orderItem.finalPrice || 0,
+            priceWithVAT: orderItem.withVAT || false,
+            estimatedDeliveryDate: shipment.estimatedDeliveryDate,
             status: 'pending',
             createdAt: serverTimestamp(),
         });
@@ -427,7 +446,7 @@ export default function ShipmentDetailPage() {
                     ) : (
                         <div className="text-center text-sm text-muted-foreground space-y-3">
                             <p>Энэ тээвэрлэлтэд гэрээ үүсээгүй байна.</p>
-                            <Button onClick={handleCreateContract} disabled={isUpdating} className="w-full">
+                            <Button onClick={handleCreateContract} disabled={isUpdating || !orderItem} className="w-full">
                                 {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                                 Гэрээ үүсгэж илгээх
                             </Button>

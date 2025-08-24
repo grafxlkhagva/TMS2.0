@@ -277,13 +277,25 @@ export type Contract = {
     shipmentRef: DocumentReference;
     orderId: string;
     orderRef: DocumentReference;
+    // Snapshot of key information at time of creation
     driverInfo: {
         name: string;
         phone: string;
     };
+    routeInfo: {
+        start: string;
+        end: string;
+    };
+    vehicleInfo: {
+        type: string;
+    };
+    price: number;
+    priceWithVAT: boolean;
+    estimatedDeliveryDate: Date;
+    // Contract status and audit trail
     status: ContractStatus;
     createdAt: Date;
-    content?: string;
+    content?: string; // Optional: For storing the exact HTML/text of the contract
     signedAt?: Date;
     signatureDataUrl?: string;
     ipAddress?: string;

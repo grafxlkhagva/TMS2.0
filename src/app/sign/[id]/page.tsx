@@ -45,6 +45,7 @@ export default function SignContractPage() {
             ...docSnap.data(),
             createdAt: docSnap.data().createdAt.toDate(),
             signedAt: docSnap.data().signedAt ? docSnap.data().signedAt.toDate() : undefined,
+             estimatedDeliveryDate: docSnap.data().estimatedDeliveryDate.toDate(),
           } as Contract;
           setContract(contractData);
           
@@ -58,7 +59,10 @@ export default function SignContractPage() {
           const shipmentSnap = await getDoc(shipmentRef);
           
           if (shipmentSnap.exists()) {
-             const shipmentData = shipmentSnap.data() as Shipment;
+             const shipmentData = {
+                ...shipmentSnap.data(),
+                estimatedDeliveryDate: shipmentSnap.data().estimatedDeliveryDate.toDate()
+             } as Shipment;
              setShipment(shipmentData);
 
              if (!shipmentData.orderItemRef) {
@@ -106,21 +110,28 @@ export default function SignContractPage() {
     try {
         const signatureDataUrl = sigCanvas.current.getTrimmedCanvas().toDataURL('image/png');
         const contractRef = doc(db, 'contracts', id);
+
+        // Fetch user agent and IP (IP requires a server-side function in a real app)
+        const userAgent = navigator.userAgent;
+
         await updateDoc(contractRef, {
             status: 'signed',
             signedAt: serverTimestamp(),
             signatureDataUrl: signatureDataUrl,
+            userAgent: userAgent,
+            // ipAddress: would be set by a server function
         });
         
         // Refetch to show signed state
         const updatedDoc = await getDoc(contractRef);
-        const updatedData = updatedDoc.data();
-        if (updatedData) {
+        if (updatedDoc.exists()) {
+            const updatedData = updatedDoc.data();
             setContract({
                 id: updatedDoc.id,
                 ...updatedData,
                 createdAt: updatedData.createdAt.toDate(),
-                signedAt: updatedData.signedAt.toDate()
+                signedAt: updatedData.signedAt.toDate(),
+                estimatedDeliveryDate: updatedData.estimatedDeliveryDate.toDate(),
             } as Contract)
         }
         
