@@ -14,14 +14,14 @@ import { useLoadScript, GoogleMap, DirectionsRenderer } from '@react-google-maps
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2, FileSignature, Send, ExternalLink, ShieldCheck, CheckCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2, FileSignature, Send, ExternalLink, ShieldCheck, CheckCircle, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Input } from '@/components/ui/input';
+import { generateChecklistAction } from './actions';
 
 
 const statusTranslations: Record<ShipmentStatusType, string> = {
@@ -76,10 +76,13 @@ export default function ShipmentDetailPage() {
   const [directions, setDirections] = React.useState<google.maps.DirectionsResult | null>(null);
   const [briefingPublicUrl, setBriefingPublicUrl] = React.useState('');
   const [assignedDriver, setAssignedDriver] = React.useState<Driver | null>(null);
+  const [generatedChecklist, setGeneratedChecklist] = React.useState<string[] | null>(null);
+  const [checkedItems, setCheckedItems] = React.useState<Set<number>>(new Set());
 
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
+  const [isGeneratingChecklist, setIsGeneratingChecklist] = React.useState(false);
   const [statusChange, setStatusChange] = React.useState<{ newStatus: ShipmentStatusType; oldStatus: ShipmentStatusType; } | null>(null);
 
 
@@ -443,6 +446,48 @@ export default function ShipmentDetailPage() {
     setStatusChange({ newStatus, oldStatus: shipment.status });
  }
 
+ const handleGenerateChecklist = async () => {
+    if (!shipment || !cargo.length) return;
+    setIsGeneratingChecklist(true);
+    setGeneratedChecklist(null);
+    setCheckedItems(new Set());
+    try {
+      const cargoInfo = cargo.map(c => `${c.quantity} ${c.unit} of ${c.name} (${getPackagingTypeName(c.packagingTypeId)})`).join(', ');
+      const vehicleInfo = `${shipment.vehicleInfo.vehicleType} with a ${shipment.vehicleInfo.trailerType}`;
+
+      const response = await generateChecklistAction({ cargoInfo, vehicleInfo });
+      if (response.success && response.data) {
+        setGeneratedChecklist(response.data.checklistItems);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Алдаа',
+          description: response.error || 'Чеклист үүсгэхэд алдаа гарлаа.',
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Алдаа',
+        description: 'Чеклист үүсгэхэд алдаа гарлаа.',
+      });
+    } finally {
+      setIsGeneratingChecklist(false);
+    }
+  };
+
+  const handleChecklistItem = (index: number) => {
+    setCheckedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
  const renderCurrentStageChecklist = () => {
     if (!shipment) return null;
     
@@ -544,15 +589,34 @@ export default function ShipmentDetailPage() {
         );
 
         case 'Ready For Loading':
-            const isLoadingReadyComplete = checklist.loadingChecklistCompleted;
+            const allItemsChecked = generatedChecklist && checkedItems.size === generatedChecklist.length;
             return (
                 <div className="space-y-4">
-                    <h3 className="font-semibold">Ачихад бэлтгэх чеклист</h3>
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="loadingChecklistCompleted" checked={checklist.loadingChecklistCompleted} onCheckedChange={(checked) => handleUpdateChecklist('loadingChecklistCompleted', !!checked)} disabled={isUpdating}/>
-                        <label htmlFor="loadingChecklistCompleted" className="text-sm font-medium leading-none">Ачилтын үеийн санамжтай танилцсан</label>
-                    </div>
-                    <Button onClick={() => handleStatusChange('Loading')} disabled={!isLoadingReadyComplete || isUpdating}>
+                    <h3 className="font-semibold">Ачихад бэлтгэх чеклист (AI-гаар үүсгэсэн)</h3>
+                    {!generatedChecklist && (
+                        <Button onClick={handleGenerateChecklist} disabled={isGeneratingChecklist}>
+                            {isGeneratingChecklist ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                            Чеклист үүсгэх
+                        </Button>
+                    )}
+                     {isGeneratingChecklist && <Skeleton className="h-24 w-full" />}
+                     {generatedChecklist && (
+                        <div className="space-y-2 rounded-md border p-4">
+                            {generatedChecklist.map((item, index) => (
+                                <div key={index} className="flex items-center space-x-2">
+                                    <Checkbox 
+                                        id={`checklist-item-${index}`} 
+                                        onCheckedChange={() => handleChecklistItem(index)}
+                                        checked={checkedItems.has(index)}
+                                    />
+                                    <label htmlFor={`checklist-item-${index}`} className="text-sm font-medium leading-none">
+                                        {item}
+                                    </label>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <Button onClick={() => handleStatusChange('Loading')} disabled={!allItemsChecked || isUpdating}>
                         Ачилт эхлүүлэх
                     </Button>
                 </div>
