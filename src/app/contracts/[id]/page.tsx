@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, type DocumentReference } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
 import type { Contract, Shipment, OrderItem } from '@/types';
@@ -16,6 +16,8 @@ import { ArrowLeft, Edit, Download, FileSignature } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { Input } from '@/components/ui/input';
+
 
 function DetailItem({ label, value }: { label: string, value?: string | React.ReactNode }) {
   if (!value) return null;
@@ -54,14 +56,20 @@ export default function ContractDetailPage() {
           } as Contract;
           setContract(contractData);
 
-          const shipmentSnap = await getDoc(contractData.shipmentRef);
+          const shipmentSnap = await getDoc(contractData.shipmentRef as DocumentReference);
           if (shipmentSnap.exists()) {
              const shipmentData = shipmentSnap.data() as Shipment;
              setShipment(shipmentData);
 
-             const orderItemSnap = await getDoc(shipmentData.orderItemRef);
-             if (orderItemSnap.exists()) {
-                setOrderItem(orderItemSnap.data() as OrderItem);
+             if (shipmentData.orderItemRef) {
+                const orderItemSnap = await getDoc(shipmentData.orderItemRef as DocumentReference);
+                if (orderItemSnap.exists()) {
+                    setOrderItem(orderItemSnap.data() as OrderItem);
+                } else {
+                     toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалгын мэдээлэл олдсонгүй.' });
+                }
+             } else {
+                toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрт холбогдох захиалгын мэдээлэл олдсонгүй.' });
              }
           }
 
@@ -157,14 +165,14 @@ export default function ContractDetailPage() {
                     <h3>3. Талуудын үүрэг</h3>
                     <p>...</p>
 
-                    {contract.status === 'signed' && (
+                    {contract.status === 'signed' && contract.signedAt && (
                         <div>
                             <h3>4. Баталгаажилт</h3>
                             <p>Гүйцэтгэгч нь дээрх нөхцлүүдийг зөвшөөрч, цахим хэлбэрээр гарын үсэг зурж баталгаажуулав.</p>
                             <div className="border p-4 rounded-md bg-muted mt-4">
                                 <p className="font-semibold">Цахим гарын үсэг:</p>
-                                <img src={contract.signatureDataUrl} alt="Signature" className="h-24 w-auto bg-white mix-blend-darken" />
-                                <p className="text-xs text-muted-foreground mt-2">Огноо: {format(contract.signedAt!, 'yyyy-MM-dd HH:mm:ss')}</p>
+                                {contract.signatureDataUrl && <img src={contract.signatureDataUrl} alt="Signature" className="h-24 w-auto bg-white mix-blend-darken" />}
+                                <p className="text-xs text-muted-foreground mt-2">Огноо: {format(contract.signedAt, 'yyyy-MM-dd HH:mm:ss')}</p>
                             </div>
                         </div>
                     )}
