@@ -55,10 +55,7 @@ async function captureElementToPdf(element: HTMLElement, fileName: string): Prom
 
     // Ensure final dimensions are valid numbers
     if (!isFinite(finalWidth) || !isFinite(finalHeight) || finalWidth <= 0 || finalHeight <= 0) {
-       console.error("Invalid calculated dimensions for PDF. Using fallback.", { finalWidth, finalHeight });
-       // Fallback to simpler scaling
-       finalWidth = pdfWidth;
-       finalHeight = pdfHeight;
+       throw new Error(`Invalid calculated dimensions for PDF. W: ${finalWidth}, H: ${finalHeight}`);
     }
 
     const x = (pdfWidth - finalWidth) / 2;

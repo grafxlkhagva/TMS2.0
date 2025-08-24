@@ -38,6 +38,10 @@ async function captureElementToPdf(element: HTMLElement, fileName: string): Prom
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
     
+    if (canvasHeight === 0) {
+        throw new Error("Canvas height is zero, cannot generate PDF.");
+    }
+    
     const canvasAspectRatio = canvasWidth / canvasHeight;
     const pdfAspectRatio = pdfWidth / pdfHeight;
 
@@ -51,8 +55,16 @@ async function captureElementToPdf(element: HTMLElement, fileName: string): Prom
         finalWidth = pdfHeight * canvasAspectRatio;
     }
 
+    if (!isFinite(finalWidth) || !isFinite(finalHeight) || finalWidth <= 0 || finalHeight <= 0) {
+       throw new Error(`Invalid calculated dimensions for PDF. W: ${finalWidth}, H: ${finalHeight}`);
+    }
+
     const x = (pdfWidth - finalWidth) / 2;
     const y = (pdfHeight - finalHeight) / 2;
+    
+    if (!isFinite(x) || !isFinite(y)) {
+        throw new Error(`Invalid coordinates for PDF: x=${x}, y=${y}`);
+    }
     
     pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
     pdf.save(fileName);
