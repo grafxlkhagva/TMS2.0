@@ -329,3 +329,21 @@ export type SafetyBriefing = {
     signatureDataUrl?: string;
     userAgent?: string;
 };
+
+export type ShipmentUpdateStatus = 'On Schedule' | 'Delayed';
+
+export type ShipmentUpdate = {
+  id: string;
+  shipmentId: string;
+  shipmentRef: DocumentReference;
+  createdAt: Date;
+  createdBy: {
+    uid: string;
+    name: string;
+  };
+  location: string;
+  distanceCovered: number;
+  status: ShipmentUpdateStatus;
+  roadConditions: string;
+  notes?: string;
+};

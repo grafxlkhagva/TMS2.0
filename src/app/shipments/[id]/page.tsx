@@ -5,16 +5,20 @@ import * as React from 'react';
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, orderBy, addDoc, serverTimestamp, DocumentReference } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, OrderItem, Warehouse, Contract, SafetyBriefing, Driver } from '@/types';
+import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, OrderItem, Warehouse, Contract, SafetyBriefing, Driver, ShipmentUpdate, ShipmentUpdateStatus } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
 import { useLoadScript, GoogleMap, DirectionsRenderer } from '@react-google-maps/api';
+import { useAuth } from '@/hooks/use-auth';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2, FileSignature, Send, ExternalLink, ShieldCheck, CheckCircle, Sparkles } from 'lucide-react';
+import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2, FileSignature, Send, ExternalLink, ShieldCheck, CheckCircle, Sparkles, PlusCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -22,6 +26,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { generateChecklistAction } from './actions';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 
 const statusTranslations: Record<ShipmentStatusType, string> = {
@@ -36,6 +44,15 @@ const statusTranslations: Record<ShipmentStatusType, string> = {
 };
 
 const shipmentStatuses: ShipmentStatusType[] = ['Preparing', 'Ready For Loading', 'Loading', 'In Transit', 'Unloading', 'Delivered'];
+
+const updateFormSchema = z.object({
+  location: z.string().min(3, { message: 'Байршил дор хаяж 3 тэмдэгттэй байх ёстой.' }),
+  distanceCovered: z.coerce.number().min(0, { message: 'Туулсан зам сөрөг утгатай байж болохгүй.' }),
+  status: z.custom<ShipmentUpdateStatus>(),
+  roadConditions: z.string().min(3, { message: 'Замын нөхцөл байдлыг оруулна уу.' }),
+  notes: z.string().optional(),
+});
+type UpdateFormValues = z.infer<typeof updateFormSchema>;
 
 
 function DetailItem({ icon: Icon, label, value, subValue }: { icon: React.ElementType, label: string, value?: string | React.ReactNode, subValue?: string }) {
@@ -64,6 +81,7 @@ export default function ShipmentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
   const [orderItem, setOrderItem] = React.useState<OrderItem | null>(null);
@@ -78,13 +96,25 @@ export default function ShipmentDetailPage() {
   const [assignedDriver, setAssignedDriver] = React.useState<Driver | null>(null);
   const [generatedChecklist, setGeneratedChecklist] = React.useState<string[] | null>(null);
   const [checkedItems, setCheckedItems] = React.useState<Set<number>>(new Set());
+  const [shipmentUpdates, setShipmentUpdates] = React.useState<ShipmentUpdate[]>([]);
 
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
   const [isGeneratingChecklist, setIsGeneratingChecklist] = React.useState(false);
   const [statusChange, setStatusChange] = React.useState<{ newStatus: ShipmentStatusType; oldStatus: ShipmentStatusType; } | null>(null);
+  const [isSubmittingUpdate, setIsSubmittingUpdate] = React.useState(false);
 
+  const updateForm = useForm<UpdateFormValues>({
+    resolver: zodResolver(updateFormSchema),
+    defaultValues: {
+      location: '',
+      distanceCovered: 0,
+      status: 'On Schedule',
+      roadConditions: '',
+      notes: '',
+    },
+  });
 
   const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
@@ -112,7 +142,6 @@ export default function ShipmentDetailPage() {
           driverRef: docSnap.data().driverRef as DocumentReference | undefined,
         } as Shipment;
         
-        // Initialize checklist if it doesn't exist
         if (!shipmentData.checklist) {
           shipmentData.checklist = {
             contractSigned: false,
@@ -140,12 +169,15 @@ export default function ShipmentDetailPage() {
             }
         }
         
-        const [cargoSnapshot, packagingSnapshot, contractSnapshot, safetyBriefingSnapshot] = await Promise.all([
+        const [cargoSnapshot, packagingSnapshot, contractSnapshot, safetyBriefingSnapshot, updatesSnapshot] = await Promise.all([
           getDocs(query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', shipmentData.orderItemId))),
           getDocs(query(collection(db, 'packaging_types'), orderBy('name'))),
           getDocs(query(collection(db, 'contracts'), where('shipmentId', '==', shipmentData.id))),
-          getDocs(query(collection(db, 'safety_briefings'), where('shipmentId', '==', shipmentData.id)))
+          getDocs(query(collection(db, 'safety_briefings'), where('shipmentId', '==', shipmentData.id))),
+          getDocs(query(collection(db, 'shipment_updates'), where('shipmentId', '==', shipmentData.id), orderBy('createdAt', 'desc'))),
         ]);
+        
+        setShipmentUpdates(updatesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data(), createdAt: doc.data().createdAt.toDate()} as ShipmentUpdate)));
         
         const cargoData = cargoSnapshot.docs.map(d => d.data() as OrderItemCargo);
         setCargo(cargoData);
@@ -167,7 +199,6 @@ export default function ShipmentDetailPage() {
             const latestContract = contractsData[0];
             setContract(latestContract);
 
-            // Auto-check if contract is signed
             if (latestContract.status === 'signed' && !shipmentData.checklist.contractSigned) {
               const shipmentRef = doc(db, 'shipments', shipmentData.id);
               await updateDoc(shipmentRef, { 'checklist.contractSigned': true });
@@ -487,6 +518,31 @@ export default function ShipmentDetailPage() {
       return newSet;
     });
   };
+  
+   const handleUpdateSubmit = async (values: UpdateFormValues) => {
+    if (!shipment || !user) return;
+    setIsSubmittingUpdate(true);
+    try {
+        await addDoc(collection(db, 'shipment_updates'), {
+            ...values,
+            shipmentId: shipment.id,
+            shipmentRef: doc(db, 'shipments', shipment.id),
+            createdAt: serverTimestamp(),
+            createdBy: {
+                uid: user.uid,
+                name: `${user.lastName} ${user.firstName}`,
+            },
+        });
+        toast({ title: "Амжилттай", description: "Явцын мэдээ нэмэгдлээ." });
+        updateForm.reset();
+        fetchShipmentData();
+    } catch (error) {
+        console.error("Error adding shipment update:", error);
+        toast({ variant: "destructive", title: "Алдаа", description: "Явцын мэдээ нэмэхэд алдаа гарлаа."});
+    } finally {
+        setIsSubmittingUpdate(false);
+    }
+  }
 
  const renderCurrentStageChecklist = () => {
     if (!shipment) return null;
@@ -631,6 +687,61 @@ export default function ShipmentDetailPage() {
                      </Button>
                  </div>
             )
+        
+        case 'In Transit':
+             return (
+                 <div className="space-y-6">
+                    <div>
+                        <h3 className="font-semibold mb-4">Явцын мэдээ нэмэх</h3>
+                        <Form {...updateForm}>
+                            <form onSubmit={updateForm.handleSubmit(handleUpdateSubmit)} className="space-y-4 p-4 border rounded-lg">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <FormField control={updateForm.control} name="location" render={({ field }) => ( <FormItem><FormLabel>Байршил</FormLabel><FormControl><Input placeholder="Дархан" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                    <FormField control={updateForm.control} name="distanceCovered" render={({ field }) => ( <FormItem><FormLabel>Туулсан зам (км)</FormLabel><FormControl><Input type="number" placeholder="100" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                </div>
+                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <FormField control={updateForm.control} name="status" render={({ field }) => ( <FormItem><FormLabel>Төлөв</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="On Schedule">Хэвийн</SelectItem><SelectItem value="Delayed">Саатсан</SelectItem></SelectContent></Select><FormMessage /></FormItem> )} />
+                                    <FormField control={updateForm.control} name="roadConditions" render={({ field }) => ( <FormItem><FormLabel>Замын нөхцөл</FormLabel><FormControl><Input placeholder="Хэвийн, үзэгдэх орчин сайн" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                </div>
+                                <FormField control={updateForm.control} name="notes" render={({ field }) => ( <FormItem><FormLabel>Нэмэлт тэмдэглэл</FormLabel><FormControl><Textarea placeholder="Нэмэлт мэдээлэл..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                <Button type="submit" disabled={isSubmittingUpdate}>
+                                    {isSubmittingUpdate ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <PlusCircle className="mr-2 h-4 w-4"/>}
+                                    Мэдээ нэмэх
+                                </Button>
+                            </form>
+                        </Form>
+                    </div>
+                     <div>
+                        <h3 className="font-semibold mb-4">Явцын түүх</h3>
+                        <div className="space-y-4">
+                            {shipmentUpdates.length > 0 ? (
+                                shipmentUpdates.map(update => (
+                                    <Card key={update.id}>
+                                        <CardHeader className="p-4">
+                                            <CardTitle className="text-base flex justify-between items-center">
+                                                <span>{update.location} ({update.distanceCovered} км)</span>
+                                                 <Badge variant={update.status === 'Delayed' ? 'warning' : 'success'}>{update.status === 'Delayed' ? 'Саатсан' : 'Хэвийн'}</Badge>
+                                            </CardTitle>
+                                            <CardDescription className="text-xs">
+                                               {format(update.createdAt, 'yyyy-MM-dd HH:mm')} - {update.createdBy.name}
+                                            </CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="p-4 pt-0 text-sm">
+                                           <p><strong>Замын нөхцөл:</strong> {update.roadConditions}</p>
+                                           {update.notes && <p><strong>Тэмдэглэл:</strong> {update.notes}</p>}
+                                        </CardContent>
+                                    </Card>
+                                ))
+                            ) : (
+                                <p className="text-sm text-muted-foreground">Явцын мэдээлэл олдсонгүй.</p>
+                            )}
+                        </div>
+                    </div>
+                    <Button onClick={() => handleStatusChange('Unloading')} disabled={isUpdating}>
+                        Буулгах цэгт ирсэн
+                    </Button>
+                 </div>
+             )
 
         case 'Unloading':
              const isUnloadingComplete = checklist.unloadingChecklistCompleted;
