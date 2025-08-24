@@ -65,6 +65,11 @@ export default function EditDriverPage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      display_name: '',
+      phone_number: '',
+      status: 'Active',
+    }
   });
   
   React.useEffect(() => {

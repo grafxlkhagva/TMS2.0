@@ -59,6 +59,18 @@ export default function EditWarehousePage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+      regionId: '',
+      location: '',
+      geolocation: { lat: 0, lng: 0 },
+      conditions: '',
+      contactInfo: '',
+      contactName: '',
+      contactPosition: '',
+      customerId: '',
+      note: '',
+    },
   });
   
   React.useEffect(() => {
