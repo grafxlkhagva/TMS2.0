@@ -39,10 +39,13 @@ export default function ContractDetailPage() {
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
   const [orderItem, setOrderItem] = React.useState<OrderItem | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [contractPublicUrl, setContractPublicUrl] = React.useState('');
 
   React.useEffect(() => {
     if (!id) return;
     setIsLoading(true);
+    setContractPublicUrl(`${window.location.origin}/sign/${id}`);
+
     const fetchContract = async () => {
       try {
         const docRef = doc(db, 'contracts', id);
@@ -87,8 +90,6 @@ export default function ContractDetailPage() {
 
     fetchContract();
   }, [id, router, toast]);
-
-  const contractPublicUrl = `${window.location.origin}/sign/${id}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(contractPublicUrl);
@@ -201,11 +202,11 @@ export default function ContractDetailPage() {
                 <CardContent>
                     <div className="flex gap-2">
                         <Input value={contractPublicUrl} readOnly />
-                        <Button onClick={copyToClipboard} variant="outline">Хуулах</Button>
+                        <Button onClick={copyToClipboard} variant="outline" disabled={!contractPublicUrl}>Хуулах</Button>
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button asChild className="w-full">
+                    <Button asChild className="w-full" disabled={!contractPublicUrl}>
                         <Link href={contractPublicUrl} target="_blank">
                             <FileSignature className="mr-2 h-4 w-4" />
                             Холбоосыг нээх
