@@ -1,4 +1,6 @@
 
+'use client';
+
 import type { Metadata } from 'next';
 import { Inter, Manrope } from 'next/font/google';
 import './globals.css';
@@ -10,14 +12,14 @@ import { usePathname } from 'next/navigation';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });
 
-export const metadata: Metadata = {
-  title: 'Tumen Tech TMS',
-  description: 'Transportation Management System by Tumen Tech',
-};
+// Since we are using 'use client', metadata should be handled differently if needed,
+// but for this case, we will keep it simple. Note that static metadata is not supported in client components.
+// export const metadata: Metadata = {
+//   title: 'Tumen Tech TMS',
+//   description: 'Transportation Management System by Tumen Tech',
+// };
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  'use client';
-  
   const pathname = usePathname();
   const isPublicPage = pathname.startsWith('/sign/') || pathname.startsWith('/safety-briefing/') || pathname === '/login' || pathname === '/signup';
 
@@ -36,6 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
        <head>
+        <title>Tumen Tech TMS</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
