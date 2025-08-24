@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { format } from "date-fns"
 import { useLoadScript, GoogleMap, DirectionsRenderer } from '@react-google-maps/api';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2, FileSignature, Send, ExternalLink, ShieldCheck, CheckCircle } from 'lucide-react';
@@ -440,17 +440,11 @@ export default function ShipmentDetailPage() {
                         </label>
                     </div>
                 </CardContent>
-                <CardFooter className="flex flex-col items-start gap-4">
+                <CardFooter>
                      {safetyBriefing ? (
-                        <>
-                           <div className="flex gap-2 w-full">
-                                <Input value={briefingPublicUrl} readOnly />
-                                <Button onClick={copyBriefingLinkToClipboard} variant="outline" disabled={!briefingPublicUrl}>Хуулах</Button>
-                           </div>
-                           <Button variant="outline" size="sm" asChild>
-                              <Link href={`/safety-briefing/${safetyBriefing.id}`} target="_blank"><ExternalLink className="mr-2 h-3 w-3" /> Заавар харах</Link>
-                           </Button>
-                        </>
+                        <Button variant="outline" size="sm" asChild>
+                           <Link href={`/safety-briefings/${safetyBriefing.id}`}><ExternalLink className="mr-2 h-3 w-3" /> Заавар харах/Илгээх</Link>
+                        </Button>
                     ) : (
                         <Button size="sm" onClick={handleCreateSafetyBriefing} disabled={isUpdating}>
                             {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ShieldCheck className="mr-2 h-4 w-4"/>} Заавар үүсгэх
@@ -506,7 +500,6 @@ export default function ShipmentDetailPage() {
             )
         
         case 'Delivered':
-            const isDeliveryComplete = checklist.deliveryDocumentsSigned;
             return (
                  <div className="space-y-4">
                     <h3 className="font-semibold">Хүргэлтийн баталгаажуулалт</h3>
