@@ -111,7 +111,7 @@ export default function ShipmentDetailPage() {
   });
 
   const fetchShipmentData = React.useCallback(async () => {
-    if (!id) return;
+    if (!id || !db) return;
     setIsLoading(true);
     try {
       const docRef = doc(db, 'shipments', id);
@@ -129,7 +129,7 @@ export default function ShipmentDetailPage() {
         const [cargoSnapshot, packagingSnapshot, contractSnapshot] = await Promise.all([
           getDocs(query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', shipmentData.orderItemId))),
           getDocs(query(collection(db, 'packaging_types'), orderBy('name'))),
-          getDocs(query(collection(db, 'contracts'), where('shipmentId', '==', shipmentData.id), orderBy('createdAt', 'desc')))
+          getDocs(query(collection(db, 'contracts'), where('shipmentId', '==', shipmentData.id)))
         ]);
         
         const cargoData = cargoSnapshot.docs.map(d => d.data() as OrderItemCargo);
@@ -139,13 +139,14 @@ export default function ShipmentDetailPage() {
         setPackagingTypes(packagingData);
 
         if (!contractSnapshot.empty) {
-            const contractData = contractSnapshot.docs[0].data();
-            setContract({
-                id: contractSnapshot.docs[0].id,
-                ...contractData,
-                createdAt: contractData.createdAt.toDate(),
-                signedAt: contractData.signedAt ? contractData.signedAt.toDate() : undefined
-            } as Contract);
+            const contracts = contractSnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data(),
+              createdAt: doc.data().createdAt.toDate(),
+              signedAt: doc.data().signedAt ? doc.data().signedAt.toDate() : undefined,
+            } as Contract)).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+            setContract(contracts[0]);
         }
         
         if (shipmentData.routeRefs) {
@@ -194,7 +195,7 @@ export default function ShipmentDetailPage() {
   }, [isMapLoaded, startWarehouse, endWarehouse, directions]);
   
   const handleStatusChange = async (newStatus: ShipmentStatusType) => {
-    if (!shipment) return;
+    if (!shipment || !db) return;
     setIsUpdating(true);
     try {
         const shipmentRef = doc(db, 'shipments', shipment.id);
@@ -222,7 +223,7 @@ export default function ShipmentDetailPage() {
   }
 
   const handleCreateContract = async () => {
-    if (!shipment) return;
+    if (!shipment || !db) return;
     setIsUpdating(true);
     try {
         const contractRef = await addDoc(collection(db, 'contracts'), {
