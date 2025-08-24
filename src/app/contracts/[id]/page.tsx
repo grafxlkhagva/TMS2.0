@@ -65,13 +65,14 @@ export default function ContractDetailPage() {
         } as Contract;
         setContract(contractData);
 
-        if (!contractData.shipmentRef) {
+        if (!contractData.shipmentId) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гэрээнд холбогдох тээвэрлэлтийн мэдээлэл олдсонгүй.' });
             setIsLoading(false);
             return;
         }
 
-        const shipmentSnap = await getDoc(contractData.shipmentRef as DocumentReference);
+        const shipmentRef = doc(db, 'shipments', contractData.shipmentId);
+        const shipmentSnap = await getDoc(shipmentRef);
         if (!shipmentSnap.exists()) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрлэлтийн мэдээлэл олдсонгүй.' });
             setIsLoading(false);
@@ -242,5 +243,3 @@ export default function ContractDetailPage() {
     </div>
   );
 }
-
-    
