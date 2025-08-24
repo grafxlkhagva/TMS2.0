@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import type { SafetyBriefing, Shipment } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { format } from "date-fns"
@@ -13,13 +13,14 @@ import SignatureCanvas from 'react-signature-canvas'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, Eraser } from 'lucide-react';
+import { Loader2, CheckCircle, Eraser, ArrowLeft } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import SafetyBriefingLayout from '@/components/safety-briefing-layout';
 
 export default function SignSafetyBriefingPage() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const router = useRouter();
 
   const [briefing, setBriefing] = React.useState<SafetyBriefing | null>(null);
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
@@ -156,6 +157,12 @@ export default function SignSafetyBriefingPage() {
 
   return (
     <div className="min-h-screen p-4 md:p-8">
+        <div className="max-w-4xl mx-auto mb-4">
+            <Button variant="outline" size="sm" onClick={() => router.push(`/shipments/${briefing.shipmentId}`)}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Тээвэрлэлт рүү буцах
+            </Button>
+        </div>
         <Card className="max-w-4xl mx-auto">
             <CardHeader>
                 <CardTitle>Аюулгүй ажиллагааны зааварчилгаа</CardTitle>

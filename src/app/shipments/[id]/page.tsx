@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { format } from "date-fns"
 import { useLoadScript, GoogleMap, DirectionsRenderer } from '@react-google-maps/api';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2, FileSignature, Send, ExternalLink, ShieldCheck, CheckCircle } from 'lucide-react';
@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
 
 
 const statusTranslations: Record<ShipmentStatusType, string> = {
@@ -73,7 +74,8 @@ export default function ShipmentDetailPage() {
   const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
   const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
   const [directions, setDirections] = React.useState<google.maps.DirectionsResult | null>(null);
-  
+  const [briefingPublicUrl, setBriefingPublicUrl] = React.useState('');
+
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
   const [statusChange, setStatusChange] = React.useState<{ newStatus: ShipmentStatusType; oldStatus: ShipmentStatusType; } | null>(null);
@@ -222,6 +224,12 @@ export default function ShipmentDetailPage() {
       );
     }
   }, [isMapLoaded, startWarehouse, endWarehouse, directions]);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && safetyBriefing?.id) {
+      setBriefingPublicUrl(`${window.location.origin}/safety-briefing/${safetyBriefing.id}`);
+    }
+  }, [safetyBriefing?.id]);
   
   const handleCreateContract = async () => {
     if (!shipment || !orderItem || !db) return;
@@ -269,8 +277,8 @@ export default function ShipmentDetailPage() {
         status: 'pending',
         createdAt: serverTimestamp(),
       });
-      toast({ title: "Заавар үүслээ", description: "Зааврын хуудас руу шилжиж байна." });
-      router.push(`/safety-briefing/${briefingRef.id}`);
+      toast({ title: "Заавар үүслээ, хуудсыг дахин ачааллаж байна." });
+      fetchShipmentData();
     } catch (error) {
        console.error("Error creating safety briefing", error);
        toast({ variant: "destructive", title: "Алдаа", description: "Аюулгүй ажиллагааны заавар үүсгэхэд алдаа гарлаа."});
@@ -278,6 +286,11 @@ export default function ShipmentDetailPage() {
       setIsUpdating(false);
     }
   };
+
+  const copyBriefingLinkToClipboard = () => {
+    navigator.clipboard.writeText(briefingPublicUrl);
+    toast({ title: "Хуулагдлаа", description: "Зааврын холбоосыг санах ойд хууллаа." });
+  }
 
   const handleUpdateChecklist = async (key: keyof Shipment['checklist'], value: boolean) => {
     if (!shipment) return;
@@ -390,37 +403,63 @@ export default function ShipmentDetailPage() {
         return (
           <div className="space-y-4">
             <h3 className="font-semibold">Бэлтгэл ажлын чеклист</h3>
-            <div className="flex items-center space-x-2">
-                <Checkbox id="contractSigned" checked={checklist.contractSigned} disabled={true}/>
-                 <label htmlFor="contractSigned" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                   Гэрээ баталгаажсан
-                </label>
-                {contract ? (
-                    <Button variant="outline" size="sm" asChild>
-                        <Link href={`/contracts/${contract.id}`} target="_blank"><ExternalLink className="mr-2 h-3 w-3" /> Гэрээ харах</Link>
-                    </Button>
-                ) : (
-                    <Button size="sm" onClick={handleCreateContract} disabled={isUpdating}>
-                        {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <FileSignature className="mr-2 h-4 w-4"/>} Гэрээ үүсгэх
-                    </Button>
-                )}
-            </div>
-             <div className="flex items-center space-x-2">
-                <Checkbox id="safetyBriefingCompleted" checked={checklist.safetyBriefingCompleted} disabled={true}/>
-                 <label htmlFor="safetyBriefingCompleted" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                   Аюулгүй ажиллагааны зааварчилгаатай танилцсан
-                </label>
-                {safetyBriefing ? (
-                     <Button variant="outline" size="sm" asChild>
-                        <Link href={`/safety-briefing/${safetyBriefing.id}`} target="_blank"><ExternalLink className="mr-2 h-3 w-3" /> Заавар харах</Link>
-                    </Button>
-                ) : (
-                     <Button size="sm" onClick={handleCreateSafetyBriefing} disabled={isUpdating}>
-                        {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ShieldCheck className="mr-2 h-4 w-4"/>} Заавар үүсгэх
-                    </Button>
-                )}
-            </div>
-            <Button onClick={() => handleStatusChange('Ready For Loading')} disabled={!isPreparingComplete || isUpdating}>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-base">Гэрээ баталгаажуулалт</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="contractSigned" checked={checklist.contractSigned} disabled={true}/>
+                        <label htmlFor="contractSigned" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                            Гэрээ баталгаажсан ({contract?.status === 'signed' ? 'Тийм' : 'Үгүй'})
+                        </label>
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    {contract ? (
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href={`/contracts/${contract.id}`}><ExternalLink className="mr-2 h-3 w-3" /> Гэрээ харах/Илгээх</Link>
+                        </Button>
+                    ) : (
+                        <Button size="sm" onClick={handleCreateContract} disabled={isUpdating}>
+                            {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <FileSignature className="mr-2 h-4 w-4"/>} Гэрээ үүсгэх
+                        </Button>
+                    )}
+                </CardFooter>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-base">Аюулгүй ажиллагааны заавар</CardTitle>
+                </CardHeader>
+                 <CardContent>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="safetyBriefingCompleted" checked={checklist.safetyBriefingCompleted} disabled={true}/>
+                        <label htmlFor="safetyBriefingCompleted" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                            Заавартай танилцсан ({safetyBriefing?.status === 'signed' ? 'Тийм' : 'Үгүй'})
+                        </label>
+                    </div>
+                </CardContent>
+                <CardFooter className="flex flex-col items-start gap-4">
+                     {safetyBriefing ? (
+                        <>
+                           <div className="flex gap-2 w-full">
+                                <Input value={briefingPublicUrl} readOnly />
+                                <Button onClick={copyBriefingLinkToClipboard} variant="outline" disabled={!briefingPublicUrl}>Хуулах</Button>
+                           </div>
+                           <Button variant="outline" size="sm" asChild>
+                              <Link href={`/safety-briefing/${safetyBriefing.id}`} target="_blank"><ExternalLink className="mr-2 h-3 w-3" /> Заавар харах</Link>
+                           </Button>
+                        </>
+                    ) : (
+                        <Button size="sm" onClick={handleCreateSafetyBriefing} disabled={isUpdating}>
+                            {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ShieldCheck className="mr-2 h-4 w-4"/>} Заавар үүсгэх
+                        </Button>
+                    )}
+                </CardFooter>
+            </Card>
+            
+            <Button className="mt-4" onClick={() => handleStatusChange('Ready For Loading')} disabled={!isPreparingComplete || isUpdating}>
                 Ачихад бэлэн болгох
             </Button>
           </div>
