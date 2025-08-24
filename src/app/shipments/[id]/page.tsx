@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { format } from "date-fns"
 import { useLoadScript, GoogleMap, DirectionsRenderer } from '@react-google-maps/api';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2, FileSignature, Send, ExternalLink, ShieldCheck, CheckCircle } from 'lucide-react';
@@ -680,3 +680,5 @@ export default function ShipmentDetailPage() {
     </div>
   );
 }
+
+    
