@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -81,7 +82,7 @@ export default function ContractDetailPage() {
         
         const shipmentData = {
             ...shipmentSnap.data(),
-            orderItemRef: shipmentSnap.data().orderItemRef as DocumentReference
+            orderItemRef: shipmentSnap.data().orderItemRef as DocumentReference | undefined
         } as Shipment;
         setShipment(shipmentData);
 
