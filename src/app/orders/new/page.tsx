@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
-import { collection, getDocs, query, addDoc, serverTimestamp, where, runTransaction, doc, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, runTransaction, doc, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
