@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2, ArrowLeft, Camera, Upload } from 'lucide-react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
@@ -65,9 +65,12 @@ export default function NewDriverPage() {
   };
 
   async function onSubmit(values: FormValues) {
+    if (!db || !storage) {
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Firebase-тэй холбогдож чадсангүй.' });
+        return;
+    }
     setIsSubmitting(true);
     try {
-      let photo_url = '';
       const docRef = await addDoc(collection(db, 'Drivers'), {
         ...values,
         photo_url: '',
@@ -78,8 +81,9 @@ export default function NewDriverPage() {
       if (avatarFile) {
         const storageRef = ref(storage, `driver_avatars/${docRef.id}/${avatarFile.name}`);
         const snapshot = await uploadBytes(storageRef, avatarFile);
-        photo_url = await getDownloadURL(snapshot.ref);
-        await db.doc(`Drivers/${docRef.id}`).update({ photo_url });
+        const photo_url = await getDownloadURL(snapshot.ref);
+        const driverDocRef = doc(db, 'Drivers', docRef.id);
+        await updateDoc(driverDocRef, { photo_url });
       }
       
       toast({
