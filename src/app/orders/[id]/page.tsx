@@ -3,7 +3,7 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, orderBy, runTransaction, type DocumentReference } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, orderBy, runTransaction, type DocumentReference, or } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
 import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, VehicleType, TrailerType, Region, PackagingType, DriverQuote, OrderItemCargo, Shipment } from '@/types';
@@ -589,8 +589,14 @@ export default function OrderDetailPage() {
   const handleRegisterDriver = async (quote: DriverQuote) => {
     setIsSubmitting(true);
     try {
+        const phoneNumberWithCode = `+976${quote.driverPhone}`;
         // Check if driver with this phone number already exists
-        const driversQuery = query(collection(db, 'Drivers'), where('phone_number', '==', quote.driverPhone));
+        const driversQuery = query(collection(db, 'Drivers'), 
+            or(
+                where('phone_number', '==', quote.driverPhone),
+                where('phone_number', '==', phoneNumberWithCode)
+            )
+        );
         const existingDrivers = await getDocs(driversQuery);
 
         if (!existingDrivers.empty) {
@@ -605,7 +611,7 @@ export default function OrderDetailPage() {
         // Add new driver
         const newDriverRef = await addDoc(collection(db, 'Drivers'), {
             display_name: quote.driverName,
-            phone_number: quote.driverPhone,
+            phone_number: phoneNumberWithCode,
             status: 'Active',
             created_time: serverTimestamp(),
         });
@@ -1048,3 +1054,4 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+
