@@ -63,6 +63,7 @@ export default function ContractDetailPage() {
           ...docSnap.data(),
           createdAt: docSnap.data().createdAt.toDate(),
           signedAt: docSnap.data().signedAt ? docSnap.data().signedAt.toDate() : undefined,
+          estimatedDeliveryDate: docSnap.data().estimatedDeliveryDate.toDate(),
         } as Contract;
         setContract(contractData);
 
