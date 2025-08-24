@@ -75,6 +75,8 @@ export default function ShipmentDetailPage() {
   const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
   const [directions, setDirections] = React.useState<google.maps.DirectionsResult | null>(null);
   const [briefingPublicUrl, setBriefingPublicUrl] = React.useState('');
+  const [assignedDriver, setAssignedDriver] = React.useState<Driver | null>(null);
+
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
@@ -104,6 +106,7 @@ export default function ShipmentDetailPage() {
           createdAt: docSnap.data().createdAt.toDate(),
           estimatedDeliveryDate: docSnap.data().estimatedDeliveryDate.toDate(),
           orderItemRef: docSnap.data().orderItemRef as DocumentReference | undefined,
+          driverRef: docSnap.data().driverRef as DocumentReference | undefined,
         } as Shipment;
         
         // Initialize checklist if it doesn't exist
@@ -117,6 +120,15 @@ export default function ShipmentDetailPage() {
           }
         }
         setShipment(shipmentData);
+        
+        if (shipmentData.driverRef) {
+            const driverSnap = await getDoc(shipmentData.driverRef);
+            if (driverSnap.exists()) {
+                setAssignedDriver({ id: driverSnap.id, ...driverSnap.data() } as Driver);
+            }
+        } else {
+            setAssignedDriver(null);
+        }
 
         if (shipmentData.orderItemRef) {
             const orderItemSnap = await getDoc(shipmentData.orderItemRef);
@@ -168,7 +180,7 @@ export default function ShipmentDetailPage() {
                 signedAt: doc.data().signedAt ? doc.data().signedAt.toDate() : undefined,
             } as SafetyBriefing));
 
-            briefingsData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+            briefingsData.sort((a, b) => b.createdAt.getTime() - a.getTime());
             
             const latestBriefing = briefingsData[0];
             setSafetyBriefing(latestBriefing);
@@ -346,12 +358,14 @@ export default function ShipmentDetailPage() {
         const driver = { id: driverDoc.id, ...driverDoc.data() } as Driver;
 
         const shipmentRef = doc(db, 'shipments', shipment.id);
+        const driverRef = doc(db, 'Drivers', driver.id);
         await updateDoc(shipmentRef, {
             driverId: driver.id,
-            driverRef: doc(db, 'Drivers', driver.id),
+            driverRef: driverRef,
         });
 
-        setShipment(prev => prev ? { ...prev, driverId: driver.id, driverRef: doc(db, 'Drivers', driver.id) } : null);
+        setShipment(prev => prev ? { ...prev, driverId: driver.id, driverRef: driverRef } : null);
+        setAssignedDriver(driver);
         toast({ title: 'Амжилттай', description: `${driver.display_name} жолоочийг тээвэрт оноолоо.` });
 
     } catch (error) {
@@ -495,14 +509,24 @@ export default function ShipmentDetailPage() {
                     <CardTitle className="text-base">Жолоочид ажил үүсгэх</CardTitle>
                 </CardHeader>
                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                        Жолоочийг системд бүртгэсний дараа энэ товчийг дарж тээвэрт онооно.
-                    </p>
+                    {assignedDriver ? (
+                        <div className="flex items-center gap-4 p-2 rounded-md bg-muted">
+                           <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                           <div>
+                                <p className="font-semibold">{assignedDriver.display_name}</p>
+                                <p className="text-sm text-muted-foreground">{assignedDriver.phone_number}</p>
+                           </div>
+                        </div>
+                    ) : (
+                        <p className="text-sm text-muted-foreground">
+                            Жолоочийг системд бүртгэсний дараа энэ товчийг дарж тээвэрт онооно.
+                        </p>
+                    )}
                 </CardContent>
                 <CardFooter>
                      {shipment.driverId ? (
-                        <Button size="sm" disabled={true} variant="success">
-                           <CheckCircle className="mr-2 h-4 w-4"/> Амжилттай үүслээ
+                        <Button size="sm" disabled={true} variant="outline" className="bg-green-100 text-green-800">
+                           <CheckCircle className="mr-2 h-4 w-4"/> Оногдсон
                         </Button>
                     ) : (
                          <Button size="sm" onClick={handleAssignDriverToShipment} disabled={isUpdating}>
