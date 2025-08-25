@@ -272,7 +272,7 @@ export default function ShipmentDetailPage() {
           if (status === window.google.maps.DirectionsStatus.OK && result) {
             setDirections(result);
           } else {
-            console.error(`Directions request failed due to ${status}`);
+            console.warn(`Directions request failed due to ${status}`);
           }
         }
       );
