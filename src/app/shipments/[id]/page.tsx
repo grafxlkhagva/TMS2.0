@@ -174,10 +174,12 @@ export default function ShipmentDetailPage() {
           getDocs(query(collection(db, 'packaging_types'), orderBy('name'))),
           getDocs(query(collection(db, 'contracts'), where('shipmentId', '==', shipmentData.id))),
           getDocs(query(collection(db, 'safety_briefings'), where('shipmentId', '==', shipmentData.id))),
-          getDocs(query(collection(db, 'shipment_updates'), where('shipmentId', '==', shipmentData.id), orderBy('createdAt', 'desc'))),
+          getDocs(query(collection(db, 'shipment_updates'), where('shipmentId', '==', shipmentData.id))),
         ]);
         
-        setShipmentUpdates(updatesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data(), createdAt: doc.data().createdAt.toDate()} as ShipmentUpdate)));
+        const updatesData = updatesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data(), createdAt: doc.data().createdAt.toDate()} as ShipmentUpdate));
+        updatesData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        setShipmentUpdates(updatesData);
         
         const cargoData = cargoSnapshot.docs.map(d => d.data() as OrderItemCargo);
         setCargo(cargoData);
