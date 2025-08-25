@@ -30,6 +30,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import ShipmentReportLayout from '@/components/shipment-report-layout';
+import PrintShipmentReportButton from '@/components/print/PrintShipmentReportButton';
 
 
 const statusTranslations: Record<ShipmentStatusType, string> = {
@@ -82,6 +84,7 @@ export default function ShipmentDetailPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
+  const reportRef = React.useRef<HTMLDivElement>(null);
 
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
   const [orderItem, setOrderItem] = React.useState<OrderItem | null>(null);
@@ -837,6 +840,10 @@ export default function ShipmentDetailPage() {
                         <AlertTitle>Тээвэрлэлт амжилттай</AlertTitle>
                         <AlertDescription>Энэ тээвэрлэлт амжилттай дууссан байна.</AlertDescription>
                     </Alert>
+                    <PrintShipmentReportButton
+                        targetRef={reportRef}
+                        fileName={`Report-${shipment.shipmentNumber}.pdf`}
+                    />
                  </div>
             )
 
@@ -1002,6 +1009,17 @@ export default function ShipmentDetailPage() {
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
+
+    {/* Hidden component for printing */}
+    <div className="print-only">
+        <ShipmentReportLayout
+            ref={reportRef}
+            shipment={shipment}
+            cargo={cargo}
+            packagingTypes={packagingTypes}
+            shipmentUpdates={shipmentUpdates}
+        />
+    </div>
     </div>
   );
 }
