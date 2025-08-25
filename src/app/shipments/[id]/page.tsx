@@ -9,7 +9,7 @@ import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, Order
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
-import { useLoadScript, GoogleMap, DirectionsRenderer } from '@react-google-maps/api';
+import { useLoadScript, GoogleMap, Marker } from '@react-google-maps/api';
 import { useAuth } from '@/hooks/use-auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -94,7 +94,6 @@ export default function ShipmentDetailPage() {
   const [packagingTypes, setPackagingTypes] = React.useState<PackagingType[]>([]);
   const [startWarehouse, setStartWarehouse] = React.useState<Warehouse | null>(null);
   const [endWarehouse, setEndWarehouse] = React.useState<Warehouse | null>(null);
-  const [directions, setDirections] = React.useState<google.maps.DirectionsResult | null>(null);
   const [briefingPublicUrl, setBriefingPublicUrl] = React.useState('');
   const [assignedDriver, setAssignedDriver] = React.useState<Driver | null>(null);
   const [generatedChecklist, setGeneratedChecklist] = React.useState<string[] | null>(null);
@@ -258,26 +257,6 @@ export default function ShipmentDetailPage() {
   React.useEffect(() => {
     fetchShipmentData();
   }, [fetchShipmentData]);
-
-  React.useEffect(() => {
-    if (isMapLoaded && startWarehouse && endWarehouse && !directions) {
-      const directionsService = new window.google.maps.DirectionsService();
-      directionsService.route(
-        {
-          origin: startWarehouse.geolocation,
-          destination: endWarehouse.geolocation,
-          travelMode: window.google.maps.TravelMode.DRIVING,
-        },
-        (result, status) => {
-          if (status === window.google.maps.DirectionsStatus.OK && result) {
-            setDirections(result);
-          } else {
-            console.warn(`Directions request failed due to ${status}`);
-          }
-        }
-      );
-    }
-  }, [isMapLoaded, startWarehouse, endWarehouse, directions]);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && safetyBriefing?.id) {
@@ -914,11 +893,12 @@ export default function ShipmentDetailPage() {
                    ) : (
                       <GoogleMap
                           mapContainerStyle={mapContainerStyle}
-                          center={{ lat: 47.91976, lng: 106.91763 }} // Default center
+                          center={startWarehouse?.geolocation || { lat: 47.91976, lng: 106.91763 }}
                           zoom={5}
                           options={{ streetViewControl: false, mapTypeControl: false }}
                       >
-                           {directions && <DirectionsRenderer options={{ directions }} />}
+                           {startWarehouse?.geolocation && <Marker position={startWarehouse.geolocation} label="A" />}
+                           {endWarehouse?.geolocation && <Marker position={endWarehouse.geolocation} label="B" />}
                       </GoogleMap>
                   )}
                 </div>
