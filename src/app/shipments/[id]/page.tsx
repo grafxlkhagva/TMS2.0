@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -14,6 +15,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Timestamp } from 'firebase/firestore';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -79,6 +81,19 @@ const mapContainerStyle = {
   borderRadius: 'var(--radius)',
 };
 
+const toDateSafe = (date: any): Date => {
+    if (date instanceof Timestamp) return date.toDate();
+    if (date instanceof Date) return date;
+    if (typeof date === 'string' || typeof date === 'number') {
+        const parsed = new Date(date);
+        if (!isNaN(parsed.getTime())) {
+            return parsed;
+        }
+    }
+    // Return a default or invalid date if parsing fails, to avoid crashes.
+    return new Date(); 
+};
+
 export default function ShipmentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -141,8 +156,8 @@ export default function ShipmentDetailPage() {
         const shipmentData = {
           id: docSnap.id,
           ...docSnap.data(),
-          createdAt: docSnap.data().createdAt.toDate(),
-          estimatedDeliveryDate: docSnap.data().estimatedDeliveryDate.toDate(),
+          createdAt: toDateSafe(docSnap.data().createdAt),
+          estimatedDeliveryDate: toDateSafe(docSnap.data().estimatedDeliveryDate),
           orderItemRef: docSnap.data().orderItemRef as DocumentReference | undefined,
           driverRef: docSnap.data().driverRef as DocumentReference | undefined,
         } as Shipment;
@@ -182,7 +197,7 @@ export default function ShipmentDetailPage() {
           getDocs(query(collection(db, 'shipment_updates'), where('shipmentId', '==', shipmentData.id))),
         ]);
         
-        const updatesData = updatesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data(), createdAt: doc.data().createdAt.toDate()} as ShipmentUpdate));
+        const updatesData = updatesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data(), createdAt: toDateSafe(doc.data().createdAt)} as ShipmentUpdate));
         updatesData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         setShipmentUpdates(updatesData);
         
@@ -196,9 +211,9 @@ export default function ShipmentDetailPage() {
             const contractsData = contractSnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
-                createdAt: doc.data().createdAt.toDate(),
-                signedAt: doc.data().signedAt ? doc.data().signedAt.toDate() : undefined,
-                estimatedDeliveryDate: doc.data().estimatedDeliveryDate.toDate(),
+                createdAt: toDateSafe(doc.data().createdAt),
+                signedAt: doc.data().signedAt ? toDateSafe(doc.data().signedAt) : undefined,
+                estimatedDeliveryDate: toDateSafe(doc.data().estimatedDeliveryDate),
             } as Contract));
 
             contractsData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -217,8 +232,8 @@ export default function ShipmentDetailPage() {
             const briefingsData = safetyBriefingSnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
-                createdAt: doc.data().createdAt.toDate(),
-                signedAt: doc.data().signedAt ? doc.data().signedAt.toDate() : undefined,
+                createdAt: toDateSafe(doc.data().createdAt),
+                signedAt: doc.data().signedAt ? toDateSafe(doc.data().signedAt) : undefined,
             } as SafetyBriefing));
 
             briefingsData.sort((a, b) => b.createdAt.getTime() - a.getTime());

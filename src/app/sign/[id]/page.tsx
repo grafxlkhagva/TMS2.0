@@ -10,6 +10,7 @@ import type { Contract, Shipment, OrderItem } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { format } from "date-fns"
 import SignatureCanvas from 'react-signature-canvas'
+import { Timestamp } from 'firebase/firestore';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,6 +18,19 @@ import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, Eraser } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import ContractPrintLayout from '@/components/contract-print-layout';
+
+const toDateSafe = (date: any): Date => {
+    if (date instanceof Timestamp) return date.toDate();
+    if (date instanceof Date) return date;
+    if (typeof date === 'string' || typeof date === 'number') {
+        const parsed = new Date(date);
+        if (!isNaN(parsed.getTime())) {
+            return parsed;
+        }
+    }
+    // Return a default or invalid date if parsing fails, to avoid crashes.
+    return new Date(); 
+};
 
 export default function SignContractPage() {
   const { id } = useParams<{ id: string }>();
@@ -44,9 +58,9 @@ export default function SignContractPage() {
           const contractData = { 
             id: docSnap.id, 
             ...docSnap.data(),
-            createdAt: docSnap.data().createdAt.toDate(),
-            signedAt: docSnap.data().signedAt ? docSnap.data().signedAt.toDate() : undefined,
-             estimatedDeliveryDate: docSnap.data().estimatedDeliveryDate.toDate(),
+            createdAt: toDateSafe(docSnap.data().createdAt),
+            signedAt: docSnap.data().signedAt ? toDateSafe(docSnap.data().signedAt) : undefined,
+            estimatedDeliveryDate: toDateSafe(docSnap.data().estimatedDeliveryDate),
           } as Contract;
           setContract(contractData);
           
@@ -62,7 +76,7 @@ export default function SignContractPage() {
           if (shipmentSnap.exists()) {
              const shipmentData = {
                 ...shipmentSnap.data(),
-                estimatedDeliveryDate: shipmentSnap.data().estimatedDeliveryDate.toDate()
+                estimatedDeliveryDate: toDateSafe(shipmentSnap.data().estimatedDeliveryDate)
              } as Shipment;
              setShipment(shipmentData);
 
@@ -130,9 +144,9 @@ export default function SignContractPage() {
             setContract({
                 id: updatedDoc.id,
                 ...updatedData,
-                createdAt: updatedData.createdAt.toDate(),
-                signedAt: updatedData.signedAt.toDate(),
-                estimatedDeliveryDate: updatedData.estimatedDeliveryDate.toDate(),
+                createdAt: toDateSafe(updatedData.createdAt),
+                signedAt: toDateSafe(updatedData.signedAt),
+                estimatedDeliveryDate: toDateSafe(updatedData.estimatedDeliveryDate),
             } as Contract)
         }
         

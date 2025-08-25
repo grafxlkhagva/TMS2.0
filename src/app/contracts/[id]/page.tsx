@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import PrintButton from '@/components/print/PrintButton';
 import ContractPrintLayout from '@/components/contract-print-layout';
+import { Timestamp } from 'firebase/firestore';
 
 function DetailItem({ label, value }: { label: string, value?: string | React.ReactNode }) {
   if (!value) return null;
@@ -29,6 +30,19 @@ function DetailItem({ label, value }: { label: string, value?: string | React.Re
     </div>
   );
 }
+
+const toDateSafe = (date: any): Date => {
+    if (date instanceof Timestamp) return date.toDate();
+    if (date instanceof Date) return date;
+    if (typeof date === 'string' || typeof date === 'number') {
+        const parsed = new Date(date);
+        if (!isNaN(parsed.getTime())) {
+            return parsed;
+        }
+    }
+    // Return a default or invalid date if parsing fails, to avoid crashes.
+    return new Date(); 
+};
 
 
 export default function ContractDetailPage() {
@@ -61,9 +75,9 @@ export default function ContractDetailPage() {
         const contractData = {
           id: docSnap.id,
           ...docSnap.data(),
-          createdAt: docSnap.data().createdAt.toDate(),
-          signedAt: docSnap.data().signedAt ? docSnap.data().signedAt.toDate() : undefined,
-          estimatedDeliveryDate: docSnap.data().estimatedDeliveryDate.toDate(),
+          createdAt: toDateSafe(docSnap.data().createdAt),
+          signedAt: docSnap.data().signedAt ? toDateSafe(docSnap.data().signedAt) : undefined,
+          estimatedDeliveryDate: toDateSafe(docSnap.data().estimatedDeliveryDate),
         } as Contract;
         setContract(contractData);
 
