@@ -840,10 +840,6 @@ export default function ShipmentDetailPage() {
                         <AlertTitle>Тээвэрлэлт амжилттай</AlertTitle>
                         <AlertDescription>Энэ тээвэрлэлт амжилттай дууссан байна.</AlertDescription>
                     </Alert>
-                    <PrintShipmentReportButton
-                        targetRef={reportRef}
-                        fileName={`Report-${shipment.shipmentNumber}.pdf`}
-                    />
                  </div>
             )
 
@@ -949,6 +945,14 @@ export default function ShipmentDetailPage() {
                 <CardContent>
                     {renderCurrentStageChecklist()}
                 </CardContent>
+                 {shipment.status === 'Delivered' && (
+                    <CardFooter>
+                        <PrintShipmentReportButton
+                            targetRef={reportRef}
+                            fileName={`Report-${shipment.shipmentNumber}.pdf`}
+                        />
+                    </CardFooter>
+                )}
             </Card>
         </div>
         
