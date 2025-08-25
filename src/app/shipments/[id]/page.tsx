@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { generateChecklistAction } from './actions';
+import { generateChecklistAction, generateUnloadingChecklistAction } from './actions';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -96,12 +96,15 @@ export default function ShipmentDetailPage() {
   const [assignedDriver, setAssignedDriver] = React.useState<Driver | null>(null);
   const [generatedChecklist, setGeneratedChecklist] = React.useState<string[] | null>(null);
   const [checkedItems, setCheckedItems] = React.useState<Set<number>>(new Set());
+  const [generatedUnloadingChecklist, setGeneratedUnloadingChecklist] = React.useState<string[] | null>(null);
+  const [checkedUnloadingItems, setCheckedUnloadingItems] = React.useState<Set<number>>(new Set());
   const [shipmentUpdates, setShipmentUpdates] = React.useState<ShipmentUpdate[]>([]);
 
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isUpdating, setIsUpdating] = React.useState(false);
   const [isGeneratingChecklist, setIsGeneratingChecklist] = React.useState(false);
+  const [isGeneratingUnloadingChecklist, setIsGeneratingUnloadingChecklist] = React.useState(false);
   const [statusChange, setStatusChange] = React.useState<{ newStatus: ShipmentStatusType; oldStatus: ShipmentStatusType; } | null>(null);
   const [isSubmittingUpdate, setIsSubmittingUpdate] = React.useState(false);
 
@@ -509,8 +512,50 @@ export default function ShipmentDetailPage() {
     }
   };
 
+  const handleGenerateUnloadingChecklist = async () => {
+    if (!shipment || !cargo.length) return;
+    setIsGeneratingUnloadingChecklist(true);
+    setGeneratedUnloadingChecklist(null);
+    setCheckedUnloadingItems(new Set());
+    try {
+      const cargoInfo = cargo.map(c => `${c.quantity} ${c.unit} of ${c.name} (${getPackagingTypeName(c.packagingTypeId)})`).join(', ');
+      const vehicleInfo = `${shipment.vehicleInfo.vehicleType} with a ${shipment.vehicleInfo.trailerType}`;
+
+      const response = await generateUnloadingChecklistAction({ cargoInfo, vehicleInfo });
+      if (response.success && response.data) {
+        setGeneratedUnloadingChecklist(response.data.checklistItems);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Алдаа',
+          description: response.error || 'Буулгах чеклист үүсгэхэд алдаа гарлаа.',
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Алдаа',
+        description: 'Буулгах чеклист үүсгэхэд алдаа гарлаа.',
+      });
+    } finally {
+      setIsGeneratingUnloadingChecklist(false);
+    }
+  };
+
   const handleChecklistItem = (index: number) => {
     setCheckedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  const handleCheckUnloadingItem = (index: number) => {
+    setCheckedUnloadingItems(prev => {
       const newSet = new Set(prev);
       if (newSet.has(index)) {
         newSet.delete(index);
@@ -746,15 +791,34 @@ export default function ShipmentDetailPage() {
              )
 
         case 'Unloading':
-             const isUnloadingComplete = checklist.unloadingChecklistCompleted;
+            const allUnloadingItemsChecked = generatedUnloadingChecklist && checkedUnloadingItems.size === generatedUnloadingChecklist.length;
              return (
                 <div className="space-y-4">
-                    <h3 className="font-semibold">Буулгалтын чеклист</h3>
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="unloadingChecklistCompleted" checked={checklist.unloadingChecklistCompleted} onCheckedChange={(checked) => handleUpdateChecklist('unloadingChecklistCompleted', !!checked)} disabled={isUpdating}/>
-                        <label htmlFor="unloadingChecklistCompleted" className="text-sm font-medium leading-none">Буулгалтын чеклисттэй танилцсан</label>
-                    </div>
-                    <Button onClick={() => handleStatusChange('Delivered')} disabled={!isUnloadingComplete || isUpdating}>
+                    <h3 className="font-semibold">Буулгахад бэлтгэх чеклист (AI-гаар үүсгэсэн)</h3>
+                     {!generatedUnloadingChecklist && (
+                        <Button onClick={handleGenerateUnloadingChecklist} disabled={isGeneratingUnloadingChecklist}>
+                            {isGeneratingUnloadingChecklist ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                            Буулгалтын чеклист үүсгэх
+                        </Button>
+                    )}
+                     {isGeneratingUnloadingChecklist && <Skeleton className="h-24 w-full" />}
+                     {generatedUnloadingChecklist && (
+                        <div className="space-y-2 rounded-md border p-4">
+                            {generatedUnloadingChecklist.map((item, index) => (
+                                <div key={index} className="flex items-center space-x-2">
+                                    <Checkbox 
+                                        id={`unloading-checklist-item-${index}`} 
+                                        onCheckedChange={() => handleCheckUnloadingItem(index)}
+                                        checked={checkedUnloadingItems.has(index)}
+                                    />
+                                    <label htmlFor={`unloading-checklist-item-${index}`} className="text-sm font-medium leading-none">
+                                        {item}
+                                    </label>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <Button onClick={() => handleStatusChange('Delivered')} disabled={!allUnloadingItemsChecked || isUpdating}>
                         Хүргэлт дууссан
                     </Button>
                 </div>
