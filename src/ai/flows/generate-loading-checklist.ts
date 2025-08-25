@@ -38,7 +38,7 @@ const prompt = ai.definePrompt({
   name: 'generateLoadingChecklistPrompt',
   input: { schema: GenerateLoadingChecklistInputSchema },
   output: { schema: GenerateLoadingChecklistOutputSchema },
-  prompt: `You are a logistics and transportation safety expert.
+  prompt: `You are a logistics and transportation safety expert. Your responses must be in Mongolian.
 Your task is to generate a concise and critical checklist for a driver preparing to load cargo.
 The checklist should be based on the specific cargo and vehicle information provided.
 Focus on safety, proper loading procedures, and securing the cargo.
@@ -47,14 +47,14 @@ Keep the checklist items short and clear. Generate between 4 and 6 critical item
 Cargo Information: {{{cargoInfo}}}
 Vehicle Information: {{{vehicleInfo}}}
 
-Generate a JSON object with a key "checklistItems" containing an array of strings.
+Generate a JSON object with a key "checklistItems" containing an array of strings in Mongolian.
 For example:
 {
   "checklistItems": [
-    "Check for any visible damage to the packaging.",
-    "Ensure the vehicle's loading area is clean and dry.",
-    "Confirm the cargo weight does not exceed the vehicle's limit.",
-    "Verify that securing straps and equipment are in good condition."
+    "Баглаа боодлын харагдах гэмтэл байгаа эсэхийг шалгах.",
+    "Тээврийн хэрэгслийн ачих хэсэг цэвэр, хуурай байгаа эсэхийг нягтлах.",
+    "Ачааны жин тээврийн хэрэгслийн даацаас хэтрээгүйг баталгаажуулах.",
+    "Ачаа бэхлэх оосор, тоноглол хэвийн нөхцөлд байгааг шалгах."
   ]
 }
 `,

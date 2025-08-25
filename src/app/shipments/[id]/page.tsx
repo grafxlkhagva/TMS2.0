@@ -488,8 +488,8 @@ export default function ShipmentDetailPage() {
     setGeneratedChecklist(null);
     setCheckedItems(new Set());
     try {
-      const cargoInfo = cargo.map(c => `${c.quantity} ${c.unit} of ${c.name} (${getPackagingTypeName(c.packagingTypeId)})`).join(', ');
-      const vehicleInfo = `${shipment.vehicleInfo.vehicleType} with a ${shipment.vehicleInfo.trailerType}`;
+      const cargoInfo = cargo.map(c => `${c.quantity} ${c.unit} ${c.name} (${getPackagingTypeName(c.packagingTypeId)})`).join(', ');
+      const vehicleInfo = `${shipment.vehicleInfo.vehicleType}, ${shipment.vehicleInfo.trailerType}`;
 
       const response = await generateChecklistAction({ cargoInfo, vehicleInfo });
       if (response.success && response.data) {
@@ -518,8 +518,8 @@ export default function ShipmentDetailPage() {
     setGeneratedUnloadingChecklist(null);
     setCheckedUnloadingItems(new Set());
     try {
-      const cargoInfo = cargo.map(c => `${c.quantity} ${c.unit} of ${c.name} (${getPackagingTypeName(c.packagingTypeId)})`).join(', ');
-      const vehicleInfo = `${shipment.vehicleInfo.vehicleType} with a ${shipment.vehicleInfo.trailerType}`;
+      const cargoInfo = cargo.map(c => `${c.quantity} ${c.unit} ${c.name} (${getPackagingTypeName(c.packagingTypeId)})`).join(', ');
+      const vehicleInfo = `${shipment.vehicleInfo.vehicleType}, ${shipment.vehicleInfo.trailerType}`;
 
       const response = await generateUnloadingChecklistAction({ cargoInfo, vehicleInfo });
       if (response.success && response.data) {
@@ -695,7 +695,7 @@ export default function ShipmentDetailPage() {
             const allItemsChecked = generatedChecklist && checkedItems.size === generatedChecklist.length;
             return (
                 <div className="space-y-4">
-                    <h3 className="font-semibold">Ачихад бэлтгэх чеклист (AI-гаар үүсгэсэн)</h3>
+                    <h3 className="font-semibold">Ачилтын чеклист (AI)</h3>
                     {!generatedChecklist && (
                         <Button onClick={handleGenerateChecklist} disabled={isGeneratingChecklist}>
                             {isGeneratingChecklist ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
@@ -794,7 +794,7 @@ export default function ShipmentDetailPage() {
             const allUnloadingItemsChecked = generatedUnloadingChecklist && checkedUnloadingItems.size === generatedUnloadingChecklist.length;
              return (
                 <div className="space-y-4">
-                    <h3 className="font-semibold">Буулгахад бэлтгэх чеклист (AI-гаар үүсгэсэн)</h3>
+                    <h3 className="font-semibold">Буулгалтын чеклист (AI)</h3>
                      {!generatedUnloadingChecklist && (
                         <Button onClick={handleGenerateUnloadingChecklist} disabled={isGeneratingUnloadingChecklist}>
                             {isGeneratingUnloadingChecklist ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
