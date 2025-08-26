@@ -150,7 +150,7 @@ export default function GenerateQuotePage() {
                     delete sanitized[key];
                 }
                 if (sanitized[key] instanceof Timestamp) {
-                    sanitized[key] = sanitized[key].toDate();
+                    sanitized[key] = toDateSafe(sanitized[key]);
                 }
             }
             return sanitized;
