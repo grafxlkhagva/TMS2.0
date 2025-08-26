@@ -173,23 +173,13 @@ export default function GenerateQuotePage() {
         setAcceptedItems(filteredAcceptedItems);
         setSelectedItems(new Map(filteredAcceptedItems.map(item => [item.id, item])));
         
-        const sanitizeDocForState = (docData: any) => {
-            const sanitized: Record<string, any> = { ...docData };
-            for (const key in sanitized) {
-                if (sanitized[key] instanceof Timestamp) {
-                    sanitized[key] = toDateSafe(sanitized[key]);
-                }
-            }
-            return sanitized;
-        };
-
         setAllData({
-          warehouses: warehouseSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDocForState(doc.data()) } as Warehouse)),
-          serviceTypes: serviceTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDocForState(doc.data()) } as ServiceType)),
-          vehicleTypes: vehicleTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDocForState(doc.data()) } as VehicleType)),
-          trailerTypes: trailerTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDocForState(doc.data()) } as TrailerType)),
-          regions: regionSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDocForState(doc.data()) } as Region)),
-          packagingTypes: packagingTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDocForState(doc.data()) } as PackagingType)),
+          warehouses: warehouseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Warehouse)),
+          serviceTypes: serviceTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceType)),
+          vehicleTypes: vehicleTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as VehicleType)),
+          trailerTypes: trailerTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrailerType)),
+          regions: regionSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Region)),
+          packagingTypes: packagingTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as PackagingType)),
         });
 
       } catch (error) {
