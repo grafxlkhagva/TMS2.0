@@ -116,20 +116,20 @@ const QuoteLayout = React.forwardRef<HTMLDivElement, { order: Order; orderItems:
         <div className="flex"><p><strong>Хариуцсан ажилтан:</strong><span className="ml-1">{order.employeeName}</span></p></div>
       </section>
 
-      <table className="w-full text-left text-[9px]" style={{ tableLayout: 'auto', wordBreak: 'break-word' }}>
+      <table className="w-full text-left text-[9px]" style={{ tableLayout: 'auto' }}>
         <thead className="bg-gray-100 font-bold">
           <tr>
-            <th scope="col" className="p-1 border border-gray-400">Үйлчилгээний төрөл</th>
-            <th scope="col" className="p-1 border border-gray-400">Ачааны мэдээлэл</th>
+            <th scope="col" className="p-1 border border-gray-400 whitespace-nowrap">Үйлчилгээний төрөл</th>
+            <th scope="col" className="p-1 border border-gray-400 whitespace-nowrap">Ачааны мэдээлэл</th>
             <th scope="col" className="p-1 border border-gray-400">Ачих</th>
             <th scope="col" className="p-1 border border-gray-400">Буулгах</th>
-            <th scope="col" className="p-1 border border-gray-400 text-right">Нийт зам</th>
-            <th scope="col" className="p-1 border border-gray-400">Тээврийн хэрэгсэл</th>
-            <th scope="col" className="p-1 border border-gray-400 text-right">Тээврийн үнэ</th>
+            <th scope="col" className="p-1 border border-gray-400 text-right whitespace-nowrap">Нийт зам</th>
+            <th scope="col" className="p-1 border border-gray-400 whitespace-nowrap">Тээврийн хэрэгсэл</th>
+            <th scope="col" className="p-1 border border-gray-400 text-right whitespace-nowrap">Тээврийн үнэ</th>
             <th scope="col" className="p-1 border border-gray-400 text-right">Тоо</th>
-            <th scope="col" className="p-1 border border-gray-400 text-right">Нийт төлбөр</th>
+            <th scope="col" className="p-1 border border-gray-400 text-right whitespace-nowrap">Нийт төлбөр</th>
             <th scope="col" className="p-1 border border-gray-400 text-right">НӨАТ</th>
-            <th scope="col" className="p-1 border border-gray-400 text-right">Нийт дүн</th>
+            <th scope="col" className="p-1 border border-gray-400 text-right whitespace-nowrap">Нийт дүн</th>
           </tr>
         </thead>
         <tbody>
