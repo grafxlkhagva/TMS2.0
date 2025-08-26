@@ -100,7 +100,11 @@ export default function GenerateQuotePage() {
           return;
         }
         const orderData = orderDocSnap.data();
-        setOrder({ id: orderDocSnap.id, ...orderData } as Order);
+        setOrder({ 
+          id: orderDocSnap.id, 
+          ...orderData,
+          createdAt: toDateSafe(orderData.createdAt)
+        } as Order);
 
         const [itemsSnap, warehouseSnap, serviceTypeSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap, packagingTypeSnap] = await Promise.all([
           getDocs(query(collection(db, 'order_items'), where('orderId', '==', orderId))),
