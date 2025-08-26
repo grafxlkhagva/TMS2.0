@@ -185,7 +185,7 @@ export default function GenerateQuotePage() {
           </div>
         </div>
         
-        {isClient && selectedItemsArray.length > 0 && (
+        {isClient && selectedItemsArray.length > 0 && order && allData && (
            <PDFDownloadLink
             document={<QuoteDocument order={order} orderItems={selectedItemsArray} allData={allData} />}
             fileName={`Quote-${order.orderNumber}.pdf`}
