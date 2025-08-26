@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -117,20 +116,7 @@ const QuoteLayout = React.forwardRef<HTMLDivElement, { order: Order; orderItems:
         <div className="flex"><p><strong>Хариуцсан ажилтан:</strong><span className="ml-1">{order.employeeName}</span></p></div>
       </section>
 
-      <table className="w-full text-left text-[9px]" style={{ tableLayout: 'fixed', wordBreak: 'break-word' }}>
-        <colgroup>
-          <col style={{ width: '8%' }} />
-          <col style={{ width: '15%' }} />
-          <col style={{ width: '10%' }} />
-          <col style={{ width: '10%' }} />
-          <col style={{ width: '6%' }} />
-          <col style={{ width: '10%' }} />
-          <col style={{ width: '7%' }} />
-          <col style={{ width: '5%' }} />
-          <col style={{ width: '8%' }} />
-          <col style={{ width: '8%' }} />
-          <col style={{ width: '8%' }} />
-        </colgroup>
+      <table className="w-full text-left text-[9px]" style={{ tableLayout: 'auto', wordBreak: 'break-word' }}>
         <thead className="bg-gray-100 font-bold">
           <tr>
             <th scope="col" className="p-1 border border-gray-400">Үйлчилгээний төрөл</th>
@@ -431,3 +417,5 @@ export default function GenerateQuotePage() {
     </div>
   );
 }
+
+    
