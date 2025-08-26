@@ -189,12 +189,25 @@ export default function GenerateQuotePage() {
   };
   
   const cleanDataForPdf = (data: any): any => {
-    if (!data || typeof data !== 'object') return data;
-    const cleaned: Record<string, any> = { ...data };
-    for (const key in cleaned) {
-      if (key.endsWith('Ref')) {
-        delete cleaned[key];
-      }
+    if (Array.isArray(data)) {
+        return data.map(item => cleanDataForPdf(item));
+    }
+    if (!data || typeof data !== 'object') {
+        return data;
+    }
+    const cleaned: Record<string, any> = {};
+    for (const key in data) {
+        if (key.endsWith('Ref')) {
+            continue;
+        }
+        const value = data[key];
+        if (value instanceof Timestamp) {
+            cleaned[key] = value.toDate();
+        } else if (typeof value === 'object' && value !== null) {
+            cleaned[key] = cleanDataForPdf(value);
+        } else {
+            cleaned[key] = value;
+        }
     }
     return cleaned;
   };
@@ -254,17 +267,10 @@ export default function GenerateQuotePage() {
                   document={<QuoteDocument 
                     order={cleanDataForPdf(order)} 
                     orderItems={selectedItemsArray.map(item => ({
-                      ...cleanDataForPdf(item),
-                      cargoItems: (item.cargoItems || []).map(cargo => cleanDataForPdf(cargo)),
-                    }))} 
-                    allData={{
-                      serviceTypes: allData.serviceTypes.map(cleanDataForPdf),
-                      regions: allData.regions.map(cleanDataForPdf),
-                      warehouses: allData.warehouses.map(cleanDataForPdf),
-                      vehicleTypes: allData.vehicleTypes.map(cleanDataForPdf),
-                      trailerTypes: allData.trailerTypes.map(cleanDataForPdf),
-                      packagingTypes: allData.packagingTypes.map(cleanDataForPdf),
-                    }}
+                        ...cleanDataForPdf(item),
+                        cargoItems: item.cargoItems ? item.cargoItems.map(cargo => cleanDataForPdf(cargo)) : []
+                    }))}
+                    allData={cleanDataForPdf(allData)}
                   />}
                   fileName={`Quote-${order.orderNumber}.pdf`}
                 >
