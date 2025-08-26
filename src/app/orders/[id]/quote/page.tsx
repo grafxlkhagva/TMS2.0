@@ -73,17 +73,15 @@ export default function GenerateQuotePage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = React.useState(false);
 
-  const [order, setOrder] = React.useState<Order | null>(null);
-  const [allData, setAllData] = React.useState<AllData>(initialAllData);
-  const [acceptedItems, setAcceptedItems] = React.useState<OrderItem[]>([]);
-  const [selectedItems, setSelectedItems] = React.useState<Map<string, OrderItem>>(new Map());
-  const [isLoading, setIsLoading] = React.useState(true);
-  
-  const getRegionName = React.useCallback((id: string) => allData.regions.find(r => r.id === id)?.name || 'N/A', [allData.regions]);
-  
   React.useEffect(() => {
     setIsClient(true);
   }, []);
+
+  const [order, setOrder] = React.useState<Order | null>(null);
+  const [acceptedItems, setAcceptedItems] = React.useState<OrderItem[]>([]);
+  const [selectedItems, setSelectedItems] = React.useState<Map<string, OrderItem>>(new Map());
+  const [allData, setAllData] = React.useState<AllData | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
     if (!orderId) return;
@@ -140,18 +138,18 @@ export default function GenerateQuotePage() {
         setAcceptedItems(filteredAcceptedItems);
         setSelectedItems(new Map(filteredAcceptedItems.map(item => [item.id, item])));
         
-        const sanitizeTimestamp = (docData: any) => ({
+        const sanitizeDoc = (docData: any) => ({
             ...docData,
             createdAt: toDateSafe(docData.createdAt),
         });
 
         setAllData({
-          warehouses: warehouseSnap.docs.map(doc => ({ id: doc.id, ...sanitizeTimestamp(doc.data()) } as Warehouse)),
-          serviceTypes: serviceTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeTimestamp(doc.data()) } as ServiceType)),
-          vehicleTypes: vehicleTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeTimestamp(doc.data()) } as VehicleType)),
-          trailerTypes: trailerTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeTimestamp(doc.data()) } as TrailerType)),
-          regions: regionSnap.docs.map(doc => ({ id: doc.id, ...sanitizeTimestamp(doc.data()) } as Region)),
-          packagingTypes: packagingTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeTimestamp(doc.data()) } as PackagingType)),
+          warehouses: warehouseSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as Warehouse)),
+          serviceTypes: serviceTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as ServiceType)),
+          vehicleTypes: vehicleTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as VehicleType)),
+          trailerTypes: trailerTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as TrailerType)),
+          regions: regionSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as Region)),
+          packagingTypes: packagingSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as PackagingType)),
         });
 
       } catch (error) {
@@ -187,7 +185,12 @@ export default function GenerateQuotePage() {
     }
     return cleaned;
   };
-
+  
+  const getRegionName = React.useCallback(
+    (id: string) => allData?.regions.find(r => r.id === id)?.name || 'N/A',
+    [allData]
+  );
+  
   const selectedItemsArray = Array.from(selectedItems.values()).sort((a,b) => (a.createdAt?.getTime?.() ?? 0) - (b.createdAt?.getTime?.() ?? 0));
   
   const { totalFinalPrice } = selectedItemsArray.reduce(
@@ -200,54 +203,77 @@ export default function GenerateQuotePage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-6 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-96 w-full" />
+      <div className="container mx-auto py-6">
+        <div className="mb-6">
+          <Skeleton className="h-8 w-1/4" />
+          <Skeleton className="h-4 w-1/2 mt-2" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-1 space-y-4">
+            <Card>
+              <CardHeader><Skeleton className="h-6 w-3/4" /></CardHeader>
+              <CardContent><Skeleton className="h-24 w-full" /></CardContent>
+            </Card>
+          </div>
+          <div className="md:col-span-2">
+            <Card>
+              <CardHeader><Skeleton className="h-6 w-1/2" /></CardHeader>
+              <CardContent><Skeleton className="h-96 w-full" /></CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/orders/${orderId}`}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Захиалга руу буцах
-            </Link>
-          </Button>
-          {order && <div>
-            <h1 className="text-2xl font-bold">Үнийн санал үүсгэх</h1>
-            <p className="text-muted-foreground">{order.orderNumber}</p>
-          </div>}
+    <div className="container mx-auto py-6">
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+            <div>
+                 <Button variant="outline" size="sm" asChild className="mb-4">
+                     <Link href={`/orders/${orderId}`}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Захиалга руу буцах
+                     </Link>
+                </Button>
+                <h1 className="text-3xl font-headline font-bold">Үнийн санал үүсгэх</h1>
+                <p className="text-muted-foreground font-mono">{order?.orderNumber}</p>
+            </div>
+            <div>
+               {isClient && selectedItemsArray.length > 0 && order && allData && (
+                 <PDFDownloadLink
+                  document={<QuoteDocument 
+                    order={cleanDataForPdf(order)} 
+                    orderItems={selectedItemsArray.map(item => ({
+                      ...cleanDataForPdf(item),
+                      cargoItems: (item.cargoItems || []).map(cargo => cleanDataForPdf(cargo)),
+                    }))} 
+                    allData={{
+                      ...allData,
+                      warehouses: allData.warehouses.map(cleanDataForPdf),
+                      regions: allData.regions.map(cleanDataForPdf),
+                      serviceTypes: allData.serviceTypes.map(cleanDataForPdf),
+                      vehicleTypes: allData.vehicleTypes.map(cleanDataForPdf),
+                      trailerTypes: allData.trailerTypes.map(cleanDataForPdf),
+                      packagingTypes: allData.packagingTypes.map(cleanDataForPdf),
+                    }}
+                  />}
+                  fileName={`Quote-${order.orderNumber}.pdf`}
+                >
+                  {({ loading }) => (
+                    <Button disabled={loading}>
+                      {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
+                       PDF Татах
+                    </Button>
+                  )}
+                </PDFDownloadLink>
+              )}
+            </div>
+          </div>
         </div>
-        
-        {isClient && selectedItemsArray.length > 0 && order && allData && (
-           <PDFDownloadLink
-            document={<QuoteDocument 
-              order={cleanDataForPdf(order)} 
-              orderItems={selectedItemsArray.map(item => ({
-                ...cleanDataForPdf(item),
-                cargoItems: item.cargoItems ? item.cargoItems.map(cleanDataForPdf) : []
-              }))} 
-              allData={allData} 
-            />}
-            fileName={`Quote-${order.orderNumber}.pdf`}
-          >
-            {({ loading }) => (
-              <Button disabled={loading}>
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
-                 PDF Татах
-              </Button>
-            )}
-          </PDFDownloadLink>
-        )}
-
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-1 flex flex-col gap-6 sticky top-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+        <div className="md:col-span-1 space-y-6 sticky top-6">
             <Card>
                 <CardHeader>
                     <CardTitle>Тээвэрлэлт сонгох</CardTitle>
@@ -257,7 +283,7 @@ export default function GenerateQuotePage() {
                     {acceptedItems.length > 0 ? (
                         acceptedItems.map((item, index) => (
                             <div key={item.id} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted">
-                                <Checkbox
+                                <Checkbox 
                                     id={`item-${item.id}`}
                                     checked={selectedItems.has(item.id)}
                                     onCheckedChange={() => handleSelectChange(item)}
@@ -268,68 +294,78 @@ export default function GenerateQuotePage() {
                             </div>
                         ))
                     ) : (
-                        <p className="text-sm text-muted-foreground p-2">Баталгаажсан үнийн саналтай тээвэрлэлт олдсонгүй.</p>
+                        <p className="text-sm text-muted-foreground text-center p-4">Баталгаажсан үнийн саналтай тээвэрлэлт олдсонгүй.</p>
                     )}
                 </CardContent>
                 {selectedItems.size > 0 && (
-                    <CardFooter className="flex-col items-start gap-2 pt-4 border-t">
-                        <div className="font-semibold">Нийт дүн: {fmt(totalFinalPrice)}₮</div>
-                        <p className="text-xs text-muted-foreground">{selectedItems.size} тээвэрлэлт сонгогдсон.</p>
+                    <CardFooter className="flex flex-col items-start pt-4 border-t">
+                        <p className="text-lg font-semibold">Нийт дүн: {fmt(totalFinalPrice)}₮</p>
+                        <p className="text-sm text-muted-foreground">{selectedItems.size} тээвэрлэлт сонгогдсон.</p>
                     </CardFooter>
                 )}
             </Card>
         </div>
-        
-        <div className="lg:col-span-2">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-primary"/>
-                        Урьдчилан харах
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="border rounded-lg shadow-sm overflow-hidden p-6 prose prose-sm max-w-none">
-                       <h2 className='text-center'>ҮНИЙН САНАЛ</h2>
-                       {order && <p className='text-center font-semibold'>{order.orderNumber}</p>}
-                       <hr/>
-                       <h3>Захиалагчийн мэдээлэл</h3>
-                       <p><strong>Байгууллага:</strong> {order?.customerName}</p>
-                       <p><strong>Хариуцсан ажилтан:</strong> {order?.employeeName}</p>
-                       <h3>Тээвэрлэлтүүд</h3>
-                       <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Чиглэл</TableHead>
-                                <TableHead className="text-right">Үнэ (НӨАТ-гүй)</TableHead>
-                                <TableHead className="text-right">НӨАТ</TableHead>
-                                <TableHead className="text-right">Нийт дүн</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {selectedItemsArray.map(item => {
-                               const finalPrice = roundCurrency(item.finalPrice);
-                               const priceBeforeVat = item.withVAT ? finalPrice / 1.1 : finalPrice;
-                               const vat = finalPrice - priceBeforeVat;
-                               return (
-                                <TableRow key={item.id}>
-                                    <TableCell>{getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</TableCell>
-                                    <TableCell className="text-right">{fmt(priceBeforeVat)}</TableCell>
-                                    <TableCell className="text-right">{fmt(vat)}</TableCell>
-                                    <TableCell className="text-right">{fmt(finalPrice)}</TableCell>
-                                </TableRow>
-                               )
-                            })}
-                        </TableBody>
-                       </Table>
-                       <p className="text-right font-bold mt-4">Нийт дүн: {fmt(totalFinalPrice)}₮</p>
+        <div className="md:col-span-2">
+             <Card>
+                 <CardHeader>
+                     <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle>Урьдчилан харах</CardTitle>
+                        </div>
+                     </div>
+                 </CardHeader>
+                 <CardContent>
+                    <div className="border rounded-md p-6 bg-gray-50 aspect-[1/1.414] overflow-auto">
+                        <div className="bg-white p-8 font-sans text-gray-800 text-[10px] w-full h-full">
+                           <header className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
+                             <div>
+                               <h1 className="text-2xl font-bold">Түмэн Тех ТМС</h1>
+                             </div>
+                             <div className="text-right">
+                               <h2 className="text-xl font-bold uppercase">ҮНИЙН САНАЛ</h2>
+                               <p className="mt-1">Захиалгын №: {order?.orderNumber}</p>
+                             </div>
+                           </header>
+                           <section className="mb-6">
+                               <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Захиалагчийн мэдээлэл</h3>
+                               <p><strong>Байгууллага:</strong> {order?.customerName}</p>
+                               <p><strong>Хариуцсан ажилтан:</strong> {order?.employeeName}</p>
+                           </section>
+                           <section>
+                               <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Тээвэрлэлтүүд</h3>
+                               <Table>
+                               <TableHeader>
+                                   <TableRow>
+                                       <TableHead className="h-8 text-[9px]">Чиглэл</TableHead>
+                                       <TableHead className="h-8 text-[9px] text-right">Үнэ (НӨАТ-гүй)</TableHead>
+                                       <TableHead className="h-8 text-[9px] text-right">НӨАТ</TableHead>
+                                       <TableHead className="h-8 text-[9px] text-right">Нийт дүн</TableHead>
+                                   </TableRow>
+                               </TableHeader>
+                               <TableBody>
+                                   {selectedItemsArray.map(item => {
+                                       const finalPrice = roundCurrency(item.finalPrice);
+                                       const priceBeforeVat = item.withVAT ? finalPrice / 1.1 : finalPrice;
+                                       const vat = finalPrice - priceBeforeVat;
+                                       return (
+                                        <TableRow key={item.id}>
+                                            <TableCell className="py-1 text-[9px]">{getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</TableCell>
+                                            <TableCell className="py-1 text-[9px] text-right">{fmt(priceBeforeVat)}</TableCell>
+                                            <TableCell className="py-1 text-[9px] text-right">{fmt(vat)}</TableCell>
+                                            <TableCell className="py-1 text-[9px] text-right font-semibold">{fmt(finalPrice)}</TableCell>
+                                        </TableRow>
+                                       )
+                                   })}
+                               </TableBody>
+                               </Table>
+                               <p className="text-right font-bold mt-4">Нийт дүн: {fmt(totalFinalPrice)}₮</p>
+                           </section>
+                        </div>
                     </div>
-                </CardContent>
-            </Card>
+                 </CardContent>
+             </Card>
         </div>
       </div>
     </div>
   );
 }
-
-    
