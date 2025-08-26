@@ -33,7 +33,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import ShipmentReportLayout from '@/components/shipment-report-layout';
-import PrintShipmentReportButton from '@/components/print/PrintShipmentReportButton';
+import PrintButton from '@/components/print/PrintButton';
 
 
 const statusTranslations: Record<ShipmentStatusType, string> = {
@@ -942,9 +942,10 @@ export default function ShipmentDetailPage() {
                 </CardContent>
                  {shipment.status === 'Delivered' && (
                     <CardFooter>
-                        <PrintShipmentReportButton
+                        <PrintButton
                             targetRef={reportRef}
                             fileName={`Report-${shipment.shipmentNumber}.pdf`}
+                            buttonLabel="Тээврийн тайлан татах"
                         />
                     </CardFooter>
                 )}

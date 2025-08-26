@@ -24,7 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, FileText } from 'lucide-react';
 import Link from 'next/link';
-import PrintQuoteButton from '@/components/print/PrintQuoteButton';
+import PrintButton from '@/components/print/PrintButton';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -364,10 +364,12 @@ export default function GenerateQuotePage() {
             <p className="text-muted-foreground">{order.orderNumber}</p>
           </div>
         </div>
-        <PrintQuoteButton
+        <PrintButton
           targetRef={componentRef}
           fileName={`Quote-${order.orderNumber}.pdf`}
           disabled={selectedItems.size === 0}
+          orientation="landscape"
+          buttonVariant="default"
         />
       </div>
 

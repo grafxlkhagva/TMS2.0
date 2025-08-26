@@ -7,30 +7,37 @@ import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { A4_WIDTH_PX } from '@/lib/print/units';
 
+type PrintButtonProps = {
+  targetRef: React.RefObject<HTMLElement>;
+  fileName: string;
+  disabled?: boolean;
+  orientation?: 'portrait' | 'landscape';
+  buttonLabel?: string;
+  buttonVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+};
 
-async function captureElementToPdf(element: HTMLElement, fileName: string): Promise<void> {
-    const originalWidth = element.style.width;
-    element.style.width = `${A4_WIDTH_PX}px`;
-
+async function captureElementToPdf(
+    element: HTMLElement, 
+    fileName: string, 
+    orientation: 'portrait' | 'landscape'
+): Promise<void> {
     // Ensure fonts are loaded before capturing
     await new Promise(resolve => setTimeout(resolve, 500));
 
     const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: 2, // Higher scale for better quality
         useCORS: true,
-        logging: true,
         allowTaint: true,
+        logging: false,
     });
     
-    element.style.width = originalWidth;
-
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF({
-        orientation: 'portrait',
+        orientation: orientation,
         unit: 'mm',
         format: 'a4',
+        compress: true,
     });
 
     const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -43,22 +50,30 @@ async function captureElementToPdf(element: HTMLElement, fileName: string): Prom
     }
     
     const canvasAspectRatio = canvasWidth / canvasHeight;
-    const pdfAspectRatio = pdfWidth / pdfHeight;
 
     let finalWidth, finalHeight;
-
-    if (canvasAspectRatio > pdfAspectRatio) {
-        finalWidth = pdfWidth;
-        finalHeight = pdfWidth / canvasAspectRatio;
-    } else {
+    
+    // Fit image to page dimensions, preserving aspect ratio
+    if (orientation === 'portrait') {
+      finalWidth = pdfWidth;
+      finalHeight = pdfWidth / canvasAspectRatio;
+      if (finalHeight > pdfHeight) {
         finalHeight = pdfHeight;
         finalWidth = pdfHeight * canvasAspectRatio;
+      }
+    } else { // landscape
+      finalHeight = pdfHeight;
+      finalWidth = pdfHeight * canvasAspectRatio;
+      if (finalWidth > pdfWidth) {
+        finalWidth = pdfWidth;
+        finalHeight = pdfWidth / canvasAspectRatio;
+      }
     }
-
+    
     if (!isFinite(finalWidth) || !isFinite(finalHeight) || finalWidth <= 0 || finalHeight <= 0) {
        throw new Error(`Invalid calculated dimensions for PDF. W: ${finalWidth}, H: ${finalHeight}`);
     }
-
+    
     const x = (pdfWidth - finalWidth) / 2;
     const y = (pdfHeight - finalHeight) / 2;
     
@@ -66,21 +81,18 @@ async function captureElementToPdf(element: HTMLElement, fileName: string): Prom
         throw new Error(`Invalid coordinates for PDF: x=${x}, y=${y}`);
     }
     
-    pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
+    pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight, undefined, 'FAST');
     pdf.save(fileName);
 }
 
-
-type PrintButtonProps = {
-  targetRef: React.RefObject<HTMLElement>;
-  fileName: string;
-  disabled?: boolean;
-};
 
 export default function PrintButton({
   targetRef,
   fileName,
   disabled = false,
+  orientation = 'portrait',
+  buttonLabel = 'PDF Татах',
+  buttonVariant = "outline",
 }: PrintButtonProps) {
   const [busy, setBusy] = useState(false);
   const { toast } = useToast();
@@ -92,7 +104,7 @@ export default function PrintButton({
       if (!element) {
         throw new Error('Could not find element to print.');
       }
-      await captureElementToPdf(element, fileName);
+      await captureElementToPdf(element, fileName, orientation);
     } catch (error) {
       console.error('Failed to generate PDF:', error);
       toast({
@@ -111,7 +123,7 @@ export default function PrintButton({
       disabled={busy || disabled}
       aria-label="PDF-ээр татах"
       className="no-print"
-      variant="outline"
+      variant={buttonVariant}
     >
       {busy ? (
         <>
@@ -121,7 +133,7 @@ export default function PrintButton({
        ) : (
         <>
           <Download className="mr-2 h-4 w-4" />
-          PDF Татах
+          {buttonLabel}
         </>
        )}
     </Button>
