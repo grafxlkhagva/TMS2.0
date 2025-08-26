@@ -23,12 +23,30 @@ async function captureElementToPdf(
     orientation: 'portrait' | 'landscape'
 ): Promise<void> {
     
-    const canvas = await html2canvas(element, {
-        scale: 2, // Higher scale for better quality
+    // Create a clone of the element to ensure styles are computed correctly.
+    const clone = element.cloneNode(true) as HTMLElement;
+    
+    // Style the clone to be off-screen but visible for rendering.
+    clone.style.position = 'absolute';
+    clone.style.left = '-9999px';
+    clone.style.top = '0px';
+    clone.style.width = element.offsetWidth + 'px'; // Use original element's width
+    clone.style.height = 'auto'; // Let height be determined by content
+    clone.style.visibility = 'visible'; // Ensure it's not hidden
+    
+    document.body.appendChild(clone);
+    
+    // Small delay to allow fonts/images to potentially load in the cloned element
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    const canvas = await html2canvas(clone, {
+        scale: 2,
         useCORS: true,
-        allowTaint: true,
         logging: false,
     });
+    
+    // Clean up by removing the clone from the DOM
+    document.body.removeChild(clone);
     
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF({
@@ -52,22 +70,16 @@ async function captureElementToPdf(
     let finalWidth, finalHeight;
     
     // Fit image to page dimensions, preserving aspect ratio
-    if (orientation === 'portrait') {
+    const pdfAspectRatio = pdfWidth / pdfHeight;
+
+    if (canvasAspectRatio > pdfAspectRatio) {
       finalWidth = pdfWidth;
       finalHeight = pdfWidth / canvasAspectRatio;
-      if (finalHeight > pdfHeight) {
-        finalHeight = pdfHeight;
-        finalWidth = pdfHeight * canvasAspectRatio;
-      }
-    } else { // landscape
+    } else {
       finalHeight = pdfHeight;
       finalWidth = pdfHeight * canvasAspectRatio;
-      if (finalWidth > pdfWidth) {
-        finalWidth = pdfWidth;
-        finalHeight = pdfWidth / canvasAspectRatio;
-      }
     }
-    
+
     if (!isFinite(finalWidth) || !isFinite(finalHeight) || finalWidth <= 0 || finalHeight <= 0) {
        throw new Error(`Invalid calculated dimensions for PDF. W: ${finalWidth}, H: ${finalHeight}`);
     }
