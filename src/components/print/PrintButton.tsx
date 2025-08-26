@@ -22,9 +22,7 @@ async function captureElementToPdf(
     fileName: string, 
     orientation: 'portrait' | 'landscape'
 ): Promise<void> {
-    // Ensure fonts are loaded before capturing
-    await new Promise(resolve => setTimeout(resolve, 500));
-
+    
     const canvas = await html2canvas(element, {
         scale: 2, // Higher scale for better quality
         useCORS: true,
