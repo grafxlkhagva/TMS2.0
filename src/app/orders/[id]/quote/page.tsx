@@ -85,7 +85,7 @@ export default function GenerateQuotePage() {
 
   const getRegionName = React.useCallback(
     (id: string) => allData.regions.find(r => r.id === id)?.name || 'N/A',
-    [allData]
+    [allData.regions]
   );
 
   React.useEffect(() => {
@@ -143,10 +143,18 @@ export default function GenerateQuotePage() {
         setAcceptedItems(filteredAcceptedItems);
         setSelectedItems(new Map(filteredAcceptedItems.map(item => [item.id, item])));
         
-        const sanitizeDoc = (docData: any) => ({
-            ...docData,
-            createdAt: toDateSafe(docData.createdAt),
-        });
+        const sanitizeDoc = (docData: any) => {
+            const sanitized = { ...docData };
+            for (const key in sanitized) {
+                if (key.endsWith('Ref')) {
+                    delete sanitized[key];
+                }
+                if (sanitized[key] instanceof Timestamp) {
+                    sanitized[key] = sanitized[key].toDate();
+                }
+            }
+            return sanitized;
+        };
 
         setAllData({
           warehouses: warehouseSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as Warehouse)),
