@@ -256,7 +256,7 @@ export default function GenerateQuotePage() {
                 <p className="text-muted-foreground font-mono">{order?.orderNumber}</p>
             </div>
             <div>
-               {isClient && selectedItemsArray.length > 0 && order && allData && (
+               {isClient && selectedItemsArray.length > 0 && order && allData.serviceTypes.length > 0 && (
                  <PDFDownloadLink
                   document={<QuoteDocument 
                     order={cleanDataForPdf(order)} 
