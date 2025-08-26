@@ -30,7 +30,7 @@ async function captureElementToPdf(
     clone.style.position = 'absolute';
     clone.style.left = '-9999px';
     clone.style.top = '0px';
-    clone.style.width = element.offsetWidth + 'px'; // Use original element's width
+    clone.style.width = element.scrollWidth + 'px'; // Use scrollWidth for full content width
     clone.style.height = 'auto'; // Let height be determined by content
     clone.style.visibility = 'visible'; // Ensure it's not hidden
     
@@ -91,7 +91,7 @@ async function captureElementToPdf(
         throw new Error(`Invalid coordinates for PDF: x=${x}, y=${y}`);
     }
     
-    pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight, undefined, 'FAST');
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
     pdf.save(fileName);
 }
 
