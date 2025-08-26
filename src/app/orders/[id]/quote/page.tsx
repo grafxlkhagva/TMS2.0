@@ -174,6 +174,7 @@ export default function GenerateQuotePage() {
   
   // Prepare a clean version of the data for the PDF renderer, removing any non-serializable fields.
   const cleanDataForPdf = (data: any) => {
+    if (!data) return {};
     const cleaned = { ...data };
     for (const key in cleaned) {
       if (key.endsWith('Ref')) {
