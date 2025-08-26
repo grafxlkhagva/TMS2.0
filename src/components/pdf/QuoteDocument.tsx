@@ -212,3 +212,5 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
 }
 
 export default QuoteDocument;
+
+    
