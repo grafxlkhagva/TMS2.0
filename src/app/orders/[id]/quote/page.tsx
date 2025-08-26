@@ -68,35 +68,32 @@ const initialAllData: AllData = {
 };
 
 const cleanDataForPdf = (data: any): any => {
-    if (Array.isArray(data)) {
-        return data.map(item => cleanDataForPdf(item));
+    if (data === null || data === undefined) {
+      return data;
     }
-    if (!data || typeof data !== 'object' || data instanceof Date) {
-        if (data instanceof Timestamp) {
-            return data.toDate();
-        }
-        return data;
-    }
-
+  
     if (data instanceof Timestamp) {
-        return data.toDate();
+      return data.toDate();
+    }
+  
+    if (Array.isArray(data)) {
+      return data.map(item => cleanDataForPdf(item));
+    }
+  
+    if (typeof data === 'object' && !(data instanceof Date)) {
+      const cleaned: Record<string, any> = {};
+      for (const key in data) {
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+          if (key.endsWith('Ref')) {
+            continue;
+          }
+          cleaned[key] = cleanDataForPdf(data[key]);
+        }
+      }
+      return cleaned;
     }
     
-    const cleaned: Record<string, any> = {};
-    for (const key in data) {
-        if (key.endsWith('Ref')) {
-            continue;
-        }
-        const value = data[key];
-        if (value instanceof Timestamp) {
-            cleaned[key] = value.toDate();
-        } else if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
-            cleaned[key] = cleanDataForPdf(value);
-        } else {
-            cleaned[key] = value;
-        }
-    }
-    return cleaned;
+    return data;
   };
 
 
@@ -176,12 +173,9 @@ export default function GenerateQuotePage() {
         setAcceptedItems(filteredAcceptedItems);
         setSelectedItems(new Map(filteredAcceptedItems.map(item => [item.id, item])));
         
-        const sanitizeDoc = (docData: any) => {
+        const sanitizeDocForState = (docData: any) => {
             const sanitized: Record<string, any> = { ...docData };
             for (const key in sanitized) {
-                if (key.endsWith('Ref')) {
-                    delete sanitized[key];
-                }
                 if (sanitized[key] instanceof Timestamp) {
                     sanitized[key] = toDateSafe(sanitized[key]);
                 }
@@ -190,12 +184,12 @@ export default function GenerateQuotePage() {
         };
 
         setAllData({
-          warehouses: warehouseSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as Warehouse)),
-          serviceTypes: serviceTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as ServiceType)),
-          vehicleTypes: vehicleTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as VehicleType)),
-          trailerTypes: trailerTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as TrailerType)),
-          regions: regionSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as Region)),
-          packagingTypes: packagingTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as PackagingType)),
+          warehouses: warehouseSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDocForState(doc.data()) } as Warehouse)),
+          serviceTypes: serviceTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDocForState(doc.data()) } as ServiceType)),
+          vehicleTypes: vehicleTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDocForState(doc.data()) } as VehicleType)),
+          trailerTypes: trailerTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDocForState(doc.data()) } as TrailerType)),
+          regions: regionSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDocForState(doc.data()) } as Region)),
+          packagingTypes: packagingTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDocForState(doc.data()) } as PackagingType)),
         });
 
       } catch (error) {
@@ -275,10 +269,7 @@ export default function GenerateQuotePage() {
                  <PDFDownloadLink
                   document={<QuoteDocument 
                     order={cleanDataForPdf(order)} 
-                    orderItems={selectedItemsArray.map(item => ({
-                        ...cleanDataForPdf(item),
-                        cargoItems: item.cargoItems ? item.cargoItems.map(cargo => cleanDataForPdf(cargo)) : []
-                    }))}
+                    orderItems={cleanDataForPdf(selectedItemsArray)}
                     allData={cleanDataForPdf(allData)}
                   />}
                   fileName={`Quote-${order.orderNumber}.pdf`}
