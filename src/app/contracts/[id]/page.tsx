@@ -44,6 +44,36 @@ const toDateSafe = (date: any): Date => {
     return new Date(); 
 };
 
+const cleanDataForPdf = (data: any): any => {
+    if (data === null || data === undefined) {
+      return data;
+    }
+  
+    if (data instanceof Timestamp) {
+      return data.toDate();
+    }
+  
+    if (Array.isArray(data)) {
+      return data.map(item => cleanDataForPdf(item));
+    }
+  
+    if (typeof data === 'object' && !(data instanceof Date)) {
+      const cleaned: Record<string, any> = {};
+      for (const key in data) {
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+          // Exclude DocumentReference fields
+          if (key.endsWith('Ref')) {
+            continue;
+          }
+          cleaned[key] = cleanDataForPdf(data[key]);
+        }
+      }
+      return cleaned;
+    }
+    
+    return data;
+};
+
 
 export default function ContractDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -250,9 +280,9 @@ export default function ContractDetailPage() {
       <div className="print-only">
         <div ref={printRef}>
             <ContractPrintLayout 
-                contract={contract}
-                shipment={shipment}
-                orderItem={orderItem}
+                contract={cleanDataForPdf(contract)}
+                shipment={cleanDataForPdf(shipment)}
+                orderItem={cleanDataForPdf(orderItem)}
             />
         </div>
       </div>

@@ -84,6 +84,7 @@ const cleanDataForPdf = (data: any): any => {
       const cleaned: Record<string, any> = {};
       for (const key in data) {
         if (Object.prototype.hasOwnProperty.call(data, key)) {
+          // Exclude DocumentReference fields
           if (key.endsWith('Ref')) {
             continue;
           }
