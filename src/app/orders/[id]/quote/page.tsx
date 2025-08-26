@@ -160,7 +160,7 @@ export default function GenerateQuotePage() {
     { totalFinalPrice: 0 }
   );
 
-  if (isLoading || !order || !allData) {
+  if (isLoading) {
     return (
       <div className="container mx-auto py-6 space-y-4">
         <Skeleton className="h-8 w-48" />
@@ -179,10 +179,10 @@ export default function GenerateQuotePage() {
               Захиалга руу буцах
             </Link>
           </Button>
-          <div>
+          {order && <div>
             <h1 className="text-2xl font-bold">Үнийн санал үүсгэх</h1>
             <p className="text-muted-foreground">{order.orderNumber}</p>
-          </div>
+          </div>}
         </div>
         
         {isClient && selectedItemsArray.length > 0 && order && allData && (
@@ -246,11 +246,11 @@ export default function GenerateQuotePage() {
                 <CardContent>
                     <div className="border rounded-lg shadow-sm overflow-hidden p-6 prose prose-sm max-w-none">
                        <h2 className='text-center'>ҮНИЙН САНАЛ</h2>
-                       <p className='text-center font-semibold'>{order.orderNumber}</p>
+                       {order && <p className='text-center font-semibold'>{order.orderNumber}</p>}
                        <hr/>
                        <h3>Захиалагчийн мэдээлэл</h3>
-                       <p><strong>Байгууллага:</strong> {order.customerName}</p>
-                       <p><strong>Хариуцсан ажилтан:</strong> {order.employeeName}</p>
+                       <p><strong>Байгууллага:</strong> {order?.customerName}</p>
+                       <p><strong>Хариуцсан ажилтан:</strong> {order?.employeeName}</p>
                        <h3>Тээвэрлэлтүүд</h3>
                        <Table>
                         <TableHeader>
