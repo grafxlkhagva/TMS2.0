@@ -57,6 +57,15 @@ type AllData = {
   packagingTypes: PackagingType[];
 };
 
+const initialAllData: AllData = {
+  serviceTypes: [],
+  regions: [],
+  warehouses: [],
+  vehicleTypes: [],
+  trailerTypes: [],
+  packagingTypes: [],
+};
+
 
 export default function GenerateQuotePage() {
   const { id: orderId } = useParams<{ id: string }>();
@@ -65,12 +74,12 @@ export default function GenerateQuotePage() {
   const [isClient, setIsClient] = React.useState(false);
 
   const [order, setOrder] = React.useState<Order | null>(null);
-  const [allData, setAllData] = React.useState<AllData | null>(null);
+  const [allData, setAllData] = React.useState<AllData>(initialAllData);
   const [acceptedItems, setAcceptedItems] = React.useState<OrderItem[]>([]);
   const [selectedItems, setSelectedItems] = React.useState<Map<string, OrderItem>>(new Map());
   const [isLoading, setIsLoading] = React.useState(true);
   
-  const getRegionName = React.useCallback((id: string) => allData?.regions.find(r => r.id === id)?.name || 'N/A', [allData]);
+  const getRegionName = React.useCallback((id: string) => allData.regions.find(r => r.id === id)?.name || 'N/A', [allData.regions]);
   
   React.useEffect(() => {
     setIsClient(true);
