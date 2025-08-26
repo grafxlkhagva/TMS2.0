@@ -30,6 +30,7 @@ import QuoteDocument from '@/components/pdf/QuoteDocument';
 
 
 const toDateSafe = (date: any): Date | undefined => {
+  if (!date) return undefined;
   if (date instanceof Timestamp) return date.toDate();
   if (date instanceof Date) return date;
   if (typeof date === 'string' || typeof date === 'number') {
@@ -65,6 +66,38 @@ const initialAllData: AllData = {
   trailerTypes: [],
   packagingTypes: [],
 };
+
+const cleanDataForPdf = (data: any): any => {
+    if (Array.isArray(data)) {
+        return data.map(item => cleanDataForPdf(item));
+    }
+    if (!data || typeof data !== 'object' || data instanceof Date) {
+        if (data instanceof Timestamp) {
+            return data.toDate();
+        }
+        return data;
+    }
+
+    if (data instanceof Timestamp) {
+        return data.toDate();
+    }
+    
+    const cleaned: Record<string, any> = {};
+    for (const key in data) {
+        if (key.endsWith('Ref')) {
+            continue;
+        }
+        const value = data[key];
+        if (value instanceof Timestamp) {
+            cleaned[key] = value.toDate();
+        } else if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
+            cleaned[key] = cleanDataForPdf(value);
+        } else {
+            cleaned[key] = value;
+        }
+    }
+    return cleaned;
+  };
 
 
 export default function GenerateQuotePage() {
@@ -187,31 +220,7 @@ export default function GenerateQuotePage() {
       return newMap;
     });
   };
-  
-  const cleanDataForPdf = (data: any): any => {
-    if (Array.isArray(data)) {
-        return data.map(item => cleanDataForPdf(item));
-    }
-    if (!data || typeof data !== 'object') {
-        return data;
-    }
-    const cleaned: Record<string, any> = {};
-    for (const key in data) {
-        if (key.endsWith('Ref')) {
-            continue;
-        }
-        const value = data[key];
-        if (value instanceof Timestamp) {
-            cleaned[key] = value.toDate();
-        } else if (typeof value === 'object' && value !== null) {
-            cleaned[key] = cleanDataForPdf(value);
-        } else {
-            cleaned[key] = value;
-        }
-    }
-    return cleaned;
-  };
-  
+    
   const selectedItemsArray = Array.from(selectedItems.values()).sort((a,b) => (a.createdAt?.getTime?.() ?? 0) - (b.createdAt?.getTime?.() ?? 0));
   
   const { totalFinalPrice } = selectedItemsArray.reduce(
