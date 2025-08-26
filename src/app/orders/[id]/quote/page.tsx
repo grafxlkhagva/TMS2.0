@@ -121,7 +121,16 @@ export default function GenerateQuotePage() {
             const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', d.id));
             const cargoSnapshot = await getDocs(cargoQuery);
             const cargoItems = cargoSnapshot.docs.map(cargoDoc => ({ id: cargoDoc.id, ...cargoDoc.data() } as OrderItemCargo));
-            return { id: d.id, ...itemData, cargoItems, createdAt: toDateSafe(itemData.createdAt) } as OrderItem;
+            return { 
+                id: d.id, 
+                ...itemData, 
+                cargoItems, 
+                createdAt: toDateSafe(itemData.createdAt),
+                loadingStartDate: toDateSafe(itemData.loadingStartDate),
+                loadingEndDate: toDateSafe(itemData.loadingEndDate),
+                unloadingStartDate: toDateSafe(itemData.unloadingStartDate),
+                unloadingEndDate: toDateSafe(itemData.unloadingEndDate),
+            } as OrderItem;
         });
 
         const allItems = await Promise.all(itemsDataPromises);
