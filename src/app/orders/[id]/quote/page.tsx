@@ -171,6 +171,17 @@ export default function GenerateQuotePage() {
       return newMap;
     });
   };
+  
+  // Prepare a clean version of the data for the PDF renderer, removing any non-serializable fields.
+  const cleanDataForPdf = (data: any) => {
+    const cleaned = { ...data };
+    for (const key in cleaned) {
+      if (key.endsWith('Ref')) {
+        delete cleaned[key];
+      }
+    }
+    return cleaned;
+  };
 
   const selectedItemsArray = Array.from(selectedItems.values()).sort((a,b) => (a.createdAt?.getTime?.() ?? 0) - (b.createdAt?.getTime?.() ?? 0));
   
@@ -209,7 +220,14 @@ export default function GenerateQuotePage() {
         
         {isClient && selectedItemsArray.length > 0 && order && allData && (
            <PDFDownloadLink
-            document={<QuoteDocument order={order} orderItems={selectedItemsArray} allData={allData} />}
+            document={<QuoteDocument 
+              order={cleanDataForPdf(order)} 
+              orderItems={selectedItemsArray.map(item => ({
+                ...cleanDataForPdf(item),
+                cargoItems: item.cargoItems ? item.cargoItems.map(cleanDataForPdf) : []
+              }))} 
+              allData={allData} 
+            />}
             fileName={`Quote-${order.orderNumber}.pdf`}
           >
             {({ loading }) => (
@@ -308,3 +326,4 @@ export default function GenerateQuotePage() {
     </div>
   );
 }
+
