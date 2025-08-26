@@ -139,14 +139,19 @@ export default function GenerateQuotePage() {
         
         setAcceptedItems(filteredAcceptedItems);
         setSelectedItems(new Map(filteredAcceptedItems.map(item => [item.id, item])));
+        
+        const sanitizeTimestamp = (docData: any) => ({
+            ...docData,
+            createdAt: toDateSafe(docData.createdAt),
+        });
 
         setAllData({
-          warehouses: warehouseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Warehouse)),
-          serviceTypes: serviceTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceType)),
-          vehicleTypes: vehicleTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as VehicleType)),
-          trailerTypes: trailerTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrailerType)),
-          regions: regionSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Region)),
-          packagingTypes: packagingTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as PackagingType)),
+          warehouses: warehouseSnap.docs.map(doc => ({ id: doc.id, ...sanitizeTimestamp(doc.data()) } as Warehouse)),
+          serviceTypes: serviceTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeTimestamp(doc.data()) } as ServiceType)),
+          vehicleTypes: vehicleTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeTimestamp(doc.data()) } as VehicleType)),
+          trailerTypes: trailerTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeTimestamp(doc.data()) } as TrailerType)),
+          regions: regionSnap.docs.map(doc => ({ id: doc.id, ...sanitizeTimestamp(doc.data()) } as Region)),
+          packagingTypes: packagingTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeTimestamp(doc.data()) } as PackagingType)),
         });
 
       } catch (error) {
@@ -172,7 +177,6 @@ export default function GenerateQuotePage() {
     });
   };
   
-  // Prepare a clean version of the data for the PDF renderer, removing any non-serializable fields.
   const cleanDataForPdf = (data: any) => {
     if (!data) return {};
     const cleaned = { ...data };
@@ -327,4 +331,3 @@ export default function GenerateQuotePage() {
     </div>
   );
 }
-
