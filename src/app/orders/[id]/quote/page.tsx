@@ -80,8 +80,13 @@ export default function GenerateQuotePage() {
   const [order, setOrder] = React.useState<Order | null>(null);
   const [acceptedItems, setAcceptedItems] = React.useState<OrderItem[]>([]);
   const [selectedItems, setSelectedItems] = React.useState<Map<string, OrderItem>>(new Map());
-  const [allData, setAllData] = React.useState<AllData | null>(null);
+  const [allData, setAllData] = React.useState<AllData>(initialAllData);
   const [isLoading, setIsLoading] = React.useState(true);
+
+  const getRegionName = React.useCallback(
+    (id: string) => allData.regions.find(r => r.id === id)?.name || 'N/A',
+    [allData]
+  );
 
   React.useEffect(() => {
     if (!orderId) return;
@@ -149,7 +154,7 @@ export default function GenerateQuotePage() {
           vehicleTypes: vehicleTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as VehicleType)),
           trailerTypes: trailerTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as TrailerType)),
           regions: regionSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as Region)),
-          packagingTypes: packagingSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as PackagingType)),
+          packagingTypes: packagingTypeSnap.docs.map(doc => ({ id: doc.id, ...sanitizeDoc(doc.data()) } as PackagingType)),
         });
 
       } catch (error) {
@@ -185,11 +190,6 @@ export default function GenerateQuotePage() {
     }
     return cleaned;
   };
-  
-  const getRegionName = React.useCallback(
-    (id: string) => allData?.regions.find(r => r.id === id)?.name || 'N/A',
-    [allData]
-  );
   
   const selectedItemsArray = Array.from(selectedItems.values()).sort((a,b) => (a.createdAt?.getTime?.() ?? 0) - (b.createdAt?.getTime?.() ?? 0));
   
