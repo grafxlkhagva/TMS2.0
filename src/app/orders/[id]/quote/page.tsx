@@ -144,7 +144,7 @@ export default function GenerateQuotePage() {
         setSelectedItems(new Map(filteredAcceptedItems.map(item => [item.id, item])));
         
         const sanitizeDoc = (docData: any) => {
-            const sanitized = { ...docData };
+            const sanitized: Record<string, any> = { ...docData };
             for (const key in sanitized) {
                 if (key.endsWith('Ref')) {
                     delete sanitized[key];
@@ -188,9 +188,9 @@ export default function GenerateQuotePage() {
     });
   };
   
-  const cleanDataForPdf = (data: any) => {
+  const cleanDataForPdf = (data: any): any => {
     if (!data || typeof data !== 'object') return data;
-    const cleaned = { ...data };
+    const cleaned: Record<string, any> = { ...data };
     for (const key in cleaned) {
       if (key.endsWith('Ref')) {
         delete cleaned[key];
@@ -376,3 +376,5 @@ export default function GenerateQuotePage() {
     </div>
   );
 }
+
+    
