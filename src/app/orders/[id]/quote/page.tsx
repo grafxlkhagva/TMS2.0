@@ -181,7 +181,7 @@ export default function GenerateQuotePage() {
   };
   
   const cleanDataForPdf = (data: any) => {
-    if (!data) return {};
+    if (!data || typeof data !== 'object') return data;
     const cleaned = { ...data };
     for (const key in cleaned) {
       if (key.endsWith('Ref')) {
@@ -250,10 +250,9 @@ export default function GenerateQuotePage() {
                       cargoItems: (item.cargoItems || []).map(cargo => cleanDataForPdf(cargo)),
                     }))} 
                     allData={{
-                      ...allData,
-                      warehouses: allData.warehouses.map(cleanDataForPdf),
-                      regions: allData.regions.map(cleanDataForPdf),
                       serviceTypes: allData.serviceTypes.map(cleanDataForPdf),
+                      regions: allData.regions.map(cleanDataForPdf),
+                      warehouses: allData.warehouses.map(cleanDataForPdf),
                       vehicleTypes: allData.vehicleTypes.map(cleanDataForPdf),
                       trailerTypes: allData.trailerTypes.map(cleanDataForPdf),
                       packagingTypes: allData.packagingTypes.map(cleanDataForPdf),
