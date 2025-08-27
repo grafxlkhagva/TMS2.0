@@ -76,10 +76,8 @@ const cleanDataForPdf = (data: any): any => {
         return data.toDate();
     }
     
-    // Rudimentary check for DocumentReference-like objects
-    // Firestore DocumentReference has path and parent properties.
     if (typeof data === 'object' && data !== null && !Array.isArray(data) && 'path' in data && 'parent' in data) {
-        return undefined; // Exclude DocumentReference
+        return undefined; 
     }
 
     if (Array.isArray(data)) {

@@ -52,7 +52,6 @@ const cleanDataForPdf = (data: any): any => {
         return data.toDate();
     }
     
-    // Rudimentary check for DocumentReference-like objects
     if (typeof data === 'object' && data !== null && !Array.isArray(data) && 'path' in data && 'parent' in data) {
         return undefined;
     }
