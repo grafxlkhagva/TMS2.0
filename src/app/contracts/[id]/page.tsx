@@ -56,7 +56,7 @@ const cleanDataForPdf = (data: any): any => {
       return data.map(item => cleanDataForPdf(item));
     }
   
-    if (typeof data === 'object' && !(data instanceof Date)) {
+    if (typeof data === 'object' && !(data instanceof Date) && typeof data.hasOwnProperty === 'function') {
       const cleaned: Record<string, any> = {};
       for (const key in data) {
         if (Object.prototype.hasOwnProperty.call(data, key)) {

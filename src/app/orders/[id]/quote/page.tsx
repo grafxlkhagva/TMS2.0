@@ -80,7 +80,7 @@ const cleanDataForPdf = (data: any): any => {
       return data.map(item => cleanDataForPdf(item));
     }
   
-    if (typeof data === 'object' && !(data instanceof Date)) {
+    if (typeof data === 'object' && !(data instanceof Date) && typeof data.hasOwnProperty === 'function') {
       const cleaned: Record<string, any> = {};
       for (const key in data) {
         if (Object.prototype.hasOwnProperty.call(data, key)) {
@@ -95,7 +95,7 @@ const cleanDataForPdf = (data: any): any => {
     }
     
     return data;
-  };
+};
 
 
 export default function GenerateQuotePage() {
@@ -175,12 +175,12 @@ export default function GenerateQuotePage() {
         setSelectedItems(new Map(filteredAcceptedItems.map(item => [item.id, item])));
         
         setAllData({
-          warehouses: warehouseSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toDateSafe(doc.data().createdAt) } as Warehouse)),
-          serviceTypes: serviceTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toDateSafe(doc.data().createdAt) } as ServiceType)),
-          vehicleTypes: vehicleTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toDateSafe(doc.data().createdAt) } as VehicleType)),
-          trailerTypes: trailerTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toDateSafe(doc.data().createdAt) } as TrailerType)),
-          regions: regionSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toDateSafe(doc.data().createdAt) } as Region)),
-          packagingTypes: packagingTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toDateSafe(doc.data().createdAt) } as PackagingType)),
+          warehouses: warehouseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Warehouse)),
+          serviceTypes: serviceTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceType)),
+          vehicleTypes: vehicleTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as VehicleType)),
+          trailerTypes: trailerTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrailerType)),
+          regions: regionSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Region)),
+          packagingTypes: packagingTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as PackagingType)),
         });
 
       } catch (error) {
