@@ -68,39 +68,28 @@ const initialAllData: AllData = {
 };
 
 const cleanDataForPdf = (data: any): any => {
-    // Handle null, undefined, or other falsy values
-    if (!data) return data;
+    if (data === null || data === undefined) return data;
 
-    // Convert Firestore Timestamps to JS Date objects
     if (data instanceof Timestamp) return data.toDate();
-    
-    // Return JS Date objects as they are
     if (data instanceof Date) return data;
-    
-    // Check if it's a Firestore DocumentReference-like object and return undefined to remove it
-    if (typeof data === 'object' && data.firestore && typeof data.path === 'string') {
-        return undefined;
-    }
 
-    // If it's an array, recursively clean each item
-    if (Array.isArray(data)) {
-        return data.map(item => cleanDataForPdf(item));
-    }
-
-    // If it's a plain object (and not a React element), recursively clean its properties
     if (typeof data === 'object' && !React.isValidElement(data)) {
+        if (Object.prototype.hasOwnProperty.call(data, 'firestore') && typeof data.path === 'string') {
+            return undefined;
+        }
+
+        if (Array.isArray(data)) {
+            return data.map(item => cleanDataForPdf(item));
+        }
+
         const cleaned: { [key: string]: any } = {};
         for (const key in data) {
-            // Ensure the key belongs to the object itself
             if (Object.prototype.hasOwnProperty.call(data, key)) {
-                // Skip any fields ending with 'Ref'
                 if (key.endsWith('Ref')) {
                     continue;
                 }
                 const value = data[key];
-                // Recursively clean the value
                 const cleanedValue = cleanDataForPdf(value);
-                // Only include the key if the cleaned value is not undefined
                 if (cleanedValue !== undefined) {
                     cleaned[key] = cleanedValue;
                 }
@@ -108,8 +97,6 @@ const cleanDataForPdf = (data: any): any => {
         }
         return cleaned;
     }
-
-    // Return primitive values as they are
     return data;
 };
 
