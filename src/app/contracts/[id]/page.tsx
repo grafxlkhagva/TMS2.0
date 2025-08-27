@@ -48,14 +48,12 @@ const cleanDataForPdf = (data: any): any => {
     if (data instanceof Timestamp) {
         return data.toDate();
     }
-    if (Array.isArray(data)) {
+     if (Array.isArray(data)) {
         return data.map(item => cleanDataForPdf(item));
     }
     if (typeof data === 'object' && !(data instanceof Date)) {
         const cleaned: { [key: string]: any } = {};
         for (const key in data) {
-            // Firestore DocumentReference objects often have a 'firestore' property
-            // We check for this and other non-serializable clues.
             if (Object.prototype.hasOwnProperty.call(data, key) && !key.endsWith('Ref') && typeof data[key]?.firestore === 'undefined') {
                 cleaned[key] = cleanDataForPdf(data[key]);
             }
@@ -280,5 +278,3 @@ export default function ContractDetailPage() {
     </div>
   );
 }
-
-    
