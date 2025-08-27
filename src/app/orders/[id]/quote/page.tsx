@@ -71,12 +71,11 @@ const cleanDataForPdf = (data: any): any => {
     if (data === null || data === undefined) {
         return data;
     }
+
     if (data instanceof Timestamp) {
         return data.toDate();
     }
-    if (React.isValidElement(data) || typeof data !== 'object') {
-        return data;
-    }
+
     if (data instanceof Date) {
         return data;
     }
@@ -84,17 +83,21 @@ const cleanDataForPdf = (data: any): any => {
     if (Array.isArray(data)) {
         return data.map(item => cleanDataForPdf(item));
     }
-    
-    const cleanedObject: { [key: string]: any } = {};
-    for (const key in data) {
-         if (Object.prototype.hasOwnProperty.call(data, key)) {
-            if (key.endsWith('Ref')) {
-                continue;
+
+    if (typeof data === 'object' && !React.isValidElement(data)) {
+        const cleanedObject: { [key: string]: any } = {};
+        for (const key in data) {
+            if (Object.prototype.hasOwnProperty.call(data, key)) {
+                if (key.endsWith('Ref')) {
+                    continue;
+                }
+                cleanedObject[key] = cleanDataForPdf(data[key]);
             }
-            cleanedObject[key] = cleanDataForPdf(data[key]);
         }
+        return cleanedObject;
     }
-    return cleanedObject;
+
+    return data;
 };
 
 
@@ -373,3 +376,5 @@ export default function GenerateQuotePage() {
     </div>
   );
 }
+
+    
