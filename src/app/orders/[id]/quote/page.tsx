@@ -72,14 +72,21 @@ const cleanDataForPdf = (data: any): any => {
     if (data instanceof Timestamp) {
         return data.toDate();
     }
-     if (Array.isArray(data)) {
+    if (data instanceof Date) {
+        return data;
+    }
+    if (Array.isArray(data)) {
         return data.map(item => cleanDataForPdf(item));
     }
-    if (typeof data === 'object' && !(data instanceof Date)) {
+    if (typeof data === 'object') {
+        // Avoid cleaning special objects like Firestore DocumentReference itself if it somehow slipped through
+        if (typeof data.firestore !== 'undefined') {
+            return null; 
+        }
         const cleaned: { [key: string]: any } = {};
         for (const key in data) {
-            if (Object.prototype.hasOwnProperty.call(data, key) && !key.endsWith('Ref') && typeof data[key]?.firestore === 'undefined') {
-                cleaned[key] = cleanDataForPdf(data[key]);
+             if (Object.prototype.hasOwnProperty.call(data, key) && !key.endsWith('Ref')) {
+                 cleaned[key] = cleanDataForPdf(data[key]);
             }
         }
         return cleaned;
