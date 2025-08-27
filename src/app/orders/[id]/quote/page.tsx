@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -223,9 +224,6 @@ export default function GenerateQuotePage() {
                 <h1 className="text-3xl font-headline font-bold">Үнийн санал үүсгэх</h1>
                 <p className="text-muted-foreground font-mono">{order?.orderNumber}</p>
             </div>
-            <div>
-               {/* PDF Download Button Removed */}
-            </div>
           </div>
         </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
@@ -325,7 +323,3 @@ export default function GenerateQuotePage() {
     </div>
   );
 }
-
-    
-
-    

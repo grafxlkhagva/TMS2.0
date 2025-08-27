@@ -32,7 +32,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import ShipmentReportLayout from '@/components/shipment-report-layout';
 
 
 const statusTranslations: Record<ShipmentStatusType, string> = {
@@ -214,7 +213,7 @@ export default function ShipmentDetailPage() {
                 estimatedDeliveryDate: toDateSafe(doc.data().estimatedDeliveryDate),
             } as Contract));
 
-            contractsData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+            contractsData.sort((a, b) => b.createdAt.getTime() - a.getTime());
             
             const latestContract = contractsData[0];
             setContract(latestContract);
