@@ -45,24 +45,24 @@ const toDateSafe = (date: any): Date => {
 
 const cleanDataForPdf = (data: any): any => {
     if (!data) return data;
-    if (data instanceof Timestamp) {
-        return data.toDate();
-    }
-    if (data instanceof Date) {
-        return data;
+    if (data instanceof Timestamp) return data.toDate();
+    if (data instanceof Date) return data;
+    // Firestore DocumentReference check
+    if (typeof data === 'object' && data.firestore && typeof data.path === 'string') {
+        return null; 
     }
     if (Array.isArray(data)) {
         return data.map(item => cleanDataForPdf(item));
     }
     if (typeof data === 'object') {
-        // Avoid cleaning special objects like Firestore DocumentReference itself if it somehow slipped through
-        if (typeof data.firestore !== 'undefined') {
-            return null; 
-        }
         const cleaned: { [key: string]: any } = {};
         for (const key in data) {
-             if (Object.prototype.hasOwnProperty.call(data, key) && !key.endsWith('Ref')) {
-                 cleaned[key] = cleanDataForPdf(data[key]);
+            // Ensure we don't copy over prototype properties
+            if (Object.prototype.hasOwnProperty.call(data, key)) {
+                // Remove fields ending in 'Ref' which are likely DocumentReferences
+                if (!key.endsWith('Ref')) {
+                    cleaned[key] = cleanDataForPdf(data[key]);
+                }
             }
         }
         return cleaned;
