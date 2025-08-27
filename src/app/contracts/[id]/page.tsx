@@ -44,43 +44,45 @@ const toDateSafe = (date: any): Date => {
 };
 
 const cleanDataForPdf = (data: any): any => {
-    if (data === null || data === undefined || React.isValidElement(data)) {
+    // Return primitives and React elements directly
+    if (data === null || typeof data !== 'object' || React.isValidElement(data)) {
         return data;
     }
 
+    // Convert Firestore Timestamp to JS Date
     if (data instanceof Timestamp) {
         return data.toDate();
     }
-    if (data instanceof Date) {
-        return data;
+
+    // Handle DocumentReference-like objects (basic check)
+    if (typeof data.path === 'string' && typeof data.firestore === 'object') {
+        return undefined; // Remove DocumentReference
     }
 
-    if (Object.prototype.hasOwnProperty.call(data, 'firestore') && typeof data.path === 'string') {
-        return undefined; // It's a DocumentReference, remove it
-    }
-
+    // For arrays, recursively clean each item
     if (Array.isArray(data)) {
-        return data.map(item => cleanDataForPdf(item));
+        return data.map(item => cleanDataForPdf(item)).filter(item => item !== undefined);
     }
 
-    if (typeof data === 'object') {
-        const cleaned: { [key: string]: any } = {};
-        for (const key in data) {
-            if (Object.prototype.hasOwnProperty.call(data, key)) {
-                if (key.endsWith('Ref')) {
-                    continue; // Skip keys ending with 'Ref'
-                }
-                const value = data[key];
-                const cleanedValue = cleanDataForPdf(value);
-                if (cleanedValue !== undefined) {
-                    cleaned[key] = cleanedValue;
-                }
+    // For plain objects, recursively clean each value
+    const cleanedObject: { [key: string]: any } = {};
+    for (const key in data) {
+        // Use hasOwnProperty to ensure it's not from the prototype chain
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+             // Skip keys ending with 'Ref' as a safeguard
+            if (key.endsWith('Ref')) {
+                continue;
+            }
+            const value = data[key];
+            const cleanedValue = cleanDataForPdf(value);
+
+            // Do not include undefined values in the final object
+            if (cleanedValue !== undefined) {
+                cleanedObject[key] = cleanedValue;
             }
         }
-        return cleaned;
     }
-
-    return data;
+    return cleanedObject;
 };
 
 
