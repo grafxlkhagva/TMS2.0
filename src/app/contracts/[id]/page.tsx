@@ -50,16 +50,20 @@ const cleanDataForPdf = (data: any): any => {
     if (data instanceof Timestamp) {
         return data.toDate();
     }
-    if (data instanceof Date || React.isValidElement(data) || typeof data !== 'object') {
+    if (React.isValidElement(data) || typeof data !== 'object') {
         return data;
     }
+    if (data instanceof Date) {
+        return data;
+    }
+
     if (Array.isArray(data)) {
         return data.map(item => cleanDataForPdf(item));
     }
     
     const cleanedObject: { [key: string]: any } = {};
     for (const key in data) {
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
+         if (Object.prototype.hasOwnProperty.call(data, key)) {
             if (key.endsWith('Ref')) {
                 continue;
             }
