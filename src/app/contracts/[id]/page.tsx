@@ -44,7 +44,7 @@ const toDateSafe = (date: any): Date => {
 };
 
 const cleanDataForPdf = (data: any): any => {
-    if (data === null || data === undefined || typeof data !== 'object') {
+    if (data === null || data === undefined) {
         return data;
     }
     
@@ -53,30 +53,32 @@ const cleanDataForPdf = (data: any): any => {
     }
     
     // Rudimentary check for DocumentReference-like objects
-    if (typeof data.path === 'string' && typeof data.parent === 'object') {
+    if (typeof data === 'object' && data !== null && !Array.isArray(data) && 'path' in data && 'parent' in data) {
         return undefined;
     }
 
     if (Array.isArray(data)) {
         return data.map(item => cleanDataForPdf(item)).filter(item => item !== undefined);
     }
-
-    const cleaned: Record<string, any> = {};
-    for (const key in data) {
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-            // Exclude fields ending with 'Ref'
-            if (key.endsWith('Ref')) {
-                continue;
-            }
-            const value = data[key];
-            const cleanedValue = cleanDataForPdf(value);
-            // Don't include undefined values that might result from cleaning refs
-            if (cleanedValue !== undefined) {
-                 cleaned[key] = cleanedValue;
+    
+    if (typeof data === 'object') {
+        const cleaned: Record<string, any> = {};
+        for (const key in data) {
+            if (Object.prototype.hasOwnProperty.call(data, key)) {
+                if (key.endsWith('Ref')) {
+                    continue;
+                }
+                const value = data[key];
+                const cleanedValue = cleanDataForPdf(value);
+                if (cleanedValue !== undefined) {
+                     cleaned[key] = cleanedValue;
+                }
             }
         }
+        return cleaned;
     }
-    return cleaned;
+
+    return data;
 };
 
 
