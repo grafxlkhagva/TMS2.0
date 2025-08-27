@@ -71,34 +71,31 @@ const cleanDataForPdf = (data: any): any => {
     if (data === null || data === undefined) {
         return data;
     }
-    // Return primitives and React elements directly
     if (typeof data !== 'object' || React.isValidElement(data)) {
         return data;
     }
 
-    // Convert Firestore Timestamp to JS Date
     if (data instanceof Timestamp) {
         return data.toDate();
     }
+    
+    if (data instanceof Date) {
+        return data;
+    }
 
-    // For arrays, recursively clean each item
     if (Array.isArray(data)) {
         return data.map(item => cleanDataForPdf(item)).filter(item => item !== undefined);
     }
 
-    // For plain objects, recursively clean each value
     const cleanedObject: { [key: string]: any } = {};
     for (const key in data) {
-        // Use hasOwnProperty to ensure it's not from the prototype chain
         if (Object.prototype.hasOwnProperty.call(data, key)) {
-             // Skip keys ending with 'Ref' as a safeguard for DocumentReferences
             if (key.endsWith('Ref')) {
                 continue;
             }
             const value = data[key];
             const cleanedValue = cleanDataForPdf(value);
 
-            // Do not include undefined values in the final object
             if (cleanedValue !== undefined) {
                 cleanedObject[key] = cleanedValue;
             }
