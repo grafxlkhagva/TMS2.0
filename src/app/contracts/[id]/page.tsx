@@ -44,25 +44,31 @@ const toDateSafe = (date: any): Date => {
 };
 
 const cleanDataForPdf = (data: any): any => {
-    if (data === null || data === undefined) return data;
+    if (data === null || data === undefined || React.isValidElement(data)) {
+        return data;
+    }
 
-    if (data instanceof Timestamp) return data.toDate();
-    if (data instanceof Date) return data;
+    if (data instanceof Timestamp) {
+        return data.toDate();
+    }
+    if (data instanceof Date) {
+        return data;
+    }
 
-    if (typeof data === 'object' && !React.isValidElement(data)) {
-        if (Object.prototype.hasOwnProperty.call(data, 'firestore') && typeof data.path === 'string') {
-            return undefined;
-        }
+    if (Object.prototype.hasOwnProperty.call(data, 'firestore') && typeof data.path === 'string') {
+        return undefined; // It's a DocumentReference, remove it
+    }
 
-        if (Array.isArray(data)) {
-            return data.map(item => cleanDataForPdf(item));
-        }
+    if (Array.isArray(data)) {
+        return data.map(item => cleanDataForPdf(item));
+    }
 
+    if (typeof data === 'object') {
         const cleaned: { [key: string]: any } = {};
         for (const key in data) {
             if (Object.prototype.hasOwnProperty.call(data, key)) {
                 if (key.endsWith('Ref')) {
-                    continue;
+                    continue; // Skip keys ending with 'Ref'
                 }
                 const value = data[key];
                 const cleanedValue = cleanDataForPdf(value);
@@ -73,6 +79,7 @@ const cleanDataForPdf = (data: any): any => {
         }
         return cleaned;
     }
+
     return data;
 };
 
