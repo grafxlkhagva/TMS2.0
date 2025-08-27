@@ -69,33 +69,33 @@ const initialAllData: AllData = {
 
 const cleanDataForPdf = (data: any): any => {
     if (data === null || data === undefined) {
-        return data;
+        return undefined; // Use undefined to ensure keys are removed if they are null
     }
-    if (typeof data !== 'object' || React.isValidElement(data)) {
-        return data;
-    }
-
     if (data instanceof Timestamp) {
         return data.toDate();
     }
-    
     if (data instanceof Date) {
         return data;
     }
-
+    if (React.isValidElement(data) || typeof data !== 'object') {
+        return data;
+    }
     if (Array.isArray(data)) {
-        return data.map(item => cleanDataForPdf(item)).filter(item => item !== undefined);
+        return data.map(item => cleanDataForPdf(item));
     }
 
     const cleanedObject: { [key: string]: any } = {};
     for (const key in data) {
+        // Ensure we are iterating over own properties
         if (Object.prototype.hasOwnProperty.call(data, key)) {
+            // Skip DocumentReference fields
             if (key.endsWith('Ref')) {
                 continue;
             }
             const value = data[key];
             const cleanedValue = cleanDataForPdf(value);
 
+            // Only add the key if the cleaned value is not undefined
             if (cleanedValue !== undefined) {
                 cleanedObject[key] = cleanedValue;
             }
