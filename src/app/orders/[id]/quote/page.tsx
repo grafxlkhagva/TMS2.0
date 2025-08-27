@@ -68,33 +68,34 @@ const initialAllData: AllData = {
 };
 
 const cleanDataForPdf = (data: any): any => {
-    if (data === null || data === undefined) {
-      return data;
+    if (data === null || data === undefined || typeof data !== 'object') {
+        return data;
     }
-  
+
     if (data instanceof Timestamp) {
-      return data.toDate();
+        return data.toDate();
     }
-  
+
     if (Array.isArray(data)) {
-      return data.map(item => cleanDataForPdf(item));
-    }
-  
-    if (typeof data === 'object' && !(data instanceof Date) && typeof data.hasOwnProperty === 'function') {
-      const cleaned: Record<string, any> = {};
-      for (const key in data) {
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-          // Exclude DocumentReference fields
-          if (key.endsWith('Ref')) {
-            continue;
-          }
-          cleaned[key] = cleanDataForPdf(data[key]);
-        }
-      }
-      return cleaned;
+        return data.map(item => cleanDataForPdf(item));
     }
     
-    return data;
+    // This is a basic check for DocumentReference, more robust checks might be needed
+    if (data.path && data.parent) { 
+        return undefined; // Or some other placeholder if you want to know it was a ref
+    }
+
+    const cleaned: Record<string, any> = {};
+    for (const key in data) {
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+            // Exclude fields ending with 'Ref'
+            if (key.endsWith('Ref')) {
+                continue;
+            }
+            cleaned[key] = cleanDataForPdf(data[key]);
+        }
+    }
+    return cleaned;
 };
 
 
@@ -373,3 +374,5 @@ export default function GenerateQuotePage() {
     </div>
   );
 }
+
+    
