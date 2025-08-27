@@ -44,37 +44,37 @@ const toDateSafe = (date: any): Date => {
 };
 
 const cleanDataForPdf = (data: any): any => {
-    if (data === null || data === undefined) {
-        return data;
+    if (data === null || data === undefined || React.isValidElement(data)) {
+      return data;
     }
-
+  
     if (data instanceof Timestamp) {
-        return data.toDate();
+      return data.toDate();
     }
-    
-    if (data instanceof Date || React.isValidElement(data)) {
-        return data;
+  
+    if (data instanceof Date) {
+      return data;
     }
-    
-    if (typeof data !== 'object') {
-        return data;
-    }
-
+  
     if (Array.isArray(data)) {
-        return data.map(item => cleanDataForPdf(item));
+      return data.map(item => cleanDataForPdf(item));
     }
-
-    const cleanedObject: { [key: string]: any } = {};
-    for (const key in data) {
+  
+    if (typeof data === 'object') {
+      const cleanedObject: { [key: string]: any } = {};
+      for (const key in data) {
         if (Object.prototype.hasOwnProperty.call(data, key)) {
-            if (key.endsWith('Ref')) {
-                continue;
-            }
-            cleanedObject[key] = cleanDataForPdf(data[key]);
+          if (key.endsWith('Ref')) {
+            continue; // Skip DocumentReference fields
+          }
+          cleanedObject[key] = cleanDataForPdf(data[key]);
         }
+      }
+      return cleanedObject;
     }
-    return cleanedObject;
-};
+  
+    return data;
+  };
 
 
 export default function ContractDetailPage() {
