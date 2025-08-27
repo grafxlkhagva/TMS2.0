@@ -51,8 +51,12 @@ const cleanDataForPdf = (data: any): any => {
     if (data instanceof Timestamp) {
         return data.toDate();
     }
-
-    if (data instanceof Date) {
+    
+    if (data instanceof Date || React.isValidElement(data)) {
+        return data;
+    }
+    
+    if (typeof data !== 'object') {
         return data;
     }
 
@@ -60,20 +64,16 @@ const cleanDataForPdf = (data: any): any => {
         return data.map(item => cleanDataForPdf(item));
     }
 
-    if (typeof data === 'object' && !React.isValidElement(data)) {
-        const cleanedObject: { [key: string]: any } = {};
-        for (const key in data) {
-            if (Object.prototype.hasOwnProperty.call(data, key)) {
-                if (key.endsWith('Ref')) {
-                    continue;
-                }
-                cleanedObject[key] = cleanDataForPdf(data[key]);
+    const cleanedObject: { [key: string]: any } = {};
+    for (const key in data) {
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+            if (key.endsWith('Ref')) {
+                continue;
             }
+            cleanedObject[key] = cleanDataForPdf(data[key]);
         }
-        return cleanedObject;
     }
-
-    return data;
+    return cleanedObject;
 };
 
 
@@ -291,5 +291,7 @@ export default function ContractDetailPage() {
     </div>
   );
 }
+
+    
 
     
