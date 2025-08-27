@@ -73,7 +73,7 @@ const cleanDataForPdf = (data: any): any => {
     if (data instanceof Date) return data;
     
     // Firestore DocumentReference check
-    if (typeof data === 'object' && data.firestore && typeof data.path === 'string') {
+    if (typeof data === 'object' && data !== null && data.firestore && typeof data.path === 'string') {
         return undefined;
     }
 
@@ -84,7 +84,8 @@ const cleanDataForPdf = (data: any): any => {
     if (typeof data === 'object' && data !== null && !React.isValidElement(data)) {
         const cleaned: { [key: string]: any } = {};
         for (const key in data) {
-            if (Object.prototype.hasOwnProperty.call(data, key)) {
+            // Important: check if data is not null before calling hasOwnProperty
+            if (data && Object.prototype.hasOwnProperty.call(data, key)) {
                 if (key.endsWith('Ref')) {
                     continue; // Skip fields ending with 'Ref'
                 }
