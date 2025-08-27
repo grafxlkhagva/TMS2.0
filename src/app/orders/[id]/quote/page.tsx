@@ -68,39 +68,24 @@ const initialAllData: AllData = {
 };
 
 const cleanDataForPdf = (data: any): any => {
-    if (data === null || data === undefined) {
-        return data;
+    if (!data) return data;
+    if (Array.isArray(data)) {
+        return data.map(item => cleanDataForPdf(item));
     }
-    
     if (data instanceof Timestamp) {
         return data.toDate();
     }
-    
-    if (typeof data === 'object' && data !== null && !Array.isArray(data) && 'path' in data && 'parent' in data) {
-        return undefined; 
-    }
-
-    if (Array.isArray(data)) {
-        return data.map(item => cleanDataForPdf(item)).filter(item => item !== undefined);
-    }
-    
-    if (typeof data === 'object' && !data.toDate) { // Exclude Date objects
-        const cleaned: Record<string, any> = {};
+    if (typeof data === 'object' && !(data instanceof Date)) {
+        const cleaned: { [key: string]: any } = {};
         for (const key in data) {
             if (Object.prototype.hasOwnProperty.call(data, key)) {
-                if (key.endsWith('Ref')) {
-                    continue;
-                }
-                const value = data[key];
-                const cleanedValue = cleanDataForPdf(value);
-                if (cleanedValue !== undefined) {
-                     cleaned[key] = cleanedValue;
+                if (!key.endsWith('Ref') && data[key] !== undefined) {
+                    cleaned[key] = cleanDataForPdf(data[key]);
                 }
             }
         }
         return cleaned;
     }
-
     return data;
 };
 
