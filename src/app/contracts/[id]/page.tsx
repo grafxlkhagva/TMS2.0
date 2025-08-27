@@ -45,35 +45,25 @@ const toDateSafe = (date: any): Date => {
 
 const cleanDataForPdf = (data: any): any => {
     if (data === null || data === undefined) {
-        return undefined;
+        return data;
     }
     if (data instanceof Timestamp) {
         return data.toDate();
     }
-    if (data instanceof Date) {
-        return data;
-    }
-     // Don't try to deep clone React elements
-    if (React.isValidElement(data)) {
-        return data;
-    }
-    if (typeof data !== 'object') {
+    if (data instanceof Date || React.isValidElement(data) || typeof data !== 'object') {
         return data;
     }
     if (Array.isArray(data)) {
         return data.map(item => cleanDataForPdf(item));
     }
-
+    
     const cleanedObject: { [key: string]: any } = {};
     for (const key in data) {
-         if (key.endsWith('Ref')) {
-            continue;
-        }
-        const value = data[key];
-        const cleanedValue = cleanDataForPdf(value);
-
-        if (cleanedValue !== undefined) {
-            cleanedObject[key] = cleanedValue;
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+            if (key.endsWith('Ref')) {
+                continue;
+            }
+            cleanedObject[key] = cleanDataForPdf(data[key]);
         }
     }
     return cleanedObject;
