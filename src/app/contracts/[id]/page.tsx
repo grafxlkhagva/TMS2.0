@@ -57,7 +57,7 @@ const cleanDataForPdf = (data: any): any => {
         return data.map(item => cleanDataForPdf(item));
     }
 
-    if (typeof data === 'object' && data !== null) {
+    if (typeof data === 'object' && data !== null && !React.isValidElement(data)) {
         const cleaned: { [key: string]: any } = {};
         for (const key in data) {
             if (Object.prototype.hasOwnProperty.call(data, key)) {
