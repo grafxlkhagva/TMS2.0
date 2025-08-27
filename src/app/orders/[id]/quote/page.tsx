@@ -79,7 +79,7 @@ const cleanDataForPdf = (data: any): any => {
         const cleaned: { [key: string]: any } = {};
         for (const key in data) {
             if (Object.prototype.hasOwnProperty.call(data, key)) {
-                if (!key.endsWith('Ref') && data[key] !== undefined) {
+                if (!key.endsWith('Ref') && data[key] !== undefined && data[key] !== null) {
                     cleaned[key] = cleanDataForPdf(data[key]);
                 }
             }
@@ -365,3 +365,5 @@ export default function GenerateQuotePage() {
     </div>
   );
 }
+
+    
