@@ -71,26 +71,25 @@ const cleanDataForPdf = (data: any): any => {
     if (!data) return data;
     if (data instanceof Timestamp) return data.toDate();
     if (data instanceof Date) return data;
-
-    // Firestore DocumentReference check (simplified)
+    
+    // Firestore DocumentReference check
     if (typeof data === 'object' && data.firestore && typeof data.path === 'string') {
-        return undefined; // Or null, depending on how you want to handle it
+        return undefined;
     }
 
     if (Array.isArray(data)) {
         return data.map(item => cleanDataForPdf(item));
     }
 
-    if (typeof data === 'object') {
+    if (typeof data === 'object' && data !== null) {
         const cleaned: { [key: string]: any } = {};
         for (const key in data) {
-            // Use Object.prototype.hasOwnProperty.call for safety
             if (Object.prototype.hasOwnProperty.call(data, key)) {
                 if (key.endsWith('Ref')) {
                     continue; // Skip fields ending with 'Ref'
                 }
                 const value = data[key];
-                 // Add a secondary check for DocumentReference-like objects that might have been missed
+                 // Add a secondary check for DocumentReference-like objects
                 if (value && typeof value === 'object' && value.firestore && typeof value.path === 'string') {
                     continue;
                 }
