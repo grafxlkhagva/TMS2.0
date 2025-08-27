@@ -16,7 +16,6 @@ import { ArrowLeft, Edit, FileSignature } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
-import PrintButton from '@/components/print/PrintButton';
 import ContractPrintLayout from '@/components/contract-print-layout';
 import { Timestamp } from 'firebase/firestore';
 
@@ -43,45 +42,11 @@ const toDateSafe = (date: any): Date => {
     return new Date(); 
 };
 
-const cleanDataForPdf = (data: any): any => {
-    if (data === null || data === undefined || React.isValidElement(data)) {
-      return data;
-    }
-  
-    if (data instanceof Timestamp) {
-      return data.toDate();
-    }
-  
-    if (data instanceof Date) {
-      return data;
-    }
-  
-    if (Array.isArray(data)) {
-      return data.map(item => cleanDataForPdf(item));
-    }
-  
-    if (typeof data === 'object') {
-      const cleanedObject: { [key: string]: any } = {};
-      for (const key in data) {
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-          if (key.endsWith('Ref')) {
-            continue; // Skip DocumentReference fields
-          }
-          cleanedObject[key] = cleanDataForPdf(data[key]);
-        }
-      }
-      return cleanedObject;
-    }
-  
-    return data;
-  };
-
 
 export default function ContractDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { toast } = useToast();
-  const printRef = React.useRef<HTMLDivElement>(null);
 
   const [contract, setContract] = React.useState<Contract | null>(null);
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
@@ -215,10 +180,6 @@ export default function ContractDetailPage() {
                 </p>
             </div>
              <div className="flex items-center gap-2">
-                <PrintButton 
-                    targetRef={printRef} 
-                    fileName={`Contract-${shipment.shipmentNumber}.pdf`}
-                />
                 <Button><Edit className="mr-2 h-4 w-4"/> Загвар засах</Button>
             </div>
         </div>
@@ -275,17 +236,6 @@ export default function ContractDetailPage() {
                     </Button>
                 </CardFooter>
             </Card>
-        </div>
-      </div>
-      
-       {/* Hidden component for printing */}
-      <div className="print-only">
-        <div ref={printRef}>
-            <ContractPrintLayout 
-                contract={cleanDataForPdf(contract)}
-                shipment={cleanDataForPdf(shipment)}
-                orderItem={cleanDataForPdf(orderItem)}
-            />
         </div>
       </div>
     </div>

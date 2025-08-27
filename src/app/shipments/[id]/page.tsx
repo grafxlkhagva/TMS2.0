@@ -33,7 +33,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import ShipmentReportLayout from '@/components/shipment-report-layout';
-import PrintButton from '@/components/print/PrintButton';
 
 
 const statusTranslations: Record<ShipmentStatusType, string> = {
@@ -99,7 +98,6 @@ export default function ShipmentDetailPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
-  const reportRef = React.useRef<HTMLDivElement>(null);
 
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
   const [orderItem, setOrderItem] = React.useState<OrderItem | null>(null);
@@ -940,15 +938,6 @@ export default function ShipmentDetailPage() {
                 <CardContent>
                     {renderCurrentStageChecklist()}
                 </CardContent>
-                 {shipment.status === 'Delivered' && (
-                    <CardFooter>
-                        <PrintButton
-                            targetRef={reportRef}
-                            fileName={`Report-${shipment.shipmentNumber}.pdf`}
-                            buttonLabel="Тээврийн тайлан татах"
-                        />
-                    </CardFooter>
-                )}
             </Card>
         </div>
         
@@ -1010,16 +999,6 @@ export default function ShipmentDetailPage() {
         </AlertDialogContent>
     </AlertDialog>
 
-    {/* Hidden component for printing */}
-    <div className="print-only">
-        <ShipmentReportLayout
-            ref={reportRef}
-            shipment={shipment}
-            cargo={cargo}
-            packagingTypes={packagingTypes}
-            shipmentUpdates={shipmentUpdates}
-        />
-    </div>
     </div>
   );
 }

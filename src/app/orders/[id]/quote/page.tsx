@@ -17,16 +17,14 @@ import type {
   OrderItemCargo,
 } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { PDFDownloadLink } from '@react-pdf/renderer';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, FileText, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileText, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import QuoteDocument from '@/components/pdf/QuoteDocument';
 
 
 const toDateSafe = (date: any): Date | undefined => {
@@ -66,39 +64,6 @@ const initialAllData: AllData = {
   trailerTypes: [],
   packagingTypes: [],
 };
-
-const cleanDataForPdf = (data: any): any => {
-    if (data === null || data === undefined || React.isValidElement(data)) {
-      return data;
-    }
-  
-    if (data instanceof Timestamp) {
-      return data.toDate();
-    }
-  
-    if (data instanceof Date) {
-      return data;
-    }
-  
-    if (Array.isArray(data)) {
-      return data.map(item => cleanDataForPdf(item));
-    }
-  
-    if (typeof data === 'object') {
-      const cleanedObject: { [key: string]: any } = {};
-      for (const key in data) {
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-          if (key.endsWith('Ref')) {
-            continue; // Skip DocumentReference fields
-          }
-          cleanedObject[key] = cleanDataForPdf(data[key]);
-        }
-      }
-      return cleanedObject;
-    }
-  
-    return data;
-  };
 
 
 export default function GenerateQuotePage() {
@@ -259,23 +224,7 @@ export default function GenerateQuotePage() {
                 <p className="text-muted-foreground font-mono">{order?.orderNumber}</p>
             </div>
             <div>
-               {isClient && selectedItemsArray.length > 0 && order && allData.serviceTypes.length > 0 && (
-                 <PDFDownloadLink
-                  document={<QuoteDocument 
-                    order={cleanDataForPdf(order)} 
-                    orderItems={cleanDataForPdf(selectedItemsArray)}
-                    allData={cleanDataForPdf(allData)}
-                  />}
-                  fileName={`Quote-${order.orderNumber}.pdf`}
-                >
-                  {({ loading }) => (
-                    <Button disabled={loading}>
-                      {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
-                       PDF Татах
-                    </Button>
-                  )}
-                </PDFDownloadLink>
-              )}
+               {/* PDF Download Button Removed */}
             </div>
           </div>
         </div>

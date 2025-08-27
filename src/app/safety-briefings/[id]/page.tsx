@@ -13,11 +13,10 @@ import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, FileSignature, Download } from 'lucide-react';
+import { ArrowLeft, Edit, FileSignature } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
-import PrintButton from '@/components/print/PrintButton';
 import SafetyBriefingLayout from '@/components/safety-briefing-layout';
 
 function DetailItem({ label, value }: { label: string, value?: string | React.ReactNode }) {
@@ -35,7 +34,6 @@ export default function SafetyBriefingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { toast } = useToast();
-  const printRef = React.useRef<HTMLDivElement>(null);
 
   const [briefing, setBriefing] = React.useState<SafetyBriefing | null>(null);
   const [shipment, setShipment] = React.useState<Shipment | null>(null);
@@ -162,10 +160,6 @@ export default function SafetyBriefingDetailPage() {
                 </p>
             </div>
              <div className="flex items-center gap-2">
-                <PrintButton 
-                    targetRef={printRef} 
-                    fileName={`Safety-Briefing-${shipment.shipmentNumber}.pdf`}
-                />
                 <Button><Edit className="mr-2 h-4 w-4"/> Загвар засах</Button>
             </div>
         </div>
@@ -221,16 +215,6 @@ export default function SafetyBriefingDetailPage() {
                     </Button>
                 </CardFooter>
             </Card>
-        </div>
-      </div>
-      
-       {/* Hidden component for printing */}
-      <div className="print-only">
-        <div ref={printRef}>
-            <SafetyBriefingLayout 
-                briefing={briefing}
-                shipment={shipment}
-            />
         </div>
       </div>
     </div>
