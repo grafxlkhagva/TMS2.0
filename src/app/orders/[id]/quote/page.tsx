@@ -72,27 +72,23 @@ const cleanDataForPdf = (data: any): any => {
         return data;
     }
     
-    // Firestore Timestamp conversion
     if (data instanceof Timestamp) {
         return data.toDate();
     }
     
-    // Check for DocumentReference-like objects (basic check) and remove them.
+    // Rudimentary check for DocumentReference-like objects
     if (typeof data.path === 'string' && typeof data.parent === 'object') {
         return undefined;
     }
 
-    // Recursively clean arrays
     if (Array.isArray(data)) {
-        return data.map(item => cleanDataForPdf(item));
+        return data.map(item => cleanDataForPdf(item)).filter(item => item !== undefined);
     }
 
-    // Recursively clean objects
     const cleaned: Record<string, any> = {};
     for (const key in data) {
-        // Use a standard hasOwnProperty check
         if (Object.prototype.hasOwnProperty.call(data, key)) {
-            // Exclude fields ending with 'Ref' as a safeguard
+            // Exclude fields ending with 'Ref'
             if (key.endsWith('Ref')) {
                 continue;
             }
