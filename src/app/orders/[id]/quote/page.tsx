@@ -26,6 +26,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import CombinedQuotePrintLayout from '@/components/combined-quote-print-layout';
 
 
 const toDateSafe = (date: any): Date | undefined => {
@@ -72,6 +73,7 @@ export default function GenerateQuotePage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isClient, setIsClient] = React.useState(false);
+  const printRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     setIsClient(true);
@@ -269,52 +271,13 @@ export default function GenerateQuotePage() {
                      </div>
                  </CardHeader>
                  <CardContent>
-                    <div className="border rounded-md p-6 bg-gray-50 aspect-[1/1.414] overflow-auto">
-                        <div className="bg-white p-8 font-sans text-gray-800 text-[10px] w-full h-full">
-                           <header className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
-                             <div>
-                               <h1 className="text-2xl font-bold">Түмэн Тех ТМС</h1>
-                             </div>
-                             <div className="text-right">
-                               <h2 className="text-xl font-bold uppercase">ҮНИЙН САНАЛ</h2>
-                               <p className="mt-1">Захиалгын №: {order?.orderNumber}</p>
-                             </div>
-                           </header>
-                           <section className="mb-6">
-                               <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Захиалагчийн мэдээлэл</h3>
-                               <p><strong>Байгууллага:</strong> {order?.customerName}</p>
-                               <p><strong>Хариуцсан ажилтан:</strong> {order?.employeeName}</p>
-                           </section>
-                           <section>
-                               <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Тээвэрлэлтүүд</h3>
-                               <Table>
-                               <TableHeader>
-                                   <TableRow>
-                                       <TableHead className="h-8 text-[9px]">Чиглэл</TableHead>
-                                       <TableHead className="h-8 text-[9px] text-right">Үнэ (НӨАТ-гүй)</TableHead>
-                                       <TableHead className="h-8 text-[9px] text-right">НӨАТ</TableHead>
-                                       <TableHead className="h-8 text-[9px] text-right">Нийт дүн</TableHead>
-                                   </TableRow>
-                               </TableHeader>
-                               <TableBody>
-                                   {selectedItemsArray.map(item => {
-                                       const finalPrice = roundCurrency(item.finalPrice);
-                                       const priceBeforeVat = item.withVAT ? finalPrice / 1.1 : finalPrice;
-                                       const vat = finalPrice - priceBeforeVat;
-                                       return (
-                                        <TableRow key={item.id}>
-                                            <TableCell className="py-1 text-[9px]">{getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}</TableCell>
-                                            <TableCell className="py-1 text-[9px] text-right">{fmt(priceBeforeVat)}</TableCell>
-                                            <TableCell className="py-1 text-[9px] text-right">{fmt(vat)}</TableCell>
-                                            <TableCell className="py-1 text-[9px] text-right font-semibold">{fmt(finalPrice)}</TableCell>
-                                        </TableRow>
-                                       )
-                                   })}
-                               </TableBody>
-                               </Table>
-                               <p className="text-right font-bold mt-4">Нийт дүн: {fmt(totalFinalPrice)}₮</p>
-                           </section>
-                        </div>
+                    <div className="border rounded-md p-6 bg-gray-50 aspect-[1.414/1] overflow-auto">
+                        <CombinedQuotePrintLayout 
+                            ref={printRef}
+                            order={order}
+                            orderItems={selectedItemsArray}
+                            allData={allData}
+                        />
                     </div>
                  </CardContent>
              </Card>

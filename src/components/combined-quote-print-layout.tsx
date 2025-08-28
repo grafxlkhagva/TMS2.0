@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -103,13 +104,13 @@ const CombinedQuotePrintLayout = React.forwardRef<
           }
         }
       `}</style>
-      <div ref={ref} className="bg-white p-8 text-gray-800 text-[10px] print-smooth" style={{ width: '297mm', minHeight: '210mm' }}>
+      <div ref={ref} className="bg-white p-8 text-gray-800 text-[10px] print-smooth" style={{ width: '100%', height: '100%' }}>
         <header className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold">Tumen Tech TMS</h1>
           </div>
           <div className="text-right">
-            <h2 className="text-xl font-bold uppercase">Үнийн санал</h2>
+            <h2 className="text-xl font-bold uppercase">ҮНИЙН САНАЛ</h2>
             <div className="flex justify-end mt-1"><p className="font-bold">Огноо:</p><p className="ml-1">{quoteDate}</p></div>
             <div className="flex justify-end mt-1"><p className="font-bold">Захиалгын №:</p><p className="ml-1">{order.orderNumber}</p></div>
           </div>
