@@ -27,7 +27,7 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
     try {
         app = getApps().length ? getApp() : initializeApp(firebaseConfig);
         auth = getAuth(app);
-        db = getFirestore(app, 'tms-data'); // Connect to the 'tms-data' database
+        db = getFirestore(app); // Connect to the (default) database
         storage = getStorage(app);
     } catch (e) {
         console.error("Failed to initialize Firebase", e);
