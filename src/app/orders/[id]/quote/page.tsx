@@ -212,78 +212,80 @@ export default function GenerateQuotePage() {
   }
 
   return (
-    <div className="container mx-auto py-6 no-print">
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-            <div>
-                 <Button variant="outline" size="sm" asChild className="mb-4">
-                     <Link href={`/orders/${orderId}`}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Захиалга руу буцах
-                     </Link>
-                </Button>
-                <h1 className="text-3xl font-headline font-bold">Үнийн санал үүсгэх</h1>
-                <p className="text-muted-foreground font-mono">{order?.orderNumber}</p>
+    <>
+      <div className="container mx-auto py-6 no-print">
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+              <div>
+                  <Button variant="outline" size="sm" asChild className="mb-4">
+                      <Link href={`/orders/${orderId}`}>
+                          <ArrowLeft className="mr-2 h-4 w-4" />
+                          Захиалга руу буцах
+                      </Link>
+                  </Button>
+                  <h1 className="text-3xl font-headline font-bold">Үнийн санал үүсгэх</h1>
+                  <p className="text-muted-foreground font-mono">{order?.orderNumber}</p>
+              </div>
             </div>
           </div>
-        </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-        <div className="md:col-span-1 space-y-6 sticky top-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Тээвэрлэлт сонгох</CardTitle>
-                    <CardDescription>Үнийн саналд оруулах тээвэрлэлтүүдээ сонгоно уу.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                    {acceptedItems.length > 0 ? (
-                        acceptedItems.map((item, index) => (
-                            <div key={item.id} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted">
-                                <Checkbox 
-                                    id={`item-${item.id}`}
-                                    checked={selectedItems.has(item.id)}
-                                    onCheckedChange={() => handleSelectChange(item)}
-                                />
-                                <label htmlFor={`item-${item.id}`} className="text-sm font-medium leading-none cursor-pointer flex-1">
-                                    Тээвэрлэлт #{index + 1}: {getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}
-                                </label>
-                            </div>
-                        ))
-                    ) : (
-                        <p className="text-sm text-muted-foreground text-center p-4">Баталгаажсан үнийн саналтай тээвэрлэлт олдсонгүй.</p>
-                    )}
-                </CardContent>
-                {selectedItems.size > 0 && (
-                    <CardFooter className="flex flex-col items-start pt-4 border-t">
-                        <p className="text-lg font-semibold">Нийт дүн: {fmt(totalFinalPrice)}₮</p>
-                        <p className="text-sm text-muted-foreground">{selectedItems.size} тээвэрлэлт сонгогдсон.</p>
-                    </CardFooter>
-                )}
-            </Card>
-        </div>
-        <div className="md:col-span-2">
-             <Card>
-                 <CardHeader>
-                     <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle>Урьдчилан харах</CardTitle>
-                        </div>
-                        <Button variant="outline" onClick={handlePrint} disabled={selectedItems.size === 0}>
-                            <Printer className="mr-2 h-4 w-4" />
-                            Хэвлэх / PDF
-                        </Button>
-                     </div>
-                 </CardHeader>
-                 <CardContent>
-                    <div className="border rounded-md p-6 bg-gray-50 aspect-[297/210] overflow-auto">
-                        <CombinedQuotePrintLayout 
-                            ref={printRef}
-                            order={order}
-                            orderItems={selectedItemsArray}
-                            allData={allData}
-                        />
-                    </div>
-                 </CardContent>
-             </Card>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          <div className="md:col-span-1 space-y-6 sticky top-6">
+              <Card>
+                  <CardHeader>
+                      <CardTitle>Тээвэрлэлт сонгох</CardTitle>
+                      <CardDescription>Үнийн саналд оруулах тээвэрлэлтүүдээ сонгоно уу.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                      {acceptedItems.length > 0 ? (
+                          acceptedItems.map((item, index) => (
+                              <div key={item.id} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted">
+                                  <Checkbox 
+                                      id={`item-${item.id}`}
+                                      checked={selectedItems.has(item.id)}
+                                      onCheckedChange={() => handleSelectChange(item)}
+                                  />
+                                  <label htmlFor={`item-${item.id}`} className="text-sm font-medium leading-none cursor-pointer flex-1">
+                                      Тээвэрлэлт #{index + 1}: {getRegionName(item.startRegionId)} &rarr; {getRegionName(item.endRegionId)}
+                                  </label>
+                              </div>
+                          ))
+                      ) : (
+                          <p className="text-sm text-muted-foreground text-center p-4">Баталгаажсан үнийн саналтай тээвэрлэлт олдсонгүй.</p>
+                      )}
+                  </CardContent>
+                  {selectedItems.size > 0 && (
+                      <CardFooter className="flex flex-col items-start pt-4 border-t">
+                          <p className="text-lg font-semibold">Нийт дүн: {fmt(totalFinalPrice)}₮</p>
+                          <p className="text-sm text-muted-foreground">{selectedItems.size} тээвэрлэлт сонгогдсон.</p>
+                      </CardFooter>
+                  )}
+              </Card>
+          </div>
+          <div className="md:col-span-2">
+              <Card>
+                  <CardHeader>
+                      <div className="flex items-center justify-between">
+                          <div>
+                              <CardTitle>Урьдчилан харах</CardTitle>
+                          </div>
+                          <Button variant="outline" onClick={handlePrint} disabled={selectedItems.size === 0}>
+                              <Printer className="mr-2 h-4 w-4" />
+                              Хэвлэх / PDF
+                          </Button>
+                      </div>
+                  </CardHeader>
+                  <CardContent>
+                      <div className="border rounded-md p-6 bg-gray-50 aspect-[210/297] overflow-auto">
+                          <CombinedQuotePrintLayout 
+                              ref={printRef}
+                              order={order}
+                              orderItems={selectedItemsArray}
+                              allData={allData}
+                          />
+                      </div>
+                  </CardContent>
+              </Card>
+          </div>
         </div>
       </div>
       <div className="print-only">
@@ -294,6 +296,6 @@ export default function GenerateQuotePage() {
             allData={allData}
           />
       </div>
-    </div>
+    </>
   );
 }
