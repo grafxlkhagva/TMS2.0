@@ -18,6 +18,7 @@ import type {
   OrderItemCargo,
 } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { useReactToPrint } from 'react-to-print';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -84,6 +85,10 @@ export default function GenerateQuotePage() {
     (id: string) => allData.regions.find(r => r.id === id)?.name || 'N/A',
     [allData.regions]
   );
+  
+  const handlePrint = useReactToPrint({
+    content: () => printRef.current,
+  });
 
   React.useEffect(() => {
     if (!orderId) return;
@@ -171,10 +176,6 @@ export default function GenerateQuotePage() {
       return newMap;
     });
   };
-
-  const handlePrint = () => {
-    window.print();
-  }
     
   const selectedItemsArray = Array.from(selectedItems.values()).sort((a,b) => (a.createdAt?.getTime?.() ?? 0) - (b.createdAt?.getTime?.() ?? 0));
   
@@ -213,7 +214,7 @@ export default function GenerateQuotePage() {
 
   return (
     <>
-      <div className="container mx-auto py-6 no-print">
+      <div className="container mx-auto py-6">
         <div className="mb-6">
           <div className="flex items-center justify-between">
               <div>
@@ -276,7 +277,7 @@ export default function GenerateQuotePage() {
                   </CardHeader>
                   <CardContent>
                       <div className="border rounded-md p-6 bg-gray-50 aspect-[210/297] overflow-auto">
-                          <CombinedQuotePrintLayout 
+                           <CombinedQuotePrintLayout 
                               ref={printRef}
                               order={order}
                               orderItems={selectedItemsArray}
@@ -288,13 +289,14 @@ export default function GenerateQuotePage() {
           </div>
         </div>
       </div>
-      <div className="print-only">
+      <div className="hidden">
+        <div ref={printRef}>
           <CombinedQuotePrintLayout 
-            ref={printRef}
             order={order}
             orderItems={selectedItemsArray}
             allData={allData}
           />
+        </div>
       </div>
     </>
   );
