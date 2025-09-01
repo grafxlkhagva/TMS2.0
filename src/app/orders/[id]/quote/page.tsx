@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -38,15 +37,6 @@ const toDateSafe = (date: any): Date | undefined => {
   }
   return undefined;
 };
-
-const roundCurrency = (value: number | undefined | null): number => {
-  if (value == null || isNaN(value)) return 0;
-  return Math.round(value * 100) / 100;
-};
-
-const nf = new Intl.NumberFormat('mn-MN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmt = (n: number) => nf.format(roundCurrency(n));
-
 
 type AllData = {
   serviceTypes: ServiceType[];
@@ -182,7 +172,8 @@ export default function GenerateQuotePage() {
   
   const { totalFinalPrice } = selectedItemsArray.reduce(
     (acc, item) => {
-      acc.totalFinalPrice += roundCurrency(item.finalPrice);
+      const finalPrice = item.finalPrice || 0;
+      acc.totalFinalPrice += finalPrice;
       return acc;
     },
     { totalFinalPrice: 0 }
@@ -257,7 +248,7 @@ export default function GenerateQuotePage() {
                   </CardContent>
                   {selectedItems.size > 0 && (
                       <CardFooter className="flex flex-col items-start pt-4 border-t">
-                          <p className="text-lg font-semibold">Нийт дүн: {fmt(totalFinalPrice)}₮</p>
+                          <p className="text-lg font-semibold">Нийт дүн: {totalFinalPrice.toLocaleString()}₮</p>
                           <p className="text-sm text-muted-foreground">{selectedItems.size} тээвэрлэлт сонгогдсон.</p>
                       </CardFooter>
                   )}

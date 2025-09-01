@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -47,7 +46,6 @@ export default function CombinedQuotePrintLayout({ order, orderItems, allData }:
   const getTrailerTypeName = React.useCallback((id: string) => allData.trailerTypes.find(t => t.id === id)?.name || 'N/A', [allData.trailerTypes]);
   const getPackagingTypeName = React.useCallback((id: string) => allData.packagingTypes.find(p => p.id === id)?.name || 'N/A', [allData.packagingTypes]);
 
-  // Rows with zero or positive price must not be filtered out. Check for null/undefined.
   const acceptedItems = orderItems.filter(
     (item) => item.acceptedQuoteId && item.finalPrice != null
   );
@@ -66,7 +64,6 @@ export default function CombinedQuotePrintLayout({ order, orderItems, allData }:
     { totalPayment: 0, totalVat: 0, totalFinalPrice: 0 }
   );
   
-  // Use a stable date from the order data to prevent hydration warnings.
   const quoteDate = order.createdAt ? format(new Date(order.createdAt), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
 
   return (
@@ -113,7 +110,6 @@ export default function CombinedQuotePrintLayout({ order, orderItems, allData }:
           <tbody>
             {acceptedItems.length > 0 ? (
               acceptedItems.map((item) => {
-                // Guard against division by zero for frequency.
                 const frequency = item.frequency && item.frequency > 0 ? item.frequency : 1;
                 const finalPrice = roundCurrency(item.finalPrice);
                 const priceBeforeVat = item.withVAT ? finalPrice / 1.1 : finalPrice;
