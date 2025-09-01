@@ -1,4 +1,6 @@
 
+'use client';
+
 import * as React from 'react';
 import { format } from 'date-fns';
 import type {
@@ -188,3 +190,4 @@ export default function CombinedQuotePrintLayout({ order, orderItems, allData }:
       </div>
   );
 }
+
