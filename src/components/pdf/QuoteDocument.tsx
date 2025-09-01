@@ -175,6 +175,10 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
   
   const quoteDate = order.createdAt ? format(new Date(order.createdAt), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
 
+  const formatNumber = (num: number) => {
+    return roundCurrency(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -231,11 +235,11 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
                   <Text style={[styles.tableCol, {width: '10%'}]}>{getRegionName(item.endRegionId)} {getWarehouseName(item.endWarehouseId)}</Text>
                   <Text style={[styles.tableCol, {width: '7%', textAlign: 'right'}]}>{item.totalDistance} км</Text>
                   <Text style={[styles.tableCol, {width: '10%'}]}>{getVehicleTypeName(item.vehicleTypeId)}</Text>
-                  <Text style={[styles.tableCol, {width: '8%', textAlign: 'right'}]}>{roundCurrency(singleTransportPriceWithProfit).toLocaleString()}</Text>
+                  <Text style={[styles.tableCol, {width: '8%', textAlign: 'right'}]}>{formatNumber(singleTransportPriceWithProfit)}</Text>
                   <Text style={[styles.tableCol, {width: '5%', textAlign: 'right'}]}>{frequency}</Text>
-                  <Text style={[styles.tableCol, {width: '10%', textAlign: 'right'}]}>{roundCurrency(priceBeforeVat).toLocaleString()}</Text>
-                  <Text style={[styles.tableCol, {width: '7%', textAlign: 'right'}]}>{roundCurrency(vatAmount).toLocaleString()}</Text>
-                  <Text style={[styles.tableCol, {width: '8%', textAlign: 'right', fontWeight: 'bold', borderRightWidth: 0}]}>{finalPrice.toLocaleString()}</Text>
+                  <Text style={[styles.tableCol, {width: '10%', textAlign: 'right'}]}>{formatNumber(priceBeforeVat)}</Text>
+                  <Text style={[styles.tableCol, {width: '7%', textAlign: 'right'}]}>{formatNumber(vatAmount)}</Text>
+                  <Text style={[styles.tableCol, {width: '8%', textAlign: 'right', fontWeight: 'bold', borderRightWidth: 0}]}>{formatNumber(finalPrice)}</Text>
                 </View>
               )
             })}
@@ -243,9 +247,9 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
                 <Text style={[styles.tableColHeader, {width: '65%', textAlign: 'right'}]}>Нийт дүн:</Text>
                 <Text style={[styles.tableColHeader, {width: '8%', textAlign: 'right'}]}></Text>
                 <Text style={[styles.tableColHeader, {width: '5%', textAlign: 'right'}]}></Text>
-                <Text style={[styles.tableColHeader, {width: '10%', textAlign: 'right'}]}>{roundCurrency(totalPayment).toLocaleString()}</Text>
-                <Text style={[styles.tableColHeader, {width: '7%', textAlign: 'right'}]}>{roundCurrency(totalVat).toLocaleString()}</Text>
-                <Text style={[styles.tableColHeader, {width: '8%', textAlign: 'right', borderRightWidth: 0}]}>{roundCurrency(totalFinalPrice).toLocaleString()}</Text>
+                <Text style={[styles.tableColHeader, {width: '10%', textAlign: 'right'}]}>{formatNumber(totalPayment)}</Text>
+                <Text style={[styles.tableColHeader, {width: '7%', textAlign: 'right'}]}>{formatNumber(totalVat)}</Text>
+                <Text style={[styles.tableColHeader, {width: '8%', textAlign: 'right', borderRightWidth: 0}]}>{formatNumber(totalFinalPrice)}</Text>
             </View>
         </View>
 
