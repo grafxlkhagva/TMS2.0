@@ -71,6 +71,12 @@ export default function CombinedQuotePrintLayout({ order, orderItems, allData }:
 
   return (
       <div className="bg-white p-8 text-gray-800 text-[10px]">
+        <style jsx global>{`
+            @media print {
+                body { -webkit-print-color-adjust: exact; }
+                .no-break { page-break-inside: avoid; }
+            }
+        `}</style>
         <header className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold">Tumen Tech TMS</h1>
