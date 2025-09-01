@@ -110,20 +110,3 @@ body {
     @apply bg-background text-foreground;
   }
 }
-
-@media print {
-  body {
-    margin: 0;
-    padding: 0;
-  }
-  .print-only {
-    display: block !important;
-  }
-  .no-print {
-    display: none !important;
-  }
-}
-
-.print-only {
-  display: none;
-}

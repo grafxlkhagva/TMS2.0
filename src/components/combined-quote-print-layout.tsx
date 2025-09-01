@@ -39,12 +39,12 @@ type CombinedQuotePrintLayoutProps = {
 export default function CombinedQuotePrintLayout({ order, orderItems, allData }: CombinedQuotePrintLayoutProps) {
   if (!order) return null;
 
-  const getServiceName = React.useCallback((id: string) => allData.serviceTypes.find(s => s.id === id)?.name || 'N/A', [allData.serviceTypes]);
-  const getRegionName = React.useCallback((id: string) => allData.regions.find(r => r.id === id)?.name || 'N/A', [allData.regions]);
-  const getWarehouseName = React.useCallback((id: string) => allData.warehouses.find(w => w.id === id)?.name || 'N/A', [allData.warehouses]);
-  const getVehicleTypeName = React.useCallback((id: string) => allData.vehicleTypes.find(v => v.id === id)?.name || 'N/A', [allData.vehicleTypes]);
-  const getTrailerTypeName = React.useCallback((id: string) => allData.trailerTypes.find(t => t.id === id)?.name || 'N/A', [allData.trailerTypes]);
-  const getPackagingTypeName = React.useCallback((id: string) => allData.packagingTypes.find(p => p.id === id)?.name || 'N/A', [allData.packagingTypes]);
+  const getServiceName = (id: string) => allData.serviceTypes.find(s => s.id === id)?.name || 'N/A';
+  const getRegionName = (id: string) => allData.regions.find(r => r.id === id)?.name || 'N/A';
+  const getWarehouseName = (id: string) => allData.warehouses.find(w => w.id === id)?.name || 'N/A';
+  const getVehicleTypeName = (id: string) => allData.vehicleTypes.find(v => v.id === id)?.name || 'N/A';
+  const getTrailerTypeName = (id: string) => allData.trailerTypes.find(t => t.id === id)?.name || 'N/A';
+  const getPackagingTypeName = (id: string) => allData.packagingTypes.find(p => p.id === id)?.name || 'N/A';
 
   const acceptedItems = orderItems.filter(
     (item) => item.acceptedQuoteId && item.finalPrice != null
@@ -68,12 +68,6 @@ export default function CombinedQuotePrintLayout({ order, orderItems, allData }:
 
   return (
       <div className="bg-white p-8 text-gray-800 text-[10px]">
-        <style jsx global>{`
-            @media print {
-                body { -webkit-print-color-adjust: exact; }
-                .no-break { page-break-inside: avoid; }
-            }
-        `}</style>
         <header className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold">Tumen Tech TMS</h1>
@@ -91,7 +85,7 @@ export default function CombinedQuotePrintLayout({ order, orderItems, allData }:
           <div className="flex"><p><strong>Хариуцсан ажилтан:</strong><span className="ml-1">{order.employeeName}</span></p></div>
         </section>
 
-        <table className="w-full text-left text-[9px]">
+        <table className="w-full text-left text-[9px] border-collapse">
           <thead className="bg-gray-100 font-bold">
             <tr>
               <th scope="col" className="p-1 border border-gray-400">Үйлчилгээний төрөл</th>
@@ -166,7 +160,7 @@ export default function CombinedQuotePrintLayout({ order, orderItems, allData }:
         </table>
         
         {order.conditions && (
-          <section className="mb-6 mt-8">
+          <section className="mb-6 mt-8" style={{pageBreakInside: 'avoid'}}>
             <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Тээврийн нөхцөл</h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-1">
               <div className="flex"><p><strong>Ачилт:</strong><span className="ml-1">{order.conditions.loading}</span></p></div>
