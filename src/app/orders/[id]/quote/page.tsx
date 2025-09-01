@@ -21,11 +21,12 @@ import { useToast } from '@/hooks/use-toast';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft, Printer, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import CombinedQuotePrintLayout from '@/components/combined-quote-print-layout';
+import { generateQuotePdf } from './actions';
 
 
 const toDateSafe = (date: any): Date | undefined => {
@@ -77,14 +78,46 @@ export default function GenerateQuotePage() {
   const [selectedItems, setSelectedItems] = React.useState<Map<string, OrderItem>>(new Map());
   const [allData, setAllData] = React.useState<AllData>(initialAllData);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isGeneratingPdf, setIsGeneratingPdf] = React.useState(false);
 
   const getRegionName = React.useCallback(
     (id: string) => allData.regions.find(r => r.id === id)?.name || 'N/A',
     [allData.regions]
   );
   
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    if (selectedItems.size === 0) {
+        toast({ variant: "destructive", title: "Тээвэрлэлт сонгоогүй байна." });
+        return;
+    }
+    
+    setIsGeneratingPdf(true);
+    try {
+        const selectedItemsArray = Array.from(selectedItems.values());
+        const result = await generateQuotePdf({ order, orderItems: selectedItemsArray, allData });
+
+        if (result.success && result.pdfBase64) {
+            const byteCharacters = atob(result.pdfBase64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], {type: 'application/pdf'});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Quote-${order?.orderNumber || 'details'}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            toast({ variant: "destructive", title: "Алдаа", description: result.error || "PDF үүсгэхэд алдаа гарлаа." });
+        }
+    } catch (e) {
+        toast({ variant: "destructive", title: "Алдаа", description: "PDF үүсгэхэд системийн алдаа гарлаа." });
+    } finally {
+        setIsGeneratingPdf(false);
+    }
   };
 
   React.useEffect(() => {
@@ -266,9 +299,9 @@ export default function GenerateQuotePage() {
                           <div>
                               <CardTitle>Урьдчилан харах</CardTitle>
                           </div>
-                          <Button variant="outline" onClick={handlePrint} disabled={selectedItems.size === 0}>
-                              <Printer className="mr-2 h-4 w-4" />
-                              Хэвлэх / PDF
+                          <Button variant="outline" onClick={handlePrint} disabled={selectedItems.size === 0 || isGeneratingPdf}>
+                              {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+                              {isGeneratingPdf ? 'Боловсруулж байна...' : 'Хэвлэх / PDF'}
                           </Button>
                       </div>
                   </CardHeader>
