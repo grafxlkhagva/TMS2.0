@@ -123,6 +123,17 @@ const styles = StyleSheet.create({
     borderTopColor: '#e5e7eb',
     paddingTop: 8,
   },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  col2: {
+    width: '50%',
+  },
+  conditionsList: {
+    flexDirection: 'column',
+    marginLeft: 16,
+  }
 });
 
 const roundCurrency = (value: number | undefined | null): number => {
@@ -225,7 +236,7 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
                   <Text style={[styles.tableCol, {width: '10%'}]}>{getServiceName(item.serviceTypeId)}</Text>
                   <View style={[styles.tableCol, {width: '15%'}]}>
                     {(item.cargoItems || []).map((cargo: OrderItemCargo, i: number) => (
-                      <View key={cargo.id || i}>
+                      <View key={cargo.id || i} style={{marginBottom: 2}}>
                         <Text style={{fontWeight: 'bold'}}>{cargo.name}</Text>
                         <Text>{`${cargo.quantity} ${cargo.unit} (${getPackagingTypeName(cargo.packagingTypeId)})`}</Text>
                       </View>
@@ -253,6 +264,31 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
             </View>
         </View>
 
+        {order.conditions && (
+          <View style={[styles.section, {marginTop: 20}]} wrap={false}>
+            <Text style={styles.sectionTitle}>Тээврийн нөхцөл</Text>
+            <View style={styles.grid}>
+              <View style={styles.col2}><Text><Text style={styles.infoLabel}>Ачилт:</Text><Text style={styles.infoValue}>{order.conditions.loading}</Text></Text></View>
+              <View style={styles.col2}><Text><Text style={styles.infoLabel}>Буулгалт:</Text><Text style={styles.infoValue}>{order.conditions.unloading}</Text></Text></View>
+              <View style={styles.col2}><Text><Text style={styles.infoLabel}>ТХ-н бэлэн байдал:</Text><Text style={styles.infoValue}>{order.conditions.vehicleAvailability}</Text></Text></View>
+              <View style={styles.col2}><Text><Text style={styles.infoLabel}>Төлбөрийн нөхцөл:</Text><Text style={styles.infoValue}>{order.conditions.paymentTerm}</Text></Text></View>
+              <View style={{width: '100%', marginTop: 2}}><Text><Text style={styles.infoLabel}>Даатгал:</Text><Text style={styles.infoValue}>{order.conditions.insurance}</Text></Text></View>
+              <View style={{width: '100%', marginTop: 2}}>
+                <Text style={styles.infoLabel}>Зөвшөөрөл:</Text>
+                 {(order.conditions.permits?.roadPermit || order.conditions.permits?.roadToll) ? (
+                  <View style={styles.conditionsList}>
+                    {order.conditions.permits.roadPermit && <Text>• Замын зөвшөөрөл авна</Text>}
+                    {order.conditions.permits.roadToll && <Text>• Замын хураамж тушаана</Text>}
+                  </View>
+                ) : <Text style={styles.infoValue}>Тодорхойлоогүй</Text>}
+              </View>
+              {order.conditions.additionalConditions && (
+                 <View style={{width: '100%', marginTop: 2}}><Text><Text style={styles.infoLabel}>Нэмэлт нөхцөл:</Text><Text style={styles.infoValue}>{order.conditions.additionalConditions}</Text></Text></View>
+              )}
+            </View>
+          </View>
+        )}
+
         <Text style={styles.footer}>Tumen Tech TMS - Тээвэр ложистикийн удирдлагын систем</Text>
       </Page>
     </Document>
@@ -260,3 +296,4 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
 };
 
 export default QuoteDocument;
+
