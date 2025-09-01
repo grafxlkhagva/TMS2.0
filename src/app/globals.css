@@ -112,15 +112,17 @@ body {
 }
 
 @media print {
-  body, html {
-    background: #fff !important;
-    color: #000 !important;
-  }
-  .no-print {
-    display: none !important;
+  body {
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .print-only {
     display: block !important;
+  }
+  .no-print {
+    display: none !important;
   }
 }
 

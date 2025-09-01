@@ -1,173 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
 
-'use server';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-import puppeteer from 'puppeteer';
-
-// Helper to safely round numbers to 2 decimal places.
-const roundCurrency = (value: number | undefined | null): number => {
-  if (value == null || isNaN(value)) return 0;
-  return Math.round(value * 100) / 100;
-};
-
-// Helper function to generate HTML for the quote.
-// This avoids using ReactDOMServer in a Server Action.
-const generateHtmlForQuote = (data: any): string => {
-  const { order, orderItems, allData } = data;
-  
-  if (!order) return '<h1>Захиалга олдсонгүй.</h1>';
-
-  const getServiceName = (id: string) => allData.serviceTypes.find((s: any) => s.id === id)?.name || 'N/A';
-  const getRegionName = (id: string) => allData.regions.find((r: any) => r.id === id)?.name || 'N/A';
-  const getWarehouseName = (id: string) => allData.warehouses.find((w: any) => w.id === id)?.name || 'N/A';
-  const getVehicleTypeName = (id: string) => allData.vehicleTypes.find((v: any) => v.id === id)?.name || 'N/A';
-  const getTrailerTypeName = (id: string) => allData.trailerTypes.find((t: any) => t.id === id)?.name || 'N/A';
-  const getPackagingTypeName = (id: string) => allData.packagingTypes.find((p: any) => p.id === id)?.name || 'N/A';
-  
-  const { totalPayment, totalVat, totalFinalPrice } = orderItems.reduce(
-    (acc: any, item: any) => {
-      const finalPrice = roundCurrency(item.finalPrice);
-      const priceBeforeVat = item.withVAT ? finalPrice / 1.1 : finalPrice;
-      const vat = finalPrice - priceBeforeVat;
-      
-      acc.totalPayment += priceBeforeVat;
-      acc.totalVat += vat;
-      acc.totalFinalPrice += finalPrice;
-      return acc;
-    },
-    { totalPayment: 0, totalVat: 0, totalFinalPrice: 0 }
-  );
-  
-  const quoteDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-CA') : new Date().toLocaleDateString('en-CA');
-  
-  const itemsHtml = orderItems.map((item: any) => {
-      const frequency = item.frequency && item.frequency > 0 ? item.frequency : 1;
-      const finalPrice = roundCurrency(item.finalPrice);
-      const priceBeforeVat = item.withVAT ? finalPrice / 1.1 : finalPrice;
-      const vatAmount = finalPrice - priceBeforeVat;
-      const singleTransportPriceWithProfit = priceBeforeVat / frequency;
-
-      const cargoHtml = (item.cargoItems || []).map((cargo: any) => `
-        <div style="margin-bottom: 4px;">
-            <p style="font-weight: 600;">${cargo.name}</p>
-            <p style="padding-left: 8px; color: #555;">${cargo.quantity} ${cargo.unit} (${getPackagingTypeName(cargo.packagingTypeId)})</p>
-        </div>
-      `).join('');
-
-      return `
-        <tr>
-          <td style="padding: 4px; border: 1px solid #9ca3af; vertical-align: top;">${getServiceName(item.serviceTypeId)}</td>
-          <td style="padding: 4px; border: 1px solid #9ca3af; vertical-align: top;">${cargoHtml}</td>
-          <td style="padding: 4px; border: 1px solid #9ca3af; vertical-align: top;">${getRegionName(item.startRegionId)}, ${getWarehouseName(item.startWarehouseId)}</td>
-          <td style="padding: 4px; border: 1px solid #9ca3af; vertical-align: top;">${getRegionName(item.endRegionId)}, ${getWarehouseName(item.endWarehouseId)}</td>
-          <td style="padding: 4px; border: 1px solid #9ca3af; text-align: right; vertical-align: top;">${item.totalDistance} км</td>
-          <td style="padding: 4px; border: 1px solid #9ca3af; vertical-align: top;">${getVehicleTypeName(item.vehicleTypeId)}, ${getTrailerTypeName(item.trailerTypeId)}</td>
-          <td style="padding: 4px; border: 1px solid #9ca3af; text-align: right; vertical-align: top;">${roundCurrency(singleTransportPriceWithProfit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-          <td style="padding: 4px; border: 1px solid #9ca3af; text-align: right; vertical-align: top;">${frequency}</td>
-          <td style="padding: 4px; border: 1px solid #9ca3af; text-align: right; vertical-align: top;">${roundCurrency(priceBeforeVat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-          <td style="padding: 4px; border: 1px solid #9ca3af; text-align: right; vertical-align: top;">${roundCurrency(vatAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-          <td style="padding: 4px; border: 1px solid #9ca3af; text-align: right; font-weight: 500; vertical-align: top;">${finalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        </tr>
-      `;
-    }).join('');
-
-  return `
-    <html>
-      <head>
-        <style>
-          body { font-family: sans-serif; }
-          table { width: 100%; border-collapse: collapse; }
-          th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
-          th { background-color: #f2f2f2; }
-        </style>
-      </head>
-      <body>
-        <div style="background-color: white; padding: 2rem; color: #1f2937; font-size: 10px;">
-          <header style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #374151; padding-bottom: 1rem; margin-bottom: 1.5rem;">
-            <div><h1 style="font-size: 1.5rem; font-weight: bold;">Tumen Tech TMS</h1></div>
-            <div style="text-align: right;">
-              <h2 style="font-size: 1.25rem; font-weight: bold; text-transform: uppercase;">ҮНИЙН САНАЛ</h2>
-              <p><strong>Огноо:</strong> ${quoteDate}</p>
-              <p><strong>Захиалгын №:</strong> ${order.orderNumber}</p>
-            </div>
-          </header>
-
-          <section style="margin-bottom: 1.5rem;">
-            <h3 style="font-size: 1rem; font-weight: 600; border-bottom: 1px solid #6b7280; padding-bottom: 0.25rem; margin-bottom: 0.5rem;">Захиалагчийн мэдээлэл</h3>
-            <p><strong>Байгууллага:</strong> ${order.customerName}</p>
-            <p><strong>Хариуцсан ажилтан:</strong> ${order.employeeName}</p>
-          </section>
-
-          <table style="width: 100%; text-align: left; font-size: 9px; border-collapse: collapse;">
-            <thead style="background-color: #f3f4f6; font-weight: bold;">
-              <tr>
-                <th style="padding: 4px; border: 1px solid #9ca3af;">Үйлчилгээний төрөл</th>
-                <th style="padding: 4px; border: 1px solid #9ca3af;">Ачааны мэдээлэл</th>
-                <th style="padding: 4px; border: 1px solid #9ca3af;">Ачих</th>
-                <th style="padding: 4px; border: 1px solid #9ca3af;">Буулгах</th>
-                <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Нийт зам</th>
-                <th style="padding: 4px; border: 1px solid #9ca3af;">Тээврийн хэрэгсэл</th>
-                <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Тээврийн үнэ</th>
-                <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Тээврийн тоо</th>
-                <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Нийт төлбөр</th>
-                <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">НӨАТ</th>
-                <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Нийт дүн</th>
-              </tr>
-            </thead>
-            <tbody>${itemsHtml}</tbody>
-            <tfoot style="font-weight: bold; background-color: #f3f4f6;">
-              <tr>
-                <td colspan="8" style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Нийт дүн:</td>
-                <td style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">${roundCurrency(totalPayment).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">${roundCurrency(totalVat).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">${roundCurrency(totalFinalPrice).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-              </tr>
-            </tfoot>
-          </table>
-          
-          <footer style="text-align: center; color: #6b7280; margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
-              <p>Tumen Tech TMS - Тээвэр ложистикийн удирдлагын систем</p>
-          </footer>
-        </div>
-      </body>
-    </html>
-  `;
+body {
+  font-family: 'Inter', sans-serif;
 }
 
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
 
-// This function needs to be serializable, so we pass plain objects.
-export async function generateQuotePdf(data: any): Promise<{ success: boolean, pdfBase64?: string, error?: string }> {
-  try {
-    const htmlContent = generateHtmlForQuote(data);
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
 
-    // Launch a headless browser
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-    const page = await browser.newPage();
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
 
-    // Set the HTML content of the page
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
 
-    // Generate PDF
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '20px',
-        right: '20px',
-        bottom: '20px',
-        left: '20px'
-      }
-    });
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
-    await browser.close();
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    // Return the PDF as a base64 string
-    return { success: true, pdfBase64: pdfBuffer.toString('base64') };
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
 
-  } catch (error) {
-    console.error('Error generating PDF:', error);
-    return { success: false, error: 'An error occurred while generating the PDF.' };
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+
+    --sidebar-background: 220 14.3% 95.9%;
+    --sidebar-foreground: 222.2 84% 4.9%;
+    --sidebar-primary: 222.2 47.4% 11.2%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 0 0% 100%;
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 222.2 84% 4.9%;
   }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+
+    --sidebar-background: 222.2 84% 4.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 210 40% 98%;
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@media print {
+  body {
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+.print-only {
+  display: none;
 }
