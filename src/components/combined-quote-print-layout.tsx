@@ -37,10 +37,7 @@ type CombinedQuotePrintLayoutProps = {
   allData: AllData;
 };
 
-const CombinedQuotePrintLayout = React.forwardRef<
-  HTMLDivElement,
-  CombinedQuotePrintLayoutProps
->(({ order, orderItems, allData }, ref) => {
+export default function CombinedQuotePrintLayout({ order, orderItems, allData }: CombinedQuotePrintLayoutProps) {
   if (!order) return null;
 
   const getServiceName = React.useCallback((id: string) => allData.serviceTypes.find(s => s.id === id)?.name || 'N/A', [allData.serviceTypes]);
@@ -73,7 +70,7 @@ const CombinedQuotePrintLayout = React.forwardRef<
   const quoteDate = order.createdAt ? format(new Date(order.createdAt), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
 
   return (
-      <div ref={ref} className="bg-white p-8 text-gray-800 text-[10px] print-smooth">
+      <div className="bg-white p-8 text-gray-800 text-[10px]">
         <header className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold">Tumen Tech TMS</h1>
@@ -85,7 +82,7 @@ const CombinedQuotePrintLayout = React.forwardRef<
           </div>
         </header>
 
-        <section className="mb-6 print-avoid-break">
+        <section className="mb-6">
           <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Захиалагчийн мэдээлэл</h3>
           <div className="flex"><p><strong>Байгууллага:</strong><span className="ml-1">{order.customerName}</span></p></div>
           <div className="flex"><p><strong>Хариуцсан ажилтан:</strong><span className="ml-1">{order.employeeName}</span></p></div>
@@ -167,7 +164,7 @@ const CombinedQuotePrintLayout = React.forwardRef<
         </table>
         
         {order.conditions && (
-          <section className="mb-6 mt-8 print-avoid-break">
+          <section className="mb-6 mt-8">
             <h3 className="text-base font-semibold border-b border-gray-400 pb-1 mb-2">Тээврийн нөхцөл</h3>
             <div className="grid grid-cols-2 gap-x-6 gap-y-1">
               <div className="flex"><p><strong>Ачилт:</strong><span className="ml-1">{order.conditions.loading}</span></p></div>
@@ -196,8 +193,4 @@ const CombinedQuotePrintLayout = React.forwardRef<
         </footer>
       </div>
   );
-});
-
-CombinedQuotePrintLayout.displayName = 'CombinedQuotePrintLayout';
-
-export default CombinedQuotePrintLayout;
+}

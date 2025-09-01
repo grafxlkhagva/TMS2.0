@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, FileText, Loader2, Printer } from 'lucide-react';
+import { ArrowLeft, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -211,7 +211,7 @@ export default function GenerateQuotePage() {
 
   return (
     <>
-      <div className="container mx-auto py-6 print-container no-print">
+      <div className="container mx-auto py-6 no-print">
         <div className="mb-6">
           <div className="flex items-center justify-between">
               <div>
