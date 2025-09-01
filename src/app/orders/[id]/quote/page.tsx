@@ -278,7 +278,6 @@ export default function GenerateQuotePage() {
                   <CardContent>
                       <div className="border rounded-md p-6 bg-gray-50 aspect-[210/297] overflow-auto">
                            <CombinedQuotePrintLayout 
-                              ref={printRef}
                               order={order}
                               orderItems={selectedItemsArray}
                               allData={allData}
@@ -289,13 +288,14 @@ export default function GenerateQuotePage() {
           </div>
         </div>
       </div>
-      <div className="hidden print-only">
-        <CombinedQuotePrintLayout 
-          ref={printRef}
-          order={order}
-          orderItems={selectedItemsArray}
-          allData={allData}
-        />
+      <div className="hidden">
+        <div ref={printRef}>
+          <CombinedQuotePrintLayout 
+            order={order}
+            orderItems={selectedItemsArray}
+            allData={allData}
+          />
+        </div>
       </div>
     </>
   );

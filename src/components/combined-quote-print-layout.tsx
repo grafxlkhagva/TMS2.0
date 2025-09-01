@@ -73,7 +73,6 @@ const CombinedQuotePrintLayout = React.forwardRef<
   const quoteDate = order.createdAt ? format(new Date(order.createdAt), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
 
   return (
-    <>
       <div ref={ref} className="bg-white p-8 text-gray-800 text-[10px] print-smooth">
         <header className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
           <div>
@@ -196,7 +195,6 @@ const CombinedQuotePrintLayout = React.forwardRef<
           <p>Tumen Tech TMS - Тээвэр ложистикийн удирдлагын систем</p>
         </footer>
       </div>
-    </>
   );
 });
 
