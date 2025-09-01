@@ -71,53 +71,65 @@ const generateHtmlForQuote = (data: any): string => {
     }).join('');
 
   return `
-    <div style="background-color: white; padding: 2rem; color: #1f2937; font-size: 10px; font-family: sans-serif;">
-      <header style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #374151; padding-bottom: 1rem; margin-bottom: 1.5rem;">
-        <div><h1 style="font-size: 1.5rem; font-weight: bold;">Tumen Tech TMS</h1></div>
-        <div style="text-align: right;">
-          <h2 style="font-size: 1.25rem; font-weight: bold; text-transform: uppercase;">ҮНИЙН САНАЛ</h2>
-          <p><strong>Огноо:</strong> ${quoteDate}</p>
-          <p><strong>Захиалгын №:</strong> ${order.orderNumber}</p>
+    <html>
+      <head>
+        <style>
+          body { font-family: sans-serif; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+          th { background-color: #f2f2f2; }
+        </style>
+      </head>
+      <body>
+        <div style="background-color: white; padding: 2rem; color: #1f2937; font-size: 10px;">
+          <header style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #374151; padding-bottom: 1rem; margin-bottom: 1.5rem;">
+            <div><h1 style="font-size: 1.5rem; font-weight: bold;">Tumen Tech TMS</h1></div>
+            <div style="text-align: right;">
+              <h2 style="font-size: 1.25rem; font-weight: bold; text-transform: uppercase;">ҮНИЙН САНАЛ</h2>
+              <p><strong>Огноо:</strong> ${quoteDate}</p>
+              <p><strong>Захиалгын №:</strong> ${order.orderNumber}</p>
+            </div>
+          </header>
+
+          <section style="margin-bottom: 1.5rem;">
+            <h3 style="font-size: 1rem; font-weight: 600; border-bottom: 1px solid #6b7280; padding-bottom: 0.25rem; margin-bottom: 0.5rem;">Захиалагчийн мэдээлэл</h3>
+            <p><strong>Байгууллага:</strong> ${order.customerName}</p>
+            <p><strong>Хариуцсан ажилтан:</strong> ${order.employeeName}</p>
+          </section>
+
+          <table style="width: 100%; text-align: left; font-size: 9px; border-collapse: collapse;">
+            <thead style="background-color: #f3f4f6; font-weight: bold;">
+              <tr>
+                <th style="padding: 4px; border: 1px solid #9ca3af;">Үйлчилгээний төрөл</th>
+                <th style="padding: 4px; border: 1px solid #9ca3af;">Ачааны мэдээлэл</th>
+                <th style="padding: 4px; border: 1px solid #9ca3af;">Ачих</th>
+                <th style="padding: 4px; border: 1px solid #9ca3af;">Буулгах</th>
+                <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Нийт зам</th>
+                <th style="padding: 4px; border: 1px solid #9ca3af;">Тээврийн хэрэгсэл</th>
+                <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Тээврийн үнэ</th>
+                <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Тээврийн тоо</th>
+                <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Нийт төлбөр</th>
+                <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">НӨАТ</th>
+                <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Нийт дүн</th>
+              </tr>
+            </thead>
+            <tbody>${itemsHtml}</tbody>
+            <tfoot style="font-weight: bold; background-color: #f3f4f6;">
+              <tr>
+                <td colspan="8" style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Нийт дүн:</td>
+                <td style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">${roundCurrency(totalPayment).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">${roundCurrency(totalVat).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">${roundCurrency(totalFinalPrice).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+              </tr>
+            </tfoot>
+          </table>
+          
+          <footer style="text-align: center; color: #6b7280; margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+              <p>Tumen Tech TMS - Тээвэр ложистикийн удирдлагын систем</p>
+          </footer>
         </div>
-      </header>
-
-      <section style="margin-bottom: 1.5rem;">
-        <h3 style="font-size: 1rem; font-weight: 600; border-bottom: 1px solid #6b7280; padding-bottom: 0.25rem; margin-bottom: 0.5rem;">Захиалагчийн мэдээлэл</h3>
-        <p><strong>Байгууллага:</strong> ${order.customerName}</p>
-        <p><strong>Хариуцсан ажилтан:</strong> ${order.employeeName}</p>
-      </section>
-
-      <table style="width: 100%; text-align: left; font-size: 9px; border-collapse: collapse;">
-        <thead style="background-color: #f3f4f6; font-weight: bold;">
-          <tr>
-            <th style="padding: 4px; border: 1px solid #9ca3af;">Үйлчилгээний төрөл</th>
-            <th style="padding: 4px; border: 1px solid #9ca3af;">Ачааны мэдээлэл</th>
-            <th style="padding: 4px; border: 1px solid #9ca3af;">Ачих</th>
-            <th style="padding: 4px; border: 1px solid #9ca3af;">Буулгах</th>
-            <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Нийт зам</th>
-            <th style="padding: 4px; border: 1px solid #9ca3af;">Тээврийн хэрэгсэл</th>
-            <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Тээврийн үнэ</th>
-            <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Тээврийн тоо</th>
-            <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Нийт төлбөр</th>
-            <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">НӨАТ</th>
-            <th style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Нийт дүн</th>
-          </tr>
-        </thead>
-        <tbody>${itemsHtml}</tbody>
-        <tfoot style="font-weight: bold; background-color: #f3f4f6;">
-          <tr>
-            <td colspan="8" style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">Нийт дүн:</td>
-            <td style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">${roundCurrency(totalPayment).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-            <td style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">${roundCurrency(totalVat).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-            <td style="padding: 4px; border: 1px solid #9ca3af; text-align: right;">${roundCurrency(totalFinalPrice).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-          </tr>
-        </tfoot>
-      </table>
-      
-      <footer style="text-align: center; color: #6b7280; margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
-          <p>Tumen Tech TMS - Тээвэр ложистикийн удирдлагын систем</p>
-      </footer>
-    </div>
+      </body>
+    </html>
   `;
 }
 
