@@ -94,30 +94,27 @@ export default function OrdersPage() {
             const batch = writeBatch(db);
             const orderRef = doc(db, 'orders', orderToDelete.id);
 
-            // 1. Find all related order_items
+            // 1. Find and delete all related order_items, quotes, and cargoes
             const itemsQuery = query(collection(db, 'order_items'), where('orderId', '==', orderToDelete.id));
             const itemsSnapshot = await getDocs(itemsQuery);
 
             for (const itemDoc of itemsSnapshot.docs) {
-                // For each item, find and delete related quotes and cargoes
-                const quotesQuery = query(collection(db, 'driver_quotes'), where('orderItemRef', '==', itemDoc.ref));
+                const itemRef = itemDoc.ref;
+                // Delete related quotes
+                const quotesQuery = query(collection(db, 'driver_quotes'), where('orderItemRef', '==', itemRef));
                 const quotesSnapshot = await getDocs(quotesQuery);
                 quotesSnapshot.forEach(quoteDoc => batch.delete(quoteDoc.ref));
 
-                const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemRef', '==', itemDoc.ref));
+                // Delete related cargoes
+                const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemRef', '==', itemRef));
                 const cargoSnapshot = await getDocs(cargoQuery);
                 cargoSnapshot.forEach(cargoDoc => batch.delete(cargoDoc.ref));
                 
                 // Delete the item itself
-                batch.delete(itemDoc.ref);
+                batch.delete(itemRef);
             }
             
-            // 2. Find and delete all related shipments
-            const shipmentsQuery = query(collection(db, 'shipments'), where('orderId', '==', orderToDelete.id));
-            const shipmentsSnapshot = await getDocs(shipmentsQuery);
-            shipmentsSnapshot.forEach(shipmentDoc => batch.delete(shipmentDoc.ref));
-
-            // 3. Delete the order itself
+            // 2. Delete the order itself
             batch.delete(orderRef);
 
             await batch.commit();
