@@ -3,7 +3,7 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, orderBy, addDoc, serverTimestamp, DocumentReference } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, orderBy, addDoc, serverTimestamp, DocumentReference, writeBatch, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
 import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, OrderItem, Warehouse, Contract, SafetyBriefing, Driver, ShipmentUpdate, ShipmentUpdateStatus } from '@/types';
@@ -20,7 +20,7 @@ import { Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2, FileSignature, Send, ExternalLink, ShieldCheck, CheckCircle, Sparkles, PlusCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, FileText, Info, Phone, User, Truck, Calendar, Cuboid, Package, Check, Loader2, FileSignature, Send, ExternalLink, ShieldCheck, CheckCircle, Sparkles, PlusCircle, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -121,6 +121,9 @@ export default function ShipmentDetailPage() {
   const [isGeneratingUnloadingChecklist, setIsGeneratingUnloadingChecklist] = React.useState(false);
   const [statusChange, setStatusChange] = React.useState<{ newStatus: ShipmentStatusType; oldStatus: ShipmentStatusType; } | null>(null);
   const [isSubmittingUpdate, setIsSubmittingUpdate] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
+
 
   const updateForm = useForm<UpdateFormValues>({
     resolver: zodResolver(updateFormSchema),
@@ -585,6 +588,50 @@ export default function ShipmentDetailPage() {
     }
   }
 
+  const handleDeleteShipment = async () => {
+    if (!shipment) return;
+    setIsDeleting(true);
+    try {
+        const batch = writeBatch(db);
+
+        // Delete associated contracts
+        const contractsQuery = query(collection(db, 'contracts'), where('shipmentId', '==', shipment.id));
+        const contractsSnapshot = await getDocs(contractsQuery);
+        contractsSnapshot.forEach(doc => batch.delete(doc.ref));
+        
+        // Delete associated safety briefings
+        const briefingsQuery = query(collection(db, 'safety_briefings'), where('shipmentId', '==', shipment.id));
+        const briefingsSnapshot = await getDocs(briefingsQuery);
+        briefingsSnapshot.forEach(doc => batch.delete(doc.ref));
+
+        // Delete associated shipment updates
+        const updatesQuery = query(collection(db, 'shipment_updates'), where('shipmentId', '==', shipment.id));
+        const updatesSnapshot = await getDocs(updatesQuery);
+        updatesSnapshot.forEach(doc => batch.delete(doc.ref));
+
+        // Update the related order_item status back to 'Assigned'
+        if (shipment.orderItemRef) {
+            batch.update(shipment.orderItemRef, { status: 'Assigned' });
+        }
+
+        // Delete the shipment itself
+        batch.delete(doc(db, 'shipments', shipment.id));
+
+        await batch.commit();
+
+        toast({ title: 'Амжилттай', description: 'Тээвэрлэлт устгагдлаа.' });
+        router.push(`/orders/${shipment.orderId}`);
+        
+    } catch (error) {
+        console.error("Error deleting shipment:", error);
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрлэлт устгахад алдаа гарлаа.' });
+    } finally {
+        setIsDeleting(false);
+        setShowDeleteDialog(false);
+    }
+  }
+
+
  const renderCurrentStageChecklist = () => {
     if (!shipment) return null;
     
@@ -881,6 +928,10 @@ export default function ShipmentDetailPage() {
                 Тээвэрлэлтийн дэлгэрэнгүй мэдээлэл.
                 </p>
             </div>
+             <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} disabled={isDeleting}>
+                <Trash2 className="mr-2 h-4 w-4"/>
+                Устгах
+             </Button>
         </div>
       </div>
       
@@ -993,6 +1044,23 @@ export default function ShipmentDetailPage() {
                 <AlertDialogCancel onClick={() => setStatusChange(null)}>Цуцлах</AlertDialogCancel>
                 <AlertDialogAction onClick={confirmStatusUpdate} disabled={isUpdating}>
                     {isUpdating ? "Шинэчилж байна..." : "Тийм, шилжүүлэх"}
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Та "{shipment?.shipmentNumber}" дугаартай тээвэрлэлтийг устгах гэж байна. Энэ үйлдэл нь холбогдох гэрээ, зааварчилгаа, явцын мэдээллийг хамт устгах бөгөөд захиалгын тээвэрлэлтийн статусыг буцаах болно.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>Цуцлах</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteShipment} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                    {isDeleting ? "Устгаж байна..." : "Тийм, устгах"}
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
