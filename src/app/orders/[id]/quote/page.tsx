@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, FileText, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileText, Loader2, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -72,12 +72,7 @@ export default function GenerateQuotePage() {
   const { id: orderId } = useParams<{ id: string }>();
   const router = useRouter();
   const { toast } = useToast();
-  const [isClient, setIsClient] = React.useState(false);
   const printRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const [order, setOrder] = React.useState<Order | null>(null);
   const [acceptedItems, setAcceptedItems] = React.useState<OrderItem[]>([]);
@@ -176,6 +171,10 @@ export default function GenerateQuotePage() {
       return newMap;
     });
   };
+
+  const handlePrint = () => {
+    window.print();
+  }
     
   const selectedItemsArray = Array.from(selectedItems.values()).sort((a,b) => (a.createdAt?.getTime?.() ?? 0) - (b.createdAt?.getTime?.() ?? 0));
   
@@ -213,7 +212,7 @@ export default function GenerateQuotePage() {
   }
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto py-6 no-print">
       <div className="mb-6">
         <div className="flex items-center justify-between">
             <div>
@@ -268,10 +267,14 @@ export default function GenerateQuotePage() {
                         <div>
                             <CardTitle>Урьдчилан харах</CardTitle>
                         </div>
+                        <Button variant="outline" onClick={handlePrint} disabled={selectedItems.size === 0}>
+                            <Printer className="mr-2 h-4 w-4" />
+                            Хэвлэх / PDF
+                        </Button>
                      </div>
                  </CardHeader>
                  <CardContent>
-                    <div className="border rounded-md p-6 bg-gray-50 aspect-[1.414/1] overflow-auto">
+                    <div className="border rounded-md p-6 bg-gray-50 aspect-[297/210] overflow-auto">
                         <CombinedQuotePrintLayout 
                             ref={printRef}
                             order={order}
@@ -282,6 +285,14 @@ export default function GenerateQuotePage() {
                  </CardContent>
              </Card>
         </div>
+      </div>
+      <div className="print-only">
+          <CombinedQuotePrintLayout 
+            ref={printRef}
+            order={order}
+            orderItems={selectedItemsArray}
+            allData={allData}
+          />
       </div>
     </div>
   );

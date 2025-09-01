@@ -74,37 +74,7 @@ const CombinedQuotePrintLayout = React.forwardRef<
 
   return (
     <>
-      <style jsx global>{`
-        :root { 
-          --print-font: "Inter", "Roboto", "Noto Sans", "Noto Sans Mongolian", system-ui, sans-serif; 
-        }
-        .print-smooth {
-          font-family: var(--print-font);
-          -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
-        }
-        @page {
-          size: A4 landscape;
-          margin: 12mm;
-        }
-        @media print {
-          html, body {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-            width: 297mm;
-            height: 210mm;
-            font-family: var(--print-font);
-          }
-          tr, thead, tfoot, .print-avoid-break {
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-          table {
-            border-collapse: collapse;
-          }
-        }
-      `}</style>
-      <div ref={ref} className="bg-white p-8 text-gray-800 text-[10px] print-smooth" style={{ width: '100%', height: '100%' }}>
+      <div ref={ref} className="bg-white p-8 text-gray-800 text-[10px] print-smooth">
         <header className="flex justify-between items-start border-b-2 border-gray-700 pb-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold">Tumen Tech TMS</h1>
