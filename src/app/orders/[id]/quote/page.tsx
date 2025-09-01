@@ -18,7 +18,6 @@ import type {
   OrderItemCargo,
 } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { useReactToPrint } from 'react-to-print';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -26,7 +25,6 @@ import { ArrowLeft, FileText, Loader2, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import CombinedQuotePrintLayout from '@/components/combined-quote-print-layout';
 
 
@@ -73,8 +71,7 @@ export default function GenerateQuotePage() {
   const { id: orderId } = useParams<{ id: string }>();
   const router = useRouter();
   const { toast } = useToast();
-  const printRef = React.useRef<HTMLDivElement>(null);
-
+  
   const [order, setOrder] = React.useState<Order | null>(null);
   const [acceptedItems, setAcceptedItems] = React.useState<OrderItem[]>([]);
   const [selectedItems, setSelectedItems] = React.useState<Map<string, OrderItem>>(new Map());
@@ -86,9 +83,9 @@ export default function GenerateQuotePage() {
     [allData.regions]
   );
   
-  const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-  });
+  const handlePrint = () => {
+    window.print();
+  };
 
   React.useEffect(() => {
     if (!orderId) return;
@@ -214,7 +211,7 @@ export default function GenerateQuotePage() {
 
   return (
     <>
-      <div className="container mx-auto py-6">
+      <div className="container mx-auto py-6 print-container no-print">
         <div className="mb-6">
           <div className="flex items-center justify-between">
               <div>
@@ -288,14 +285,12 @@ export default function GenerateQuotePage() {
           </div>
         </div>
       </div>
-      <div className="hidden">
-        <div ref={printRef}>
+      <div className="print-only">
           <CombinedQuotePrintLayout 
             order={order}
             orderItems={selectedItemsArray}
             allData={allData}
           />
-        </div>
       </div>
     </>
   );
