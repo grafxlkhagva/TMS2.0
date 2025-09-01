@@ -1,32 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
 
-/**
- * Standard DPI used for web calculations.
- */
-export const DPI = 96;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/**
- * A4 paper dimensions in millimeters (landscape).
- */
-export const A4_MM_WIDTH = 297;
-export const A4_MM_HEIGHT = 210;
+body {
+  font-family: 'Inter', sans-serif;
+}
 
-/**
- * Converts millimeters to pixels.
- * @param mm Millimeters to convert.
- * @returns Equivalent value in pixels.
- */
-export const mmToPx = (mm: number): number => (mm * DPI) / 25.4;
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
 
-/**
- * Converts pixels to millimeters.
- * @param px Pixels to convert.
- * @returns Equivalent value in millimeters.
- */
-export const pxToMm = (px: number): number => (px * 25.4) / DPI;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
 
-/**
- * Approximate width of an A4 landscape page in pixels at standard DPI.
- * This is used to set the width of the HTML element before capturing it with html2canvas.
- * 297mm * 96 DPI / 25.4 mm/inch ≈ 1122.5 px
- */
-export const A4_WIDTH_PX = Math.round(mmToPx(A4_MM_WIDTH));
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+
+    --sidebar-background: 220 14.3% 95.9%;
+    --sidebar-foreground: 222.2 84% 4.9%;
+    --sidebar-primary: 222.2 47.4% 11.2%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 0 0% 100%;
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 222.2 84% 4.9%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+
+    --sidebar-background: 222.2 84% 4.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 210 40% 98%;
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@media print {
+  body {
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+.print-only {
+  display: none;
+}

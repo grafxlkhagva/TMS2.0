@@ -289,14 +289,13 @@ export default function GenerateQuotePage() {
           </div>
         </div>
       </div>
-      <div className="hidden">
-        <div ref={printRef}>
-          <CombinedQuotePrintLayout 
-            order={order}
-            orderItems={selectedItemsArray}
-            allData={allData}
-          />
-        </div>
+      <div className="hidden print-only">
+        <CombinedQuotePrintLayout 
+          ref={printRef}
+          order={order}
+          orderItems={selectedItemsArray}
+          allData={allData}
+        />
       </div>
     </>
   );
