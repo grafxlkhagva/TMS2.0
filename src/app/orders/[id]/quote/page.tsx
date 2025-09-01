@@ -81,14 +81,16 @@ export default function GenerateQuotePage() {
     }
     setIsGeneratingPdf(true);
     try {
-        const itemIds = Array.from(selectedItems.keys());
+        const dataForPdf = {
+            order: order,
+            orderItems: Array.from(selectedItems.values()),
+            allData: allData
+        };
+
         const response = await fetch('/api/quotes/pdf', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                orderId, 
-                itemIds,
-             })
+            body: JSON.stringify(dataForPdf)
         });
 
         if (!response.ok) {
