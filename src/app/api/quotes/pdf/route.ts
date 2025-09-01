@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { renderToStream } from '@react-pdf/renderer';
 import QuoteDocument from '@/components/pdf/QuoteDocument';
+import React from 'react';
 
 export async function POST(request: Request) {
     try {
@@ -12,11 +13,11 @@ export async function POST(request: Request) {
         }
 
         const pdfStream = await renderToStream(
-            <QuoteDocument 
-                order={body.order}
-                orderItems={body.orderItems}
-                allData={body.allData}
-            />
+            React.createElement(QuoteDocument, {
+                order: body.order,
+                orderItems: body.orderItems,
+                allData: body.allData,
+            })
         );
         
         return new NextResponse(pdfStream as any, {
