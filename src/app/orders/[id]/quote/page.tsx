@@ -94,23 +94,20 @@ export default function GenerateQuotePage() {
         });
 
         if (!response.ok) {
-            let errorMessage = 'PDF үүсгэхэд алдаа гарлаа.';
+            let errorMessage = 'PDF үүсгэхэд алдаа гарлаа';
             try {
-                // Try to parse as JSON first
-                const errorData = await response.json();
-                if (errorData && errorData.message) {
-                    errorMessage = errorData.message;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await response.json();
+                    if (typeof errorData === 'string') errorMessage = errorData;
+                    else if (typeof errorData?.message === 'string') errorMessage = errorData.message;
+                    else errorMessage = JSON.stringify(errorData);
+                } else {
+                    const textData = await response.text();
+                    if (textData) errorMessage = textData;
                 }
-            } catch (jsonError) {
-                // If not JSON, try to read as text
-                try {
-                    const textError = await response.text();
-                    if (textError) {
-                        errorMessage = textError;
-                    }
-                } catch (textError) {
-                    // Fallback if reading as text also fails
-                }
+            } catch (e) {
+                // Ignore parsing errors, use the default message
             }
             throw new Error(errorMessage);
         }

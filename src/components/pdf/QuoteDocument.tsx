@@ -129,8 +129,10 @@ const styles = StyleSheet.create({
   },
   col2: {
     width: '50%',
-    flexDirection: 'row',
     marginBottom: 2,
+  },
+  conditionItem: {
+      flexDirection: 'row',
   },
   conditionsList: {
     flexDirection: 'column',
@@ -139,12 +141,8 @@ const styles = StyleSheet.create({
   },
   fullWidth: {
       width: '100%',
-      flexDirection: 'row',
       marginTop: 2,
       marginBottom: 2,
-  },
-  conditionItem: {
-    flexDirection: 'row',
   },
 });
 
@@ -258,7 +256,7 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
               const singleTransportPriceWithProfit = priceBeforeVat / frequency;
 
               return (
-                <View key={item.id} style={styles.tableRow}>
+                <View key={item.id} style={styles.tableRow} wrap={false}>
                   <View style={[styles.tableCol, {width: '10%'}]}><Text>{getServiceName(item.serviceTypeId)}</Text></View>
                   <View style={[styles.tableCol, {width: '15%'}]}>
                     {(item.cargoItems || []).map((cargo: OrderItemCargo, i: number) => (
@@ -303,38 +301,38 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
           <View style={[styles.section, {marginTop: 20}]} wrap={false}>
             <Text style={styles.sectionTitle}>Тээврийн нөхцөл</Text>
             <View style={styles.grid}>
-                <View style={styles.col2}>
-                  <View style={styles.conditionItem}>
-                    <Text style={styles.infoLabel}>Ачилт: </Text>
-                    <Text style={styles.infoValue}>{order.conditions.loading}</Text>
-                  </View>
+              <View style={styles.col2}>
+                <View style={styles.conditionItem}>
+                  <Text style={styles.infoLabel}>Ачилт: </Text>
+                  <Text style={styles.infoValue}>{order.conditions.loading}</Text>
                 </View>
-                <View style={styles.col2}>
-                  <View style={styles.conditionItem}>
-                    <Text style={styles.infoLabel}>Буулгалт: </Text>
-                    <Text style={styles.infoValue}>{order.conditions.unloading}</Text>
-                  </View>
+              </View>
+              <View style={styles.col2}>
+                <View style={styles.conditionItem}>
+                  <Text style={styles.infoLabel}>Буулгалт: </Text>
+                  <Text style={styles.infoValue}>{order.conditions.unloading}</Text>
                 </View>
-                <View style={styles.col2}>
-                  <View style={styles.conditionItem}>
-                    <Text style={styles.infoLabel}>ТХ-н бэлэн байдал: </Text>
-                    <Text style={styles.infoValue}>{order.conditions.vehicleAvailability}</Text>
-                  </View>
+              </View>
+              <View style={styles.col2}>
+                <View style={styles.conditionItem}>
+                  <Text style={styles.infoLabel}>ТХ-н бэлэн байдал: </Text>
+                  <Text style={styles.infoValue}>{order.conditions.vehicleAvailability}</Text>
                 </View>
-                <View style={styles.col2}>
-                  <View style={styles.conditionItem}>
-                    <Text style={styles.infoLabel}>Төлбөрийн нөхцөл: </Text>
-                    <Text style={styles.infoValue}>{order.conditions.paymentTerm}</Text>
-                  </View>
+              </View>
+              <View style={styles.col2}>
+                <View style={styles.conditionItem}>
+                  <Text style={styles.infoLabel}>Төлбөрийн нөхцөл: </Text>
+                  <Text style={styles.infoValue}>{order.conditions.paymentTerm}</Text>
                 </View>
-                <View style={styles.fullWidth}>
-                  <View style={styles.conditionItem}>
-                    <Text style={styles.infoLabel}>Даатгал: </Text>
-                    <Text style={styles.infoValue}>{order.conditions.insurance}</Text>
-                  </View>
+              </View>
+              <View style={styles.fullWidth}>
+                <View style={styles.conditionItem}>
+                  <Text style={styles.infoLabel}>Даатгал: </Text>
+                  <Text style={styles.infoValue}>{order.conditions.insurance}</Text>
                 </View>
+              </View>
 
-              <View style={[styles.fullWidth, {flexDirection: 'column'}]}>
+              <View style={[styles.fullWidth, { flexDirection: 'column' }]}>
                 <Text style={styles.infoLabel}>Зөвшөөрөл:</Text>
                 {(order.conditions.permits?.roadPermit || order.conditions.permits?.roadToll) ? (
                   <View style={styles.conditionsList}>
@@ -356,7 +354,7 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
           </View>
         )}
 
-        <Text style={styles.footer}>Tumen Tech TMS - Тээвэр ложистикийн удирдлагын систем</Text>
+        <Text style={styles.footer} fixed>Tumen Tech TMS - Тээвэр ложистикийн удирдлагын систем</Text>
       </Page>
     </Document>
   )
