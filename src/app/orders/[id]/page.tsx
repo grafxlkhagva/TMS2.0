@@ -43,7 +43,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Checkbox } from '@/components/ui/checkbox';
 
 
 const quoteFormSchema = z.object({
@@ -151,7 +150,6 @@ export default function OrderDetailPage() {
   const [itemToDelete, setItemToDelete] = React.useState<OrderItem | null>(null);
   const [itemToShip, setItemToShip] = React.useState<OrderItem | null>(null);
   const [isUpdatingEmployee, setIsUpdatingEmployee] = React.useState(false);
-  const [selectedItemsForQuote, setSelectedItemsForQuote] = React.useState<Set<string>>(new Set());
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -225,14 +223,6 @@ export default function OrderDetailPage() {
       itemsData.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       setOrderItems(itemsData);
       
-      const initialSelectedItems = new Set<string>();
-      itemsData.forEach(item => {
-        if(item.acceptedQuoteId) {
-            initialSelectedItems.add(item.id);
-        }
-      });
-      setSelectedItemsForQuote(initialSelectedItems);
-
       // Fetch quotes for each item
       const quotesMap = new Map<string, DriverQuote[]>();
       for (const item of itemsData) {
@@ -246,7 +236,7 @@ export default function OrderDetailPage() {
                 createdAt: toDateSafe(data.createdAt)
             } as DriverQuote
           });
-          quotesData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+          quotesData.sort((a, b) => b.createdAt.getTime() - a.getTime());
           quotesMap.set(item.id, quotesData);
       }
       setQuotes(quotesMap);
@@ -661,18 +651,6 @@ export default function OrderDetailPage() {
   const getTrailerTypeName = (id: string) => trailerTypes.find(t => t.id === id)?.name || 'N/A';
   const getChannelName = (channel: 'Phone' | 'App') => channel === 'Phone' ? 'Утсаар' : 'Апп-р';
 
-  const handleSelectItemForQuote = (itemId: string) => {
-    setSelectedItemsForQuote(prev => {
-        const newSet = new Set(prev);
-        if (newSet.has(itemId)) {
-            newSet.delete(itemId);
-        } else {
-            newSet.add(itemId);
-        }
-        return newSet;
-    });
-  };
-
   const handleAddNewItem = () => {
     const fromDate = new Date();
     const toDate = new Date();
@@ -772,12 +750,6 @@ export default function OrderDetailPage() {
                 <p className="text-muted-foreground font-mono">{order.orderNumber}</p>
             </div>
              <div className="flex items-center gap-2">
-                <Button variant="outline" asChild>
-                    <Link href={`/orders/${order.id}/quote`}>
-                        <FileText className="mr-2 h-4 w-4"/>
-                        Үнийн санал үүсгэх
-                    </Link>
-                </Button>
                 <Button asChild>
                     <Link href={`/orders/${order.id}/edit`}>
                         <Edit className="mr-2 h-4 w-4"/>
@@ -820,15 +792,6 @@ export default function OrderDetailPage() {
                            {orderItems.map((item, index) => (
                                <AccordionItem value={`item-${index}`} key={item.id}>
                                    <div className="flex items-center gap-4 w-full pr-4 border-b">
-                                       <div className="py-4 pl-4">
-                                            <Checkbox
-                                                id={`select-item-${item.id}`}
-                                                checked={selectedItemsForQuote.has(item.id)}
-                                                onCheckedChange={() => handleSelectItemForQuote(item.id)}
-                                                disabled={!item.acceptedQuoteId}
-                                                aria-label="Нэгдсэн саналд нэмэх"
-                                            />
-                                       </div>
                                        <AccordionTrigger className="flex-1 py-4 pr-0 border-b-0 text-left">
                                             <div className="flex justify-between items-start w-full gap-4">
                                                 <div className="flex-1 space-y-2">

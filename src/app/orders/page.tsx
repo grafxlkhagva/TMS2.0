@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -227,12 +228,6 @@ export default function OrdersPage() {
                                         <Edit className="mr-2 h-4 w-4"/>
                                         Засах
                                     </Link>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem asChild>
-                                      <Link href={`/orders/${order.id}/quote`}>
-                                        <FileText className="mr-2 h-4 w-4" />
-                                        Үнийн санал үүсгэх
-                                      </Link>
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem onClick={() => setOrderToDelete(order)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
