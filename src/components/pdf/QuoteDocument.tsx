@@ -60,6 +60,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     fontSize: 9,
     marginTop: 4,
+    justifyContent: 'flex-end',
   },
   section: {
     marginBottom: 20,
@@ -129,10 +130,18 @@ const styles = StyleSheet.create({
   },
   col2: {
     width: '50%',
+    flexDirection: 'row',
   },
   conditionsList: {
     flexDirection: 'column',
     marginLeft: 16,
+    marginTop: 2,
+  },
+  fullWidth: {
+      width: '100%',
+      flexDirection: 'row',
+      marginTop: 2,
+      marginBottom: 2,
   }
 });
 
@@ -252,7 +261,7 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
                   </View>
                   <View style={[styles.tableCol, {width: '7%', textAlign: 'right'}]}><Text>{item.totalDistance} км</Text></View>
                   <View style={[styles.tableCol, {width: '10%'}]}>
-                    <Text>{`${getVehicleTypeName(item.vehicleTypeId)}, ${getTrailerTypeName(item.trailerTypeId)}`}</Text>
+                    <Text>{getVehicleTypeName(item.vehicleTypeId)}, {getTrailerTypeName(item.trailerTypeId)}</Text>
                   </View>
                   <View style={[styles.tableCol, {width: '8%', textAlign: 'right'}]}><Text>{formatNumber(singleTransportPriceWithProfit)}</Text></View>
                   <View style={[styles.tableCol, {width: '5%', textAlign: 'right'}]}><Text>{frequency}</Text></View>
@@ -276,12 +285,12 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
           <View style={[styles.section, {marginTop: 20}]} wrap={false}>
             <Text style={styles.sectionTitle}>Тээврийн нөхцөл</Text>
             <View style={styles.grid}>
-              <View style={[styles.col2, {marginBottom: 2}]}><Text><Text style={styles.infoLabel}>Ачилт: </Text>{order.conditions.loading}</Text></View>
-              <View style={[styles.col2, {marginBottom: 2}]}><Text><Text style={styles.infoLabel}>Буулгалт: </Text>{order.conditions.unloading}</Text></View>
-              <View style={[styles.col2, {marginBottom: 2}]}><Text><Text style={styles.infoLabel}>ТХ-н бэлэн байдал: </Text>{order.conditions.vehicleAvailability}</Text></View>
-              <View style={[styles.col2, {marginBottom: 2}]}><Text><Text style={styles.infoLabel}>Төлбөрийн нөхцөл: </Text>{order.conditions.paymentTerm}</Text></View>
-              <View style={{width: '100%', marginTop: 2, marginBottom: 2}}><Text><Text style={styles.infoLabel}>Даатгал: </Text>{order.conditions.insurance}</Text></View>
-              <View style={{width: '100%', marginTop: 2, marginBottom: 2}}>
+              <View style={[styles.col2, {marginBottom: 2}]}><Text style={styles.infoLabel}>Ачилт: </Text><Text>{order.conditions.loading}</Text></View>
+              <View style={[styles.col2, {marginBottom: 2}]}><Text style={styles.infoLabel}>Буулгалт: </Text><Text>{order.conditions.unloading}</Text></View>
+              <View style={[styles.col2, {marginBottom: 2}]}><Text style={styles.infoLabel}>ТХ-н бэлэн байдал: </Text><Text>{order.conditions.vehicleAvailability}</Text></View>
+              <View style={[styles.col2, {marginBottom: 2}]}><Text style={styles.infoLabel}>Төлбөрийн нөхцөл: </Text><Text>{order.conditions.paymentTerm}</Text></View>
+              <View style={[styles.fullWidth]}><Text style={styles.infoLabel}>Даатгал: </Text><Text>{order.conditions.insurance}</Text></View>
+              <View style={[styles.fullWidth, {flexDirection: 'column'}]}>
                 <Text style={styles.infoLabel}>Зөвшөөрөл:</Text>
                  {(order.conditions.permits?.roadPermit || order.conditions.permits?.roadToll) ? (
                   <View style={styles.conditionsList}>
@@ -291,7 +300,7 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
                 ) : <Text style={styles.infoValue}>Тодорхойлоогүй</Text>}
               </View>
               {order.conditions.additionalConditions && (
-                 <View style={{width: '100%', marginTop: 2}}><Text><Text style={styles.infoLabel}>Нэмэлт нөхцөл: </Text>{order.conditions.additionalConditions}</Text></View>
+                 <View style={[styles.fullWidth]}><Text style={styles.infoLabel}>Нэмэлт нөхцөл: </Text><Text>{order.conditions.additionalConditions}</Text></View>
               )}
             </View>
           </View>
