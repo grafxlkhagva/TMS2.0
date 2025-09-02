@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -131,6 +130,7 @@ const styles = StyleSheet.create({
   col2: {
     width: '50%',
     flexDirection: 'row',
+    marginBottom: 2,
   },
   conditionsList: {
     flexDirection: 'column',
@@ -208,15 +208,27 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.subTitle}>ҮНИЙН САНАЛ</Text>
-            <View style={styles.headerText}><Text style={{fontWeight: 'bold'}}>Огноо: </Text><Text>{quoteDate}</Text></View>
-            <View style={styles.headerText}><Text style={{fontWeight: 'bold'}}>Захиалгын №: </Text><Text>{order.orderNumber}</Text></View>
+            <View style={styles.headerText}>
+                <Text style={{fontWeight: 'bold'}}>Огноо: </Text>
+                <Text>{quoteDate}</Text>
+            </View>
+            <View style={styles.headerText}>
+                <Text style={{fontWeight: 'bold'}}>Захиалгын №: </Text>
+                <Text>{order.orderNumber}</Text>
+            </View>
           </View>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Захиалагчийн мэдээлэл</Text>
-          <View style={styles.infoText}><Text style={styles.infoLabel}>Байгууллага:</Text><Text style={styles.infoValue}>{order.customerName}</Text></View>
-          <View style={styles.infoText}><Text style={styles.infoLabel}>Хариуцсан ажилтан:</Text><Text style={styles.infoValue}>{order.employeeName}</Text></View>
+          <View style={styles.infoText}>
+              <Text style={styles.infoLabel}>Байгууллага:</Text>
+              <Text style={styles.infoValue}>{order.customerName}</Text>
+          </View>
+          <View style={styles.infoText}>
+              <Text style={styles.infoLabel}>Хариуцсан ажилтан:</Text>
+              <Text style={styles.infoValue}>{order.employeeName}</Text>
+          </View>
         </View>
 
         <View style={styles.table}>
@@ -285,22 +297,26 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
           <View style={[styles.section, {marginTop: 20}]} wrap={false}>
             <Text style={styles.sectionTitle}>Тээврийн нөхцөл</Text>
             <View style={styles.grid}>
-              <View style={[styles.col2, {marginBottom: 2}]}><Text style={styles.infoLabel}>Ачилт: </Text><Text>{order.conditions.loading}</Text></View>
-              <View style={[styles.col2, {marginBottom: 2}]}><Text style={styles.infoLabel}>Буулгалт: </Text><Text>{order.conditions.unloading}</Text></View>
-              <View style={[styles.col2, {marginBottom: 2}]}><Text style={styles.infoLabel}>ТХ-н бэлэн байдал: </Text><Text>{order.conditions.vehicleAvailability}</Text></View>
-              <View style={[styles.col2, {marginBottom: 2}]}><Text style={styles.infoLabel}>Төлбөрийн нөхцөл: </Text><Text>{order.conditions.paymentTerm}</Text></View>
-              <View style={[styles.fullWidth]}><Text style={styles.infoLabel}>Даатгал: </Text><Text>{order.conditions.insurance}</Text></View>
+              <View style={styles.col2}><Text style={styles.infoLabel}>Ачилт: </Text><Text>{order.conditions.loading}</Text></View>
+              <View style={styles.col2}><Text style={styles.infoLabel}>Буулгалт: </Text><Text>{order.conditions.unloading}</Text></View>
+              <View style={styles.col2}><Text style={styles.infoLabel}>ТХ-н бэлэн байдал: </Text><Text>{order.conditions.vehicleAvailability}</Text></View>
+              <View style={styles.col2}><Text style={styles.infoLabel}>Төлбөрийн нөхцөл: </Text><Text>{order.conditions.paymentTerm}</Text></View>
+              <View style={styles.fullWidth}><Text style={styles.infoLabel}>Даатгал: </Text><Text>{order.conditions.insurance}</Text></View>
+              
               <View style={[styles.fullWidth, {flexDirection: 'column'}]}>
                 <Text style={styles.infoLabel}>Зөвшөөрөл:</Text>
-                 {(order.conditions.permits?.roadPermit || order.conditions.permits?.roadToll) ? (
+                {(order.conditions.permits?.roadPermit || order.conditions.permits?.roadToll) ? (
                   <View style={styles.conditionsList}>
                     {order.conditions.permits.roadPermit && <Text>• Замын зөвшөөрөл авна</Text>}
                     {order.conditions.permits.roadToll && <Text>• Замын хураамж тушаана</Text>}
                   </View>
-                ) : <Text style={styles.infoValue}>Тодорхойлоогүй</Text>}
+                ) : (
+                  <Text style={styles.infoValue}>Тодорхойлоогүй</Text>
+                )}
               </View>
+
               {order.conditions.additionalConditions && (
-                 <View style={[styles.fullWidth]}><Text style={styles.infoLabel}>Нэмэлт нөхцөл: </Text><Text>{order.conditions.additionalConditions}</Text></View>
+                 <View style={styles.fullWidth}><Text style={styles.infoLabel}>Нэмэлт нөхцөл: </Text><Text>{order.conditions.additionalConditions}</Text></View>
               )}
             </View>
           </View>
