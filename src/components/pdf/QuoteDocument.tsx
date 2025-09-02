@@ -233,7 +233,7 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
 
               return (
                 <View key={item.id} style={styles.tableRow}>
-                  <Text style={[styles.tableCol, {width: '10%'}]}>{getServiceName(item.serviceTypeId)}</Text>
+                  <View style={[styles.tableCol, {width: '10%'}]}><Text>{getServiceName(item.serviceTypeId)}</Text></View>
                   <View style={[styles.tableCol, {width: '15%'}]}>
                     {(item.cargoItems || []).map((cargo: OrderItemCargo, i: number) => (
                       <View key={cargo.id || i} style={{marginBottom: 2}}>
@@ -242,25 +242,33 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
                       </View>
                     ))}
                   </View>
-                  <Text style={[styles.tableCol, {width: '10%'}]}>{getRegionName(item.startRegionId)} {getWarehouseName(item.startWarehouseId)}</Text>
-                  <Text style={[styles.tableCol, {width: '10%'}]}>{getRegionName(item.endRegionId)} {getWarehouseName(item.endWarehouseId)}</Text>
-                  <Text style={[styles.tableCol, {width: '7%', textAlign: 'right'}]}>{item.totalDistance} км</Text>
-                  <Text style={[styles.tableCol, {width: '10%'}]}>{getVehicleTypeName(item.vehicleTypeId)}</Text>
-                  <Text style={[styles.tableCol, {width: '8%', textAlign: 'right'}]}>{formatNumber(singleTransportPriceWithProfit)}</Text>
-                  <Text style={[styles.tableCol, {width: '5%', textAlign: 'right'}]}>{frequency}</Text>
-                  <Text style={[styles.tableCol, {width: '10%', textAlign: 'right'}]}>{formatNumber(priceBeforeVat)}</Text>
-                  <Text style={[styles.tableCol, {width: '7%', textAlign: 'right'}]}>{formatNumber(vatAmount)}</Text>
-                  <Text style={[styles.tableCol, {width: '8%', textAlign: 'right', fontWeight: 'bold', borderRightWidth: 0}]}>{formatNumber(finalPrice)}</Text>
+                  <View style={[styles.tableCol, {width: '10%'}]}>
+                    <Text>{getRegionName(item.startRegionId)}</Text>
+                    <Text>{getWarehouseName(item.startWarehouseId)}</Text>
+                  </View>
+                  <View style={[styles.tableCol, {width: '10%'}]}>
+                    <Text>{getRegionName(item.endRegionId)}</Text>
+                    <Text>{getWarehouseName(item.endWarehouseId)}</Text>
+                  </View>
+                  <View style={[styles.tableCol, {width: '7%', textAlign: 'right'}]}><Text>{item.totalDistance} км</Text></View>
+                  <View style={[styles.tableCol, {width: '10%'}]}>
+                    <Text>{`${getVehicleTypeName(item.vehicleTypeId)}, ${getTrailerTypeName(item.trailerTypeId)}`}</Text>
+                  </View>
+                  <View style={[styles.tableCol, {width: '8%', textAlign: 'right'}]}><Text>{formatNumber(singleTransportPriceWithProfit)}</Text></View>
+                  <View style={[styles.tableCol, {width: '5%', textAlign: 'right'}]}><Text>{frequency}</Text></View>
+                  <View style={[styles.tableCol, {width: '10%', textAlign: 'right'}]}><Text>{formatNumber(priceBeforeVat)}</Text></View>
+                  <View style={[styles.tableCol, {width: '7%', textAlign: 'right'}]}><Text>{formatNumber(vatAmount)}</Text></View>
+                  <View style={[styles.tableCol, {width: '8%', textAlign: 'right', fontWeight: 'bold', borderRightWidth: 0}]}><Text>{formatNumber(finalPrice)}</Text></View>
                 </View>
               )
             })}
              <View style={[styles.tableRow, styles.tableHeader]}>
-                <Text style={[styles.tableColHeader, {width: '65%', textAlign: 'right'}]}>Нийт дүн:</Text>
-                <Text style={[styles.tableColHeader, {width: '8%', textAlign: 'right'}]}></Text>
-                <Text style={[styles.tableColHeader, {width: '5%', textAlign: 'right'}]}></Text>
-                <Text style={[styles.tableColHeader, {width: '10%', textAlign: 'right'}]}>{formatNumber(totalPayment)}</Text>
-                <Text style={[styles.tableColHeader, {width: '7%', textAlign: 'right'}]}>{formatNumber(totalVat)}</Text>
-                <Text style={[styles.tableColHeader, {width: '8%', textAlign: 'right', borderRightWidth: 0}]}>{formatNumber(totalFinalPrice)}</Text>
+                <View style={[styles.tableColHeader, {width: '65%', textAlign: 'right'}]}><Text>Нийт дүн:</Text></View>
+                <View style={[styles.tableColHeader, {width: '8%', textAlign: 'right'}]}></View>
+                <View style={[styles.tableColHeader, {width: '5%', textAlign: 'right'}]}></View>
+                <View style={[styles.tableColHeader, {width: '10%', textAlign: 'right'}]}><Text>{formatNumber(totalPayment)}</Text></View>
+                <View style={[styles.tableColHeader, {width: '7%', textAlign: 'right'}]}><Text>{formatNumber(totalVat)}</Text></View>
+                <View style={[styles.tableColHeader, {width: '8%', textAlign: 'right', borderRightWidth: 0}]}><Text>{formatNumber(totalFinalPrice)}</Text></View>
             </View>
         </View>
 
