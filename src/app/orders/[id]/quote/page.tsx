@@ -127,8 +127,8 @@ export default function GenerateQuotePage() {
 
     } catch (error: any) {
         console.error("PDF generation failed:", error);
-        setErrorText(error.message);
-        toast({ variant: "destructive", title: "Алдаа", description: error.message });
+        setErrorText(error instanceof Error ? error.message : String(error));
+        toast({ variant: "destructive", title: "Алдаа", description: error instanceof Error ? error.message : String(error) });
     } finally {
         setIsGeneratingPdf(false);
     }
@@ -344,3 +344,4 @@ export default function GenerateQuotePage() {
     </>
   );
 }
+

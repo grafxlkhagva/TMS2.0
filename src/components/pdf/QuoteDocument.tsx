@@ -276,8 +276,7 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
                   </View>
                   <View style={[styles.tableCol, {width: '7%', textAlign: 'right'}]}><Text>{`${item.totalDistance} км`}</Text></View>
                   <View style={[styles.tableCol, {width: '10%'}]}>
-                    <Text>{getVehicleTypeName(item.vehicleTypeId)}</Text>
-                    <Text>{getTrailerTypeName(item.trailerTypeId)}</Text>
+                    <Text>{`${getVehicleTypeName(item.vehicleTypeId)}, ${getTrailerTypeName(item.trailerTypeId)}`}</Text>
                   </View>
                   <View style={[styles.tableCol, {width: '8%', textAlign: 'right'}]}><Text>{formatNumber(singleTransportPriceWithProfit)}</Text></View>
                   <View style={[styles.tableCol, {width: '5%', textAlign: 'right'}]}><Text>{String(frequency)}</Text></View>
@@ -325,21 +324,22 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
                   <Text style={styles.infoValue}>{order.conditions.paymentTerm}</Text>
                 </View>
               </View>
-              <View style={styles.fullWidth}>
-                <View style={styles.conditionItem}>
-                  <Text style={styles.infoLabel}>Даатгал: </Text>
-                  <Text style={styles.infoValue}>{order.conditions.insurance}</Text>
+              {order.conditions.insurance && (
+                <View style={styles.fullWidth}>
+                  <View style={styles.conditionItem}>
+                    <Text style={styles.infoLabel}>Даатгал: </Text>
+                    <Text style={styles.infoValue}>{order.conditions.insurance}</Text>
+                  </View>
                 </View>
-              </View>
-
+              )}
+              
               <View style={[styles.fullWidth, { flexDirection: 'column' }]}>
                 <Text style={styles.infoLabel}>Зөвшөөрөл:</Text>
-                {(order.conditions.permits?.roadPermit || order.conditions.permits?.roadToll) ? (
-                  <View style={styles.conditionsList}>
-                    {order.conditions.permits.roadPermit && <Text>• Замын зөвшөөрөл авна</Text>}
-                    {order.conditions.permits.roadToll && <Text>• Замын хураамж тушаана</Text>}
-                  </View>
-                ) : <Text style={styles.infoValue}>Тодорхойлоогүй</Text>}
+                <View style={styles.conditionsList}>
+                  {order.conditions.permits?.roadPermit && <Text>• Замын зөвшөөрөл авна</Text>}
+                  {order.conditions.permits?.roadToll && <Text>• Замын хураамж тушаана</Text>}
+                  {(!order.conditions.permits || (!order.conditions.permits.roadPermit && !order.conditions.permits.roadToll)) && <Text>• Тодорхойлоогүй</Text>}
+                </View>
               </View>
 
               {order.conditions.additionalConditions && (
@@ -361,3 +361,4 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
 };
 
 export default QuoteDocument;
+
