@@ -17,7 +17,7 @@ import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink, Download, Megaphone, MegaphoneOff, Calendar, Package, MapPin, UserPlus } from 'lucide-react';
+import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink, Download, Megaphone, MegaphoneOff, Calendar, Package, MapPin, UserPlus, FileSpreadsheet } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -750,6 +750,12 @@ export default function OrderDetailPage() {
                 <p className="text-muted-foreground font-mono">{order.orderNumber}</p>
             </div>
              <div className="flex items-center gap-2">
+                 <Button asChild variant="outline">
+                    <Link href={`/orders/${order.id}/quote`}>
+                        <FileSpreadsheet className="mr-2 h-4 w-4"/>
+                        Үнийн санал гаргах
+                    </Link>
+                </Button>
                 <Button asChild>
                     <Link href={`/orders/${order.id}/edit`}>
                         <Edit className="mr-2 h-4 w-4"/>
@@ -1017,4 +1023,5 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+
 
