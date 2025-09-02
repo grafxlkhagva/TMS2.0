@@ -96,7 +96,7 @@ export default function GenerateQuotePage() {
         if (!response.ok) {
             let errorMessage = 'PDF үүсгэхэд алдаа гарлаа.';
             try {
-                // Try to parse as JSON
+                // Try to parse as JSON first
                 const errorData = await response.json();
                 if (errorData && errorData.message) {
                     errorMessage = errorData.message;

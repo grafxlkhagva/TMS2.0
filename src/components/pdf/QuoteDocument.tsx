@@ -145,7 +145,10 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       marginTop: 2,
       marginBottom: 2,
-  }
+  },
+  conditionItem: {
+    flexDirection: 'row',
+  },
 });
 
 const roundCurrency = (value: number | undefined | null): number => {
@@ -301,24 +304,34 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
             <Text style={styles.sectionTitle}>Тээврийн нөхцөл</Text>
             <View style={styles.grid}>
                 <View style={styles.col2}>
+                  <View style={styles.conditionItem}>
                     <Text style={styles.infoLabel}>Ачилт: </Text>
                     <Text style={styles.infoValue}>{order.conditions.loading}</Text>
+                  </View>
                 </View>
                 <View style={styles.col2}>
+                  <View style={styles.conditionItem}>
                     <Text style={styles.infoLabel}>Буулгалт: </Text>
                     <Text style={styles.infoValue}>{order.conditions.unloading}</Text>
+                  </View>
                 </View>
                 <View style={styles.col2}>
+                  <View style={styles.conditionItem}>
                     <Text style={styles.infoLabel}>ТХ-н бэлэн байдал: </Text>
                     <Text style={styles.infoValue}>{order.conditions.vehicleAvailability}</Text>
+                  </View>
                 </View>
                 <View style={styles.col2}>
+                  <View style={styles.conditionItem}>
                     <Text style={styles.infoLabel}>Төлбөрийн нөхцөл: </Text>
                     <Text style={styles.infoValue}>{order.conditions.paymentTerm}</Text>
+                  </View>
                 </View>
                 <View style={styles.fullWidth}>
+                  <View style={styles.conditionItem}>
                     <Text style={styles.infoLabel}>Даатгал: </Text>
                     <Text style={styles.infoValue}>{order.conditions.insurance}</Text>
+                  </View>
                 </View>
 
               <View style={[styles.fullWidth, {flexDirection: 'column'}]}>
@@ -333,8 +346,10 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
 
               {order.conditions.additionalConditions && (
                  <View style={styles.fullWidth}>
-                    <Text style={styles.infoLabel}>Нэмэлт нөхцөл: </Text>
-                    <Text style={styles.infoValue}>{order.conditions.additionalConditions}</Text>
+                   <View style={styles.conditionItem}>
+                      <Text style={styles.infoLabel}>Нэмэлт нөхцөл: </Text>
+                      <Text style={styles.infoValue}>{order.conditions.additionalConditions}</Text>
+                    </View>
                   </View>
               )}
             </View>
