@@ -109,6 +109,8 @@ const styles = StyleSheet.create({
     padding: 4,
     borderRightWidth: 1,
     borderRightColor: '#9ca3af',
+    display: 'flex',
+    flexDirection: 'column',
   },
   tableCell: {
   },
@@ -274,7 +276,7 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
                   </View>
                   <View style={[styles.tableCol, {width: '7%', textAlign: 'right'}]}><Text>{item.totalDistance} км</Text></View>
                   <View style={[styles.tableCol, {width: '10%'}]}>
-                    <Text>{getVehicleTypeName(item.vehicleTypeId)}, {getTrailerTypeName(item.trailerTypeId)}</Text>
+                    <Text>{`${getVehicleTypeName(item.vehicleTypeId)}, ${getTrailerTypeName(item.trailerTypeId)}`}</Text>
                   </View>
                   <View style={[styles.tableCol, {width: '8%', textAlign: 'right'}]}><Text>{formatNumber(singleTransportPriceWithProfit)}</Text></View>
                   <View style={[styles.tableCol, {width: '5%', textAlign: 'right'}]}><Text>{frequency}</Text></View>
@@ -298,26 +300,26 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
           <View style={[styles.section, {marginTop: 20}]} wrap={false}>
             <Text style={styles.sectionTitle}>Тээврийн нөхцөл</Text>
             <View style={styles.grid}>
-              <View style={styles.col2}>
-                  <Text style={styles.infoLabel}>Ачилт: </Text>
-                  <Text>{order.conditions.loading}</Text>
-              </View>
-              <View style={styles.col2}>
-                  <Text style={styles.infoLabel}>Буулгалт: </Text>
-                  <Text>{order.conditions.unloading}</Text>
-              </View>
-              <View style={styles.col2}>
-                  <Text style={styles.infoLabel}>ТХ-н бэлэн байдал: </Text>
-                  <Text>{order.conditions.vehicleAvailability}</Text>
-              </View>
-              <View style={styles.col2}>
-                  <Text style={styles.infoLabel}>Төлбөрийн нөхцөл: </Text>
-                  <Text>{order.conditions.paymentTerm}</Text>
-              </View>
-              <View style={styles.fullWidth}>
-                <Text style={styles.infoLabel}>Даатгал: </Text>
-                <Text>{order.conditions.insurance}</Text>
-              </View>
+                <View style={styles.col2}>
+                    <Text style={styles.infoLabel}>Ачилт: </Text>
+                    <Text style={styles.infoValue}>{order.conditions.loading}</Text>
+                </View>
+                <View style={styles.col2}>
+                    <Text style={styles.infoLabel}>Буулгалт: </Text>
+                    <Text style={styles.infoValue}>{order.conditions.unloading}</Text>
+                </View>
+                <View style={styles.col2}>
+                    <Text style={styles.infoLabel}>ТХ-н бэлэн байдал: </Text>
+                    <Text style={styles.infoValue}>{order.conditions.vehicleAvailability}</Text>
+                </View>
+                <View style={styles.col2}>
+                    <Text style={styles.infoLabel}>Төлбөрийн нөхцөл: </Text>
+                    <Text style={styles.infoValue}>{order.conditions.paymentTerm}</Text>
+                </View>
+                <View style={styles.fullWidth}>
+                    <Text style={styles.infoLabel}>Даатгал: </Text>
+                    <Text style={styles.infoValue}>{order.conditions.insurance}</Text>
+                </View>
 
               <View style={[styles.fullWidth, {flexDirection: 'column'}]}>
                 <Text style={styles.infoLabel}>Зөвшөөрөл:</Text>
@@ -326,15 +328,13 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
                     {order.conditions.permits.roadPermit && <Text>• Замын зөвшөөрөл авна</Text>}
                     {order.conditions.permits.roadToll && <Text>• Замын хураамж тушаана</Text>}
                   </View>
-                ) : (
-                  <Text style={styles.infoValue}>Тодорхойлоогүй</Text>
-                )}
+                ) : <Text style={styles.infoValue}>Тодорхойлоогүй</Text>}
               </View>
 
               {order.conditions.additionalConditions && (
                  <View style={styles.fullWidth}>
                     <Text style={styles.infoLabel}>Нэмэлт нөхцөл: </Text>
-                    <Text>{order.conditions.additionalConditions}</Text>
+                    <Text style={styles.infoValue}>{order.conditions.additionalConditions}</Text>
                   </View>
               )}
             </View>
@@ -348,5 +348,3 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
 };
 
 export default QuoteDocument;
-
-    

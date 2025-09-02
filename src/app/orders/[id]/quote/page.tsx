@@ -94,8 +94,25 @@ export default function GenerateQuotePage() {
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'PDF үүсгэхэд алдаа гарлаа');
+            let errorMessage = 'PDF үүсгэхэд алдаа гарлаа.';
+            try {
+                // Try to parse as JSON
+                const errorData = await response.json();
+                if (errorData && errorData.message) {
+                    errorMessage = errorData.message;
+                }
+            } catch (jsonError) {
+                // If not JSON, try to read as text
+                try {
+                    const textError = await response.text();
+                    if (textError) {
+                        errorMessage = textError;
+                    }
+                } catch (textError) {
+                    // Fallback if reading as text also fails
+                }
+            }
+            throw new Error(errorMessage);
         }
 
         const blob = await response.blob();
