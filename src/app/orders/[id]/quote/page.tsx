@@ -25,6 +25,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import CombinedQuotePrintLayout from '@/components/combined-quote-print-layout';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 
 const toDateSafe = (date: any): Date | undefined => {
@@ -68,6 +69,7 @@ export default function GenerateQuotePage() {
   const [allData, setAllData] = React.useState<AllData>(initialAllData);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = React.useState(false);
+  const [errorText, setErrorText] = React.useState<string | null>(null);
 
   const getRegionName = React.useCallback(
     (id: string) => allData.regions.find(r => r.id === id)?.name || 'N/A',
@@ -80,6 +82,7 @@ export default function GenerateQuotePage() {
         return;
     }
     setIsGeneratingPdf(true);
+    setErrorText(null);
     try {
         const dataForPdf = {
             order: order,
@@ -124,6 +127,7 @@ export default function GenerateQuotePage() {
 
     } catch (error: any) {
         console.error("PDF generation failed:", error);
+        setErrorText(error.message);
         toast({ variant: "destructive", title: "Алдаа", description: error.message });
     } finally {
         setIsGeneratingPdf(false);
@@ -136,6 +140,7 @@ export default function GenerateQuotePage() {
 
     async function fetchData() {
       setIsLoading(true);
+      setErrorText(null);
       try {
         const orderDocRef = doc(db, 'orders', orderId);
         const orderDocSnap = await getDoc(orderDocRef);
@@ -271,6 +276,12 @@ export default function GenerateQuotePage() {
               </div>
             </div>
           </div>
+        {errorText && (
+            <Alert variant="destructive" className="mb-6">
+                <AlertTitle>Алдаа гарлаа!</AlertTitle>
+                <AlertDescription>{errorText}</AlertDescription>
+            </Alert>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
           <div className="md:col-span-1 space-y-6 sticky top-6">
               <Card>
