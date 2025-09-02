@@ -16,13 +16,12 @@ import type {
 } from '@/types';
 import { format } from 'date-fns';
 
-// Since we can't use tailwind, we define styles using StyleSheet API
-// DeJa Vu Sans is one of the few fonts that supports Mongolian characters
+// Use TTF fonts for better compatibility with react-pdf
 Font.register({
   family: 'DejaVu Sans',
   fonts: [
-    { src: 'https://fonts.cdnfonts.com/s/15067/DejaVuSans.woff', fontWeight: 'normal' },
-    { src: 'https://fonts.cdnfonts.com/s/15067/DejaVuSans-Bold.woff', fontWeight: 'bold' },
+    { src: 'https://raw.githubusercontent.com/dejavu-fonts/dejavu-fonts/master/ttf/DejaVuSans.ttf', fontWeight: 'normal' },
+    { src: 'https://raw.githubusercontent.com/dejavu-fonts/dejavu-fonts/master/ttf/DejaVuSans-Bold.ttf', fontWeight: 'bold' },
   ],
 });
 
@@ -88,7 +87,6 @@ const styles = StyleSheet.create({
     borderStyle: 'solid',
     borderWidth: 1,
     borderColor: '#9ca3af',
-    borderCollapse: 'collapse',
   },
   tableRow: {
     flexDirection: 'row',
@@ -109,7 +107,6 @@ const styles = StyleSheet.create({
     padding: 4,
     borderRightWidth: 1,
     borderRightColor: '#9ca3af',
-    display: 'flex',
     flexDirection: 'column',
   },
   tableCell: {
@@ -156,6 +153,8 @@ const roundCurrency = (value: number | undefined | null): number => {
   return Math.round(value * 100) / 100;
 };
 
+const VAT_RATE = 0.1;
+
 type AllData = {
   serviceTypes: ServiceType[];
   regions: Region[];
@@ -188,7 +187,7 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
   const { totalPayment, totalVat, totalFinalPrice } = acceptedItems.reduce(
     (acc, item) => {
       const finalPrice = roundCurrency(item.finalPrice);
-      const priceBeforeVat = item.withVAT ? finalPrice / 1.1 : finalPrice;
+      const priceBeforeVat = item.withVAT ? finalPrice / (1 + VAT_RATE) : finalPrice;
       const vat = finalPrice - priceBeforeVat;
       
       acc.totalPayment += priceBeforeVat;
@@ -254,7 +253,7 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
             {acceptedItems.map((item) => {
               const frequency = item.frequency && item.frequency > 0 ? item.frequency : 1;
               const finalPrice = roundCurrency(item.finalPrice);
-              const priceBeforeVat = item.withVAT ? finalPrice / 1.1 : finalPrice;
+              const priceBeforeVat = item.withVAT ? finalPrice / (1 + VAT_RATE) : finalPrice;
               const vatAmount = finalPrice - priceBeforeVat;
               const singleTransportPriceWithProfit = priceBeforeVat / frequency;
 
@@ -277,12 +276,13 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
                     <Text>{getRegionName(item.endRegionId)}</Text>
                     <Text>{getWarehouseName(item.endWarehouseId)}</Text>
                   </View>
-                  <View style={[styles.tableCol, {width: '7%', textAlign: 'right'}]}><Text>{item.totalDistance} км</Text></View>
+                  <View style={[styles.tableCol, {width: '7%', textAlign: 'right'}]}><Text>{`${item.totalDistance} км`}</Text></View>
                   <View style={[styles.tableCol, {width: '10%'}]}>
-                    <Text>{`${getVehicleTypeName(item.vehicleTypeId)}, ${getTrailerTypeName(item.trailerTypeId)}`}</Text>
+                    <Text>{getVehicleTypeName(item.vehicleTypeId)}</Text>
+                    <Text>{getTrailerTypeName(item.trailerTypeId)}</Text>
                   </View>
                   <View style={[styles.tableCol, {width: '8%', textAlign: 'right'}]}><Text>{formatNumber(singleTransportPriceWithProfit)}</Text></View>
-                  <View style={[styles.tableCol, {width: '5%', textAlign: 'right'}]}><Text>{frequency}</Text></View>
+                  <View style={[styles.tableCol, {width: '5%', textAlign: 'right'}]}><Text>{String(frequency)}</Text></View>
                   <View style={[styles.tableCol, {width: '10%', textAlign: 'right'}]}><Text>{formatNumber(priceBeforeVat)}</Text></View>
                   <View style={[styles.tableCol, {width: '7%', textAlign: 'right'}]}><Text>{formatNumber(vatAmount)}</Text></View>
                   <View style={[styles.tableCol, {width: '8%', textAlign: 'right', fontWeight: 'bold', borderRightWidth: 0}]}><Text>{formatNumber(finalPrice)}</Text></View>
