@@ -202,6 +202,7 @@ export default function GenerateQuotePage() {
 
       } catch (error) {
         console.error("Error fetching data:", error);
+        setErrorText('Мэдээлэл татахад алдаа гарлаа.');
         toast({ variant: 'destructive', title: 'Алдаа', description: 'Мэдээлэл татахад алдаа гарлаа.' });
       } finally {
         setIsLoading(false);
@@ -344,4 +345,5 @@ export default function GenerateQuotePage() {
     </>
   );
 }
+
 

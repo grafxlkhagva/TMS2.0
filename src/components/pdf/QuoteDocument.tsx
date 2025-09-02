@@ -335,10 +335,10 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
               
               <View style={[styles.fullWidth, { flexDirection: 'column' }]}>
                 <Text style={styles.infoLabel}>Зөвшөөрөл:</Text>
-                <View style={styles.conditionsList}>
-                  {order.conditions.permits?.roadPermit && <Text>• Замын зөвшөөрөл авна</Text>}
-                  {order.conditions.permits?.roadToll && <Text>• Замын хураамж тушаана</Text>}
-                  {(!order.conditions.permits || (!order.conditions.permits.roadPermit && !order.conditions.permits.roadToll)) && <Text>• Тодорхойлоогүй</Text>}
+                 <View style={styles.conditionsList}>
+                    {order.conditions.permits?.roadPermit && <Text>• Замын зөвшөөрөл авна</Text>}
+                    {order.conditions.permits?.roadToll && <Text>• Замын хураамж тушаана</Text>}
+                    {(!order.conditions.permits || (!order.conditions.permits.roadPermit && !order.conditions.permits.roadToll)) && <Text>• Тодорхойлоогүй</Text>}
                 </View>
               </View>
 
@@ -361,4 +361,5 @@ const QuoteDocument = ({ order, orderItems, allData }: QuoteDocumentProps) => {
 };
 
 export default QuoteDocument;
+
 
