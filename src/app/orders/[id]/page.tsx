@@ -639,7 +639,7 @@ export default function OrderDetailPage() {
     try {
         const payload = {
             order,
-            orderItem,
+            orderItem: item,
             quote,
             allData
         };
