@@ -17,7 +17,7 @@ import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink, Download, Megaphone, MegaphoneOff, Calendar, Package, MapPin, UserPlus, FileSpreadsheet } from 'lucide-react';
+import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink, Download, Megaphone, MegaphoneOff, Calendar, Package, MapPin, UserPlus, FileSpreadsheet, Send } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -150,6 +150,8 @@ export default function OrderDetailPage() {
   const [itemToDelete, setItemToDelete] = React.useState<OrderItem | null>(null);
   const [itemToShip, setItemToShip] = React.useState<OrderItem | null>(null);
   const [isUpdatingEmployee, setIsUpdatingEmployee] = React.useState(false);
+  const [sendingToSheet, setSendingToSheet] = React.useState<string | null>(null);
+
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -623,6 +625,44 @@ export default function OrderDetailPage() {
     }
 };
 
+  const allData = {
+    serviceTypes,
+    regions,
+    warehouses,
+    vehicleTypes,
+    trailerTypes,
+    packagingTypes,
+  };
+
+  const handleSendToSheet = async (item: OrderItem, quote: DriverQuote) => {
+    setSendingToSheet(quote.id);
+    try {
+        const payload = {
+            order,
+            orderItem,
+            quote,
+            allData
+        };
+
+        const response = await fetch('/api/quotes/send-to-sheet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Sheet-рүү илгээхэд алдаа гарлаа.');
+        }
+
+        toast({ title: 'Амжилттай', description: 'Үнийн саналыг Google Sheet-рүү илгээлээ.' });
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Алдаа', description: (error as Error).message });
+    } finally {
+        setSendingToSheet(null);
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -727,16 +767,6 @@ export default function OrderDetailPage() {
     }
   };
 
-  const allData = {
-    serviceTypes,
-    regions,
-    warehouses,
-    vehicleTypes,
-    trailerTypes,
-    packagingTypes,
-  };
-
-
   return (
     <div className="container mx-auto py-6">
        <div className="mb-6">
@@ -839,6 +869,10 @@ export default function OrderDetailPage() {
                                    </div>
                                    <AccordionContent className="space-y-4">
                                        <div className="flex items-center justify-end gap-2 px-4 pb-4 border-b">
+                                            <Button variant="outline" size="sm" onClick={() => handleSendToSheet(item, (quotes.get(item.id) || []).find(q => q.id === item.acceptedQuoteId)!)} disabled={!item.acceptedQuoteId || sendingToSheet === item.acceptedQuoteId}>
+                                                {sendingToSheet === item.acceptedQuoteId ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>}
+                                                Sheet-рүү илгээх
+                                            </Button>
                                            <Button variant="outline" size="sm" onClick={() => handleToggleTenderStatus(item)}>
                                                 {item.tenderStatus === 'Open' ? <MegaphoneOff className="mr-2 h-4 w-4" /> : <Megaphone className="mr-2 h-4 w-4" />}
                                                 {item.tenderStatus === 'Open' ? 'Тендер хаах' : 'Тендер нээх'}
@@ -1023,5 +1057,3 @@ export default function OrderDetailPage() {
     </div>
   );
 }
-
-
