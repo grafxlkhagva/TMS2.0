@@ -238,7 +238,7 @@ export default function OrderDetailPage() {
                 createdAt: toDateSafe(data.createdAt)
             } as DriverQuote
           });
-          quotesData.sort((a, b) => b.createdAt.getTime() - a.getTime());
+          quotesData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
           quotesMap.set(item.id, quotesData);
       }
       setQuotes(quotesMap);
