@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
+import type { TransportationConditions } from '@/types';
 
 // Helper to convert Firestore Timestamps or date strings to JS Date objects recursively
 const convertDateFields = (data: any): any => {
@@ -10,14 +11,19 @@ const convertDateFields = (data: any): any => {
         return data;
     }
     // Handle Firestore Timestamp
-    if (typeof data.seconds === 'number' && typeof data.nanoseconds === 'number') {
-        return new Timestamp(data.seconds, data.nanoseconds).toDate();
+    if (data.seconds !== undefined && data.nanoseconds !== undefined && typeof data.seconds === 'number' && typeof data.nanoseconds === 'number') {
+        try {
+            return new Timestamp(data.seconds, data.nanoseconds).toDate();
+        } catch (e) {
+            // Not a valid timestamp, return as is
+            return data;
+        }
     }
     // Handle date strings
     if (typeof data === 'string') {
          // Basic check to see if it's a date-like string
         const parsedDate = new Date(data);
-        if (!isNaN(parsedDate.getTime()) && data.includes('T')) {
+        if (!isNaN(parsedDate.getTime()) && data.includes('T') && data.length > 10) {
             return parsedDate;
         }
     }
@@ -34,6 +40,25 @@ const convertDateFields = (data: any): any => {
     }
     return data;
 };
+
+const formatConditions = (conditions?: TransportationConditions) => {
+    if (!conditions) return 'N/A';
+    
+    const parts = [
+        `Ачилт: ${conditions.loading}`,
+        `Буулгалт: ${conditions.unloading}`,
+        `Даатгал: ${conditions.insurance}`,
+        `Төлбөр: ${conditions.paymentTerm}`,
+        `ТХ бэлэн байдал: ${conditions.vehicleAvailability}`,
+        `Зөвшөөрөл: ${conditions.permits?.roadPermit ? 'Замын зөвшөөрөл' : ''}${conditions.permits?.roadPermit && conditions.permits?.roadToll ? ', ' : ''}${conditions.permits?.roadToll ? 'Замын хураамж' : ''}`
+    ];
+
+    if (conditions.additionalConditions) {
+        parts.push(`Нэмэлт: ${conditions.additionalConditions}`);
+    }
+
+    return parts.join(' | ');
+}
 
 
 export async function POST(req: NextRequest) {
@@ -85,6 +110,7 @@ export async function POST(req: NextRequest) {
             profitAmount,
             finalPrice,
             quote.notes || '',
+            formatConditions(order.conditions),
         ];
         
         await sheets.spreadsheets.values.append({
