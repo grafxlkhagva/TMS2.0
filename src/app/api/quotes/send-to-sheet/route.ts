@@ -15,7 +15,7 @@ const convertDateFields = (data: any): any => {
     }
     
     // Handle Firestore-like object structure from serialization
-    if (typeof data === 'object' && data !== null && 'seconds' in data && 'nanoseconds' in date) {
+    if (typeof data === 'object' && data !== null && 'seconds' in data && 'nanoseconds' in data) {
         return new Timestamp(data.seconds, data.nanoseconds).toDate();
     }
     
@@ -82,8 +82,10 @@ export async function POST(req: NextRequest) {
         const finalPrice = priceWithProfit + vatAmount;
         const profitAmount = priceWithProfit - quote.price;
         
+        const sentDate = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
+        
         const newRow = [
-            // User requested order:
+            sentDate, // Илгээсэн огноо
             getDetailName('regions', orderItem.startRegionId), // Ачих бүс
             getDetailName('regions', orderItem.endRegionId), // Буулгах бүс
             getDetailName('serviceTypes', orderItem.serviceTypeId), // Үйлчилгээний төрөл
@@ -96,18 +98,16 @@ export async function POST(req: NextRequest) {
             getDetailName('vehicleTypes', orderItem.vehicleTypeId), // Машин
             getDetailName('trailerTypes', orderItem.trailerTypeId), // Тэвш
             orderItem.profitMargin || 0, // Ашгийн хувь (%)
-            cargoInfo, // Ачаа
-
-            // Additional fields from previous logic
-            order.orderNumber,
-            order.customerName,
-            quote.driverName,
-            quote.driverPhone,
-            quote.price,
-            vatAmount,
-            profitAmount,
-            finalPrice,
-            quote.notes || '',
+            cargoInfo, // Ачааны нэгтгэл
+            order.orderNumber, // Захиалгын №
+            order.customerName, // Харилцагч
+            quote.driverName, // Жолоочийн нэр
+            quote.driverPhone, // Жолоочийн утас
+            quote.price, // Жолоочийн санал (₮)
+            vatAmount, // НӨАТ (₮)
+            profitAmount, // Ашиг (₮)
+            finalPrice, // Нийт дүн (₮)
+            quote.notes || '', // Жолоочийн тэмдэглэл
         ];
         
         await sheets.spreadsheets.values.append({
