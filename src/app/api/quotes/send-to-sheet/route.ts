@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
-import type { TransportationConditions } from '@/types';
 
 // Helper to convert Firestore Timestamps or date strings to JS Date objects recursively
 const convertDateFields = (data: any): any => {
@@ -11,15 +10,13 @@ const convertDateFields = (data: any): any => {
         return data;
     }
     
-    // Handle Firestore Timestamp from server-side (often comes as plain object)
-    if (data.seconds !== undefined && data.nanoseconds !== undefined && typeof data.seconds === 'number' && typeof data.nanoseconds === 'number') {
-        try {
-            // Check if it's a valid Timestamp structure before converting
-            return new Timestamp(data.seconds, data.nanoseconds).toDate();
-        } catch (e) {
-            // Not a valid timestamp, return as is to avoid crash
-            return data;
-        }
+    if (data instanceof Timestamp) {
+        return data.toDate();
+    }
+    
+    // Handle Firestore-like object structure from serialization
+    if (typeof data === 'object' && data !== null && 'seconds' in data && 'nanoseconds' in date) {
+        return new Timestamp(data.seconds, data.nanoseconds).toDate();
     }
     
     // Handle date strings (like ISO strings)
@@ -45,30 +42,6 @@ const convertDateFields = (data: any): any => {
     
     return data;
 };
-
-const formatConditions = (conditions?: TransportationConditions) => {
-    if (!conditions) return 'N/A';
-    
-    const parts = [];
-
-    if (conditions.loading) parts.push(`Ачилт: ${conditions.loading}`);
-    if (conditions.unloading) parts.push(`Буулгалт: ${conditions.unloading}`);
-    if (conditions.insurance) parts.push(`Даатгал: ${conditions.insurance}`);
-    if (conditions.paymentTerm) parts.push(`Төлбөр: ${conditions.paymentTerm}`);
-    if (conditions.vehicleAvailability) parts.push(`ТХ бэлэн байдал: ${conditions.vehicleAvailability}`);
-    
-    const permitParts = [];
-    if(conditions.permits?.roadPermit) permitParts.push('Замын зөвшөөрөл');
-    if(conditions.permits?.roadToll) permitParts.push('Замын хураамж');
-    if(permitParts.length > 0) parts.push(`Зөвшөөрөл: ${permitParts.join(', ')}`);
-
-
-    if (conditions.additionalConditions) {
-        parts.push(`Нэмэлт: ${conditions.additionalConditions}`);
-    }
-
-    return parts.join(' | ');
-}
 
 
 export async function POST(req: NextRequest) {
@@ -101,23 +74,33 @@ export async function POST(req: NextRequest) {
         }
 
         const cargoInfo = orderItem.cargoItems?.map((c: any) => `${c.quantity}${c.unit} ${c.name}`).join(', ') || '';
-        const vehicleInfo = `${getDetailName('vehicleTypes', orderItem.vehicleTypeId)}, ${getDetailName('trailerTypes', orderItem.trailerTypeId)}`;
-
+        
         const VAT_RATE = 0.1;
         const profitMargin = (orderItem.profitMargin || 0) / 100;
-        const priceWithProfit = quote.price / (1 - profitMargin);
+        const priceWithProfit = profitMargin > 0 ? quote.price / (1 - profitMargin) : quote.price;
         const vatAmount = orderItem.withVAT ? priceWithProfit * VAT_RATE : 0;
         const finalPrice = priceWithProfit + vatAmount;
         const profitAmount = priceWithProfit - quote.price;
         
         const newRow = [
-            format(new Date(), 'yyyy-MM-dd HH:mm:ss'),
+            // User requested order:
+            getDetailName('regions', orderItem.startRegionId), // Ачих бүс
+            getDetailName('regions', orderItem.endRegionId), // Буулгах бүс
+            getDetailName('serviceTypes', orderItem.serviceTypeId), // Үйлчилгээний төрөл
+            orderItem.frequency, // Давтамж
+            getDetailName('warehouses', orderItem.startWarehouseId), // Ачих агуулах
+            getDetailName('warehouses', orderItem.endWarehouseId), // Буулгах агуулах
+            orderItem.totalDistance, // Нийт зам (км)
+            format(new Date(orderItem.loadingStartDate), 'yyyy-MM-dd'), // Ачих огноо
+            format(new Date(orderItem.unloadingEndDate), 'yyyy-MM-dd'), // Буулгах огноо
+            getDetailName('vehicleTypes', orderItem.vehicleTypeId), // Машин
+            getDetailName('trailerTypes', orderItem.trailerTypeId), // Тэвш
+            orderItem.profitMargin || 0, // Ашгийн хувь (%)
+            cargoInfo, // Ачаа
+
+            // Additional fields from previous logic
             order.orderNumber,
             order.customerName,
-            `${getDetailName('regions', orderItem.startRegionId)}, ${getDetailName('warehouses', orderItem.startWarehouseId)}`,
-            `${getDetailName('regions', orderItem.endRegionId)}, ${getDetailName('warehouses', orderItem.endWarehouseId)}`,
-            cargoInfo,
-            vehicleInfo,
             quote.driverName,
             quote.driverPhone,
             quote.price,
@@ -125,7 +108,6 @@ export async function POST(req: NextRequest) {
             profitAmount,
             finalPrice,
             quote.notes || '',
-            formatConditions(order.conditions),
         ];
         
         await sheets.spreadsheets.values.append({
