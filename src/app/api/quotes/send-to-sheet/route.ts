@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
         const sentDate = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
         
         const newRow = [
+            order.orderNumber, // Захиалгын №
             sentDate, // Илгээсэн огноо
             getDetailName('regions', orderItem.startRegionId), // Ачих бүс
             getDetailName('regions', orderItem.endRegionId), // Буулгах бүс
@@ -99,7 +100,6 @@ export async function POST(req: NextRequest) {
             getDetailName('trailerTypes', orderItem.trailerTypeId), // Тэвш
             orderItem.profitMargin || 0, // Ашгийн хувь (%)
             cargoInfo, // Ачааны нэгтгэл
-            order.orderNumber, // Захиалгын №
             order.customerName, // Харилцагч
             quote.driverName, // Жолоочийн нэр
             quote.driverPhone, // Жолоочийн утас
