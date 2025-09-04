@@ -49,14 +49,19 @@ const convertDateFields = (data: any): any => {
 const formatConditions = (conditions?: TransportationConditions) => {
     if (!conditions) return 'N/A';
     
-    const parts = [
-        `Ачилт: ${conditions.loading}`,
-        `Буулгалт: ${conditions.unloading}`,
-        `Даатгал: ${conditions.insurance}`,
-        `Төлбөр: ${conditions.paymentTerm}`,
-        `ТХ бэлэн байдал: ${conditions.vehicleAvailability}`,
-        `Зөвшөөрөл: ${conditions.permits?.roadPermit ? 'Замын зөвшөөрөл' : ''}${conditions.permits?.roadPermit && conditions.permits?.roadToll ? ', ' : ''}${conditions.permits?.roadToll ? 'Замын хураамж' : ''}`
-    ];
+    const parts = [];
+
+    if (conditions.loading) parts.push(`Ачилт: ${conditions.loading}`);
+    if (conditions.unloading) parts.push(`Буулгалт: ${conditions.unloading}`);
+    if (conditions.insurance) parts.push(`Даатгал: ${conditions.insurance}`);
+    if (conditions.paymentTerm) parts.push(`Төлбөр: ${conditions.paymentTerm}`);
+    if (conditions.vehicleAvailability) parts.push(`ТХ бэлэн байдал: ${conditions.vehicleAvailability}`);
+    
+    const permitParts = [];
+    if(conditions.permits?.roadPermit) permitParts.push('Замын зөвшөөрөл');
+    if(conditions.permits?.roadToll) permitParts.push('Замын хураамж');
+    if(permitParts.length > 0) parts.push(`Зөвшөөрөл: ${permitParts.join(', ')}`);
+
 
     if (conditions.additionalConditions) {
         parts.push(`Нэмэлт: ${conditions.additionalConditions}`);
@@ -99,7 +104,8 @@ export async function POST(req: NextRequest) {
         const vehicleInfo = `${getDetailName('vehicleTypes', orderItem.vehicleTypeId)}, ${getDetailName('trailerTypes', orderItem.trailerTypeId)}`;
 
         const VAT_RATE = 0.1;
-        const priceWithProfit = quote.price * (1 + (orderItem.profitMargin || 0) / 100);
+        const profitMargin = (orderItem.profitMargin || 0) / 100;
+        const priceWithProfit = quote.price / (1 - profitMargin);
         const vatAmount = orderItem.withVAT ? priceWithProfit * VAT_RATE : 0;
         const finalPrice = priceWithProfit + vatAmount;
         const profitAmount = priceWithProfit - quote.price;

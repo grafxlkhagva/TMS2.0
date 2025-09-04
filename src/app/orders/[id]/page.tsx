@@ -104,10 +104,25 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const toDateSafe = (date: any): Date => {
-  if (date instanceof Timestamp) return date.toDate();
-  if (date instanceof Date) return date;
-  return new Date(date);
+    if (date instanceof Timestamp) return date.toDate();
+    if (date instanceof Date) return date;
+    // Basic check for string that could be a date
+    if (typeof date === 'string' && date.length > 5 && (date.includes('-') || date.includes('/'))) {
+        const parsed = new Date(date);
+        if (!isNaN(parsed.getTime())) {
+            return parsed;
+        }
+    }
+    // Handle Firestore-like object structure from serialization
+    if (typeof date === 'object' && date !== null && 'seconds' in date && 'nanoseconds' in date) {
+        return new Timestamp(date.seconds, date.nanoseconds).toDate();
+    }
+    // Return a default or invalid date if parsing fails, to avoid crashes.
+    // Let's return something that won't crash format() but indicates an issue.
+    // Or, based on context, you might prefer `new Date()`
+    return new Date(0); 
 };
+
 
 async function generateShipmentNumber() {
     const counterRef = doc(db, 'counters', 'shipmentCounter');
@@ -742,7 +757,8 @@ export default function OrderDetailPage() {
   }
   
   const calculateFinalPrice = (item: OrderItem, quote: DriverQuote) => {
-    const priceWithProfit = quote.price * (1 + (item.profitMargin || 0) / 100);
+    const profitMargin = (item.profitMargin || 0) / 100;
+    const priceWithProfit = profitMargin > 0 ? quote.price / (1 - profitMargin) : quote.price;
     const vatAmount = item.withVAT ? priceWithProfit * 0.1 : 0;
     const finalPrice = priceWithProfit + vatAmount;
     return {
@@ -804,7 +820,7 @@ export default function OrderDetailPage() {
                     <CardTitle>Захиалгын мэдээлэл</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <OrderDetailItem icon={Building} label="Харилцагч" value={<Link href={`/customers/${order.customerId}`} className="hover:underline text-primary">{order.customerName}</Link>} />
+                    <OrderDetailItem icon={Building} label="Харилцагч" value={<Link href={`/customers/${order.customerId}`} className="text-primary hover:underline">{order.customerName}</Link>} />
                     <OrderDetailItem icon={User} label="Харилцагчийн ажилтан" value={order.employeeName} />
                     <OrderDetailItem icon={User} label="Тээврийн менежер" value={order.transportManagerName} />
                     {totalOrderPrice > 0 && (
@@ -932,14 +948,14 @@ export default function OrderDetailPage() {
                                                                     <span className="text-right font-mono">{quote.price.toLocaleString()}₮</span>
                                                                     
                                                                     <span className="font-medium text-muted-foreground">Ашиг ({item.profitMargin || 0}%):</span>
-                                                                    <span className="text-right font-mono">{profitAmount.toLocaleString()}₮</span>
+                                                                    <span className="text-right font-mono">{profitAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}₮</span>
                                                                     
                                                                     {item.withVAT && <>
                                                                         <span className="font-medium text-muted-foreground">НӨАТ (10%):</span>
-                                                                        <span className="text-right font-mono">{vatAmount.toLocaleString()}₮</span>
+                                                                        <span className="text-right font-mono">{vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}₮</span>
                                                                     </>}
                                                                     
-                                                                    <span className="font-bold col-span-2 border-t mt-1 pt-1 text-base text-primary text-right">{finalPrice.toLocaleString()}₮</span>
+                                                                    <span className="font-bold col-span-2 border-t mt-1 pt-1 text-base text-primary text-right">{finalPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}₮</span>
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell>
