@@ -140,11 +140,12 @@ export async function POST(req: NextRequest) {
         const conditions = order.conditions;
         let conditionsText = '';
         if (conditions) {
+            const firstItem = orderItems.length > 0 ? orderItems[0] : null;
             conditionsText = [
                 `Ачилт: ${conditions.loading}`,
                 `Буулгалт: ${conditions.unloading}`,
                  // Assuming you have a way to describe the route. This is a placeholder.
-                `Маршрут: ${getDetailName('regions', orderItems[0].startRegionId)} - ${getDetailName('regions', orderItems[0].endRegionId)}`,
+                `Маршрут: ${firstItem ? `${getDetailName('regions', firstItem.startRegionId)} - ${getDetailName('regions', firstItem.endRegionId)}` : 'N/A'}`,
                 `ТХ-ийн бэлэн байдал: ${conditions.vehicleAvailability}`,
                 `Тээвэрлэлтийн хугацаа: Стандарт`,
                 `Буцах ачаа: Буцахдаа ачаагүй`, // Placeholder
