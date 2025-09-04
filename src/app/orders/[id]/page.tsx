@@ -635,6 +635,7 @@ export default function OrderDetailPage() {
   };
 
   const handleSendToSheet = async (item: OrderItem, quote: DriverQuote) => {
+    if (!order) return;
     setSendingToSheet(quote.id);
     try {
         const payload = {
@@ -869,10 +870,6 @@ export default function OrderDetailPage() {
                                    </div>
                                    <AccordionContent className="space-y-4">
                                        <div className="flex items-center justify-end gap-2 px-4 pb-4 border-b">
-                                            <Button variant="outline" size="sm" onClick={() => handleSendToSheet(item, (quotes.get(item.id) || []).find(q => q.id === item.acceptedQuoteId)!)} disabled={!item.acceptedQuoteId || sendingToSheet === item.acceptedQuoteId}>
-                                                {sendingToSheet === item.acceptedQuoteId ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>}
-                                                Sheet-рүү илгээх
-                                            </Button>
                                            <Button variant="outline" size="sm" onClick={() => handleToggleTenderStatus(item)}>
                                                 {item.tenderStatus === 'Open' ? <MegaphoneOff className="mr-2 h-4 w-4" /> : <Megaphone className="mr-2 h-4 w-4" />}
                                                 {item.tenderStatus === 'Open' ? 'Тендер хаах' : 'Тендер нээх'}
@@ -952,11 +949,10 @@ export default function OrderDetailPage() {
                                                             </TableCell>
                                                             <TableCell className="text-right">
                                                                 <div className="flex gap-1 justify-end items-center">
-                                                                     {quote.channel === 'Phone' && (
-                                                                        <Button size="sm" variant="outline" onClick={() => handleRegisterDriver(quote)} disabled={isSubmitting}>
-                                                                            <UserPlus className="mr-2 h-4 w-4" /> Тээвэрчин болгох
-                                                                        </Button>
-                                                                    )}
+                                                                     <Button size="sm" variant="outline" onClick={() => handleSendToSheet(item, quote)} disabled={sendingToSheet === quote.id}>
+                                                                        {sendingToSheet === quote.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>}
+                                                                        Sheet-рүү
+                                                                    </Button>
                                                                     {item.acceptedQuoteId === quote.id ? (
                                                                          <Button size="sm" variant="destructive" onClick={() => handleRevertQuoteSelection(item)} disabled={isSubmitting || item.status === 'Shipped'}>
                                                                              <XCircle className="mr-2 h-4 w-4"/> Буцаах

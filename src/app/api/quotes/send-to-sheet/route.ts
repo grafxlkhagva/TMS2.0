@@ -100,6 +100,8 @@ export async function POST(req: NextRequest) {
 
     } catch (error) {
         console.error('Error sending data to Google Sheets:', error);
-        return NextResponse.json({ message: 'Error sending data to Google Sheets', error: (error as Error).message }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        // Provide more detailed error response
+        return NextResponse.json({ message: 'Error sending data to Google Sheets', error: errorMessage, details: error }, { status: 500 });
     }
 }
