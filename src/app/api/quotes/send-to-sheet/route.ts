@@ -10,16 +10,19 @@ const convertDateFields = (data: any): any => {
     if (data === null || data === undefined) {
         return data;
     }
-    // Handle Firestore Timestamp
+    
+    // Handle Firestore Timestamp from server-side (often comes as plain object)
     if (data.seconds !== undefined && data.nanoseconds !== undefined && typeof data.seconds === 'number' && typeof data.nanoseconds === 'number') {
         try {
+            // Check if it's a valid Timestamp structure before converting
             return new Timestamp(data.seconds, data.nanoseconds).toDate();
         } catch (e) {
-            // Not a valid timestamp, return as is
+            // Not a valid timestamp, return as is to avoid crash
             return data;
         }
     }
-    // Handle date strings
+    
+    // Handle date strings (like ISO strings)
     if (typeof data === 'string') {
          // Basic check to see if it's a date-like string
         const parsedDate = new Date(data);
@@ -29,15 +32,17 @@ const convertDateFields = (data: any): any => {
     }
 
     if (Array.isArray(data)) {
-        return data.map(convertDateFields);
+        return data.map(item => convertDateFields(item));
     }
-    if (typeof data === 'object') {
+    
+    if (typeof data === 'object' && data.constructor === Object) {
         const newData: { [key: string]: any } = {};
         for (const key in data) {
             newData[key] = convertDateFields(data[key]);
         }
         return newData;
     }
+    
     return data;
 };
 
@@ -64,7 +69,8 @@ const formatConditions = (conditions?: TransportationConditions) => {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { order, orderItem, quote, allData } = convertDateFields(body);
+        const payload = convertDateFields(body);
+        const { order, orderItem, quote, allData } = payload;
 
         if (!process.env.GOOGLE_SHEETS_CLIENT_EMAIL || !process.env.GOOGLE_SHEETS_PRIVATE_KEY || !process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_SHEET_NAME) {
             throw new Error("Google Sheets environment variables are not configured.");
@@ -83,6 +89,9 @@ export async function POST(req: NextRequest) {
         const sheets = google.sheets({ version: 'v4', auth });
         
         const getDetailName = (collection: string, id: string) => {
+            if (!allData || !allData[collection] || !id) {
+                return id || 'N/A';
+            }
             return allData[collection]?.find((d: any) => d.id === id)?.name || id;
         }
 
@@ -127,7 +136,6 @@ export async function POST(req: NextRequest) {
     } catch (error) {
         console.error('Error sending data to Google Sheets:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        // Provide more detailed error response
         return NextResponse.json({ message: 'Error sending data to Google Sheets', error: errorMessage, details: error }, { status: 500 });
     }
 }
