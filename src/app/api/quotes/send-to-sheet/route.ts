@@ -84,6 +84,8 @@ export async function POST(req: NextRequest) {
         
         const sentDate = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
         
+        const conditions = order.conditions || {};
+
         const newRow = [
             order.orderNumber, // Захиалгын №
             sentDate, // Илгээсэн огноо
@@ -108,6 +110,14 @@ export async function POST(req: NextRequest) {
             profitAmount, // Ашиг (₮)
             finalPrice, // Нийт дүн (₮)
             quote.notes || '', // Жолоочийн тэмдэглэл
+            conditions.loading || '', // Ачилт
+            conditions.unloading || '', // Буулгалт
+            conditions.permits?.roadPermit ? 'Тийм' : 'Үгүй', // Замын зөвшөөрөл
+            conditions.permits?.roadToll ? 'Тийм' : 'Үгүй', // Замын хураамж
+            conditions.vehicleAvailability || '', // ТХ-н бэлэн байдал
+            conditions.paymentTerm || '', // Төлбөрийн нөхцөл
+            conditions.insurance || '', // Даатгал
+            conditions.additionalConditions || '', // Нэмэлт нөхцөл
         ];
         
         await sheets.spreadsheets.values.append({
