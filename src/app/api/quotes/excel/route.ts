@@ -6,20 +6,26 @@ import { Timestamp } from 'firebase/firestore';
 const VAT_RATE = 0.1;
 
 // Helper to convert Firestore Timestamps to JS Date objects recursively
+// This version is safer and avoids overwriting non-timestamp fields.
 const convertTimestamps = (data: any): any => {
+    if (!data) return data;
+
     if (data instanceof Timestamp) {
         return data.toDate();
     }
+    
     if (Array.isArray(data)) {
-        return data.map(convertTimestamps);
+        return data.map(item => convertTimestamps(item));
     }
-    if (data !== null && typeof data === 'object') {
+    
+    if (typeof data === 'object' && data.constructor === Object) {
         const newData: { [key: string]: any } = {};
         for (const key in data) {
             newData[key] = convertTimestamps(data[key]);
         }
         return newData;
     }
+    
     return data;
 };
 
@@ -64,7 +70,7 @@ export async function POST(req: NextRequest) {
         
         // --- Quote Info ---
         sheet.getCell('L8').value = 'Quote No:';
-        sheet.getCell('M8').value = order.orderNumber ? order.orderNumber.replace('ORD', 'Q') : '';
+        sheet.getCell('M8').value = order.orderNumber ? String(order.orderNumber).replace('ORD', 'Q') : '';
         sheet.getCell('L9').value = 'Quote Date:';
         sheet.getCell('M9').value = new Date();
         
