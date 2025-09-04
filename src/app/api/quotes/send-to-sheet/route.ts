@@ -2,19 +2,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { format } from 'date-fns';
+import { Timestamp } from 'firebase/firestore';
 
-// Helper to convert Firestore Timestamps to JS Date objects recursively
-const convertTimestamps = (data: any): any => {
-    if (data?.seconds) { // Basic check for Firestore Timestamp-like object
-        return new Date(data.seconds * 1000);
+// Helper to convert Firestore Timestamps or date strings to JS Date objects recursively
+const convertDateFields = (data: any): any => {
+    if (data === null || data === undefined) {
+        return data;
     }
+    // Handle Firestore Timestamp
+    if (typeof data.seconds === 'number' && typeof data.nanoseconds === 'number') {
+        return new Timestamp(data.seconds, data.nanoseconds).toDate();
+    }
+    // Handle date strings
+    if (typeof data === 'string') {
+         // Basic check to see if it's a date-like string
+        const parsedDate = new Date(data);
+        if (!isNaN(parsedDate.getTime()) && data.includes('T')) {
+            return parsedDate;
+        }
+    }
+
     if (Array.isArray(data)) {
-        return data.map(convertTimestamps);
+        return data.map(convertDateFields);
     }
-    if (data !== null && typeof data === 'object') {
+    if (typeof data === 'object') {
         const newData: { [key: string]: any } = {};
         for (const key in data) {
-            newData[key] = convertTimestamps(data[key]);
+            newData[key] = convertDateFields(data[key]);
         }
         return newData;
     }
@@ -25,7 +39,7 @@ const convertTimestamps = (data: any): any => {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { order, orderItem, quote, allData } = convertTimestamps(body);
+        const { order, orderItem, quote, allData } = convertDateFields(body);
 
         if (!process.env.GOOGLE_SHEETS_CLIENT_EMAIL || !process.env.GOOGLE_SHEETS_PRIVATE_KEY || !process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_SHEET_NAME) {
             throw new Error("Google Sheets environment variables are not configured.");
