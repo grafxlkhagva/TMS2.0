@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
         
         // --- Quote Info ---
         sheet.getCell('L8').value = 'Quote No:';
-        sheet.getCell('M8').value = order.orderNumber?.replace('ORD', 'Q') || '';
+        sheet.getCell('M8').value = order.orderNumber ? order.orderNumber.replace('ORD', 'Q') : '';
         sheet.getCell('L9').value = 'Quote Date:';
         sheet.getCell('M9').value = new Date();
         
