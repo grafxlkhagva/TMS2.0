@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -106,6 +105,11 @@ type FormValues = z.infer<typeof formSchema>;
 const toDateSafe = (date: any): Date => {
     if (date instanceof Timestamp) return date.toDate();
     if (date instanceof Date) return date;
+    // Handle Firestore-like object structure from serialization
+    if (typeof date === 'object' && date !== null && 'seconds' in date && 'nanoseconds' in date) {
+        // This is a basic check; you might want more robust validation
+        return new Timestamp(date.seconds, date.nanoseconds).toDate();
+    }
     // Basic check for string that could be a date
     if (typeof date === 'string' && date.length > 5 && (date.includes('-') || date.includes('/'))) {
         const parsed = new Date(date);
@@ -113,13 +117,7 @@ const toDateSafe = (date: any): Date => {
             return parsed;
         }
     }
-    // Handle Firestore-like object structure from serialization
-    if (typeof date === 'object' && date !== null && 'seconds' in date && 'nanoseconds' in data) {
-        return new Timestamp(date.seconds, date.nanoseconds).toDate();
-    }
     // Return a default or invalid date if parsing fails, to avoid crashes.
-    // Let's return something that won't crash format() but indicates an issue.
-    // Or, based on context, you might prefer `new Date()`
     return new Date(0); 
 };
 
@@ -242,7 +240,7 @@ export default function OrderDetailPage() {
       });
 
       const itemsData = await Promise.all(itemsDataPromises);
-      itemsData.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      itemsData.sort((a, b) => toDateSafe(a.createdAt).getTime() - toDateSafe(b.createdAt).getTime());
       setOrderItems(itemsData);
       
       // Fetch quotes for each item
@@ -258,7 +256,7 @@ export default function OrderDetailPage() {
                 createdAt: toDateSafe(data.createdAt)
             } as DriverQuote
           });
-          quotesData.sort((a, b) => b.createdAt.getTime() - a.getTime());
+          quotesData.sort((a, b) => toDateSafe(b.createdAt).getTime() - toDateSafe(a.createdAt).getTime());
           quotesMap.set(item.id, quotesData);
       }
       setQuotes(quotesMap);
@@ -843,7 +841,7 @@ export default function OrderDetailPage() {
                     />
                     <OrderDetailItem icon={User} label="Тээврийн менежер" value={order.transportManagerName} />
                     {totalOrderPrice > 0 && (
-                        <OrderDetailItem icon={CircleDollarSign} label="Нийт үнийн дүн" value={`${totalOrderPrice.toLocaleString()}₮`} />
+                        <OrderDetailItem icon={CircleDollarSign} label="Нийт үнийн дүн" value={`${Math.round(totalOrderPrice).toLocaleString()}₮`} />
                     )}
                     <OrderDetailItem icon={FileText} label="Статус" value={<Badge>{order.status}</Badge>} />
                     <OrderDetailItem icon={User} label="Бүртгэсэн хэрэглэгч" value={order.createdBy.name} />
@@ -894,7 +892,7 @@ export default function OrderDetailPage() {
                                                 <div className="flex flex-col items-end gap-2 flex-shrink-0">
                                                     <div className="flex items-center gap-2">
                                                         {item.finalPrice != null && (
-                                                            <p className="font-semibold text-primary">{item.finalPrice.toLocaleString()}₮</p>
+                                                            <p className="font-semibold text-primary">{Math.round(item.finalPrice).toLocaleString()}₮</p>
                                                         )}
                                                         <Badge variant={getItemStatusBadgeVariant(item.status)}>{item.status}</Badge>
                                                     </div>
@@ -1088,3 +1086,5 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+
+    
