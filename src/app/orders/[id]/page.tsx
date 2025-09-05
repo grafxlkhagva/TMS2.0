@@ -5,7 +5,7 @@ import * as React from 'react';
 import { doc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, orderBy, runTransaction, type DocumentReference, or } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, VehicleType, TrailerType, Region, PackagingType, DriverQuote, OrderItemCargo, Shipment } from '@/types';
+import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, VehicleType, TrailerType, Region, PackagingType, DriverQuote, OrderItemCargo, Shipment, SystemUser } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -106,7 +106,7 @@ const toDateSafe = (date: any): Date => {
     if (date instanceof Timestamp) return date.toDate();
     if (date instanceof Date) return date;
     // Handle Firestore-like object structure from serialization
-    if (typeof date === 'object' && date !== null && 'seconds' in date && 'nanoseconds' in date) {
+    if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in date) {
         // This is a basic check; you might want more robust validation
         return new Timestamp(date.seconds, date.nanoseconds).toDate();
     }
@@ -157,6 +157,7 @@ export default function OrderDetailPage() {
   const [trailerTypes, setTrailerTypes] = React.useState<TrailerType[]>([]);
   const [packagingTypes, setPackagingTypes] = React.useState<PackagingType[]>([]);
   const [customerEmployees, setCustomerEmployees] = React.useState<CustomerEmployee[]>([]);
+  const [transportManagers, setTransportManagers] = React.useState<SystemUser[]>([]);
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -209,7 +210,7 @@ export default function OrderDetailPage() {
       } as Order;
       setOrder(currentOrder);
 
-      const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap, packagingTypeSnap, shipmentsSnap] = await Promise.all([
+      const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap, packagingTypeSnap, shipmentsSnap, managersSnap] = await Promise.all([
         getDocs(query(collection(db, 'order_items'), where('orderId', '==', orderId))),
         getDocs(query(collection(db, "warehouses"), orderBy("name"))),
         getDocs(query(collection(db, "service_types"), orderBy("name"))),
@@ -219,8 +220,11 @@ export default function OrderDetailPage() {
         getDocs(query(collection(db, "regions"), orderBy("name"))),
         getDocs(query(collection(db, "packaging_types"), orderBy("name"))),
         getDocs(query(collection(db, 'shipments'), where('orderId', '==', orderId))),
+        getDocs(query(collection(db, 'users'), where('role', '==', 'transport_manager'))),
       ]);
       
+      setTransportManagers(managersSnap.docs.map(d => d.data() as SystemUser));
+
       const itemsDataPromises: Promise<OrderItem>[] = itemsSnap.docs.map(async (d) => {
         const itemData = d.data();
         const cargoQuery = query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', d.id));
@@ -656,11 +660,16 @@ export default function OrderDetailPage() {
     if (!order) return;
     setSendingToSheet(quote.id);
     try {
+        const customerEmployee = customerEmployees.find(e => e.id === order.employeeId);
+        const transportManager = transportManagers.find(m => m.uid === order.transportManagerId);
+        
         const payload = {
             order,
             orderItem: item,
             quote,
-            allData
+            allData,
+            customerEmployee,
+            transportManager,
         };
 
         const response = await fetch('/api/quotes/send-to-sheet', {
@@ -766,11 +775,13 @@ export default function OrderDetailPage() {
     const priceWithProfit = driverPrice * (1 + profitMargin);
     const vatAmount = item.withVAT ? priceWithProfit * 0.1 : 0;
     const finalPrice = priceWithProfit + vatAmount;
+    const profitAmount = priceWithProfit - driverPrice;
 
     return {
         priceWithProfit,
         vatAmount,
         finalPrice,
+        profitAmount
     };
   }
   
@@ -948,8 +959,7 @@ export default function OrderDetailPage() {
                                             <TableBody>
                                                 {quotes.get(item.id)?.length > 0 ? (
                                                     quotes.get(item.id)?.map(quote => {
-                                                        const { finalPrice, priceWithProfit, vatAmount } = calculateFinalPrice(item, quote);
-                                                        const profitAmount = priceWithProfit - quote.price;
+                                                        const { finalPrice, profitAmount, vatAmount } = calculateFinalPrice(item, quote);
                                                         return (
                                                         <TableRow key={quote.id} className={quote.status === 'Accepted' ? 'bg-green-100 dark:bg-green-900/50' : ''}>
                                                             <TableCell>
@@ -1086,5 +1096,3 @@ export default function OrderDetailPage() {
     </div>
   );
 }
-
-    

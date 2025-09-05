@@ -16,7 +16,6 @@ const convertDateFields = (data: any): any => {
     
     // Handle Firestore-like object structure from serialization
     if (typeof data === 'object' && data !== null && !Array.isArray(data) && 'seconds' in data && 'nanoseconds' in data) {
-        // Basic check to ensure it's likely a Timestamp object
          if (typeof data.seconds === 'number' && typeof data.nanoseconds === 'number') {
             return new Timestamp(data.seconds, data.nanoseconds).toDate();
         }
@@ -24,7 +23,6 @@ const convertDateFields = (data: any): any => {
     
     // Handle date strings (like ISO strings)
     if (typeof data === 'string') {
-         // A simple check to see if it's a date-like string
         const parsedDate = new Date(data);
          if (!isNaN(parsedDate.getTime()) && data.includes('T') && data.length > 10) {
             return parsedDate;
@@ -51,7 +49,7 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         const payload = convertDateFields(body);
-        const { order, orderItem, quote, allData } = payload;
+        const { order, orderItem, quote, allData, customerEmployee, transportManager } = payload;
 
         if (!process.env.GOOGLE_SHEETS_CLIENT_EMAIL || !process.env.GOOGLE_SHEETS_PRIVATE_KEY || !process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_SHEET_NAME) {
             throw new Error("Google Sheets environment variables are not configured.");
@@ -123,6 +121,13 @@ export async function POST(req: NextRequest) {
             conditions.paymentTerm || '', // Төлбөрийн нөхцөл
             conditions.insurance || '', // Даатгал
             conditions.additionalConditions || '', // Нэмэлт нөхцөл
+            customerEmployee?.lastName || '',
+            customerEmployee?.firstName || '',
+            customerEmployee?.position || '',
+            customerEmployee?.phone || '',
+            customerEmployee?.email || '',
+            transportManager?.phone || '',
+            transportManager?.email || '',
         ];
         
         await sheets.spreadsheets.values.append({
