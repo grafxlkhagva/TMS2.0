@@ -106,7 +106,7 @@ const toDateSafe = (date: any): Date => {
     if (date instanceof Timestamp) return date.toDate();
     if (date instanceof Date) return date;
     // Handle Firestore-like object structure from serialization
-    if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in data) {
+    if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in data && 'nanoseconds' in data) {
          // This is a basic check; you might want more robust validation
         return new Timestamp(date.seconds, date.nanoseconds).toDate();
     }
@@ -961,7 +961,7 @@ export default function OrderDetailPage() {
                                             <TableBody>
                                                 {quotes.get(item.id)?.length > 0 ? (
                                                     quotes.get(item.id)?.map(quote => {
-                                                        const { finalPrice, profitAmount, vatAmount } = calculateFinalPrice(item, quote);
+                                                        const { priceWithProfit, finalPrice, profitAmount, vatAmount } = calculateFinalPrice(item, quote);
                                                         return (
                                                         <TableRow key={quote.id} className={quote.status === 'Accepted' ? 'bg-green-100 dark:bg-green-900/50' : ''}>
                                                             <TableCell>
@@ -978,6 +978,9 @@ export default function OrderDetailPage() {
                                                                     
                                                                     <span className="font-medium text-muted-foreground">Ашиг ({item.profitMargin || 0}%):</span>
                                                                     <span className="text-right font-mono">{Math.round(profitAmount).toLocaleString()}₮</span>
+
+                                                                    <span className="font-medium text-muted-foreground">НӨАТ-гүй үнэ:</span>
+                                                                    <span className="text-right font-mono">{Math.round(priceWithProfit).toLocaleString()}₮</span>
                                                                     
                                                                     {item.withVAT && <>
                                                                         <span className="font-medium text-muted-foreground">НӨАТ (10%):</span>

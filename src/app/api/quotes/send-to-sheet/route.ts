@@ -109,6 +109,7 @@ export async function POST(req: NextRequest) {
             quote.driverName, // Жолоочийн нэр
             quote.driverPhone, // Жолоочийн утас
             Math.round(quote.price), // Жолоочийн санал (₮)
+            Math.round(priceWithProfit), // НӨАТ-гүй үнэ (₮)
             Math.round(vatAmount), // НӨАТ (₮)
             Math.round(profitAmount), // Ашиг (₮)
             Math.round(finalPrice), // Нийт дүн (₮)
