@@ -126,6 +126,8 @@ export async function POST(req: NextRequest) {
             customerEmployee?.position || '',
             customerEmployee?.phone || '',
             customerEmployee?.email || '',
+            transportManager?.lastName || '',
+            transportManager?.firstName || '',
             transportManager?.phone || '',
             transportManager?.email || '',
         ];
