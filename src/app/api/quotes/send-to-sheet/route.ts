@@ -15,15 +15,18 @@ const convertDateFields = (data: any): any => {
     }
     
     // Handle Firestore-like object structure from serialization
-    if (typeof data === 'object' && data !== null && 'seconds' in data && 'nanoseconds' in data) {
-        return new Timestamp(data.seconds, data.nanoseconds).toDate();
+    if (typeof data === 'object' && data !== null && !Array.isArray(data) && 'seconds' in data && 'nanoseconds' in data) {
+        // Basic check to ensure it's likely a Timestamp object
+         if (typeof data.seconds === 'number' && typeof data.nanoseconds === 'number') {
+            return new Timestamp(data.seconds, data.nanoseconds).toDate();
+        }
     }
     
     // Handle date strings (like ISO strings)
     if (typeof data === 'string') {
-         // Basic check to see if it's a date-like string
+         // A simple check to see if it's a date-like string
         const parsedDate = new Date(data);
-        if (!isNaN(parsedDate.getTime()) && data.includes('T') && data.length > 10) {
+         if (!isNaN(parsedDate.getTime()) && data.includes('T') && data.length > 10) {
             return parsedDate;
         }
     }
@@ -77,11 +80,13 @@ export async function POST(req: NextRequest) {
         
         const VAT_RATE = 0.1;
         const profitMargin = (orderItem.profitMargin || 0) / 100;
-        const priceWithProfit = profitMargin > 0 ? quote.price / (1 - profitMargin) : quote.price;
+        const driverPrice = quote.price;
+
+        const priceWithProfit = driverPrice * (1 + profitMargin);
         const vatAmount = orderItem.withVAT ? priceWithProfit * VAT_RATE : 0;
         const finalPrice = priceWithProfit + vatAmount;
-        const profitAmount = priceWithProfit - quote.price;
-        
+        const profitAmount = priceWithProfit - driverPrice;
+
         const sentDate = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
         
         const conditions = order.conditions || {};

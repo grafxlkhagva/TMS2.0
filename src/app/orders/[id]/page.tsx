@@ -114,8 +114,8 @@ const toDateSafe = (date: any): Date => {
         }
     }
     // Handle Firestore-like object structure from serialization
-    if (typeof date === 'object' && date !== null && 'seconds' in date && 'nanoseconds' in date) {
-        return new Timestamp(date.seconds, date.nanoseconds).toDate();
+    if (typeof data === 'object' && data !== null && 'seconds' in data && 'nanoseconds' in data) {
+        return new Timestamp(data.seconds, data.nanoseconds).toDate();
     }
     // Return a default or invalid date if parsing fails, to avoid crashes.
     // Let's return something that won't crash format() but indicates an issue.
@@ -758,9 +758,12 @@ export default function OrderDetailPage() {
   
   const calculateFinalPrice = (item: OrderItem, quote: DriverQuote) => {
     const profitMargin = (item.profitMargin || 0) / 100;
-    const priceWithProfit = profitMargin > 0 ? quote.price / (1 - profitMargin) : quote.price;
+    const driverPrice = quote.price;
+    
+    const priceWithProfit = driverPrice * (1 + profitMargin);
     const vatAmount = item.withVAT ? priceWithProfit * 0.1 : 0;
     const finalPrice = priceWithProfit + vatAmount;
+    
     return {
         priceWithProfit,
         vatAmount,
