@@ -114,8 +114,8 @@ const toDateSafe = (date: any): Date => {
         }
     }
     // Handle Firestore-like object structure from serialization
-    if (typeof data === 'object' && data !== null && 'seconds' in data && 'nanoseconds' in data) {
-        return new Timestamp(data.seconds, data.nanoseconds).toDate();
+    if (typeof date === 'object' && date !== null && 'seconds' in date && 'nanoseconds' in data) {
+        return new Timestamp(date.seconds, date.nanoseconds).toDate();
     }
     // Return a default or invalid date if parsing fails, to avoid crashes.
     // Let's return something that won't crash format() but indicates an issue.
@@ -186,6 +186,11 @@ export default function OrderDetailPage() {
     return orderItems.reduce((acc, item) => acc + (item.finalPrice || 0), 0);
   }, [orderItems]);
 
+  const selectedEmployee = React.useMemo(() => {
+    if (!order || !customerEmployees.length) return null;
+    return customerEmployees.find(e => e.id === order.employeeId);
+  }, [order, customerEmployees]);
+
   const fetchOrderData = React.useCallback(async () => {
     if (!orderId) return;
     setIsLoading(true);
@@ -253,7 +258,7 @@ export default function OrderDetailPage() {
                 createdAt: toDateSafe(data.createdAt)
             } as DriverQuote
           });
-          quotesData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+          quotesData.sort((a, b) => b.createdAt.getTime() - a.getTime());
           quotesMap.set(item.id, quotesData);
       }
       setQuotes(quotesMap);
@@ -824,7 +829,18 @@ export default function OrderDetailPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <OrderDetailItem icon={Building} label="Харилцагч" value={<Link href={`/customers/${order.customerId}`} className="text-primary hover:underline">{order.customerName}</Link>} />
-                    <OrderDetailItem icon={User} label="Харилцагчийн ажилтан" value={order.employeeName} />
+                    <OrderDetailItem 
+                        icon={User} 
+                        label="Харилцагчийн ажилтан" 
+                        value={
+                            selectedEmployee ? (
+                                <div>
+                                    <p>{selectedEmployee.lastName} {selectedEmployee.firstName}</p>
+                                    <p className="text-xs text-muted-foreground">{selectedEmployee.phone} &bull; {selectedEmployee.email}</p>
+                                </div>
+                            ) : order.employeeName
+                        } 
+                    />
                     <OrderDetailItem icon={User} label="Тээврийн менежер" value={order.transportManagerName} />
                     {totalOrderPrice > 0 && (
                         <OrderDetailItem icon={CircleDollarSign} label="Нийт үнийн дүн" value={`${totalOrderPrice.toLocaleString()}₮`} />
@@ -948,17 +964,17 @@ export default function OrderDetailPage() {
                                                              <TableCell className="text-xs">
                                                                 <div className="grid grid-cols-2 gap-x-2">
                                                                     <span className="font-medium text-muted-foreground">Жолоочийн санал:</span>
-                                                                    <span className="text-right font-mono">{quote.price.toLocaleString()}₮</span>
+                                                                    <span className="text-right font-mono">{Math.round(quote.price).toLocaleString()}₮</span>
                                                                     
                                                                     <span className="font-medium text-muted-foreground">Ашиг ({item.profitMargin || 0}%):</span>
-                                                                    <span className="text-right font-mono">{profitAmount.toLocaleString()}₮</span>
+                                                                    <span className="text-right font-mono">{Math.round(profitAmount).toLocaleString()}₮</span>
                                                                     
                                                                     {item.withVAT && <>
                                                                         <span className="font-medium text-muted-foreground">НӨАТ (10%):</span>
-                                                                        <span className="text-right font-mono">{vatAmount.toLocaleString()}₮</span>
+                                                                        <span className="text-right font-mono">{Math.round(vatAmount).toLocaleString()}₮</span>
                                                                     </>}
                                                                     
-                                                                    <span className="font-bold col-span-2 border-t mt-1 pt-1 text-base text-primary text-right">{finalPrice.toLocaleString()}₮</span>
+                                                                    <span className="font-bold col-span-2 border-t mt-1 pt-1 text-base text-primary text-right">{Math.round(finalPrice).toLocaleString()}₮</span>
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell>
