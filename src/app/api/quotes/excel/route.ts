@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
             // Format number cells
             ['J', 'K', 'L'].forEach(col => {
                 const cell = row.getCell(col);
-                cell.numFmt = '#,##0.00';
+                cell.numFmt = '#,##0';
             });
 
             row.height = 45;

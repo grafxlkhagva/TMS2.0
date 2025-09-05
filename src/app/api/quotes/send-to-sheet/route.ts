@@ -110,10 +110,10 @@ export async function POST(req: NextRequest) {
             order.customerName, // Харилцагч
             quote.driverName, // Жолоочийн нэр
             quote.driverPhone, // Жолоочийн утас
-            quote.price, // Жолоочийн санал (₮)
-            vatAmount, // НӨАТ (₮)
-            profitAmount, // Ашиг (₮)
-            finalPrice, // Нийт дүн (₮)
+            Math.round(quote.price), // Жолоочийн санал (₮)
+            Math.round(vatAmount), // НӨАТ (₮)
+            Math.round(profitAmount), // Ашиг (₮)
+            Math.round(finalPrice), // Нийт дүн (₮)
             quote.notes || '', // Жолоочийн тэмдэглэл
             conditions.loading || '', // Ачилт
             conditions.unloading || '', // Буулгалт

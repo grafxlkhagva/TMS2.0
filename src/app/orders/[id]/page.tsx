@@ -759,11 +759,11 @@ export default function OrderDetailPage() {
   const calculateFinalPrice = (item: OrderItem, quote: DriverQuote) => {
     const profitMargin = (item.profitMargin || 0) / 100;
     const driverPrice = quote.price;
-    
+
     const priceWithProfit = driverPrice * (1 + profitMargin);
     const vatAmount = item.withVAT ? priceWithProfit * 0.1 : 0;
     const finalPrice = priceWithProfit + vatAmount;
-    
+
     return {
         priceWithProfit,
         vatAmount,
@@ -951,14 +951,14 @@ export default function OrderDetailPage() {
                                                                     <span className="text-right font-mono">{quote.price.toLocaleString()}₮</span>
                                                                     
                                                                     <span className="font-medium text-muted-foreground">Ашиг ({item.profitMargin || 0}%):</span>
-                                                                    <span className="text-right font-mono">{profitAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}₮</span>
+                                                                    <span className="text-right font-mono">{profitAmount.toLocaleString()}₮</span>
                                                                     
                                                                     {item.withVAT && <>
                                                                         <span className="font-medium text-muted-foreground">НӨАТ (10%):</span>
-                                                                        <span className="text-right font-mono">{vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}₮</span>
+                                                                        <span className="text-right font-mono">{vatAmount.toLocaleString()}₮</span>
                                                                     </>}
                                                                     
-                                                                    <span className="font-bold col-span-2 border-t mt-1 pt-1 text-base text-primary text-right">{finalPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}₮</span>
+                                                                    <span className="font-bold col-span-2 border-t mt-1 pt-1 text-base text-primary text-right">{finalPrice.toLocaleString()}₮</span>
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell>
