@@ -106,7 +106,7 @@ const toDateSafe = (date: any): Date => {
     if (date instanceof Timestamp) return date.toDate();
     if (date instanceof Date) return date;
     // Handle Firestore-like object structure from serialization
-    if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in data && 'nanoseconds' in data) {
+    if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in data) {
          // This is a basic check; you might want more robust validation
         return new Timestamp(date.seconds, date.nanoseconds).toDate();
     }
@@ -801,8 +801,6 @@ export default function OrderDetailPage() {
     }
   };
 
-  const sheetUrl = `https://docs.google.com/spreadsheets/d/${process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID}/edit`;
-
   return (
     <div className="container mx-auto py-6">
        <div className="mb-6">
@@ -1002,7 +1000,7 @@ export default function OrderDetailPage() {
                                                                         Sheet-рүү
                                                                     </Button>
                                                                     <Button size="sm" variant="outline" asChild>
-                                                                        <Link href={sheetUrl} target="_blank">
+                                                                        <Link href="https://docs.google.com/spreadsheets/d/1QYHh2wyugW1QKCvhKLYF37ApSROFl2CjD21z9v6UzC8/edit?gid=1943364164#gid=1943364164" target="_blank">
                                                                             <FileSpreadsheet className="mr-2 h-4 w-4"/> Sheet нээх
                                                                         </Link>
                                                                     </Button>
