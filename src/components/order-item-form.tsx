@@ -30,32 +30,33 @@ import { Checkbox } from './ui/checkbox';
 function CargoForm({ control, itemIndex, packagingTypes, onRemove, cargoIndex, onQuickAdd }: any) {
     const standardUnits = ["кг", "тн", "м3", "литр", "ш", "боодол", "хайрцаг"];
     return (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start p-2 border rounded-md">
-             <FormField control={control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.name`} render={({ field }: any) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Нэр</FormLabel><FormControl><Input placeholder="Цемент" {...field} /></FormControl><FormMessage /></FormItem>)} />
-             <FormField control={control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.quantity`} render={({ field }: any) => (<FormItem className="md:col-span-1"><FormLabel className="text-xs">Хэмжээ</FormLabel><FormControl><Input type="number" placeholder="25" {...field} /></FormControl><FormMessage /></FormItem>)} />
-             <FormField control={control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.unit`} render={({ field }: any) => (
-                <FormItem className="md:col-span-2">
-                  <FormLabel className="text-xs">Нэгж</FormLabel>
-                   <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Нэгж..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {standardUnits.map(unit => (
-                        <SelectItem key={unit} value={unit}>
-                          {unit}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-             <FormField control={control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.packagingTypeId`} render={({ field }: any) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Баглаа</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Сонгох..." /></SelectTrigger></FormControl><SelectContent>{packagingTypes.map((p: any) => ( <SelectItem key={p.id} value={p.id}> {p.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => onQuickAdd('packaging_types', `items.${itemIndex}.cargoItems.${cargoIndex}.packagingTypeId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)} />
-             <FormField control={control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.notes`} render={({ field }: any) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Input placeholder="..." {...field} /></FormControl><FormMessage /></FormItem>)} />
-             <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive self-end" onClick={onRemove}><Trash2 className="h-4 w-4" /></Button>
+        <div className="p-2 border rounded-md">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <FormField control={control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.name`} render={({ field }: any) => (<FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-xs">Нэр</FormLabel><FormControl><Input placeholder="Цемент" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                
+                <div className="col-span-2 md:col-span-1">
+                    <FormLabel className="text-xs">Хэмжээ/Нэгж</FormLabel>
+                    <div className="flex gap-2">
+                        <FormField control={control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.quantity`} render={({ field }: any) => (<FormItem className="flex-1"><FormControl><Input type="number" placeholder="25" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.unit`} render={({ field }: any) => (
+                            <FormItem className="w-24">
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Нэгж..." /></SelectTrigger></FormControl>
+                                    <SelectContent>{standardUnits.map(unit => (<SelectItem key={unit} value={unit}>{unit}</SelectItem>))}</SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    </div>
+                </div>
+
+                <FormField control={control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.packagingTypeId`} render={({ field }: any) => (<FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-xs">Баглаа</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Сонгох..." /></SelectTrigger></FormControl><SelectContent>{packagingTypes.map((p: any) => ( <SelectItem key={p.id} value={p.id}> {p.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => onQuickAdd('packaging_types', `items.${itemIndex}.cargoItems.${cargoIndex}.packagingTypeId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)} />
+                <FormField control={control} name={`items.${itemIndex}.cargoItems.${cargoIndex}.notes`} render={({ field }: any) => (<FormItem className="col-span-2 md:col-span-1"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Input placeholder="..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+
+                <div className="col-span-2 md:col-span-1 flex items-end justify-end">
+                     <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={onRemove}><Trash2 className="h-4 w-4" /></Button>
+                </div>
+            </div>
         </div>
     )
 }
@@ -210,5 +211,7 @@ export default function OrderItemForm({ form, fields, remove, isSubmitting, onSu
         </Form>
     )
 }
+
+    
 
     
