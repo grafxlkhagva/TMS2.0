@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -697,14 +698,8 @@ export default function OrderDetailPage() {
       <div className="container mx-auto py-6 space-y-6">
         <Skeleton className="h-8 w-32" />
         <Skeleton className="h-10 w-48" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1 space-y-6">
-                <Card><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
-            </div>
-            <div className="lg:col-span-2 space-y-6">
-                <Card><CardContent className="pt-6"><Skeleton className="h-64 w-full" /></CardContent></Card>
-            </div>
-        </div>
+        <Card><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
+        <Card><CardContent className="pt-6"><Skeleton className="h-64 w-full" /></CardContent></Card>
       </div>
     );
   }
@@ -802,7 +797,7 @@ export default function OrderDetailPage() {
   };
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto py-6 space-y-6">
        <div className="mb-6">
         <Button variant="outline" size="sm" onClick={() => router.push('/orders')} className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -829,244 +824,238 @@ export default function OrderDetailPage() {
             </div>
         </div>
       </div>
-
-       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            <div className="lg:col-span-1 space-y-6 sticky top-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Захиалгын мэдээлэл</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <OrderDetailItem icon={Building} label="Харилцагч" value={<Link href={`/customers/${order.customerId}`} className="text-primary hover:underline">{order.customerName}</Link>} />
-                    <OrderDetailItem 
-                        icon={User} 
-                        label="Харилцагчийн ажилтан" 
-                        value={
-                            selectedEmployee ? (
-                                <div>
-                                    <p>{selectedEmployee.lastName} {selectedEmployee.firstName}</p>
-                                    <p className="text-xs text-muted-foreground">{selectedEmployee.phone} &bull; {selectedEmployee.email}</p>
-                                </div>
-                            ) : order.employeeName
-                        } 
-                    />
-                    <OrderDetailItem icon={User} label="Тээврийн менежер" value={order.transportManagerName} />
-                    {totalOrderPrice > 0 && (
-                        <OrderDetailItem icon={CircleDollarSign} label="Нийт үнийн дүн" value={`${Math.round(totalOrderPrice).toLocaleString()}₮`} />
-                    )}
-                    <OrderDetailItem icon={FileText} label="Статус" value={<Badge>{order.status}</Badge>} />
-                    <OrderDetailItem icon={User} label="Бүртгэсэн хэрэглэгч" value={order.createdBy.name} />
-                    <OrderDetailItem icon={FileText} label="Бүртгэсэн огноо" value={order.createdAt.toLocaleString()} />
-                  </CardContent>
-                </Card>
-            </div>
         
-            <div className="lg:col-span-2 space-y-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Тээвэрлэлтийн жагсаалт</CardTitle>
-                        <CardDescription>Энэ захиалгад хамаарах тээвэрлэлтүүд.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {orderItems.length > 0 ? (
-                        <Accordion type="multiple" className="w-full">
-                           {orderItems.map((item, index) => (
-                               <AccordionItem value={`item-${index}`} key={item.id}>
-                                   <div className="flex items-center gap-4 w-full pr-4 border-b">
-                                       <AccordionTrigger className="flex-1 py-4 pr-0 border-b-0 text-left">
-                                            <div className="flex justify-between items-start w-full gap-4">
-                                                <div className="flex-1 space-y-2">
-                                                    <p className="font-semibold text-base">Тээвэрлэлт #{index + 1}</p>
-                                                    <div className="space-y-2 text-sm text-muted-foreground">
-                                                        <div className="flex items-center gap-2">
-                                                          <MapPin className="h-4 w-4 flex-shrink-0"/> 
-                                                          <span>{getRegionName(item.startRegionId)} ({getWarehouseName(item.startWarehouseId)}) &rarr; {getRegionName(item.endRegionId)} ({getWarehouseName(item.endWarehouseId)})</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                          <Calendar className="h-4 w-4 flex-shrink-0"/> 
-                                                          <span>{format(new Date(item.loadingStartDate), "MM/dd")} - {format(new Date(item.unloadingEndDate), "MM/dd")}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <Truck className="h-4 w-4 flex-shrink-0"/>
-                                                            <span>{getVehicleTypeName(item.vehicleTypeId)}</span>
-                                                        </div>
-                                                         <div className="flex items-start gap-2">
-                                                          <Package className="h-4 w-4 flex-shrink-0 mt-0.5"/>
-                                                          <div className="flex flex-wrap gap-x-2 gap-y-1">
-                                                            {(item.cargoItems || []).map((cargo, idx) => (
-                                                                <span key={idx} className="text-xs bg-muted px-1.5 py-0.5 rounded">{cargo.name} ({cargo.quantity} {cargo.unit})</span>
-                                                            ))}
-                                                          </div>
-                                                        </div>
+        <Card>
+            <CardHeader>
+            <CardTitle>Захиалгын мэдээлэл</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+            <OrderDetailItem icon={Building} label="Харилцагч" value={<Link href={`/customers/${order.customerId}`} className="text-primary hover:underline">{order.customerName}</Link>} />
+            <OrderDetailItem 
+                icon={User} 
+                label="Харилцагчийн ажилтан" 
+                value={
+                    selectedEmployee ? (
+                        <div>
+                            <p>{selectedEmployee.lastName} {selectedEmployee.firstName}</p>
+                            <p className="text-xs text-muted-foreground">{selectedEmployee.phone} &bull; {selectedEmployee.email}</p>
+                        </div>
+                    ) : order.employeeName
+                } 
+            />
+            <OrderDetailItem icon={User} label="Тээврийн менежер" value={order.transportManagerName} />
+            {totalOrderPrice > 0 && (
+                <OrderDetailItem icon={CircleDollarSign} label="Нийт үнийн дүн" value={`${Math.round(totalOrderPrice).toLocaleString()}₮`} />
+            )}
+            <OrderDetailItem icon={FileText} label="Статус" value={<Badge>{order.status}</Badge>} />
+            <OrderDetailItem icon={User} label="Бүртгэсэн хэрэглэгч" value={order.createdBy.name} />
+            <OrderDetailItem icon={FileText} label="Бүртгэсэн огноо" value={order.createdAt.toLocaleString()} />
+            </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Тээвэрлэлтийн жагсаалт</CardTitle>
+                <CardDescription>Энэ захиалгад хамаарах тээвэрлэлтүүд.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {orderItems.length > 0 ? (
+                <Accordion type="multiple" className="w-full">
+                    {orderItems.map((item, index) => (
+                        <AccordionItem value={`item-${index}`} key={item.id}>
+                            <div className="flex items-center gap-4 w-full pr-4 border-b">
+                                <AccordionTrigger className="flex-1 py-4 pr-0 border-b-0 text-left">
+                                    <div className="flex justify-between items-start w-full gap-4">
+                                        <div className="flex-1 space-y-2">
+                                            <p className="font-semibold text-base">Тээвэрлэлт #{index + 1}</p>
+                                            <div className="space-y-2 text-sm text-muted-foreground">
+                                                <div className="flex items-center gap-2">
+                                                    <MapPin className="h-4 w-4 flex-shrink-0"/> 
+                                                    <span>{getRegionName(item.startRegionId)} ({getWarehouseName(item.startWarehouseId)}) &rarr; {getRegionName(item.endRegionId)} ({getWarehouseName(item.endWarehouseId)})</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar className="h-4 w-4 flex-shrink-0"/> 
+                                                    <span>{format(new Date(item.loadingStartDate), "MM/dd")} - {format(new Date(item.unloadingEndDate), "MM/dd")}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Truck className="h-4 w-4 flex-shrink-0"/>
+                                                    <span>{getVehicleTypeName(item.vehicleTypeId)}</span>
+                                                </div>
+                                                    <div className="flex items-start gap-2">
+                                                    <Package className="h-4 w-4 flex-shrink-0 mt-0.5"/>
+                                                    <div className="flex flex-wrap gap-x-2 gap-y-1">
+                                                    {(item.cargoItems || []).map((cargo, idx) => (
+                                                        <span key={idx} className="text-xs bg-muted px-1.5 py-0.5 rounded">{cargo.name} ({cargo.quantity} {cargo.unit})</span>
+                                                    ))}
                                                     </div>
                                                 </div>
-                                                <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                                                    <div className="flex items-center gap-2">
-                                                        {item.finalPrice != null && (
-                                                            <p className="font-semibold text-primary">{Math.round(item.finalPrice).toLocaleString()}₮</p>
-                                                        )}
-                                                        <Badge variant={getItemStatusBadgeVariant(item.status)}>{item.status}</Badge>
-                                                    </div>
-                                                    <Badge variant={item.tenderStatus === 'Open' ? 'success' : 'secondary'}>{item.tenderStatus === 'Open' ? 'Нээлттэй' : 'Хаалттай'}</Badge>
-                                                </div>
-                                           </div>
-                                       </AccordionTrigger>
-                                   </div>
-                                   <AccordionContent className="space-y-4">
-                                       <div className="flex items-center justify-end gap-2 px-4 pb-4 border-b">
-                                           <Button variant="outline" size="sm" onClick={() => handleToggleTenderStatus(item)}>
-                                                {item.tenderStatus === 'Open' ? <MegaphoneOff className="mr-2 h-4 w-4" /> : <Megaphone className="mr-2 h-4 w-4" />}
-                                                {item.tenderStatus === 'Open' ? 'Тендер хаах' : 'Тендер нээх'}
-                                           </Button>
-                                           {shipments.has(item.id) ? (
-                                                <Button variant="outline" size="sm" asChild>
-                                                    <Link href={`/shipments/${shipments.get(item.id)?.id}`}>
-                                                        <ExternalLink className="mr-2 h-4 w-4" />
-                                                        Тээвэрлэлт рүү
-                                                    </Link>
-                                                </Button>
-                                            ) : (
-                                                <Button variant="default" size="sm" onClick={() => setItemToShip(item)} disabled={!item.acceptedQuoteId || item.status === 'Shipped'}>
-                                                    <Truck className="mr-2 h-4 w-4" />
-                                                    Тээвэр үүсгэх
-                                                </Button>
-                                            )}
-                                           <Button variant="outline" size="sm" asChild>
-                                               <Link href={`/orders/${orderId}/items/${item.id}/edit`}>
-                                                   <Edit className="mr-2 h-4 w-4" />
-                                                   Засах
-                                               </Link>
-                                           </Button>
-                                           <Button variant="destructive" size="sm" onClick={() => setItemToDelete(item)}>
-                                               <Trash2 className="mr-2 h-4 w-4" />
-                                               Устгах
-                                           </Button>
-                                       </div>
-                                       <div className="px-4 space-y-4">
-                                         <h4 className="font-semibold pt-2">Шинэ үнийн санал нэмэх</h4>
-                                        <QuoteForm orderItemId={item.id} />
-                                        <h4 className="font-semibold pt-4">Ирсэн саналууд</h4>
-                                         <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Жолооч</TableHead>
-                                                    <TableHead>Суваг</TableHead>
-                                                    <TableHead>Үнийн задаргаа</TableHead>
-                                                    <TableHead>Статус</TableHead>
-                                                    <TableHead className="text-right">Үйлдэл</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {quotes.get(item.id)?.length > 0 ? (
-                                                    quotes.get(item.id)?.map(quote => {
-                                                        const { priceWithProfit, finalPrice, profitAmount, vatAmount } = calculateFinalPrice(item, quote);
-                                                        return (
-                                                        <TableRow key={quote.id} className={quote.status === 'Accepted' ? 'bg-green-100 dark:bg-green-900/50' : ''}>
-                                                            <TableCell>
-                                                                <p className="font-medium">{quote.driverName}</p>
-                                                                <p className="text-xs text-muted-foreground">{quote.driverPhone}</p>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                 <Badge variant="outline">{getChannelName(quote.channel)}</Badge>
-                                                            </TableCell>
-                                                             <TableCell className="text-xs">
-                                                                <div className="grid grid-cols-2 gap-x-2">
-                                                                    <span className="font-medium text-muted-foreground">Жолоочийн санал:</span>
-                                                                    <span className="text-right font-mono">{Math.round(quote.price).toLocaleString()}₮</span>
-                                                                    
-                                                                    <span className="font-medium text-muted-foreground">Ашиг ({item.profitMargin || 0}%):</span>
-                                                                    <span className="text-right font-mono">{Math.round(profitAmount).toLocaleString()}₮</span>
-
-                                                                    <span className="font-medium text-muted-foreground">НӨАТ-гүй үнэ:</span>
-                                                                    <span className="text-right font-mono">{Math.round(priceWithProfit).toLocaleString()}₮</span>
-                                                                    
-                                                                    {item.withVAT && <>
-                                                                        <span className="font-medium text-muted-foreground">НӨАТ (10%):</span>
-                                                                        <span className="text-right font-mono">{Math.round(vatAmount).toLocaleString()}₮</span>
-                                                                    </>}
-                                                                    
-                                                                    <span className="font-bold col-span-2 border-t mt-1 pt-1 text-base text-primary text-right">{Math.round(finalPrice).toLocaleString()}₮</span>
-                                                                </div>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <Badge variant={quote.status === 'Accepted' ? 'default' : quote.status === 'Rejected' ? 'destructive' : 'secondary'}>
-                                                                    {quote.status}
-                                                                </Badge>
-                                                            </TableCell>
-                                                            <TableCell className="text-right">
-                                                                <div className="flex gap-1 justify-end items-center">
-                                                                     <Button size="sm" variant="outline" onClick={() => handleSendToSheet(item, quote)} disabled={sendingToSheet === quote.id}>
-                                                                        {sendingToSheet === quote.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>}
-                                                                        Sheet-рүү
-                                                                    </Button>
-                                                                    <Button size="sm" variant="outline" asChild>
-                                                                        <Link href="https://docs.google.com/spreadsheets/d/1QYHh2wyugW1QKCvhKLYF37ApSROFl2CjD21z9v6UzC8/edit?gid=1943364164#gid=1943364164" target="_blank">
-                                                                            <FileSpreadsheet className="mr-2 h-4 w-4"/> Sheet нээх
-                                                                        </Link>
-                                                                    </Button>
-                                                                    {item.acceptedQuoteId === quote.id ? (
-                                                                         <Button size="sm" variant="destructive" onClick={() => handleRevertQuoteSelection(item)} disabled={isSubmitting || item.status === 'Shipped'}>
-                                                                             <XCircle className="mr-2 h-4 w-4"/> Буцаах
-                                                                         </Button>
-                                                                    ) : (
-                                                                        <Button size="sm" onClick={() => handleAcceptQuote(item, quote)} disabled={isSubmitting || !!item.acceptedQuoteId || item.status === 'Shipped'}>
-                                                                            <CheckCircle className="mr-2 h-4 w-4"/> Сонгох
-                                                                        </Button>
-                                                                    )}
-
-                                                                    {quote.status !== 'Accepted' && (
-                                                                        <Button variant="ghost" size="icon" onClick={() => handleDeleteQuote(quote.id)} disabled={isSubmitting}>
-                                                                            <Trash2 className="h-4 w-4 text-destructive"/>
-                                                                        </Button>
-                                                                    )}
-                                                                </div>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    )})
-                                                ) : (
-                                                    <TableRow><TableCell colSpan={5} className="text-center h-24">Үнийн санал олдсонгүй.</TableCell></TableRow>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                                            <div className="flex items-center gap-2">
+                                                {item.finalPrice != null && (
+                                                    <p className="font-semibold text-primary">{Math.round(item.finalPrice).toLocaleString()}₮</p>
                                                 )}
-                                            </TableBody>
-                                        </Table>
-                                       </div>
-                                   </AccordionContent>
-                               </AccordionItem>
-                           ))}
-                        </Accordion>
-                        ) : (
-                            <div className="text-center h-24 flex items-center justify-center text-muted-foreground">Тээвэрлэлт одоогоор алга.</div>
-                        )}
-                    </CardContent>
-                </Card>
-                 
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Шинэ тээвэрлэлт нэмэх</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <OrderItemForm 
-                            form={form}
-                            fields={fields}
-                            append={append}
-                            remove={remove}
-                            allData={allData}
-                            setAllData={{
-                              setServiceTypes,
-                              setRegions,
-                              setWarehouses,
-                              setVehicleTypes,
-                              setTrailerTypes,
-                              setPackagingTypes,
-                            }}
-                            isSubmitting={isSubmitting}
-                            onSubmit={onNewItemSubmit}
-                            onAddNewItem={handleAddNewItem}
-                        />
-                    </CardContent>
-                </Card>
+                                                <Badge variant={getItemStatusBadgeVariant(item.status)}>{item.status}</Badge>
+                                            </div>
+                                            <Badge variant={item.tenderStatus === 'Open' ? 'success' : 'secondary'}>{item.tenderStatus === 'Open' ? 'Нээлттэй' : 'Хаалттай'}</Badge>
+                                        </div>
+                                    </div>
+                                </AccordionTrigger>
+                            </div>
+                            <AccordionContent className="space-y-4">
+                                <div className="flex items-center justify-end gap-2 px-4 pb-4 border-b">
+                                    <Button variant="outline" size="sm" onClick={() => handleToggleTenderStatus(item)}>
+                                        {item.tenderStatus === 'Open' ? <MegaphoneOff className="mr-2 h-4 w-4" /> : <Megaphone className="mr-2 h-4 w-4" />}
+                                        {item.tenderStatus === 'Open' ? 'Тендер хаах' : 'Тендер нээх'}
+                                    </Button>
+                                    {shipments.has(item.id) ? (
+                                        <Button variant="outline" size="sm" asChild>
+                                            <Link href={`/shipments/${shipments.get(item.id)?.id}`}>
+                                                <ExternalLink className="mr-2 h-4 w-4" />
+                                                Тээвэрлэлт рүү
+                                            </Link>
+                                        </Button>
+                                    ) : (
+                                        <Button variant="default" size="sm" onClick={() => setItemToShip(item)} disabled={!item.acceptedQuoteId || item.status === 'Shipped'}>
+                                            <Truck className="mr-2 h-4 w-4" />
+                                            Тээвэр үүсгэх
+                                        </Button>
+                                    )}
+                                    <Button variant="outline" size="sm" asChild>
+                                        <Link href={`/orders/${orderId}/items/${item.id}/edit`}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Засах
+                                        </Link>
+                                    </Button>
+                                    <Button variant="destructive" size="sm" onClick={() => setItemToDelete(item)}>
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Устгах
+                                    </Button>
+                                </div>
+                                <div className="px-4 space-y-4">
+                                    <h4 className="font-semibold pt-2">Шинэ үнийн санал нэмэх</h4>
+                                <QuoteForm orderItemId={item.id} />
+                                <h4 className="font-semibold pt-4">Ирсэн саналууд</h4>
+                                    <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Жолооч</TableHead>
+                                            <TableHead>Суваг</TableHead>
+                                            <TableHead>Үнийн задаргаа</TableHead>
+                                            <TableHead>Статус</TableHead>
+                                            <TableHead className="text-right">Үйлдэл</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {quotes.get(item.id)?.length > 0 ? (
+                                            quotes.get(item.id)?.map(quote => {
+                                                const { priceWithProfit, finalPrice, profitAmount, vatAmount } = calculateFinalPrice(item, quote);
+                                                return (
+                                                <TableRow key={quote.id} className={quote.status === 'Accepted' ? 'bg-green-100 dark:bg-green-900/50' : ''}>
+                                                    <TableCell>
+                                                        <p className="font-medium">{quote.driverName}</p>
+                                                        <p className="text-xs text-muted-foreground">{quote.driverPhone}</p>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                            <Badge variant="outline">{getChannelName(quote.channel)}</Badge>
+                                                    </TableCell>
+                                                        <TableCell className="text-xs">
+                                                        <div className="grid grid-cols-2 gap-x-2">
+                                                            <span className="font-medium text-muted-foreground">Жолоочийн санал:</span>
+                                                            <span className="text-right font-mono">{Math.round(quote.price).toLocaleString()}₮</span>
+                                                            
+                                                            <span className="font-medium text-muted-foreground">Ашиг ({item.profitMargin || 0}%):</span>
+                                                            <span className="text-right font-mono">{Math.round(profitAmount).toLocaleString()}₮</span>
 
-            </div>
-      </div>
+                                                            <span className="font-medium text-muted-foreground">НӨАТ-гүй үнэ:</span>
+                                                            <span className="text-right font-mono">{Math.round(priceWithProfit).toLocaleString()}₮</span>
+                                                            
+                                                            {item.withVAT && <>
+                                                                <span className="font-medium text-muted-foreground">НӨАТ (10%):</span>
+                                                                <span className="text-right font-mono">{Math.round(vatAmount).toLocaleString()}₮</span>
+                                                            </>}
+                                                            
+                                                            <span className="font-bold col-span-2 border-t mt-1 pt-1 text-base text-primary text-right">{Math.round(finalPrice).toLocaleString()}₮</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={quote.status === 'Accepted' ? 'default' : quote.status === 'Rejected' ? 'destructive' : 'secondary'}>
+                                                            {quote.status}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex gap-1 justify-end items-center">
+                                                                <Button size="sm" variant="outline" onClick={() => handleSendToSheet(item, quote)} disabled={sendingToSheet === quote.id}>
+                                                                {sendingToSheet === quote.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>}
+                                                                Sheet-рүү
+                                                            </Button>
+                                                            <Button size="sm" variant="outline" asChild>
+                                                                <Link href="https://docs.google.com/spreadsheets/d/1QYHh2wyugW1QKCvhKLYF37ApSROFl2CjD21z9v6UzC8/edit?gid=1943364164#gid=1943364164" target="_blank">
+                                                                    <FileSpreadsheet className="mr-2 h-4 w-4"/> Sheet нээх
+                                                                </Link>
+                                                            </Button>
+                                                            {item.acceptedQuoteId === quote.id ? (
+                                                                    <Button size="sm" variant="destructive" onClick={() => handleRevertQuoteSelection(item)} disabled={isSubmitting || item.status === 'Shipped'}>
+                                                                        <XCircle className="mr-2 h-4 w-4"/> Буцаах
+                                                                    </Button>
+                                                            ) : (
+                                                                <Button size="sm" onClick={() => handleAcceptQuote(item, quote)} disabled={isSubmitting || !!item.acceptedQuoteId || item.status === 'Shipped'}>
+                                                                    <CheckCircle className="mr-2 h-4 w-4"/> Сонгох
+                                                                </Button>
+                                                            )}
+
+                                                            {quote.status !== 'Accepted' && (
+                                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteQuote(quote.id)} disabled={isSubmitting}>
+                                                                    <Trash2 className="h-4 w-4 text-destructive"/>
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )})
+                                        ) : (
+                                            <TableRow><TableCell colSpan={5} className="text-center h-24">Үнийн санал олдсонгүй.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                                </div>
+                            </AccordionContent>
+                        </AccordionItem>
+                    ))}
+                </Accordion>
+                ) : (
+                    <div className="text-center h-24 flex items-center justify-center text-muted-foreground">Тээвэрлэлт одоогоор алга.</div>
+                )}
+            </CardContent>
+        </Card>
+        
+        <Card>
+            <CardHeader>
+                <CardTitle>Шинэ тээвэрлэлт нэмэх</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <OrderItemForm 
+                    form={form}
+                    fields={fields}
+                    append={append}
+                    remove={remove}
+                    allData={allData}
+                    setAllData={{
+                        setServiceTypes,
+                        setRegions,
+                        setWarehouses,
+                        setVehicleTypes,
+                        setTrailerTypes,
+                        setPackagingTypes,
+                    }}
+                    isSubmitting={isSubmitting}
+                    onSubmit={onNewItemSubmit}
+                    onAddNewItem={handleAddNewItem}
+                />
+            </CardContent>
+        </Card>
+
       
        <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
             <AlertDialogContent>
@@ -1104,3 +1093,4 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+
