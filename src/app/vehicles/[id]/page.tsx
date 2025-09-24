@@ -15,6 +15,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Calendar, Hash, Car, Container, Droplet, StickyNote, User } from 'lucide-react';
 import Image from 'next/image';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"
 
 function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value?: string | number }) {
   if (!value) return null;
@@ -126,15 +133,31 @@ export default function VehicleDetailPage() {
         <div className="lg:col-span-2">
             <Card>
                 <CardContent className="p-4">
-                    <div className="aspect-video relative rounded-md overflow-hidden bg-muted">
-                        {vehicle.imageUrl ? (
-                           <Image src={vehicle.imageUrl} alt={`${vehicle.make} ${vehicle.model}`} fill className="object-cover" />
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-muted-foreground">
-                                <Car className="h-16 w-16" />
-                            </div>
-                        )}
-                    </div>
+                   <Carousel className="w-full">
+                        <CarouselContent>
+                           {(vehicle.imageUrls && vehicle.imageUrls.length > 0) ? (
+                                vehicle.imageUrls.map((url, index) => (
+                                    <CarouselItem key={index}>
+                                        <div className="aspect-video relative rounded-md overflow-hidden bg-muted">
+                                             <Image src={url} alt={`${vehicle.make} ${vehicle.model} - зураг ${index + 1}`} fill className="object-contain" />
+                                        </div>
+                                    </CarouselItem>
+                                ))
+                           ) : (
+                               <CarouselItem>
+                                 <div className="aspect-video relative rounded-md overflow-hidden bg-muted flex items-center justify-center h-full text-muted-foreground">
+                                    <Car className="h-24 w-24" />
+                                </div>
+                               </CarouselItem>
+                           )}
+                        </CarouselContent>
+                         {(vehicle.imageUrls && vehicle.imageUrls.length > 1) && (
+                            <>
+                                <CarouselPrevious className="left-2" />
+                                <CarouselNext className="right-2" />
+                            </>
+                         )}
+                    </Carousel>
                 </CardContent>
             </Card>
         </div>

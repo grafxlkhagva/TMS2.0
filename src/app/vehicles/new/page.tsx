@@ -5,11 +5,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, ArrowLeft, Plus, Camera, Car } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Camera, Car, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import Link from 'next/link';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -55,8 +56,8 @@ export default function NewVehiclePage() {
   const [vehicleTypes, setVehicleTypes] = React.useState<VehicleType[]>([]);
   const [trailerTypes, setTrailerTypes] = React.useState<TrailerType[]>([]);
   const [dialogProps, setDialogProps] = React.useState<Omit<QuickAddDialogProps, 'onClose'> | null>(null);
-  const [imageFile, setImageFile] = React.useState<File | null>(null);
-  const [imagePreview, setImagePreview] = React.useState<string | null>(null);
+  const [imageFiles, setImageFiles] = React.useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = React.useState<string[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
 
@@ -102,15 +103,17 @@ export default function NewVehiclePage() {
         status: 'Available',
         driverId: null,
         driverName: null,
-        imageUrl: '',
+        imageUrls: [],
         createdAt: serverTimestamp(),
       });
 
-      if (imageFile) {
-        const storageRef = ref(storage, `vehicle_images/${docRef.id}/${imageFile.name}`);
-        const snapshot = await uploadBytes(storageRef, imageFile);
-        const imageUrl = await getDownloadURL(snapshot.ref);
-        await updateDoc(docRef, { imageUrl });
+      if (imageFiles.length > 0) {
+        const uploadPromises = imageFiles.map(file => {
+            const storageRef = ref(storage, `vehicle_images/${docRef.id}/${Date.now()}_${file.name}`);
+            return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+        });
+        const urls = await Promise.all(uploadPromises);
+        await updateDoc(docRef, { imageUrls: urls });
       }
 
       toast({
@@ -148,12 +151,23 @@ export default function NewVehiclePage() {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setImageFiles(prev => [...prev, ...files]);
+      
+      const newPreviews = files.map(file => URL.createObjectURL(file));
+      setImagePreviews(prev => [...prev, ...newPreviews]);
     }
   };
+
+  const removeImage = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => {
+        const newPreviews = prev.filter((_, i) => i !== index);
+        URL.revokeObjectURL(prev[index]); // Clean up object URL
+        return newPreviews;
+    });
+  }
 
   return (
     <div className="container mx-auto py-6">
@@ -173,33 +187,32 @@ export default function NewVehiclePage() {
         <CardContent className="pt-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                <div className="flex items-center gap-6">
-                    <div className="relative">
-                        <Avatar className="h-24 w-24 border">
-                            <AvatarImage src={imagePreview ?? undefined} />
-                            <AvatarFallback>
-                                <Car />
-                            </AvatarFallback>
-                        </Avatar>
+                <div className="space-y-4">
+                    <FormLabel>Тээврийн хэрэгслийн зургууд</FormLabel>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                        {imagePreviews.map((src, index) => (
+                            <div key={index} className="relative aspect-square">
+                                <Image src={src} alt={`Preview ${index + 1}`} fill className="object-cover rounded-md border" />
+                                <Button type="button" variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full" onClick={() => removeImage(index)}>
+                                    <X className="h-4 w-4"/>
+                                </Button>
+                            </div>
+                        ))}
+                         <Button type="button" variant="outline" className="aspect-square w-full h-full flex flex-col items-center justify-center" onClick={() => fileInputRef.current?.click()}>
+                            <Camera className="h-8 w-8 text-muted-foreground" />
+                            <span className="text-xs mt-1 text-muted-foreground">Зураг нэмэх</span>
+                         </Button>
                          <Input 
                             type="file" 
+                            multiple
                             className="hidden" 
                             ref={fileInputRef}
                             onChange={handleFileChange} 
                             accept="image/*"
                         />
-                        <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="icon" 
-                            className="absolute bottom-0 right-0 rounded-full"
-                            onClick={() => fileInputRef.current?.click()}
-                        >
-                            <Camera className="h-4 w-4" />
-                        </Button>
                     </div>
-                     <p className="text-sm text-muted-foreground">Тээврийн хэрэгслийн зураг оруулах.</p>
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="make" render={({ field }) => ( <FormItem><FormLabel>Үйлдвэрлэгч</FormLabel><FormControl><Input placeholder="Howo" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                     <FormField control={form.control} name="model" render={({ field }) => ( <FormItem><FormLabel>Загвар</FormLabel><FormControl><Input placeholder="T7H" {...field} /></FormControl><FormMessage /></FormItem> )}/>

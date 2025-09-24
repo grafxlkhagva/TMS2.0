@@ -222,7 +222,7 @@ export default function VehiclesPage() {
                     <TableRow key={vehicle.id}>
                         <TableCell>
                             <Avatar>
-                                <AvatarImage src={vehicle.imageUrl} alt={vehicle.model} />
+                                <AvatarImage src={vehicle.imageUrls?.[0]} alt={vehicle.model} />
                                 <AvatarFallback>{vehicle.make.charAt(0)}</AvatarFallback>
                             </Avatar>
                         </TableCell>

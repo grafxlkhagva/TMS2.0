@@ -23,7 +23,7 @@ export type Vehicle = {
   driverId: string | null;
   driverName?: string;
   createdAt: Date;
-  imageUrl?: string;
+  imageUrls?: string[];
 };
 
 export type DriverStatus = 'Active' | 'Inactive' | 'On Leave';

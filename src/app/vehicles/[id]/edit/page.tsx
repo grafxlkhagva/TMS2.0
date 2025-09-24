@@ -6,10 +6,11 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, ArrowLeft, Plus, Camera } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Camera, Car, X } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -29,7 +30,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import type { Vehicle, VehicleType, TrailerType } from '@/types';
 import QuickAddDialog, { type QuickAddDialogProps } from '@/components/quick-add-dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const fuelTypes = ['Diesel', 'Gasoline', 'Electric', 'Hybrid'] as const;
@@ -57,8 +57,10 @@ export default function EditVehiclePage() {
   const [vehicleTypes, setVehicleTypes] = React.useState<VehicleType[]>([]);
   const [trailerTypes, setTrailerTypes] = React.useState<TrailerType[]>([]);
   const [dialogProps, setDialogProps] = React.useState<Omit<QuickAddDialogProps, 'onClose'> | null>(null);
-  const [imageFile, setImageFile] = React.useState<File | null>(null);
-  const [imagePreview, setImagePreview] = React.useState<string | null>(null);
+  
+  const [newImageFiles, setNewImageFiles] = React.useState<File[]>([]);
+  const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>([]);
+
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -78,7 +80,7 @@ export default function EditVehiclePage() {
         if (vehicleSnap.exists()) {
             const vehicleData = vehicleSnap.data() as Vehicle;
             form.reset(vehicleData);
-            setImagePreview(vehicleData.imageUrl || null);
+            setExistingImageUrls(vehicleData.imageUrls || []);
         } else {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл олдсонгүй.' });
              router.push('/vehicles');
@@ -99,21 +101,22 @@ export default function EditVehiclePage() {
     if (!id) return;
     setIsSubmitting(true);
     try {
-        let imageUrl: string | undefined = undefined;
-        if (imageFile) {
-            const storageRef = ref(storage, `vehicle_images/${id}/${imageFile.name}`);
-            const snapshot = await uploadBytes(storageRef, imageFile);
-            imageUrl = await getDownloadURL(snapshot.ref);
+        let finalImageUrls = [...existingImageUrls];
+
+        if (newImageFiles.length > 0) {
+            const uploadPromises = newImageFiles.map(file => {
+                const storageRef = ref(storage, `vehicle_images/${id}/${Date.now()}_${file.name}`);
+                return uploadBytes(storageRef, file).then(snapshot => getDownloadURL(snapshot.ref));
+            });
+            const newUrls = await Promise.all(uploadPromises);
+            finalImageUrls.push(...newUrls);
         }
 
         const dataToUpdate: any = {
             ...values,
+            imageUrls: finalImageUrls,
             updatedAt: serverTimestamp(),
         };
-
-        if (imageUrl) {
-            dataToUpdate.imageUrl = imageUrl;
-        }
 
       await updateDoc(doc(db, 'vehicles', id), dataToUpdate);
 
@@ -135,13 +138,27 @@ export default function EditVehiclePage() {
   }
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+    if (e.target.files) {
+      setNewImageFiles(prev => [...prev, ...Array.from(e.target.files!)]);
     }
   };
 
+
+  const removeNewImage = (index: number) => {
+    setNewImageFiles(prev => prev.filter((_, i) => i !== index));
+  }
+
+  const removeExistingImage = async (urlToRemove: string, index: number) => {
+      try {
+        const imageRef = ref(storage, urlToRemove);
+        await deleteObject(imageRef);
+        setExistingImageUrls(prev => prev.filter((url, i) => i !== index));
+         toast({ title: 'Зураг устгагдлаа', description: 'Хадгалах товчийг дарж өөрчлөлтийг баталгаажуулна уу.'});
+      } catch (error) {
+          console.error("Error deleting image:", error);
+          toast({ variant: 'destructive', title: 'Алдаа', description: 'Зураг устгахад алдаа гарлаа.'});
+      }
+  }
 
   const handleQuickAdd = (type: 'vehicle_types' | 'trailer_types', formField: 'vehicleTypeId' | 'trailerTypeId') => {
     setDialogProps({
@@ -166,7 +183,7 @@ export default function EditVehiclePage() {
              <div className="mb-6"><Skeleton className="h-8 w-1/4 mb-4" /><Skeleton className="h-4 w-1/2" /></div>
             <Card>
                 <CardContent className="pt-6 space-y-8">
-                     <Skeleton className="h-24 w-24 rounded-full" />
+                     <Skeleton className="h-24 w-full" />
                     <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
                     <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
                     <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
@@ -192,32 +209,38 @@ export default function EditVehiclePage() {
         <CardContent className="pt-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                <div className="flex items-center gap-6">
-                    <div className="relative">
-                        <Avatar className="h-24 w-24 border">
-                            <AvatarImage src={imagePreview ?? undefined} />
-                            <AvatarFallback>
-                                <Car />
-                            </AvatarFallback>
-                        </Avatar>
+                 <div className="space-y-4">
+                    <FormLabel>Тээврийн хэрэгслийн зургууд</FormLabel>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                        {existingImageUrls.map((src, index) => (
+                            <div key={src} className="relative aspect-square">
+                                <Image src={src} alt={`Existing ${index + 1}`} fill className="object-cover rounded-md border" />
+                                <Button type="button" variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full" onClick={() => removeExistingImage(src, index)}>
+                                    <X className="h-4 w-4"/>
+                                </Button>
+                            </div>
+                        ))}
+                         {newImageFiles.map((file, index) => (
+                            <div key={index} className="relative aspect-square">
+                                <Image src={URL.createObjectURL(file)} alt={`New ${index + 1}`} fill className="object-cover rounded-md border" />
+                                <Button type="button" variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full" onClick={() => removeNewImage(index)}>
+                                    <X className="h-4 w-4"/>
+                                </Button>
+                            </div>
+                        ))}
+                         <Button type="button" variant="outline" className="aspect-square w-full h-full flex flex-col items-center justify-center" onClick={() => fileInputRef.current?.click()}>
+                            <Camera className="h-8 w-8 text-muted-foreground" />
+                            <span className="text-xs mt-1 text-muted-foreground">Зураг нэмэх</span>
+                         </Button>
                          <Input 
                             type="file" 
+                            multiple
                             className="hidden" 
                             ref={fileInputRef}
                             onChange={handleFileChange} 
                             accept="image/*"
                         />
-                        <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="icon" 
-                            className="absolute bottom-0 right-0 rounded-full"
-                            onClick={() => fileInputRef.current?.click()}
-                        >
-                            <Camera className="h-4 w-4" />
-                        </Button>
                     </div>
-                     <p className="text-sm text-muted-foreground">Тээврийн хэрэгслийн зураг солих.</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="make" render={({ field }) => ( <FormItem><FormLabel>Үйлдвэрлэгч</FormLabel><FormControl><Input placeholder="Howo" {...field} /></FormControl><FormMessage /></FormItem> )}/>
