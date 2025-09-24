@@ -351,7 +351,10 @@ export default function EditDriverPage() {
                     {assignedVehicle ? (
                         <div className="space-y-4">
                             <div className="flex items-center gap-4 p-3 rounded-md border bg-muted">
-                                <Truck className="h-6 w-6 text-muted-foreground" />
+                                <Avatar>
+                                    <AvatarImage src={assignedVehicle.imageUrls?.[0]} />
+                                    <AvatarFallback>{assignedVehicle.makeName?.charAt(0)}</AvatarFallback>
+                                </Avatar>
                                 <div>
                                     <p className="font-semibold">{assignedVehicle.makeName} {assignedVehicle.modelName}</p>
                                     <p className="text-sm text-muted-foreground font-mono">{assignedVehicle.licensePlate}</p>
