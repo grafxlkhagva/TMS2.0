@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -23,19 +22,19 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { doc, updateDoc, serverTimestamp, getDocs, query, orderBy, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDocs, query, orderBy, getDoc, collection, where } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { Vehicle, VehicleType, TrailerType } from '@/types';
+import type { Vehicle, VehicleType, TrailerType, VehicleMake, VehicleModel } from '@/types';
 import QuickAddDialog, { type QuickAddDialogProps } from '@/components/quick-add-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const fuelTypes = ['Diesel', 'Gasoline', 'Electric', 'Hybrid'] as const;
 
 const formSchema = z.object({
-  make: z.string().min(2, "Үйлдвэрлэгчийн нэр дор хаяж 2 тэмдэгттэй байх ёстой."),
-  model: z.string().min(2, "Загварын нэр дор хаяж 2 тэмдэгттэй байх ёстой."),
+  makeId: z.string().min(1, "Үйлдвэрлэгч сонгоно уу."),
+  modelId: z.string().min(1, "Загвар сонгоно уу."),
   year: z.coerce.number().min(1980, "Оноо зөв оруулна уу.").max(new Date().getFullYear() + 1, "Оноо зөв оруулна уу."),
   importedYear: z.coerce.number().min(1980, "Оноо зөв оруулна уу.").max(new Date().getFullYear() + 1, "Оноо зөв оруулна уу."),
   licensePlate: z.string().min(4, "Улсын дугаар дор хаяж 4 тэмдэгттэй байх ёстой.").regex(/^[0-9]{4}\s[А-Я|а-я]{3}$/, 'Улсын дугаарыг "0000 УБA" хэлбэрээр оруулна уу.'),
@@ -59,6 +58,9 @@ export default function EditVehiclePage() {
   
   const [newImageFiles, setNewImageFiles] = React.useState<File[]>([]);
   const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>([]);
+  const [makes, setMakes] = React.useState<VehicleMake[]>([]);
+  const [models, setModels] = React.useState<VehicleModel[]>([]);
+  const [filteredModels, setFilteredModels] = React.useState<VehicleModel[]>([]);
   
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -66,9 +68,41 @@ export default function EditVehiclePage() {
     resolver: zodResolver(formSchema),
   });
 
+  const watchedMakeId = form.watch('makeId');
+
+  React.useEffect(() => {
+    const fetchMakesAndModels = async () => {
+        try {
+            const [makesSnapshot, modelsSnapshot] = await Promise.all([
+                getDocs(query(collection(db, 'vehicle_makes'), orderBy('name'))),
+                getDocs(query(collection(db, 'vehicle_models'), orderBy('name')))
+            ]);
+            setMakes(makesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VehicleMake)));
+            setModels(modelsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VehicleModel)));
+        } catch (error) {
+             toast({ variant: 'destructive', title: 'Алдаа', description: 'Үйлдвэрлэгч, загварын мэдээлэл татахад алдаа гарлаа.'});
+        }
+    }
+    fetchMakesAndModels();
+  }, [toast]);
+  
+  React.useEffect(() => {
+      if (watchedMakeId) {
+          setFilteredModels(models.filter(model => model.makeId === watchedMakeId));
+          // Do not reset modelId if it's the initial load with data
+          const currentModel = models.find(m => m.id === form.getValues('modelId'));
+          if (currentModel && currentModel.makeId !== watchedMakeId) {
+              form.setValue('modelId', '');
+          }
+      } else {
+          setFilteredModels([]);
+      }
+  }, [watchedMakeId, models, form]);
+
+
   React.useEffect(() => {
     const fetchData = async () => {
-      if (!id) return;
+      if (!id || models.length === 0) return;
       try {
         const [vehicleSnap, vehicleTypeSnap, trailerTypeSnap] = await Promise.all([
           getDoc(doc(db, "vehicles", id)),
@@ -78,7 +112,11 @@ export default function EditVehiclePage() {
 
         if (vehicleSnap.exists()) {
             const vehicleData = vehicleSnap.data() as Vehicle;
-            form.reset(vehicleData);
+            form.reset({
+                ...vehicleData,
+                makeId: vehicleData.makeId,
+                modelId: vehicleData.modelId,
+            });
             setExistingImageUrls(vehicleData.imageUrls || []);
         } else {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл олдсонгүй.' });
@@ -94,7 +132,7 @@ export default function EditVehiclePage() {
       }
     }
     fetchData();
-  }, [id, toast, router, form]);
+  }, [id, toast, router, form, models]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!id) return;
@@ -110,9 +148,14 @@ export default function EditVehiclePage() {
             const newUrls = await Promise.all(uploadPromises);
             finalImageUrls.push(...newUrls);
         }
+        
+        const selectedMake = makes.find(m => m.id === values.makeId);
+        const selectedModel = models.find(m => m.id === values.modelId);
 
         const dataToUpdate: any = {
             ...values,
+            makeName: selectedMake?.name,
+            modelName: selectedModel?.name,
             imageUrls: finalImageUrls,
             updatedAt: serverTimestamp(),
         };
@@ -241,9 +284,9 @@ export default function EditVehiclePage() {
                         />
                     </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField control={form.control} name="make" render={({ field }) => ( <FormItem><FormLabel>Үйлдвэрлэгч</FormLabel><FormControl><Input placeholder="Toyota" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                    <FormField control={form.control} name="model" render={({ field }) => ( <FormItem><FormLabel>Загвар</FormLabel><FormControl><Input placeholder="Prius" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField control={form.control} name="makeId" render={({ field }) => ( <FormItem><FormLabel>Үйлдвэрлэгч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Үйлдвэрлэгч сонгох..." /></SelectTrigger></FormControl><SelectContent>{makes.map((make) => <SelectItem key={make.id} value={make.id}>{make.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                    <FormField control={form.control} name="modelId" render={({ field }) => ( <FormItem><FormLabel>Загвар</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={!watchedMakeId || filteredModels.length === 0}><FormControl><SelectTrigger><SelectValue placeholder="Эхлээд үйлдвэрлэгчээс сонгоно уу..." /></SelectTrigger></FormControl><SelectContent>{filteredModels.map((model) => <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="year" render={({ field }) => ( <FormItem><FormLabel>Үйлдвэрлэсэн он</FormLabel><FormControl><Input type="number" placeholder="2023" {...field} /></FormControl><FormMessage /></FormItem> )}/>

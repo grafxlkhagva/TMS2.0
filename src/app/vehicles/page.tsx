@@ -72,7 +72,7 @@ function AssignDriverDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{vehicle?.model} - жолооч оноох</DialogTitle>
+          <DialogTitle>{vehicle?.modelName} - жолооч оноох</DialogTitle>
           <DialogDescription>
             {vehicle?.licensePlate} дугаартай тээврийн хэрэгсэлд жолооч онооно уу.
           </DialogDescription>
@@ -242,13 +242,13 @@ export default function VehiclesPage() {
                     <TableRow key={vehicle.id}>
                         <TableCell>
                             <Avatar>
-                                <AvatarImage src={vehicle.imageUrls?.[0]} alt={vehicle.model} />
-                                <AvatarFallback>{vehicle.make.charAt(0)}</AvatarFallback>
+                                <AvatarImage src={vehicle.imageUrls?.[0]} alt={vehicle.modelName} />
+                                <AvatarFallback>{vehicle.makeName.charAt(0)}</AvatarFallback>
                             </Avatar>
                         </TableCell>
                       <TableCell className="font-mono">{vehicle.licensePlate}</TableCell>
-                      <TableCell>{vehicle.make}</TableCell>
-                      <TableCell className="font-medium">{vehicle.model}</TableCell>
+                      <TableCell>{vehicle.makeName}</TableCell>
+                      <TableCell className="font-medium">{vehicle.modelName}</TableCell>
                       <TableCell>{vehicle.capacity}</TableCell>
                       <TableCell>
                         <StatusBadge status={vehicle.status} />

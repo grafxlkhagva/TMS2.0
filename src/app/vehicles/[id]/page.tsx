@@ -127,7 +127,7 @@ export default function VehicleDetailPage() {
         </Button>
         <div className="flex items-center justify-between">
             <div>
-                <h1 className="text-3xl font-headline font-bold">{vehicle.make} {vehicle.model}</h1>
+                <h1 className="text-3xl font-headline font-bold">{vehicle.makeName} {vehicle.modelName}</h1>
                 <p className="text-muted-foreground font-mono">
                     {vehicle.licensePlate}
                 </p>
@@ -150,7 +150,7 @@ export default function VehicleDetailPage() {
                                 vehicle.imageUrls.map((url, index) => (
                                     <CarouselItem key={index}>
                                         <div className="aspect-video relative rounded-md overflow-hidden bg-muted">
-                                             <Image src={url} alt={`${vehicle.make} ${vehicle.model} - зураг ${index + 1}`} fill className="object-contain" />
+                                             <Image src={url} alt={`${vehicle.makeName} ${vehicle.modelName} - зураг ${index + 1}`} fill className="object-contain" />
                                         </div>
                                     </CarouselItem>
                                 ))
