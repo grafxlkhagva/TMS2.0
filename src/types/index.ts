@@ -15,6 +15,8 @@ export type Vehicle = {
   year: number;
   importedYear: number;
   licensePlate: string;
+  licensePlateDigits: string;
+  licensePlateChars: string;
   vin: string;
   vehicleTypeId: string;
   trailerTypeId: string;

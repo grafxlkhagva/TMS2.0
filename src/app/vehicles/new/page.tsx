@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,13 +31,19 @@ import QuickAddDialog, { type QuickAddDialogProps } from '@/components/quick-add
 import { cn } from '@/lib/utils';
 
 const fuelTypes = ['Diesel', 'Gasoline', 'Electric', 'Hybrid'] as const;
+const mongolianAlphabet = [
+  'А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И', 'Й', 'К', 'Л', 'М', 'Н', 'О', 'Ө', 'П', 'Р', 'С', 'Т', 'У', 'Ү', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ', 'Ы', 'Ь', 'Э', 'Ю', 'Я'
+];
 
 const formSchema = z.object({
   makeId: z.string().min(1, "Үйлдвэрлэгч сонгоно уу."),
   modelId: z.string().min(1, "Загвар сонгоно уу."),
   year: z.coerce.number().min(1980, "Оноо зөв оруулна уу.").max(new Date().getFullYear() + 1, "Оноо зөв оруулна уу."),
   importedYear: z.coerce.number().min(1980, "Оноо зөв оруулна уу.").max(new Date().getFullYear() + 1, "Оноо зөв оруулна уу."),
-  licensePlate: z.string().min(4, "Улсын дугаар дор хаяж 4 тэмдэгттэй байх ёстой.").regex(/^[0-9]{4}\s[А-Я|а-я]{3}$/, 'Улсын дугаарыг "0000 УБA" хэлбэрээр оруулна уу.'),
+  licensePlateDigits: z.string().length(4, "4 оронтой тоо оруулна уу.").regex(/^[0-9]{4}$/, "Зөвхөн тоо оруулна уу."),
+  licensePlateChar1: z.string().min(1, "Үсэг сонгоно уу."),
+  licensePlateChar2: z.string().min(1, "Үсэг сонгоно уу."),
+  licensePlateChar3: z.string().min(1, "Үсэг сонгоно уу."),
   vin: z.string().length(17, "Арлын дугаар 17 тэмдэгттэй байна."),
   vehicleTypeId: z.string().min(1, "Машины төрөл сонгоно уу."),
   trailerTypeId: z.string().min(1, "Тэвшний төрөл сонгоно уу."),
@@ -69,7 +74,10 @@ export default function NewVehiclePage() {
       modelId: '',
       year: new Date().getFullYear(),
       importedYear: new Date().getFullYear(),
-      licensePlate: '',
+      licensePlateDigits: '',
+      licensePlateChar1: '',
+      licensePlateChar2: '',
+      licensePlateChar3: '',
       vin: '',
       vehicleTypeId: '',
       trailerTypeId: '',
@@ -116,9 +124,16 @@ export default function NewVehiclePage() {
     try {
       const selectedMake = makes.find(m => m.id === values.makeId);
       const selectedModel = models.find(m => m.id === values.modelId);
+      
+      const licensePlateChars = `${values.licensePlateChar1}${values.licensePlateChar2}${values.licensePlateChar3}`;
+      const licensePlate = `${values.licensePlateDigits} ${licensePlateChars}`;
+
+      const { licensePlateChar1, licensePlateChar2, licensePlateChar3, ...restOfValues } = values;
 
       const docRef = await addDoc(collection(db, 'vehicles'), {
-        ...values,
+        ...restOfValues,
+        licensePlate,
+        licensePlateChars,
         makeName: selectedMake?.name || '',
         modelName: selectedModel?.name || '',
         status: 'Available',
@@ -242,10 +257,16 @@ export default function NewVehiclePage() {
                     <FormField control={form.control} name="year" render={({ field }) => ( <FormItem><FormLabel>Үйлдвэрлэсэн он</FormLabel><FormControl><Input type="number" placeholder="2023" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                     <FormField control={form.control} name="importedYear" render={({ field }) => ( <FormItem><FormLabel>Орж ирсэн он</FormLabel><FormControl><Input type="number" placeholder="2024" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField control={form.control} name="licensePlate" render={({ field }) => ( <FormItem><FormLabel>Улсын дугаар</FormLabel><FormControl><Input placeholder="0000 УБА" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                    <FormField control={form.control} name="vin" render={({ field }) => ( <FormItem><FormLabel>Арлын дугаар (VIN)</FormLabel><FormControl><Input placeholder="17 оронтой дугаар" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                 <div>
+                    <FormLabel>Улсын дугаар</FormLabel>
+                    <div className="flex items-start gap-2 mt-2">
+                        <FormField control={form.control} name="licensePlateDigits" render={({ field }) => ( <FormItem className="w-24"><FormControl><Input placeholder="0000" {...field} maxLength={4} /></FormControl><FormMessage /></FormItem> )}/>
+                        <FormField control={form.control} name="licensePlateChar1" render={({ field }) => ( <FormItem className="flex-1"><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{mongolianAlphabet.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                        <FormField control={form.control} name="licensePlateChar2" render={({ field }) => ( <FormItem className="flex-1"><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{mongolianAlphabet.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                        <FormField control={form.control} name="licensePlateChar3" render={({ field }) => ( <FormItem className="flex-1"><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{mongolianAlphabet.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                    </div>
                 </div>
+                <FormField control={form.control} name="vin" render={({ field }) => ( <FormItem><FormLabel>Арлын дугаар (VIN)</FormLabel><FormControl><Input placeholder="17 оронтой дугаар" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="vehicleTypeId" render={({ field }) => (<FormItem><FormLabel>Машины төрөл</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{vehicleTypes.map((s) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('vehicle_types', 'vehicleTypeId')}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
                     <FormField control={form.control} name="trailerTypeId" render={({ field }) => (<FormItem><FormLabel>Тэвшний төрөл</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{trailerTypes.map((s) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('trailer_types', 'trailerTypeId')}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
