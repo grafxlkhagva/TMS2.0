@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -187,7 +186,7 @@ export default function VehiclesPage() {
         </div>
          <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading}>
-                <RefreshCw className={'h-4 w-4 ${isLoading ? 'animate-spin' : ''}'} />
+                <RefreshCw className={'h-4 w-4 ${isLoading ? \'animate-spin\' : \'\'}'} />
             </Button>
             <Button asChild>
                 <Link href="/vehicles/new">
