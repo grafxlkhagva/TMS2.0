@@ -11,6 +11,7 @@ export type Vehicle = {
   make: string;
   model: string;
   year: number;
+  importedYear: number;
   licensePlate: string;
   vin: string;
   vehicleTypeId: string;
