@@ -5,7 +5,7 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, ArrowLeft, Plus, Camera, Car, X } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Camera, X } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -30,7 +30,6 @@ import { Textarea } from '@/components/ui/textarea';
 import type { Vehicle, VehicleType, TrailerType } from '@/types';
 import QuickAddDialog, { type QuickAddDialogProps } from '@/components/quick-add-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 
 const fuelTypes = ['Diesel', 'Gasoline', 'Electric', 'Hybrid'] as const;
 
@@ -48,16 +47,6 @@ const formSchema = z.object({
   notes: z.string().optional(),
 });
 
-interface Make {
-  Make_ID: number;
-  Make_Name: string;
-}
-
-interface Model {
-  Model_ID: number;
-  Model_Name: string;
-}
-
 export default function EditVehiclePage() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
@@ -71,44 +60,11 @@ export default function EditVehiclePage() {
   const [newImageFiles, setNewImageFiles] = React.useState<File[]>([]);
   const [existingImageUrls, setExistingImageUrls] = React.useState<string[]>([]);
   
-  const [makes, setMakes] = React.useState<Make[]>([]);
-  const [models, setModels] = React.useState<Model[]>([]);
-  const [isLoadingMakes, setIsLoadingMakes] = React.useState(false);
-  const [isLoadingModels, setIsLoadingModels] = React.useState(false);
-
-
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
   });
-  
-  const selectedMake = form.watch('make');
-
-  React.useEffect(() => {
-    setIsLoadingMakes(true);
-    fetch('https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json')
-      .then(res => res.json())
-      .then((data) => {
-        setMakes(data.Results);
-        setIsLoadingMakes(false);
-      });
-  }, []);
-
-  React.useEffect(() => {
-    if (selectedMake) {
-      setIsLoadingModels(true);
-      fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${selectedMake}?format=json`)
-        .then(res => res.json())
-        .then(data => {
-          setModels(data.Results);
-          setIsLoadingModels(false);
-        });
-    } else {
-      setModels([]);
-    }
-  }, [selectedMake]);
-
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -286,8 +242,8 @@ export default function EditVehiclePage() {
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField control={form.control} name="make" render={({ field }) => ( <FormItem><FormLabel>Үйлдвэрлэгч</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={isLoadingMakes}><FormControl><SelectTrigger><SelectValue placeholder="Үйлдвэрлэгч сонгох..." /></SelectTrigger></FormControl><SelectContent>{isLoadingMakes ? <div className="p-4 text-sm">Ачааллаж байна...</div> : makes.map(make => (<SelectItem key={make.Make_ID} value={make.Make_Name}>{make.Make_Name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                    <FormField control={form.control} name="model" render={({ field }) => ( <FormItem><FormLabel>Загвар</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={!selectedMake || isLoadingModels}><FormControl><SelectTrigger><SelectValue placeholder="Загвар сонгох..." /></SelectTrigger></FormControl><SelectContent>{isLoadingModels ? <div className="p-4 text-sm">Ачааллаж байна...</div> : models.length > 0 ? models.map(model => (<SelectItem key={model.Model_ID} value={model.Model_Name}>{model.Model_Name}</SelectItem>)) : <div className="p-4 text-sm">Загвар олдсонгүй</div>}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                    <FormField control={form.control} name="make" render={({ field }) => ( <FormItem><FormLabel>Үйлдвэрлэгч</FormLabel><FormControl><Input placeholder="Toyota" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                    <FormField control={form.control} name="model" render={({ field }) => ( <FormItem><FormLabel>Загвар</FormLabel><FormControl><Input placeholder="Prius" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="year" render={({ field }) => ( <FormItem><FormLabel>Үйлдвэрлэсэн он</FormLabel><FormControl><Input type="number" placeholder="2023" {...field} /></FormControl><FormMessage /></FormItem> )}/>

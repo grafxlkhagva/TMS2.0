@@ -4,7 +4,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, ArrowLeft, Plus, Camera, Car, X } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Camera, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import Link from 'next/link';
@@ -34,8 +34,8 @@ import { cn } from '@/lib/utils';
 const fuelTypes = ['Diesel', 'Gasoline', 'Electric', 'Hybrid'] as const;
 
 const formSchema = z.object({
-  make: z.string().min(2, "Үйлдвэрлэгчийн нэр дор хаяж 2 тэмдэгттэй байх ёстой."),
-  model: z.string().min(2, "Загварын нэр дор хаяж 2 тэмдэгттэй байх ёстой."),
+  make: z.string().min(2, { message: "Үйлдвэрлэгчийн нэр дор хаяж 2 тэмдэгттэй байх ёстой." }),
+  model: z.string().min(2, { message: "Загварын нэр дор хаяж 2 тэмдэгттэй байх ёстой." }),
   year: z.coerce.number().min(1980, "Оноо зөв оруулна уу.").max(new Date().getFullYear() + 1, "Оноо зөв оруулна уу."),
   importedYear: z.coerce.number().min(1980, "Оноо зөв оруулна уу.").max(new Date().getFullYear() + 1, "Оноо зөв оруулна уу."),
   licensePlate: z.string().min(4, "Улсын дугаар дор хаяж 4 тэмдэгттэй байх ёстой.").regex(/^[0-9]{4}\s[А-Я|а-я]{3}$/, 'Улсын дугаарыг "0000 УБA" хэлбэрээр оруулна уу.'),
@@ -47,17 +47,6 @@ const formSchema = z.object({
   notes: z.string().optional(),
 });
 
-interface Make {
-  Make_ID: number;
-  Make_Name: string;
-}
-
-interface Model {
-  Model_ID: number;
-  Model_Name: string;
-}
-
-
 export default function NewVehiclePage() {
   const { toast } = useToast();
   const router = useRouter();
@@ -68,11 +57,6 @@ export default function NewVehiclePage() {
   const [imageFiles, setImageFiles] = React.useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = React.useState<string[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  
-  const [makes, setMakes] = React.useState<Make[]>([]);
-  const [models, setModels] = React.useState<Model[]>([]);
-  const [isLoadingMakes, setIsLoadingMakes] = React.useState(false);
-  const [isLoadingModels, setIsLoadingModels] = React.useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -90,32 +74,6 @@ export default function NewVehiclePage() {
       notes: '',
     },
   });
-
-  const selectedMake = form.watch('make');
-
-  React.useEffect(() => {
-    setIsLoadingMakes(true);
-    fetch('https://vpic.nhtsa.dot.gov/api/vehicles/getallmakes?format=json')
-      .then(res => res.json())
-      .then((data) => {
-        setMakes(data.Results);
-        setIsLoadingMakes(false);
-      });
-  }, []);
-
-  React.useEffect(() => {
-    if (selectedMake) {
-      setIsLoadingModels(true);
-      fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/getmodelsformake/${selectedMake}?format=json`)
-        .then(res => res.json())
-        .then(data => {
-          setModels(data.Results);
-          setIsLoadingModels(false);
-        });
-    } else {
-      setModels([]);
-    }
-  }, [selectedMake]);
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -253,8 +211,8 @@ export default function NewVehiclePage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField control={form.control} name="make" render={({ field }) => ( <FormItem><FormLabel>Үйлдвэрлэгч</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingMakes}><FormControl><SelectTrigger><SelectValue placeholder="Үйлдвэрлэгч сонгох..." /></SelectTrigger></FormControl><SelectContent>{isLoadingMakes ? <div className="p-4 text-sm">Ачааллаж байна...</div> : makes.map(make => (<SelectItem key={make.Make_ID} value={make.Make_Name}>{make.Make_Name}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                    <FormField control={form.control} name="model" render={({ field }) => ( <FormItem><FormLabel>Загвар</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedMake || isLoadingModels}><FormControl><SelectTrigger><SelectValue placeholder="Загвар сонгох..." /></SelectTrigger></FormControl><SelectContent>{isLoadingModels ? <div className="p-4 text-sm">Ачааллаж байна...</div> : models.length > 0 ? models.map(model => (<SelectItem key={model.Model_ID} value={model.Model_Name}>{model.Model_Name}</SelectItem>)) : <div className="p-4 text-sm">Загвар олдсонгүй</div>}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                    <FormField control={form.control} name="make" render={({ field }) => ( <FormItem><FormLabel>Үйлдвэрлэгч</FormLabel><FormControl><Input placeholder="Toyota" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                    <FormField control={form.control} name="model" render={({ field }) => ( <FormItem><FormLabel>Загвар</FormLabel><FormControl><Input placeholder="Prius" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="year" render={({ field }) => ( <FormItem><FormLabel>Үйлдвэрлэсэн он</FormLabel><FormControl><Input type="number" placeholder="2023" {...field} /></FormControl><FormMessage /></FormItem> )}/>
