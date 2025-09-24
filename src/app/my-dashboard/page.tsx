@@ -70,39 +70,60 @@ export default function MyDashboardPage() {
             setIsLoading(true);
 
             try {
-                const ordersQuery = query(collection(db, "orders"), where("transportManagerId", "==", user.uid));
-                const shipmentsQuery = query(collection(db, "shipments"), where("driverInfo.phone", "in", (await getDocs(query(collection(db, "Drivers"), where("authUid", "==", user.uid)))).docs.map(d => d.data().phone_number))));
+                let managerOrders: Order[] = [];
+                let managerShipments: Shipment[] = [];
 
-                const [ordersSnapshot, shipmentsSnapshot] = await Promise.all([
-                    getDocs(ordersQuery),
-                    getDocs(shipmentsQuery)
-                ]);
+                if (user.role === 'transport_manager') {
+                    const ordersQuery = query(collection(db, "orders"), where("transportManagerId", "==", user.uid));
+                    const ordersSnapshot = await getDocs(ordersQuery);
+                    managerOrders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
 
-                const managerOrders = ordersSnapshot.docs.map(doc => doc.data() as Order);
-                const managerShipments = shipmentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Shipment));
-                
-                const activeOrdersCount = managerOrders.filter(o => o.status === 'Pending' || o.status === 'Processing').length;
-                const inTransitShipments = managerShipments.filter(s => s.status === 'In Transit');
-                
-                const activeShipmentItemsQuery = query(collection(db, 'order_items'), where('orderId', 'in', managerOrders.map(o => o.id)));
-                const orderItemsSnapshot = await getDocs(activeShipmentItemsQuery);
-                const totalValue = orderItemsSnapshot.docs.reduce((acc, doc) => {
-                    const item = doc.data() as OrderItem;
-                    if (item.status === 'Shipped' || item.status === 'Delivered') {
-                        return acc + (item.finalPrice || 0);
+                    const orderIds = managerOrders.map(o => o.id);
+                    let totalValue = 0;
+
+                    if (orderIds.length > 0) {
+                        const activeShipmentItemsQuery = query(collection(db, 'order_items'), where('orderId', 'in', orderIds));
+                        const orderItemsSnapshot = await getDocs(activeShipmentItemsQuery);
+                        totalValue = orderItemsSnapshot.docs.reduce((acc, doc) => {
+                            const item = doc.data() as OrderItem;
+                            if (item.status === 'Shipped' || item.status === 'Delivered') {
+                                return acc + (item.finalPrice || 0);
+                            }
+                            return acc;
+                        }, 0);
+
+                        const shipmentsForManagerQuery = query(collection(db, "shipments"), where("orderId", "in', orderIds));
+                        const shipmentsSnapshot = await getDocs(shipmentsForManagerQuery);
+                        managerShipments = shipmentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Shipment));
                     }
-                    return acc;
-                }, 0);
+                    
+                    setStats(prev => ({
+                        ...prev,
+                        totalShipmentValue: totalValue,
+                        activeOrders: managerOrders.filter(o => o.status === 'Pending' || o.status === 'Processing').length,
+                    }));
+                    setPendingOrders(managerOrders.filter(o => o.status === 'Pending'));
 
-
-                setStats({
-                    totalShipmentValue: totalValue,
-                    activeOrders: activeOrdersCount,
-                    inTransitShipments: inTransitShipments.length,
-                });
+                } else if (user.role === 'driver') {
+                    const driverQuery = query(collection(db, "Drivers"), where("authUid", "==", user.uid));
+                    const driverSnapshot = await getDocs(driverQuery);
+                    if (!driverSnapshot.empty) {
+                        const driverData = driverSnapshot.docs[0].data();
+                        const driverPhone = driverData.phone_number;
+                        if (driverPhone) {
+                            const shipmentsQuery = query(collection(db, "shipments"), where("driverInfo.phone", "==", driverPhone));
+                            const shipmentsSnapshot = await getDocs(shipmentsQuery);
+                            managerShipments = shipmentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Shipment));
+                        }
+                    }
+                }
                 
+                const inTransitShipments = managerShipments.filter(s => s.status === 'In Transit');
+                setStats(prev => ({
+                    ...prev,
+                    inTransitShipments: inTransitShipments.length,
+                }));
                 setActiveShipments(inTransitShipments);
-                setPendingOrders(managerOrders.filter(o => o.status === 'Pending'));
 
             } catch (error) {
                 console.error("Error fetching dashboard data:", error);
@@ -238,3 +259,5 @@ export default function MyDashboardPage() {
         </div>
     );
 }
+
+    
