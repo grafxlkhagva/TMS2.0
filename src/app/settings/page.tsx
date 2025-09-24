@@ -20,16 +20,10 @@ const settingsItems = [
         icon: Map
     },
     {
-        title: "Машины үйлдвэрлэгч",
-        description: "Машины үйлдвэрлэгчдийн лавлах сан.",
-        href: "/settings/vehicle-makes",
+        title: "Үйлдвэрлэгч ба Загвар",
+        description: "Машины үйлдвэрлэгч болон загваруудыг удирдах.",
+        href: "/settings/vehicle-definitions",
         icon: Building
-    },
-    {
-        title: "Машины загвар",
-        description: "Машины загваруудыг удирдах лавлах сан.",
-        href: "/settings/vehicle-models",
-        icon: Car
     },
     {
         title: "Үйлчилгээний төрөл",
