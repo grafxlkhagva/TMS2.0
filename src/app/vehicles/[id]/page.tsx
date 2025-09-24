@@ -1,12 +1,11 @@
 
-
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Vehicle } from '@/types';
+import type { Vehicle, VehicleType, TrailerType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
@@ -42,6 +41,8 @@ export default function VehicleDetailPage() {
   const { toast } = useToast();
 
   const [vehicle, setVehicle] = React.useState<Vehicle | null>(null);
+  const [vehicleTypeName, setVehicleTypeName] = React.useState('');
+  const [trailerTypeName, setTrailerTypeName] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -58,6 +59,16 @@ export default function VehicleDetailPage() {
             id: docSnap.id,
             ...data,
           });
+
+          if (data.vehicleTypeId) {
+            const typeDoc = await getDoc(doc(db, 'vehicle_types', data.vehicleTypeId));
+            if (typeDoc.exists()) setVehicleTypeName(typeDoc.data().name);
+          }
+          if (data.trailerTypeId) {
+            const typeDoc = await getDoc(doc(db, 'trailer_types', data.trailerTypeId));
+            if (typeDoc.exists()) setTrailerTypeName(typeDoc.data().name);
+          }
+
         } else {
           toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл олдсонгүй.' });
           router.push('/vehicles');
@@ -168,8 +179,8 @@ export default function VehicleDetailPage() {
           <CardContent className="space-y-4">
             <DetailItem icon={Calendar} label="Үйлдвэрлэсэн / Орж ирсэн он" value={`${vehicle.year} / ${vehicle.importedYear}`} />
             <DetailItem icon={Hash} label="Арлын дугаар (VIN)" value={vehicle.vin} />
-            <DetailItem icon={Car} label="Машины төрөл" value={vehicle.vehicleTypeId} />
-            <DetailItem icon={Container} label="Тэвшний төрөл" value={vehicle.trailerTypeId} />
+            <DetailItem icon={Car} label="Машины төрөл" value={vehicleTypeName} />
+            <DetailItem icon={Container} label="Тэвшний төрөл" value={trailerTypeName} />
             <DetailItem icon={Hash} label="Даац / Хэмжээ" value={vehicle.capacity} />
             <DetailItem icon={Droplet} label="Шатахууны төрөл" value={vehicle.fuelType} />
             <DetailItem icon={User} label="Оноосон жолооч" value={vehicle.driverName || 'Оноогоогүй'} />

@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Vehicle, VehicleStatus, Driver } from '@/types';
+import type { Vehicle, VehicleStatus, Driver, VehicleType, TrailerType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { collection, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -30,6 +30,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 function StatusBadge({ status }: { status: VehicleStatus }) {
@@ -102,6 +103,7 @@ function AssignDriverDialog({
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = React.useState<Vehicle[]>([]);
   const [drivers, setDrivers] = React.useState<Driver[]>([]);
+  const [vehicleTypes, setVehicleTypes] = React.useState<Map<string, string>>(new Map());
   const [isLoading, setIsLoading] = React.useState(true);
   const [selectedVehicle, setSelectedVehicle] = React.useState<Vehicle | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -110,9 +112,10 @@ export default function VehiclesPage() {
   const fetchData = React.useCallback(async () => {
       setIsLoading(true);
       try {
-        const [vehiclesSnapshot, driversSnapshot] = await Promise.all([
+        const [vehiclesSnapshot, driversSnapshot, vehicleTypesSnapshot] = await Promise.all([
           getDocs(query(collection(db, 'vehicles'), orderBy('createdAt', 'desc'))),
-          getDocs(query(collection(db, 'Drivers'), orderBy('display_name')))
+          getDocs(query(collection(db, 'Drivers'), orderBy('display_name'))),
+          getDocs(query(collection(db, 'vehicle_types'))),
         ]);
 
         const vehiclesData = vehiclesSnapshot.docs.map(doc => ({
@@ -126,6 +129,9 @@ export default function VehiclesPage() {
           ...doc.data()
         } as Driver));
         setDrivers(driversData);
+        
+        const vehicleTypesMap = new Map(vehicleTypesSnapshot.docs.map(doc => [doc.id, doc.data().name]));
+        setVehicleTypes(vehicleTypesMap);
           
       } catch (error) {
         console.error("Error fetching data: ", error);
@@ -186,7 +192,7 @@ export default function VehiclesPage() {
         </div>
          <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading}>
-                <RefreshCw className={'h-4 w-4 ${isLoading ? \'animate-spin\' : \'\'}'} />
+                <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
             </Button>
             <Button asChild>
                 <Link href="/vehicles/new">
@@ -217,7 +223,20 @@ export default function VehiclesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {vehicles.length > 0 ? (
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><Skeleton className="h-10 w-10 rounded-full"/></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24"/></TableCell>
+                        <TableCell><Skeleton className="h-5 w-20"/></TableCell>
+                        <TableCell><Skeleton className="h-5 w-20"/></TableCell>
+                        <TableCell><Skeleton className="h-5 w-16"/></TableCell>
+                        <TableCell><Skeleton className="h-6 w-20 rounded-full"/></TableCell>
+                        <TableCell><Skeleton className="h-5 w-28"/></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto"/></TableCell>
+                    </TableRow>
+                ))
+              ) : vehicles.length > 0 ? (
                 vehicles.map((vehicle) => (
                     <TableRow key={vehicle.id}>
                         <TableCell>
