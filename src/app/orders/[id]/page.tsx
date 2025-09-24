@@ -6,7 +6,7 @@ import * as React from 'react';
 import { doc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, orderBy, runTransaction, type DocumentReference, or } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, VehicleType, TrailerType, Region, PackagingType, DriverQuote, OrderItemCargo, Shipment, SystemUser, Driver } from '@/types';
+import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, VehicleType, TrailerType, Region, PackagingType, DriverQuote, OrderItemCargo, Shipment, SystemUser, Driver, Vehicle } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
@@ -103,11 +103,13 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+type DriverWithVehicle = Driver & { vehicle?: Vehicle & { vehicleTypeName?: string; trailerTypeName?: string; } };
+
 const toDateSafe = (date: any): Date => {
     if (date instanceof Timestamp) return date.toDate();
     if (date instanceof Date) return date;
     // Handle Firestore-like object structure from serialization
-    if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in data && 'nanoseconds' in data) {
+    if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in data) {
          // This is a basic check; you might want more robust validation
         return new Timestamp(date.seconds, date.nanoseconds).toDate();
     }
@@ -159,7 +161,7 @@ export default function OrderDetailPage() {
   const [packagingTypes, setPackagingTypes] = React.useState<PackagingType[]>([]);
   const [customerEmployees, setCustomerEmployees] = React.useState<CustomerEmployee[]>([]);
   const [transportManagers, setTransportManagers] = React.useState<SystemUser[]>([]);
-  const [drivers, setDrivers] = React.useState<Driver[]>([]);
+  const [drivers, setDrivers] = React.useState<DriverWithVehicle[]>([]);
 
 
   const [isLoading, setIsLoading] = React.useState(true);
@@ -211,7 +213,20 @@ export default function OrderDetailPage() {
       } as Order;
       setOrder(currentOrder);
 
-      const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap, packagingTypeSnap, shipmentsSnap, managersSnap, driversSnap] = await Promise.all([
+      const [
+        itemsSnap, 
+        warehouseSnap, 
+        serviceTypeSnap, 
+        employeesSnap, 
+        vehicleTypeSnap, 
+        trailerTypeSnap, 
+        regionSnap, 
+        packagingTypeSnap, 
+        shipmentsSnap, 
+        managersSnap, 
+        driversSnap,
+        vehiclesSnap
+    ] = await Promise.all([
         getDocs(query(collection(db, 'order_items'), where('orderId', '==', orderId))),
         getDocs(query(collection(db, "warehouses"), orderBy("name"))),
         getDocs(query(collection(db, "service_types"), orderBy("name"))),
@@ -223,11 +238,37 @@ export default function OrderDetailPage() {
         getDocs(query(collection(db, 'shipments'), where('orderId', '==', orderId))),
         getDocs(query(collection(db, 'users'), where('role', '==', 'transport_manager'))),
         getDocs(query(collection(db, 'Drivers'), orderBy('display_name'))),
+        getDocs(query(collection(db, "vehicles"))),
       ]);
       
       setTransportManagers(managersSnap.docs.map(d => d.data() as SystemUser));
-      setDrivers(driversSnap.docs.map(d => ({id: d.id, ...d.data() } as Driver)));
 
+      const vehiclesData = vehiclesSnap.docs.map(doc => ({ id: doc.id, ...doc.data()} as Vehicle));
+      const vehicleTypesMap = new Map(vehicleTypeSnap.docs.map(doc => [doc.id, doc.data().name]));
+      const trailerTypesMap = new Map(trailerTypeSnap.docs.map(doc => [doc.id, doc.data().name]));
+
+      const vehiclesByDriverId = new Map<string, Vehicle & { vehicleTypeName?: string; trailerTypeName?: string; }>();
+      vehiclesData.forEach(vehicle => {
+          if (vehicle.driverId) {
+              vehiclesByDriverId.set(vehicle.driverId, {
+                  ...vehicle,
+                  vehicleTypeName: vehicleTypesMap.get(vehicle.vehicleTypeId),
+                  trailerTypeName: trailerTypesMap.get(vehicle.trailerTypeId),
+              });
+          }
+      });
+      
+      const driversData = driversSnap.docs.map(doc => {
+        const docData = doc.data() as Driver;
+        const driverId = doc.id;
+        return {
+          id: driverId,
+          ...docData,
+          created_time: toDateSafe(docData.created_time),
+          vehicle: vehiclesByDriverId.get(driverId),
+        } as DriverWithVehicle;
+      });
+      setDrivers(driversData);
 
       const itemsDataPromises: Promise<OrderItem>[] = itemsSnap.docs.map(async (d) => {
         const itemData = d.data();
@@ -712,7 +753,7 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
         defaultValues: { price: 0, notes: '' },
     });
 
-    const [selectedDriver, setSelectedDriver] = React.useState<Driver | null>(null);
+    const [selectedDriver, setSelectedDriver] = React.useState<DriverWithVehicle | null>(null);
     const [manualDriverName, setManualDriverName] = React.useState('');
     const [manualDriverPhone, setManualDriverPhone] = React.useState('');
     const [isRegisteringDriver, setIsRegisteringDriver] = React.useState(false);
@@ -745,7 +786,7 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
                 status: 'Active',
                 created_time: serverTimestamp(),
             });
-            const newDriver = { id: docRef.id, display_name: manualDriverName, phone_number: manualDriverPhone, status: 'Active' } as Driver;
+            const newDriver = { id: docRef.id, display_name: manualDriverName, phone_number: manualDriverPhone, status: 'Active' } as DriverWithVehicle;
             setDrivers(prev => [...prev, newDriver]);
             setSelectedDriver(newDriver);
             toast({ title: 'Амжилттай', description: `Шинэ жолооч ${manualDriverName} бүртгэгдлээ.` });
@@ -757,17 +798,30 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
     }
 
     const handleAddQuote = async (values: QuoteFormValues) => {
-        if (!selectedDriver) {
+        if (!selectedDriver && (!manualDriverName || !manualDriverPhone)) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч сонгоно уу эсвэл шинээр бүртгэнэ үү.' });
              return;
         }
 
+        let driverToUse = selectedDriver;
+
+        if (!driverToUse) {
+            const existingDriver = drivers.find(d => d.phone_number === manualDriverPhone);
+            if(existingDriver) {
+                driverToUse = existingDriver;
+            } else {
+                 toast({ variant: 'destructive', title: 'Алдаа', description: 'Шинэ жолоочийг эхлээд бүртгэнэ үү.' });
+                 return;
+            }
+        }
+
+
         setIsSubmitting(true);
         try {
             await addDoc(collection(db, 'driver_quotes'), {
-                driverId: selectedDriver.id,
-                driverName: selectedDriver.display_name,
-                driverPhone: selectedDriver.phone_number,
+                driverId: driverToUse.id,
+                driverName: driverToUse.display_name,
+                driverPhone: driverToUse.phone_number,
                 price: values.price,
                 notes: values.notes || '',
                 orderItemId: orderItemId,
@@ -818,9 +872,19 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
                                                     key={driver.id}
                                                     value={`${driver.display_name} ${driver.phone_number}`}
                                                     onSelect={() => handleSelectDriver(driver.id)}
+                                                    className="flex flex-col items-start"
                                                 >
-                                                    <CheckIcon className={cn("mr-2 h-4 w-4", selectedDriver?.id === driver.id ? "opacity-100" : "opacity-0")}/>
-                                                    {driver.display_name} ({driver.phone_number})
+                                                   <div className="flex items-center w-full">
+                                                        <CheckIcon className={cn("mr-2 h-4 w-4", selectedDriver?.id === driver.id ? "opacity-100" : "opacity-0")}/>
+                                                        <div className="flex-1">
+                                                            <p className="font-medium">{driver.display_name} ({driver.phone_number})</p>
+                                                            {driver.vehicle && (
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    {driver.vehicle.licensePlate} &bull; {driver.vehicle.capacity} &bull; {driver.vehicle.vehicleTypeName} / {driver.vehicle.trailerTypeName}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </CommandItem>
                                             ))}
                                         </CommandGroup>
@@ -1174,3 +1238,4 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
     </div>
   );
 }
+
