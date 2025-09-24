@@ -30,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { Vehicle, VehicleType, TrailerType } from '@/types';
 import QuickAddDialog, { type QuickAddDialogProps } from '@/components/quick-add-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 const fuelTypes = ['Diesel', 'Gasoline', 'Electric', 'Hybrid'] as const;
 
@@ -323,4 +324,3 @@ export default function EditVehiclePage() {
     </div>
   );
 }
-
