@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { collection, getDocs, orderBy, query, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Driver, DriverStatus } from '@/types';
+import type { Driver, DriverStatus, Vehicle, VehicleType, TrailerType } from '@/types';
 import {
   Table,
   TableBody,
@@ -42,6 +42,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Timestamp } from 'firebase/firestore';
 
+type DriverWithVehicle = Driver & { vehicle?: Vehicle & { vehicleTypeName?: string; trailerTypeName?: string; } };
+
 function StatusBadge({ status }: { status: DriverStatus }) {
     const variant = status === 'Active' ? 'success' : status === 'On Leave' ? 'warning' : 'secondary';
     const text = status === 'Active' ? 'Идэвхтэй' : status === 'On Leave' ? 'Чөлөөнд' : 'Идэвхгүй';
@@ -62,14 +64,14 @@ const toDateSafe = (date: any): Date => {
 };
 
 export default function DriversPage() {
-  const [drivers, setDrivers] = React.useState<Driver[]>([]);
+  const [drivers, setDrivers] = React.useState<DriverWithVehicle[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [driverToDelete, setDriverToDelete] = React.useState<Driver | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
   const { toast } = useToast();
 
-  const fetchDrivers = React.useCallback(async () => {
+  const fetchData = React.useCallback(async () => {
     setIsLoading(true);
     if (!db) {
       toast({
@@ -81,23 +83,45 @@ export default function DriversPage() {
       return;
     }
     try {
-      const q = query(collection(db, "Drivers"), orderBy("created_time", "desc"));
-      const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map(doc => {
-        const docData = doc.data();
+      const [driversSnapshot, vehiclesSnapshot, vehicleTypesSnapshot, trailerTypesSnapshot] = await Promise.all([
+          getDocs(query(collection(db, "Drivers"), orderBy("created_time", "desc"))),
+          getDocs(query(collection(db, "vehicles"))),
+          getDocs(query(collection(db, "vehicle_types"))),
+          getDocs(query(collection(db, "trailer_types"))),
+      ]);
+      
+      const vehiclesData = vehiclesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data()} as Vehicle));
+      const vehicleTypesMap = new Map(vehicleTypesSnapshot.docs.map(doc => [doc.id, doc.data().name]));
+      const trailerTypesMap = new Map(trailerTypesSnapshot.docs.map(doc => [doc.id, doc.data().name]));
+      
+      const vehiclesByDriverId = new Map<string, Vehicle & { vehicleTypeName?: string; trailerTypeName?: string; }>();
+      vehiclesData.forEach(vehicle => {
+          if (vehicle.driverId) {
+              vehiclesByDriverId.set(vehicle.driverId, {
+                  ...vehicle,
+                  vehicleTypeName: vehicleTypesMap.get(vehicle.vehicleTypeId),
+                  trailerTypeName: trailerTypesMap.get(vehicle.trailerTypeId),
+              });
+          }
+      });
+
+      const driversData = driversSnapshot.docs.map(doc => {
+        const docData = doc.data() as Driver;
+        const driverId = doc.id;
         return {
-          id: doc.id,
+          id: driverId,
           ...docData,
           created_time: toDateSafe(docData.created_time),
-        } as Driver;
+          vehicle: vehiclesByDriverId.get(driverId),
+        } as DriverWithVehicle;
       });
-      setDrivers(data);
+      setDrivers(driversData);
     } catch (error) {
-      console.error("Error fetching drivers: ", error);
+      console.error("Error fetching data: ", error);
       toast({
         variant: 'destructive',
         title: 'Алдаа',
-        description: 'Жолооч нарын мэдээллийг татахад алдаа гарлаа.',
+        description: 'Мэдээллийг татахад алдаа гарлаа.',
       });
     } finally {
       setIsLoading(false);
@@ -105,8 +129,8 @@ export default function DriversPage() {
   }, [toast]);
 
   React.useEffect(() => {
-    fetchDrivers();
-  }, [fetchDrivers]);
+    fetchData();
+  }, [fetchData]);
 
   const handleDeleteDriver = async () => {
     if (!driverToDelete || !db) return;
@@ -148,7 +172,7 @@ export default function DriversPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
              />
            </div>
-           <Button variant="outline" size="icon" onClick={fetchDrivers} disabled={isLoading}>
+           <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
           <Button asChild>
@@ -173,6 +197,9 @@ export default function DriversPage() {
                 <TableHead>Нэр</TableHead>
                 <TableHead>Утас</TableHead>
                 <TableHead>Статус</TableHead>
+                <TableHead>Улсын дугаар</TableHead>
+                <TableHead>Даац</TableHead>
+                <TableHead>Төрөл / Тэвш</TableHead>
                 <TableHead>Бүртгүүлсэн</TableHead>
                 <TableHead><span className="sr-only">Үйлдэл</span></TableHead>
               </TableRow>
@@ -185,6 +212,9 @@ export default function DriversPage() {
                     <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
                   </TableRow>
@@ -205,6 +235,9 @@ export default function DriversPage() {
                       </TableCell>
                       <TableCell>{driver.phone_number}</TableCell>
                       <TableCell><StatusBadge status={driver.status} /></TableCell>
+                       <TableCell>{driver.vehicle?.licensePlate || 'Оноогоогүй'}</TableCell>
+                      <TableCell>{driver.vehicle?.capacity || '-'}</TableCell>
+                      <TableCell>{driver.vehicle ? `${driver.vehicle.vehicleTypeName} / ${driver.vehicle.trailerTypeName}` : '-'}</TableCell>
                       <TableCell>{toDateSafe(driver.created_time).toLocaleDateString()}</TableCell>
                       <TableCell className="text-right">
                          <DropdownMenu>
@@ -240,7 +273,7 @@ export default function DriversPage() {
                 ))
               ) : (
                  <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center">
+                    <TableCell colSpan={9} className="h-24 text-center">
                         Бүртгэлтэй жолооч олдсонгүй.
                     </TableCell>
                  </TableRow>
