@@ -28,6 +28,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
 import { Timestamp } from 'firebase/firestore';
 
 const driverStatuses: DriverStatus[] = ['Active', 'Inactive', 'On Leave'];
@@ -397,4 +398,3 @@ export default function EditDriverPage() {
     </div>
   );
 }
-
