@@ -17,7 +17,7 @@ import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink, Download, Megaphone, MegaphoneOff, Calendar, Package, MapPin, UserPlus, FileSpreadsheet, Send, CheckIcon, ChevronsUpDown } from 'lucide-react';
+import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink, Download, Megaphone, MegaphoneOff, Calendar, Package, MapPin, UserPlus, FileSpreadsheet, Send, CheckIcon, ChevronsUpDown, X } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -107,7 +107,7 @@ const toDateSafe = (date: any): Date => {
     if (date instanceof Timestamp) return date.toDate();
     if (date instanceof Date) return date;
     // Handle Firestore-like object structure from serialization
-    if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in date) {
+    if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in data && 'nanoseconds' in data) {
          // This is a basic check; you might want more robust validation
         return new Timestamp(date.seconds, date.nanoseconds).toDate();
     }
@@ -726,6 +726,12 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
         }
     };
     
+    const handleClearSelection = () => {
+        setSelectedDriver(null);
+        setManualDriverName('');
+        setManualDriverPhone('');
+    }
+
     const handleRegisterDriver = async () => {
         if (!manualDriverName || !manualDriverPhone) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолоочийн нэр, утасны дугаарыг оруулна уу.' });
@@ -751,29 +757,17 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
     }
 
     const handleAddQuote = async (values: QuoteFormValues) => {
-        if (!selectedDriver && (!manualDriverName || !manualDriverPhone)) {
+        if (!selectedDriver) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч сонгоно уу эсвэл шинээр бүртгэнэ үү.' });
              return;
-        }
-
-        let driverToQuote = selectedDriver;
-
-        if (!driverToQuote) {
-             const existingDriver = drivers.find(d => d.phone_number === manualDriverPhone);
-             if (existingDriver) {
-                 driverToQuote = existingDriver;
-             } else {
-                 toast({ variant: 'destructive', title: 'Алдаа', description: 'Шинэ жолоочийг эхлээд бүртгэнэ үү.' });
-                 return;
-             }
         }
 
         setIsSubmitting(true);
         try {
             await addDoc(collection(db, 'driver_quotes'), {
-                driverId: driverToQuote.id,
-                driverName: driverToQuote.display_name,
-                driverPhone: driverToQuote.phone_number,
+                driverId: selectedDriver.id,
+                driverName: selectedDriver.display_name,
+                driverPhone: selectedDriver.phone_number,
                 price: values.price,
                 notes: values.notes || '',
                 orderItemId: orderItemId,
@@ -785,9 +779,7 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
             toast({ title: 'Амжилттай', description: 'Шинэ үнийн санал нэмэгдлээ.' });
             fetchOrderData();
             form.reset();
-            setSelectedDriver(null);
-            setManualDriverName('');
-            setManualDriverPhone('');
+            handleClearSelection();
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Үнийн санал нэмэхэд алдаа гарлаа.' });
         } finally {
@@ -801,40 +793,47 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
                 
                 <div className="md:col-span-4 space-y-2">
                     <FormLabel className="text-xs">Жолооч хайх</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant="outline"
-                                role="combobox"
-                                className="w-full justify-between"
-                            >
-                                {selectedDriver
-                                    ? `${selectedDriver.display_name} (${selectedDriver.phone_number})`
-                                    : "Жолооч сонгох..."}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    <div className="flex items-center gap-2">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    className="w-full justify-between"
+                                >
+                                    {selectedDriver
+                                        ? `${selectedDriver.display_name} (${selectedDriver.phone_number})`
+                                        : "Жолооч сонгох..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                <Command>
+                                    <CommandInput placeholder="Нэр, утсаар хайх..." />
+                                    <CommandList>
+                                        <CommandEmpty>Олдсонгүй.</CommandEmpty>
+                                        <CommandGroup>
+                                            {drivers.map((driver) => (
+                                                <CommandItem
+                                                    key={driver.id}
+                                                    value={`${driver.display_name} ${driver.phone_number}`}
+                                                    onSelect={() => handleSelectDriver(driver.id)}
+                                                >
+                                                    <CheckIcon className={cn("mr-2 h-4 w-4", selectedDriver?.id === driver.id ? "opacity-100" : "opacity-0")}/>
+                                                    {driver.display_name} ({driver.phone_number})
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                         {selectedDriver && (
+                            <Button type="button" variant="ghost" size="icon" onClick={handleClearSelection} className="flex-shrink-0">
+                                <X className="h-4 w-4" />
                             </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                            <Command>
-                                <CommandInput placeholder="Нэр, утсаар хайх..." />
-                                <CommandList>
-                                    <CommandEmpty>Олдсонгүй.</CommandEmpty>
-                                    <CommandGroup>
-                                        {drivers.map((driver) => (
-                                            <CommandItem
-                                                key={driver.id}
-                                                value={`${driver.display_name} ${driver.phone_number}`}
-                                                onSelect={() => handleSelectDriver(driver.id)}
-                                            >
-                                                <CheckIcon className={cn("mr-2 h-4 w-4", selectedDriver?.id === driver.id ? "opacity-100" : "opacity-0")}/>
-                                                {driver.display_name} ({driver.phone_number})
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
+                        )}
+                    </div>
                 </div>
                 
                 <div className="md:col-span-3 space-y-2">
@@ -1175,7 +1174,3 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
     </div>
   );
 }
-
-    
-
-
