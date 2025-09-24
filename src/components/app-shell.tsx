@@ -18,6 +18,7 @@ import {
   UserSquare,
   ChevronDown,
   Car,
+  LayoutGrid,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -51,13 +52,18 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { cn } from '@/lib/utils';
 
-const navItems = [
+const baseNavItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/orders', icon: Briefcase, label: 'Захиалга' },
   { href: '/shipments', icon: Truck, label: 'Тээвэрлэлт' },
   { href: '/customers', icon: Building2, label: 'Харилцагчид' },
   { href: '/warehouses', icon: Warehouse, label: 'Агуулах' },
   { href: '/vehicles', icon: Car, label: 'Тээврийн хэрэгсэл' },
+];
+
+const transportManagerNavItems = [
+  { href: '/my-dashboard', icon: LayoutGrid, label: 'Миний самбар' },
+  ...baseNavItems,
   { 
     href: '/drivers', 
     icon: UserSquare, 
@@ -69,8 +75,9 @@ const navItems = [
   },
 ];
 
+
 const adminNavItems = [
-  ...navItems.filter(item => item.href !== '/drivers'),
+  ...baseNavItems,
   { 
     href: '/drivers', 
     icon: UserSquare, 
@@ -88,26 +95,28 @@ function Nav() {
   const pathname = usePathname();
   const { state } = useSidebar();
   const { user } = useAuth();
-  const [items, setItems] = React.useState(navItems);
+  const [items, setItems] = React.useState(baseNavItems);
   const [mounted, setMounted] = React.useState(false);
   
-  const isSubItemActive = (subItems: any[]) => {
-    return subItems.some(item => pathname === item.href);
-  }
-
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
   React.useEffect(() => {
     if (user?.role) {
-      setItems(user.role === 'admin' ? adminNavItems : navItems);
+        if (user.role === 'admin') {
+            setItems(adminNavItems);
+        } else if (user.role === 'transport_manager') {
+            setItems(transportManagerNavItems);
+        } else {
+            setItems(baseNavItems);
+        }
     }
   }, [user?.role]);
 
   if (!mounted) {
     // Basic render to avoid layout shift
-    return <SidebarMenu>{navItems.map(item => <SidebarMenuItem key={item.href}><SidebarMenuButton><item.icon/><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu>;
+    return <SidebarMenu>{baseNavItems.map(item => <SidebarMenuItem key={item.href}><SidebarMenuButton><item.icon/><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu>;
   }
 
   return (
