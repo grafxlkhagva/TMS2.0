@@ -17,7 +17,7 @@ import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink, Download, Megaphone, MegaphoneOff, Calendar, Package, MapPin, UserPlus, FileSpreadsheet, Send } from 'lucide-react';
+import { ArrowLeft, User, Building, FileText, PlusCircle, Trash2, Edit, Loader2, CheckCircle, XCircle, CircleDollarSign, Info, Truck, ExternalLink, Download, Megaphone, MegaphoneOff, Calendar, Package, MapPin, UserPlus, FileSpreadsheet, Send, CheckIcon, ChevronsUpDown } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -43,10 +43,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 
 const quoteFormSchema = z.object({
-    driverId: z.string().min(1, "Жолооч сонгоно уу."),
     price: z.coerce.number().min(1, "Үнийн санал оруулна уу."),
     notes: z.string().optional(),
 });
@@ -181,8 +182,6 @@ export default function OrderDetailPage() {
     name: "items"
   });
   
-  const quoteForms = React.useRef<Map<string, any>>(new Map());
-
   const totalOrderPrice = React.useMemo(() => {
     return orderItems.reduce((acc, item) => acc + (item.finalPrice || 0), 0);
   }, [orderItems]);
@@ -418,38 +417,6 @@ export default function OrderDetailPage() {
        toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрлэлт нэмэхэд алдаа гарлаа.'});
     } finally {
       setIsSubmitting(false);
-    }
-  }
-  
-  const handleAddQuote = async (itemId: string, values: QuoteFormValues) => {
-    setIsSubmitting(true);
-    try {
-        const selectedDriver = drivers.find(d => d.id === values.driverId);
-        if (!selectedDriver) {
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч олдсонгүй.' });
-            setIsSubmitting(false);
-            return;
-        }
-
-        await addDoc(collection(db, 'driver_quotes'), {
-            driverId: selectedDriver.id,
-            driverName: selectedDriver.display_name,
-            driverPhone: selectedDriver.phone_number,
-            price: values.price,
-            notes: values.notes || '',
-            orderItemId: itemId,
-            orderItemRef: doc(db, 'order_items', itemId),
-            status: 'Pending',
-            channel: 'Phone',
-            createdAt: serverTimestamp(),
-        });
-        toast({ title: 'Амжилттай', description: 'Шинэ үнийн санал нэмэгдлээ.' });
-        fetchOrderData(); // Refetch quotes
-        quoteForms.current.get(itemId)?.reset();
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Алдаа', description: 'Үнийн санал нэмэхэд алдаа гарлаа.' });
-    } finally {
-        setIsSubmitting(false);
     }
   }
 
@@ -706,82 +673,6 @@ export default function OrderDetailPage() {
     });
   };
 
-  function QuoteForm({ orderItemId }: { orderItemId: string }) {
-    const quoteForm = useForm<QuoteFormValues>({
-        resolver: zodResolver(quoteFormSchema),
-        defaultValues: { driverId: '', price: 0, notes: '' },
-    });
-    quoteForms.current.set(orderItemId, quoteForm);
-
-    return (
-        <Form {...quoteForm}>
-            <form onSubmit={quoteForm.handleSubmit((values) => handleAddQuote(orderItemId, values))} className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 items-start p-3 border rounded-md bg-muted/50">
-                <FormField
-                    control={quoteForm.control}
-                    name="driverId"
-                    render={({ field }) => (
-                        <FormItem className="md:col-span-4">
-                            <FormLabel className="text-xs">Жолооч</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Жолооч сонгох..." />
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {drivers.map(driver => (
-                                        <SelectItem key={driver.id} value={driver.id}>
-                                            {driver.display_name} ({driver.phone_number})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                
-                <FormField
-                    control={quoteForm.control}
-                    name="price"
-                    render={({ field }) => (
-                        <FormItem className="md:col-span-3">
-                            <FormLabel className="text-xs">Үнийн санал (₮)</FormLabel>
-                            <FormControl><Input type="number" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-
-                <FormField
-                    control={quoteForm.control}
-                    name="notes"
-                    render={({ field }) => (
-                        <FormItem className="md:col-span-4">
-                            <FormLabel className="text-xs">Тэмдэглэл</FormLabel>
-                            <FormControl><Textarea rows={1} {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                
-                <div className="md:col-span-1 flex justify-end items-end h-full">
-                    <Button type="submit" disabled={isSubmitting} className="w-full">
-                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin"/> : <PlusCircle className="h-4 w-4"/>}
-                    </Button>
-                </div>
-                 <div className="md:col-span-12">
-                    <Button type="button" variant="link" size="sm" className="p-0 h-auto" asChild>
-                        <Link href="/drivers/new" target="_blank">
-                            <UserPlus className="mr-2 h-4 w-4"/> Шинэ жолооч бүртгэх
-                        </Link>
-                    </Button>
-                </div>
-            </form>
-        </Form>
-    );
-  }
-  
   const calculateFinalPrice = (item: OrderItem, quote: DriverQuote) => {
     const profitMargin = (item.profitMargin || 0) / 100;
     const driverPrice = quote.price;
@@ -814,6 +705,171 @@ export default function OrderDetailPage() {
         return 'secondary';
     }
   };
+  
+function QuoteForm({ orderItemId }: { orderItemId: string }) {
+    const form = useForm<QuoteFormValues>({
+        resolver: zodResolver(quoteFormSchema),
+        defaultValues: { price: 0, notes: '' },
+    });
+
+    const [selectedDriver, setSelectedDriver] = React.useState<Driver | null>(null);
+    const [manualDriverName, setManualDriverName] = React.useState('');
+    const [manualDriverPhone, setManualDriverPhone] = React.useState('');
+    const [isRegisteringDriver, setIsRegisteringDriver] = React.useState(false);
+
+    const handleSelectDriver = (driverId: string) => {
+        const driver = drivers.find(d => d.id === driverId);
+        if (driver) {
+            setSelectedDriver(driver);
+            setManualDriverName(driver.display_name);
+            setManualDriverPhone(driver.phone_number);
+        }
+    };
+    
+    const handleRegisterDriver = async () => {
+        if (!manualDriverName || !manualDriverPhone) {
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолоочийн нэр, утасны дугаарыг оруулна уу.' });
+            return;
+        }
+        setIsRegisteringDriver(true);
+        try {
+            const docRef = await addDoc(collection(db, 'Drivers'), {
+                display_name: manualDriverName,
+                phone_number: manualDriverPhone,
+                status: 'Active',
+                created_time: serverTimestamp(),
+            });
+            const newDriver = { id: docRef.id, display_name: manualDriverName, phone_number: manualDriverPhone, status: 'Active' } as Driver;
+            setDrivers(prev => [...prev, newDriver]);
+            setSelectedDriver(newDriver);
+            toast({ title: 'Амжилттай', description: `Шинэ жолооч ${manualDriverName} бүртгэгдлээ.` });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Шинэ жолооч бүртгэхэд алдаа гарлаа.' });
+        } finally {
+            setIsRegisteringDriver(false);
+        }
+    }
+
+    const handleAddQuote = async (values: QuoteFormValues) => {
+        if (!selectedDriver) {
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч сонгоно уу эсвэл шинээр бүртгэнэ үү.' });
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            await addDoc(collection(db, 'driver_quotes'), {
+                driverId: selectedDriver.id,
+                driverName: selectedDriver.display_name,
+                driverPhone: selectedDriver.phone_number,
+                price: values.price,
+                notes: values.notes || '',
+                orderItemId: orderItemId,
+                orderItemRef: doc(db, 'order_items', orderItemId),
+                status: 'Pending',
+                channel: 'Phone',
+                createdAt: serverTimestamp(),
+            });
+            toast({ title: 'Амжилттай', description: 'Шинэ үнийн санал нэмэгдлээ.' });
+            fetchOrderData();
+            form.reset();
+            setSelectedDriver(null);
+            setManualDriverName('');
+            setManualDriverPhone('');
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Үнийн санал нэмэхэд алдаа гарлаа.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
+
+    return (
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleAddQuote)} className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 items-start p-3 border rounded-md bg-muted/50">
+                
+                <div className="md:col-span-4 space-y-2">
+                    <FormLabel className="text-xs">Жолооч хайх</FormLabel>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                role="combobox"
+                                className="w-full justify-between"
+                            >
+                                {selectedDriver
+                                    ? `${selectedDriver.display_name} (${selectedDriver.phone_number})`
+                                    : "Жолооч сонгох..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            <Command>
+                                <CommandInput placeholder="Нэр, утсаар хайх..." />
+                                <CommandList>
+                                    <CommandEmpty>Олдсонгүй.</CommandEmpty>
+                                    <CommandGroup>
+                                        {drivers.map((driver) => (
+                                            <CommandItem
+                                                key={driver.id}
+                                                value={`${driver.display_name} ${driver.phone_number}`}
+                                                onSelect={() => handleSelectDriver(driver.id)}
+                                            >
+                                                <CheckIcon className={cn("mr-2 h-4 w-4", selectedDriver?.id === driver.id ? "opacity-100" : "opacity-0")}/>
+                                                {driver.display_name} ({driver.phone_number})
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+                </div>
+                
+                <div className="md:col-span-3 space-y-2">
+                    <FormLabel className="text-xs">Нэр</FormLabel>
+                    <Input 
+                        placeholder="Жолоочийн нэр"
+                        value={manualDriverName}
+                        onChange={(e) => {
+                            setManualDriverName(e.target.value);
+                            if(selectedDriver) setSelectedDriver(null);
+                        }}
+                        readOnly={!!selectedDriver}
+                    />
+                </div>
+                
+                <div className="md:col-span-3 space-y-2">
+                    <FormLabel className="text-xs">Утас</FormLabel>
+                    <div className="flex gap-2">
+                         <Input 
+                            placeholder="Утасны дугаар"
+                            value={manualDriverPhone}
+                            onChange={(e) => {
+                                setManualDriverPhone(e.target.value);
+                                if(selectedDriver) setSelectedDriver(null);
+                            }}
+                            readOnly={!!selectedDriver}
+                        />
+                         <Button type="button" onClick={handleRegisterDriver} disabled={isRegisteringDriver || !!selectedDriver}>
+                            <UserPlus className="h-4 w-4"/>
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="md:col-span-2"></div>
+                
+                <FormField control={form.control} name="price" render={({ field }) => ( <FormItem className="md:col-span-3"><FormLabel className="text-xs">Үнийн санал (₮)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                <FormField control={form.control} name="notes" render={({ field }) => ( <FormItem className="md:col-span-8"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Textarea rows={1} {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                
+                <div className="md:col-span-1 flex justify-end items-end h-full">
+                    <Button type="submit" disabled={isSubmitting || isRegisteringDriver} className="w-full">
+                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin"/> : <PlusCircle className="h-4 w-4"/>}
+                    </Button>
+                </div>
+            </form>
+        </Form>
+    );
+  }
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -1107,3 +1163,5 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+
+    
