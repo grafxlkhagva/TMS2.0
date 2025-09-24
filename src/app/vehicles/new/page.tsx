@@ -5,7 +5,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, ArrowLeft, Plus, Camera } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Camera, Car } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import Link from 'next/link';
