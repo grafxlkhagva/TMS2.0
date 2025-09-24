@@ -107,7 +107,7 @@ const toDateSafe = (date: any): Date => {
     if (date instanceof Timestamp) return date.toDate();
     if (date instanceof Date) return date;
     // Handle Firestore-like object structure from serialization
-    if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in data) {
+    if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in date) {
          // This is a basic check; you might want more robust validation
         return new Timestamp(date.seconds, date.nanoseconds).toDate();
     }
@@ -751,17 +751,29 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
     }
 
     const handleAddQuote = async (values: QuoteFormValues) => {
-        if (!selectedDriver) {
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч сонгоно уу эсвэл шинээр бүртгэнэ үү.' });
-            return;
+        if (!selectedDriver && (!manualDriverName || !manualDriverPhone)) {
+             toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч сонгоно уу эсвэл шинээр бүртгэнэ үү.' });
+             return;
+        }
+
+        let driverToQuote = selectedDriver;
+
+        if (!driverToQuote) {
+             const existingDriver = drivers.find(d => d.phone_number === manualDriverPhone);
+             if (existingDriver) {
+                 driverToQuote = existingDriver;
+             } else {
+                 toast({ variant: 'destructive', title: 'Алдаа', description: 'Шинэ жолоочийг эхлээд бүртгэнэ үү.' });
+                 return;
+             }
         }
 
         setIsSubmitting(true);
         try {
             await addDoc(collection(db, 'driver_quotes'), {
-                driverId: selectedDriver.id,
-                driverName: selectedDriver.display_name,
-                driverPhone: selectedDriver.phone_number,
+                driverId: driverToQuote.id,
+                driverName: driverToQuote.display_name,
+                driverPhone: driverToQuote.phone_number,
                 price: values.price,
                 notes: values.notes || '',
                 orderItemId: orderItemId,
@@ -1165,3 +1177,5 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
 }
 
     
+
+
