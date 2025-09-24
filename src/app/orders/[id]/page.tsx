@@ -6,7 +6,7 @@ import * as React from 'react';
 import { doc, getDoc, collection, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, Timestamp, updateDoc, writeBatch, orderBy, runTransaction, type DocumentReference, or } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, VehicleType, TrailerType, Region, PackagingType, DriverQuote, OrderItemCargo, Shipment, SystemUser } from '@/types';
+import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, VehicleType, TrailerType, Region, PackagingType, DriverQuote, OrderItemCargo, Shipment, SystemUser, Driver } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -46,6 +46,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 
 
 const quoteFormSchema = z.object({
+    driverId: z.string().optional(),
     driverName: z.string().min(2, "Жолоочийн нэр оруулна уу."),
     driverPhone: z.string().min(8, "Утасны дугаар буруу байна."),
     price: z.coerce.number().min(1, "Үнийн санал оруулна уу."),
@@ -159,6 +160,8 @@ export default function OrderDetailPage() {
   const [packagingTypes, setPackagingTypes] = React.useState<PackagingType[]>([]);
   const [customerEmployees, setCustomerEmployees] = React.useState<CustomerEmployee[]>([]);
   const [transportManagers, setTransportManagers] = React.useState<SystemUser[]>([]);
+  const [drivers, setDrivers] = React.useState<Driver[]>([]);
+
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -211,7 +214,7 @@ export default function OrderDetailPage() {
       } as Order;
       setOrder(currentOrder);
 
-      const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap, packagingTypeSnap, shipmentsSnap, managersSnap] = await Promise.all([
+      const [itemsSnap, warehouseSnap, serviceTypeSnap, employeesSnap, vehicleTypeSnap, trailerTypeSnap, regionSnap, packagingTypeSnap, shipmentsSnap, managersSnap, driversSnap] = await Promise.all([
         getDocs(query(collection(db, 'order_items'), where('orderId', '==', orderId))),
         getDocs(query(collection(db, "warehouses"), orderBy("name"))),
         getDocs(query(collection(db, "service_types"), orderBy("name"))),
@@ -222,9 +225,12 @@ export default function OrderDetailPage() {
         getDocs(query(collection(db, "packaging_types"), orderBy("name"))),
         getDocs(query(collection(db, 'shipments'), where('orderId', '==', orderId))),
         getDocs(query(collection(db, 'users'), where('role', '==', 'transport_manager'))),
+        getDocs(query(collection(db, 'Drivers'), orderBy('display_name'))),
       ]);
       
       setTransportManagers(managersSnap.docs.map(d => d.data() as SystemUser));
+      setDrivers(driversSnap.docs.map(d => ({id: d.id, ...d.data() } as Driver)));
+
 
       const itemsDataPromises: Promise<OrderItem>[] = itemsSnap.docs.map(async (d) => {
         const itemData = d.data();
@@ -420,8 +426,9 @@ export default function OrderDetailPage() {
   const handleAddQuote = async (itemId: string, values: QuoteFormValues) => {
     setIsSubmitting(true);
     try {
+        const { driverId, ...restOfValues } = values;
         await addDoc(collection(db, 'driver_quotes'), {
-            ...values,
+            ...restOfValues,
             orderItemId: itemId,
             orderItemRef: doc(db, 'order_items', itemId),
             status: 'Pending',
@@ -745,15 +752,49 @@ export default function OrderDetailPage() {
     });
     quoteForms.current.set(orderItemId, quoteForm);
 
+    const handleDriverSelect = (driverId: string) => {
+        const driver = drivers.find(d => d.id === driverId);
+        if (driver) {
+            quoteForm.setValue('driverId', driver.id);
+            quoteForm.setValue('driverName', driver.display_name);
+            quoteForm.setValue('driverPhone', driver.phone_number.replace('+976', ''));
+        }
+    }
+
     return (
         <Form {...quoteForm}>
              <form onSubmit={quoteForm.handleSubmit((values) => handleAddQuote(orderItemId, values))} className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 items-start p-3 border rounded-md bg-muted/50">
-                <FormField control={quoteForm.control} name="driverName" render={({ field }) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Жолоочийн нэр</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={quoteForm.control} name="driverPhone" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Утас</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField
+                    control={quoteForm.control}
+                    name="driverId"
+                    render={({ field }) => (
+                        <FormItem className="md:col-span-3">
+                            <FormLabel className="text-xs">Жолооч</FormLabel>
+                            <Select onValueChange={handleDriverSelect}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Жолооч сонгох..."/>
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {drivers.map(driver => (
+                                        <SelectItem key={driver.id} value={driver.id}>
+                                            {driver.display_name} ({driver.phone_number})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage/>
+                        </FormItem>
+                    )}
+                />
+                <FormField control={quoteForm.control} name="driverName" render={({ field }) => (<FormItem className="md:col-span-2 hidden"><FormLabel className="text-xs">Жолоочийн нэр</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={quoteForm.control} name="driverPhone" render={({ field }) => (<FormItem className="md:col-span-2 hidden"><FormLabel className="text-xs">Утас</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                
                 <FormField control={quoteForm.control} name="price" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Үнийн санал (₮)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={quoteForm.control} name="notes" render={({ field }) => (<FormItem className="md:col-span-4"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Textarea rows={1} {...field} /></FormControl><FormMessage /></FormItem>)} />
                 
-                <div className="md:col-span-1 flex justify-end items-end h-full">
+                <div className="md:col-span-3 flex justify-end items-end h-full">
                     <Button type="submit" disabled={isSubmitting} className="w-full">
                         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin"/> : "Нэмэх"}
                     </Button>
@@ -986,14 +1027,12 @@ export default function OrderDetailPage() {
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex gap-1 justify-end items-center">
-                                                                <Button size="sm" variant="outline" onClick={() => handleSendToSheet(item, quote)} disabled={sendingToSheet === quote.id}>
+                                                            <Button size="sm" variant="ghost" onClick={() => handleRegisterDriver(quote)} disabled={isSubmitting}>
+                                                                <UserPlus className="h-4 w-4"/>
+                                                            </Button>
+                                                            <Button size="sm" variant="outline" onClick={() => handleSendToSheet(item, quote)} disabled={sendingToSheet === quote.id}>
                                                                 {sendingToSheet === quote.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>}
                                                                 Sheet-рүү
-                                                            </Button>
-                                                            <Button size="sm" variant="outline" asChild>
-                                                                <Link href="https://docs.google.com/spreadsheets/d/1QYHh2wyugW1QKCvhKLYF37ApSROFl2CjD21z9v6UzC8/edit?gid=1943364164#gid=1943364164" target="_blank">
-                                                                    <FileSpreadsheet className="mr-2 h-4 w-4"/> Sheet нээх
-                                                                </Link>
                                                             </Button>
                                                             {item.acceptedQuoteId === quote.id ? (
                                                                     <Button size="sm" variant="destructive" onClick={() => handleRevertQuoteSelection(item)} disabled={isSubmitting || item.status === 'Shipped'}>
@@ -1093,4 +1132,3 @@ export default function OrderDetailPage() {
     </div>
   );
 }
-
