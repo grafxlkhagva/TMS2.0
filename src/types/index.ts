@@ -1,4 +1,5 @@
 
+
 import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Delayed';
@@ -11,6 +12,8 @@ export type Vehicle = {
   licensePlate: string;
   status: VehicleStatus;
   driverId: string | null;
+  driverName?: string;
+  createdAt: Date;
 };
 
 export type DriverStatus = 'Active' | 'Inactive' | 'On Leave';

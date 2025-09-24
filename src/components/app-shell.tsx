@@ -17,6 +17,7 @@ import {
   Truck,
   UserSquare,
   ChevronDown,
+  Car,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -56,6 +57,7 @@ const navItems = [
   { href: '/shipments', icon: Truck, label: 'Тээвэрлэлт' },
   { href: '/customers', icon: Building2, label: 'Харилцагчид' },
   { href: '/warehouses', icon: Warehouse, label: 'Агуулах' },
+  { href: '/vehicles', icon: Car, label: 'Тээврийн хэрэгсэл' },
   { 
     href: '/drivers', 
     icon: UserSquare, 

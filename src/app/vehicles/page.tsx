@@ -17,12 +17,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Vehicle, VehicleStatus, Driver } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { PlusCircle, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
 
 function StatusBadge({ status }: { status: VehicleStatus }) {
-  const variant = status === 'Available' ? 'default' : status === 'Maintenance' ? 'destructive' : 'outline';
-  return <Badge variant={variant}>{status}</Badge>;
+  const variant = status === 'Available' ? 'success' : status === 'Maintenance' ? 'destructive' : 'secondary';
+  const text = status === 'Available' ? 'Сул' : status === 'In Use' ? 'Ашиглаж буй' : 'Засварт';
+  return <Badge variant={variant}>{text}</Badge>;
 }
 
 function AssignDriverDialog({
@@ -46,33 +49,39 @@ function AssignDriverDialog({
       onOpenChange(false);
     }
   };
+  
+  React.useEffect(() => {
+    if (!open) {
+      setSelectedDriver('');
+    }
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Assign Driver to {vehicle?.model}</DialogTitle>
+          <DialogTitle>{vehicle?.model} - жолооч оноох</DialogTitle>
           <DialogDescription>
-            Select a driver to assign to vehicle with license plate {vehicle?.licensePlate}.
+            {vehicle?.licensePlate} дугаартай тээврийн хэрэгсэлд жолооч онооно уу.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
-          <Select onValueChange={setSelectedDriver} defaultValue={selectedDriver}>
+          <Select onValueChange={setSelectedDriver}>
             <SelectTrigger>
-              <SelectValue placeholder="Select a driver" />
+              <SelectValue placeholder="Жолооч сонгоно уу..." />
             </SelectTrigger>
             <SelectContent>
-              {drivers.map((driver) => (
+              {drivers.filter(d => d.status === 'Active').map((driver) => (
                 <SelectItem key={driver.id} value={driver.id}>
-                  {driver.name}
+                  {driver.display_name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleAssign} disabled={!selectedDriver}>Assign Driver</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Цуцлах</Button>
+          <Button onClick={handleAssign} disabled={!selectedDriver}>Оноох</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -83,74 +92,127 @@ function AssignDriverDialog({
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = React.useState<Vehicle[]>([]);
   const [drivers, setDrivers] = React.useState<Driver[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
   const [selectedVehicle, setSelectedVehicle] = React.useState<Vehicle | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const { toast } = useToast();
   
-  // In a real app, you would fetch vehicles and drivers from Firestore.
-  // For now, we'll use an empty array.
+  const fetchData = React.useCallback(async () => {
+      setIsLoading(true);
+      try {
+        const [vehiclesSnapshot, driversSnapshot] = await Promise.all([
+          getDocs(query(collection(db, 'vehicles'), orderBy('createdAt', 'desc'))),
+          getDocs(query(collection(db, 'Drivers'), orderBy('display_name')))
+        ]);
+
+        const vehiclesData = vehiclesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Vehicle));
+        setVehicles(vehiclesData);
+
+        const driversData = driversSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Driver));
+        setDrivers(driversData);
+          
+      } catch (error) {
+        console.error("Error fetching data: ", error);
+        toast({
+          variant: "destructive",
+          title: "Алдаа",
+          description: "Мэдээлэл татахад алдаа гарлаа.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+  }, [toast]);
+
   React.useEffect(() => {
-    //
-  }, []);
+    fetchData();
+  }, [fetchData]);
 
   const handleAssignClick = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle);
     setIsDialogOpen(true);
   };
 
-  const handleAssignDriver = (vehicleId: string, driverId: string) => {
-    // This would be a Firestore update in a real app.
-    setVehicles(prevVehicles =>
-      prevVehicles.map(v =>
-        v.id === vehicleId ? { ...v, driverId, status: 'In Use' } : v
-      )
-    );
+  const handleAssignDriver = async (vehicleId: string, driverId: string) => {
     const driver = drivers.find(d => d.id === driverId);
-    toast({
-      title: 'Driver Assigned',
-      description: `${driver?.name} has been assigned to vehicle ${vehicleId}.`,
-    });
+    if (!driver) return;
+
+    try {
+        const vehicleRef = doc(db, 'vehicles', vehicleId);
+        await updateDoc(vehicleRef, {
+            driverId: driver.id,
+            driverName: driver.display_name,
+            status: 'In Use',
+        });
+        
+        await fetchData();
+
+        toast({
+            title: 'Амжилттай',
+            description: `${driver?.display_name}-г ${selectedVehicle?.licensePlate} дугаартай тээврийн хэрэгсэлд оноолоо.`,
+        });
+    } catch (error) {
+         toast({
+            variant: "destructive",
+            title: 'Алдаа',
+            description: `Жолооч онооход алдаа гарлаа.`,
+        });
+    }
   };
 
   return (
     <div className="container mx-auto py-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-headline font-bold">Vehicle Management</h1>
-        <p className="text-muted-foreground">
-          Assign drivers to available vehicles.
-        </p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+            <h1 className="text-3xl font-headline font-bold">Тээврийн хэрэгсэл</h1>
+            <p className="text-muted-foreground">
+                Бүртгэлтэй тээврийн хэрэгслүүдийн жагсаалт, удирдлага.
+            </p>
+        </div>
+         <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading}>
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button asChild>
+                <Link href="/vehicles/new">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Шинэ хэрэгсэл
+                </Link>
+            </Button>
+        </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Vehicle Fleet</CardTitle>
-          <CardDescription>A list of all vehicles in your fleet.</CardDescription>
+          <CardTitle>Тээврийн хэрэгслийн парк</CardTitle>
+          <CardDescription>Танай байгууллагын бүх тээврийн хэрэгслийн жагсаалт.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Vehicle ID</TableHead>
-                <TableHead>Model</TableHead>
-                <TableHead>License Plate</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Assigned Driver</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>Загвар</TableHead>
+                <TableHead>Улсын дугаар</TableHead>
+                <TableHead>Статус</TableHead>
+                <TableHead>Оноосон жолооч</TableHead>
+                <TableHead>Үйлдэл</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {vehicles.length > 0 ? (
-                vehicles.map((vehicle) => {
-                  const driver = drivers.find(d => d.id === vehicle.driverId);
-                  return (
+                vehicles.map((vehicle) => (
                     <TableRow key={vehicle.id}>
-                      <TableCell className="font-medium">{vehicle.id}</TableCell>
-                      <TableCell>{vehicle.model}</TableCell>
+                      <TableCell className="font-medium">{vehicle.model}</TableCell>
                       <TableCell>{vehicle.licensePlate}</TableCell>
                       <TableCell>
                         <StatusBadge status={vehicle.status} />
                       </TableCell>
-                      <TableCell>{driver?.name || 'N/A'}</TableCell>
+                      <TableCell>{vehicle.driverName || 'Оноогоогүй'}</TableCell>
                       <TableCell>
                         <Button 
                           variant="outline" 
@@ -158,12 +220,11 @@ export default function VehiclesPage() {
                           disabled={vehicle.status !== 'Available'}
                           onClick={() => handleAssignClick(vehicle)}
                         >
-                          Assign Driver
+                          Жолооч оноох
                         </Button>
                       </TableCell>
                     </TableRow>
-                  );
-                })
+                ))
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center h-24">
