@@ -425,10 +425,32 @@ export default function OrderDetailPage() {
   
   const handleAddQuote = async (itemId: string, values: QuoteFormValues) => {
     setIsSubmitting(true);
+    let driverId = values.driverId;
     try {
-        const { driverId, ...restOfValues } = values;
+        // If no driverId exists, it means it's a new driver
+        if (!driverId) {
+            const phoneNumber = values.driverPhone.replace('+976', '');
+            const phoneNumberWithCode = `+976${phoneNumber}`;
+
+            const newDriverRef = await addDoc(collection(db, 'Drivers'), {
+                display_name: values.driverName,
+                phone_number: phoneNumberWithCode,
+                status: 'Active',
+                created_time: serverTimestamp(),
+            });
+            driverId = newDriverRef.id;
+            toast({ title: 'Жолооч бүртгэгдлээ', description: `${values.driverName} системд амжилттай нэмэгдлээ.` });
+            // Re-fetch drivers to include the new one in the state
+            const driversSnap = await getDocs(query(collection(db, 'Drivers'), orderBy('display_name')));
+            setDrivers(driversSnap.docs.map(d => ({id: d.id, ...d.data() } as Driver)));
+        }
+
         await addDoc(collection(db, 'driver_quotes'), {
-            ...restOfValues,
+            driverId: driverId,
+            driverName: values.driverName,
+            driverPhone: values.driverPhone,
+            price: values.price,
+            notes: values.notes || '',
             orderItemId: itemId,
             orderItemRef: doc(db, 'order_items', itemId),
             status: 'Pending',
@@ -608,53 +630,6 @@ export default function OrderDetailPage() {
     }
   }
 
-  const handleRegisterDriver = async (quote: DriverQuote) => {
-    setIsSubmitting(true);
-    try {
-        const phoneNumberWithCode = `+976${quote.driverPhone}`;
-        // Check if driver with this phone number already exists
-        const driversQuery = query(collection(db, 'Drivers'), 
-            or(
-                where('phone_number', '==', quote.driverPhone),
-                where('phone_number', '==', phoneNumberWithCode)
-            )
-        );
-        const existingDrivers = await getDocs(driversQuery);
-
-        if (!existingDrivers.empty) {
-            toast({
-                variant: 'default',
-                title: 'Бүртгэлтэй жолооч',
-                description: `${quote.driverName} (${quote.driverPhone}) дугаартай жолооч системд бүртгэлтэй байна.`,
-            });
-            return;
-        }
-
-        // Add new driver
-        const newDriverRef = await addDoc(collection(db, 'Drivers'), {
-            display_name: quote.driverName,
-            phone_number: phoneNumberWithCode,
-            status: 'Active',
-            created_time: serverTimestamp(),
-        });
-        
-        toast({
-            title: 'Амжилттай',
-            description: `${quote.driverName} нэртэй жолоочийг системд бүртгэлээ.`,
-        });
-
-    } catch (error) {
-        console.error('Error registering driver:', error);
-        toast({
-            variant: 'destructive',
-            title: 'Алдаа',
-            description: 'Жолооч бүртгэхэд алдаа гарлаа.',
-        });
-    } finally {
-        setIsSubmitting(false);
-    }
-};
-
   const allData = {
     serviceTypes,
     regions,
@@ -752,51 +727,63 @@ export default function OrderDetailPage() {
     });
     quoteForms.current.set(orderItemId, quoteForm);
 
-    const handleDriverSelect = (driverId: string) => {
-        const driver = drivers.find(d => d.id === driverId);
-        if (driver) {
-            quoteForm.setValue('driverId', driver.id);
-            quoteForm.setValue('driverName', driver.display_name);
-            quoteForm.setValue('driverPhone', driver.phone_number.replace('+976', ''));
+    const handlePhoneBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+        const phone = e.target.value.replace('+976', '');
+        if (phone.length >= 8) {
+            const foundDriver = drivers.find(d => d.phone_number.includes(phone));
+            if (foundDriver) {
+                quoteForm.setValue('driverId', foundDriver.id);
+                quoteForm.setValue('driverName', foundDriver.display_name);
+                quoteForm.clearErrors('driverName');
+            } else {
+                quoteForm.setValue('driverId', undefined);
+                 if (quoteForm.getValues('driverName')) {
+                    quoteForm.setValue('driverName', ''); // Clear name if number changes and not found
+                }
+            }
         }
     }
+
+    const isDriverFound = !!quoteForm.watch('driverId');
 
     return (
         <Form {...quoteForm}>
              <form onSubmit={quoteForm.handleSubmit((values) => handleAddQuote(orderItemId, values))} className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 items-start p-3 border rounded-md bg-muted/50">
-                <FormField
-                    control={quoteForm.control}
-                    name="driverId"
-                    render={({ field }) => (
-                        <FormItem className="md:col-span-3">
-                            <FormLabel className="text-xs">Жолооч</FormLabel>
-                            <Select onValueChange={handleDriverSelect}>
-                                <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Жолооч сонгох..."/>
-                                    </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {drivers.map(driver => (
-                                        <SelectItem key={driver.id} value={driver.id}>
-                                            {driver.display_name} ({driver.phone_number})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage/>
-                        </FormItem>
-                    )}
-                />
-                <FormField control={quoteForm.control} name="driverName" render={({ field }) => (<FormItem className="md:col-span-2 hidden"><FormLabel className="text-xs">Жолоочийн нэр</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={quoteForm.control} name="driverPhone" render={({ field }) => (<FormItem className="md:col-span-2 hidden"><FormLabel className="text-xs">Утас</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={quoteForm.control} name="driverPhone" render={({ field }) => (
+                    <FormItem className="md:col-span-3">
+                        <FormLabel className="text-xs">Утасны дугаар</FormLabel>
+                        <FormControl><Input {...field} onBlur={handlePhoneBlur} placeholder="8811XXXX"/></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+
+                <FormField control={quoteForm.control} name="driverName" render={({ field }) => (
+                    <FormItem className="md:col-span-3">
+                        <FormLabel className="text-xs">Нэр</FormLabel>
+                        <FormControl><Input {...field} readOnly={isDriverFound} placeholder={isDriverFound ? '' : "Шинэ жолоочийн нэр"}/></FormControl>
+                         <FormMessage />
+                    </FormItem>
+                )} />
                 
-                <FormField control={quoteForm.control} name="price" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Үнийн санал (₮)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={quoteForm.control} name="notes" render={({ field }) => (<FormItem className="md:col-span-4"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Textarea rows={1} {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={quoteForm.control} name="price" render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                        <FormLabel className="text-xs">Үнийн санал (₮)</FormLabel>
+                        <FormControl><Input type="number" {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+
+                <FormField control={quoteForm.control} name="notes" render={({ field }) => (
+                    <FormItem className="md:col-span-3">
+                        <FormLabel className="text-xs">Тэмдэглэл</FormLabel>
+                        <FormControl><Textarea rows={1} {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
                 
-                <div className="md:col-span-3 flex justify-end items-end h-full">
+                <div className="md:col-span-1 flex justify-end items-end h-full">
                     <Button type="submit" disabled={isSubmitting} className="w-full">
-                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin"/> : "Нэмэх"}
+                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin"/> : <PlusCircle className="h-4 w-4"/>}
                     </Button>
                 </div>
             </form>
@@ -1027,9 +1014,6 @@ export default function OrderDetailPage() {
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex gap-1 justify-end items-center">
-                                                            <Button size="sm" variant="ghost" onClick={() => handleRegisterDriver(quote)} disabled={isSubmitting}>
-                                                                <UserPlus className="h-4 w-4"/>
-                                                            </Button>
                                                             <Button size="sm" variant="outline" onClick={() => handleSendToSheet(item, quote)} disabled={sendingToSheet === quote.id}>
                                                                 {sendingToSheet === quote.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>}
                                                                 Sheet-рүү
