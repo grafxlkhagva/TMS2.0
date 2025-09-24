@@ -8,8 +8,10 @@ export type VehicleStatus = 'Available' | 'In Use' | 'Maintenance';
 
 export type Vehicle = {
   id: string;
-  make: string;
-  model: string;
+  makeId: string;
+  makeName: string;
+  modelId: string;
+  modelName: string;
   year: number;
   importedYear: number;
   licensePlate: string;
@@ -137,6 +139,19 @@ export type VehicleType = {
 export type TrailerType = {
   id: string;
   name: string;
+  createdAt: Date;
+};
+
+export type VehicleMake = {
+  id: string;
+  name: string;
+  createdAt: Date;
+};
+
+export type VehicleModel = {
+  id: string;
+  name: string;
+  makeId: string;
   createdAt: Date;
 };
 

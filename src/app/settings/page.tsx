@@ -3,7 +3,7 @@
 'use client';
 
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowRight, CaseSensitive, Map, Truck, Car, Container, Package } from "lucide-react";
+import { ArrowRight, CaseSensitive, Map, Truck, Car, Container, Package, Building } from "lucide-react";
 import Link from "next/link";
 
 const settingsItems = [
@@ -18,6 +18,18 @@ const settingsItems = [
         description: "Аймаг, нийслэлийн нэрийг удирдах лавлах сан.",
         href: "/settings/regions",
         icon: Map
+    },
+    {
+        title: "Машины үйлдвэрлэгч",
+        description: "Машины үйлдвэрлэгчдийн лавлах сан.",
+        href: "/settings/vehicle-makes",
+        icon: Building
+    },
+    {
+        title: "Машины загвар",
+        description: "Машины загваруудыг удирдах лавлах сан.",
+        href: "/settings/vehicle-models",
+        icon: Car
     },
     {
         title: "Үйлчилгээний төрөл",
