@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -19,8 +20,17 @@ import type { Vehicle, VehicleStatus, Driver } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { collection, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { PlusCircle, RefreshCw } from 'lucide-react';
+import { PlusCircle, RefreshCw, MoreHorizontal, Eye, Edit } from 'lucide-react';
 import Link from 'next/link';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+
 
 function StatusBadge({ status }: { status: VehicleStatus }) {
   const variant = status === 'Available' ? 'success' : status === 'Maintenance' ? 'destructive' : 'secondary';
@@ -196,38 +206,61 @@ export default function VehiclesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Загвар</TableHead>
                 <TableHead>Улсын дугаар</TableHead>
+                <TableHead>Үйлдвэрлэгч</TableHead>
+                <TableHead>Загвар</TableHead>
+                <TableHead>Даац</TableHead>
                 <TableHead>Статус</TableHead>
                 <TableHead>Оноосон жолооч</TableHead>
-                <TableHead>Үйлдэл</TableHead>
+                <TableHead className="text-right">Үйлдэл</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {vehicles.length > 0 ? (
                 vehicles.map((vehicle) => (
                     <TableRow key={vehicle.id}>
+                      <TableCell className="font-mono">{vehicle.licensePlate}</TableCell>
+                      <TableCell>{vehicle.make}</TableCell>
                       <TableCell className="font-medium">{vehicle.model}</TableCell>
-                      <TableCell>{vehicle.licensePlate}</TableCell>
+                      <TableCell>{vehicle.capacity}</TableCell>
                       <TableCell>
                         <StatusBadge status={vehicle.status} />
                       </TableCell>
                       <TableCell>{vehicle.driverName || 'Оноогоогүй'}</TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          disabled={vehicle.status !== 'Available'}
-                          onClick={() => handleAssignClick(vehicle)}
-                        >
-                          Жолооч оноох
-                        </Button>
+                      <TableCell className="text-right">
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Цэс нээх</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Үйлдлүүд</DropdownMenuLabel>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/vehicles/${vehicle.id}`}>
+                                    <Eye className="mr-2 h-4 w-4"/>
+                                    Дэлгэрэнгүй
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/vehicles/${vehicle.id}/edit`}>
+                                    <Edit className="mr-2 h-4 w-4"/>
+                                    Засах
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleAssignClick(vehicle)} disabled={vehicle.status !== 'Available'}>
+                                   Жолооч оноох
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center h-24">
+                  <TableCell colSpan={7} className="text-center h-24">
                     Тээврийн хэрэгсэл бүртгэлгүй байна.
                   </TableCell>
                 </TableRow>

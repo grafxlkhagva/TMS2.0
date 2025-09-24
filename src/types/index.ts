@@ -8,9 +8,17 @@ export type VehicleStatus = 'Available' | 'In Use' | 'Maintenance';
 
 export type Vehicle = {
   id: string;
+  make: string;
   model: string;
+  year: number;
   licensePlate: string;
+  vin: string;
+  vehicleTypeId: string;
+  trailerTypeId: string;
+  capacity: string;
+  fuelType: 'Diesel' | 'Gasoline' | 'Electric' | 'Hybrid';
   status: VehicleStatus;
+  notes?: string;
   driverId: string | null;
   driverName?: string;
   createdAt: Date;
