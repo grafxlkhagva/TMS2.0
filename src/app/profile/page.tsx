@@ -62,7 +62,7 @@ export default function ProfilePage() {
         setPreviewUrl(user.avatarUrl);
       }
     }
-  }, [user, form.reset]);
+  }, [user]);
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -274,3 +274,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+
