@@ -92,7 +92,7 @@ export default function MyDashboardPage() {
                             return acc;
                         }, 0);
 
-                        const shipmentsForManagerQuery = query(collection(db, "shipments"), where("orderId", "in', orderIds));
+                        const shipmentsForManagerQuery = query(collection(db, "shipments"), where("orderId", "in", orderIds));
                         const shipmentsSnapshot = await getDocs(shipmentsForManagerQuery);
                         managerShipments = shipmentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Shipment));
                     }
@@ -149,20 +149,24 @@ export default function MyDashboardPage() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <StatCard
-                    title="Нийт тээвэрлэлтийн дүн"
-                    value={`${stats.totalShipmentValue.toLocaleString()}₮`}
-                    icon={DollarSign}
-                    description="Таны хариуцсан баталгаажсан тээврийн дүн"
-                    isLoading={isLoading}
-                />
-                <StatCard
-                    title="Идэвхтэй захиалга"
-                    value={stats.activeOrders}
-                    icon={Briefcase}
-                    description="Танд оноогдсон шинэ захиалгын тоо"
-                    isLoading={isLoading}
-                />
+                 {user?.role === 'transport_manager' && (
+                    <>
+                        <StatCard
+                            title="Нийт тээвэрлэлтийн дүн"
+                            value={`${stats.totalShipmentValue.toLocaleString()}₮`}
+                            icon={DollarSign}
+                            description="Таны хариуцсан баталгаажсан тээврийн дүн"
+                            isLoading={isLoading}
+                        />
+                        <StatCard
+                            title="Идэвхтэй захиалга"
+                            value={stats.activeOrders}
+                            icon={Briefcase}
+                            description="Танд оноогдсон шинэ захиалгын тоо"
+                            isLoading={isLoading}
+                        />
+                    </>
+                )}
                 <StatCard
                     title="Замд яваа тээвэр"
                     value={stats.inTransitShipments}
@@ -259,5 +263,7 @@ export default function MyDashboardPage() {
         </div>
     );
 }
+
+    
 
     
