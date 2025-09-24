@@ -9,7 +9,7 @@ import { useParams, useRouter } from 'next/navigation';
 import type { Order, OrderItem, Warehouse, ServiceType, CustomerEmployee, VehicleType, TrailerType, Region, PackagingType, DriverQuote, OrderItemCargo, Shipment, SystemUser, Driver } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from "date-fns"
@@ -46,9 +46,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 
 
 const quoteFormSchema = z.object({
-    driverId: z.string().optional(),
-    driverName: z.string().min(2, "Жолоочийн нэр оруулна уу."),
-    driverPhone: z.string().min(8, "Утасны дугаар буруу байна."),
+    driverId: z.string().min(1, "Жолооч сонгоно уу."),
     price: z.coerce.number().min(1, "Үнийн санал оруулна уу."),
     notes: z.string().optional(),
 });
@@ -425,30 +423,18 @@ export default function OrderDetailPage() {
   
   const handleAddQuote = async (itemId: string, values: QuoteFormValues) => {
     setIsSubmitting(true);
-    let driverId = values.driverId;
     try {
-        // If no driverId exists, it means it's a new driver
-        if (!driverId) {
-            const phoneNumber = values.driverPhone.replace('+976', '');
-            const phoneNumberWithCode = `+976${phoneNumber}`;
-
-            const newDriverRef = await addDoc(collection(db, 'Drivers'), {
-                display_name: values.driverName,
-                phone_number: phoneNumberWithCode,
-                status: 'Active',
-                created_time: serverTimestamp(),
-            });
-            driverId = newDriverRef.id;
-            toast({ title: 'Жолооч бүртгэгдлээ', description: `${values.driverName} системд амжилттай нэмэгдлээ.` });
-            // Re-fetch drivers to include the new one in the state
-            const driversSnap = await getDocs(query(collection(db, 'Drivers'), orderBy('display_name')));
-            setDrivers(driversSnap.docs.map(d => ({id: d.id, ...d.data() } as Driver)));
+        const selectedDriver = drivers.find(d => d.id === values.driverId);
+        if (!selectedDriver) {
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч олдсонгүй.' });
+            setIsSubmitting(false);
+            return;
         }
 
         await addDoc(collection(db, 'driver_quotes'), {
-            driverId: driverId,
-            driverName: values.driverName,
-            driverPhone: values.driverPhone,
+            driverId: selectedDriver.id,
+            driverName: selectedDriver.display_name,
+            driverPhone: selectedDriver.phone_number,
             price: values.price,
             notes: values.notes || '',
             orderItemId: itemId,
@@ -723,67 +709,72 @@ export default function OrderDetailPage() {
   function QuoteForm({ orderItemId }: { orderItemId: string }) {
     const quoteForm = useForm<QuoteFormValues>({
         resolver: zodResolver(quoteFormSchema),
-        defaultValues: { driverName: '', driverPhone: '', price: 0, notes: '' },
+        defaultValues: { driverId: '', price: 0, notes: '' },
     });
     quoteForms.current.set(orderItemId, quoteForm);
 
-    const handlePhoneBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-        const phone = e.target.value.replace('+976', '');
-        if (phone.length >= 8) {
-            const foundDriver = drivers.find(d => d.phone_number.includes(phone));
-            if (foundDriver) {
-                quoteForm.setValue('driverId', foundDriver.id);
-                quoteForm.setValue('driverName', foundDriver.display_name);
-                quoteForm.clearErrors('driverName');
-            } else {
-                quoteForm.setValue('driverId', undefined);
-                 if (quoteForm.getValues('driverName')) {
-                    quoteForm.setValue('driverName', ''); // Clear name if number changes and not found
-                }
-            }
-        }
-    }
-
-    const isDriverFound = !!quoteForm.watch('driverId');
-
     return (
         <Form {...quoteForm}>
-             <form onSubmit={quoteForm.handleSubmit((values) => handleAddQuote(orderItemId, values))} className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 items-start p-3 border rounded-md bg-muted/50">
-                <FormField control={quoteForm.control} name="driverPhone" render={({ field }) => (
-                    <FormItem className="md:col-span-3">
-                        <FormLabel className="text-xs">Утасны дугаар</FormLabel>
-                        <FormControl><Input {...field} onBlur={handlePhoneBlur} placeholder="8811XXXX"/></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-
-                <FormField control={quoteForm.control} name="driverName" render={({ field }) => (
-                    <FormItem className="md:col-span-3">
-                        <FormLabel className="text-xs">Нэр</FormLabel>
-                        <FormControl><Input {...field} readOnly={isDriverFound} placeholder={isDriverFound ? '' : "Шинэ жолоочийн нэр"}/></FormControl>
-                         <FormMessage />
-                    </FormItem>
-                )} />
+            <form onSubmit={quoteForm.handleSubmit((values) => handleAddQuote(orderItemId, values))} className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 items-start p-3 border rounded-md bg-muted/50">
+                <FormField
+                    control={quoteForm.control}
+                    name="driverId"
+                    render={({ field }) => (
+                        <FormItem className="md:col-span-4">
+                            <FormLabel className="text-xs">Жолооч</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Жолооч сонгох..." />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {drivers.map(driver => (
+                                        <SelectItem key={driver.id} value={driver.id}>
+                                            {driver.display_name} ({driver.phone_number})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
                 
-                <FormField control={quoteForm.control} name="price" render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                        <FormLabel className="text-xs">Үнийн санал (₮)</FormLabel>
-                        <FormControl><Input type="number" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
+                <FormField
+                    control={quoteForm.control}
+                    name="price"
+                    render={({ field }) => (
+                        <FormItem className="md:col-span-3">
+                            <FormLabel className="text-xs">Үнийн санал (₮)</FormLabel>
+                            <FormControl><Input type="number" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
-                <FormField control={quoteForm.control} name="notes" render={({ field }) => (
-                    <FormItem className="md:col-span-3">
-                        <FormLabel className="text-xs">Тэмдэглэл</FormLabel>
-                        <FormControl><Textarea rows={1} {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
+                <FormField
+                    control={quoteForm.control}
+                    name="notes"
+                    render={({ field }) => (
+                        <FormItem className="md:col-span-4">
+                            <FormLabel className="text-xs">Тэмдэглэл</FormLabel>
+                            <FormControl><Textarea rows={1} {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
                 
                 <div className="md:col-span-1 flex justify-end items-end h-full">
                     <Button type="submit" disabled={isSubmitting} className="w-full">
                         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin"/> : <PlusCircle className="h-4 w-4"/>}
+                    </Button>
+                </div>
+                 <div className="md:col-span-12">
+                    <Button type="button" variant="link" size="sm" className="p-0 h-auto" asChild>
+                        <Link href="/drivers/new" target="_blank">
+                            <UserPlus className="mr-2 h-4 w-4"/> Шинэ жолооч бүртгэх
+                        </Link>
                     </Button>
                 </div>
             </form>
