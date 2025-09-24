@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 function StatusBadge({ status }: { status: VehicleStatus }) {
@@ -186,7 +187,7 @@ export default function VehiclesPage() {
         </div>
          <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading}>
-                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={'h-4 w-4 ${isLoading ? 'animate-spin' : ''}'} />
             </Button>
             <Button asChild>
                 <Link href="/vehicles/new">
@@ -206,6 +207,7 @@ export default function VehiclesPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Зураг</TableHead>
                 <TableHead>Улсын дугаар</TableHead>
                 <TableHead>Үйлдвэрлэгч</TableHead>
                 <TableHead>Загвар</TableHead>
@@ -219,6 +221,12 @@ export default function VehiclesPage() {
               {vehicles.length > 0 ? (
                 vehicles.map((vehicle) => (
                     <TableRow key={vehicle.id}>
+                        <TableCell>
+                            <Avatar>
+                                <AvatarImage src={vehicle.imageUrl} alt={vehicle.model} />
+                                <AvatarFallback>{vehicle.make.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                        </TableCell>
                       <TableCell className="font-mono">{vehicle.licensePlate}</TableCell>
                       <TableCell>{vehicle.make}</TableCell>
                       <TableCell className="font-medium">{vehicle.model}</TableCell>
@@ -260,7 +268,7 @@ export default function VehiclesPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center h-24">
+                  <TableCell colSpan={8} className="text-center h-24">
                     Тээврийн хэрэгсэл бүртгэлгүй байна.
                   </TableCell>
                 </TableRow>

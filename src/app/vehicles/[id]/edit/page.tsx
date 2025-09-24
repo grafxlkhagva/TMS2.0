@@ -2,12 +2,12 @@
 
 'use client';
 
+import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2, ArrowLeft, Plus, Camera } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import * as React from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
@@ -23,13 +23,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { addDoc, collection, serverTimestamp, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDocs, query, orderBy, getDoc } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { VehicleType, TrailerType } from '@/types';
+import type { Vehicle, VehicleType, TrailerType } from '@/types';
 import QuickAddDialog, { type QuickAddDialogProps } from '@/components/quick-add-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const fuelTypes = ['Diesel', 'Gasoline', 'Electric', 'Hybrid'] as const;
 
@@ -47,10 +48,11 @@ const formSchema = z.object({
   notes: z.string().optional(),
 });
 
-
-export default function NewVehiclePage() {
+export default function EditVehiclePage() {
+  const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const router = useRouter();
+  const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [vehicleTypes, setVehicleTypes] = React.useState<VehicleType[]>([]);
   const [trailerTypes, setTrailerTypes] = React.useState<TrailerType[]>([]);
@@ -59,76 +61,87 @@ export default function NewVehiclePage() {
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      make: '',
-      model: '',
-      year: new Date().getFullYear(),
-      importedYear: new Date().getFullYear(),
-      licensePlate: '',
-      vin: '',
-      vehicleTypeId: '',
-      trailerTypeId: '',
-      capacity: '',
-      fuelType: 'Diesel',
-      notes: '',
-    },
   });
-
+  
   React.useEffect(() => {
     const fetchData = async () => {
+      if (!id) return;
       try {
-        const [vehicleTypeSnap, trailerTypeSnap] = await Promise.all([
+        const [vehicleSnap, vehicleTypeSnap, trailerTypeSnap] = await Promise.all([
+          getDoc(doc(db, "vehicles", id)),
           getDocs(query(collection(db, "vehicle_types"), orderBy("name"))),
           getDocs(query(collection(db, "trailer_types"), orderBy("name"))),
         ]);
+
+        if (vehicleSnap.exists()) {
+            const vehicleData = vehicleSnap.data() as Vehicle;
+            form.reset(vehicleData);
+            setImagePreview(vehicleData.imageUrl || null);
+        } else {
+             toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл олдсонгүй.' });
+             router.push('/vehicles');
+        }
+
         setVehicleTypes(vehicleTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as VehicleType)));
         setTrailerTypes(trailerTypeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrailerType)));
       } catch (error) {
-        toast({ variant: 'destructive', title: 'Алдаа', description: 'Лавлах сангийн мэдээлэл татахад алдаа гарлаа.'});
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Мэдээлэл татахад алдаа гарлаа.'});
+      } finally {
+        setIsLoading(false);
       }
     }
     fetchData();
-  }, [toast]);
-  
+  }, [id, toast, router, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!id) return;
     setIsSubmitting(true);
     try {
-      const docRef = await addDoc(collection(db, 'vehicles'), {
-        ...values,
-        status: 'Available',
-        driverId: null,
-        driverName: null,
-        imageUrl: '',
-        createdAt: serverTimestamp(),
-      });
+        let imageUrl: string | undefined = undefined;
+        if (imageFile) {
+            const storageRef = ref(storage, `vehicle_images/${id}/${imageFile.name}`);
+            const snapshot = await uploadBytes(storageRef, imageFile);
+            imageUrl = await getDownloadURL(snapshot.ref);
+        }
 
-      if (imageFile) {
-        const storageRef = ref(storage, `vehicle_images/${docRef.id}/${imageFile.name}`);
-        const snapshot = await uploadBytes(storageRef, imageFile);
-        const imageUrl = await getDownloadURL(snapshot.ref);
-        await updateDoc(docRef, { imageUrl });
-      }
+        const dataToUpdate: any = {
+            ...values,
+            updatedAt: serverTimestamp(),
+        };
+
+        if (imageUrl) {
+            dataToUpdate.imageUrl = imageUrl;
+        }
+
+      await updateDoc(doc(db, 'vehicles', id), dataToUpdate);
 
       toast({
         title: 'Амжилттай!',
-        description: `Тээврийн хэрэгслийг системд бүртгэлээ.`,
+        description: `Тээврийн хэрэгслийн мэдээллийг шинэчиллээ.`,
       });
       router.push('/vehicles');
     } catch(error) {
-        console.error("Error adding vehicle:", error)
+        console.error("Error updating vehicle:", error)
         toast({
             variant: "destructive",
             title: 'Алдаа',
-            description: `Тээврийн хэрэгсэл бүртгэхэд алдаа гарлаа.`,
+            description: `Тээврийн хэрэгсэл шинэчлэхэд алдаа гарлаа.`,
         });
     } finally {
         setIsSubmitting(false);
     }
   }
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
 
   const handleQuickAdd = (type: 'vehicle_types' | 'trailer_types', formField: 'vehicleTypeId' | 'trailerTypeId') => {
     setDialogProps({
@@ -146,14 +159,23 @@ export default function NewVehiclePage() {
         }
     });
   };
+  
+    if (isLoading) {
+    return (
+        <div className="container mx-auto py-6">
+             <div className="mb-6"><Skeleton className="h-8 w-1/4 mb-4" /><Skeleton className="h-4 w-1/2" /></div>
+            <Card>
+                <CardContent className="pt-6 space-y-8">
+                     <Skeleton className="h-24 w-24 rounded-full" />
+                    <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
+                    <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
+                    <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
+                </CardContent>
+            </Card>
+        </div>
+    )
+  }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
-    }
-  };
 
   return (
     <div className="container mx-auto py-6">
@@ -164,10 +186,7 @@ export default function NewVehiclePage() {
                 Буцах
              </Link>
         </Button>
-          <h1 className="text-3xl font-headline font-bold">Шинэ тээврийн хэрэгсэл</h1>
-          <p className="text-muted-foreground">
-            Үндсэн мэдээллийг бөглөж шинээр тээврийн хэрэгсэл бүртгэнэ үү.
-          </p>
+          <h1 className="text-3xl font-headline font-bold">Тээврийн хэрэгсэл засах</h1>
         </div>
       <Card>
         <CardContent className="pt-6">
@@ -198,7 +217,7 @@ export default function NewVehiclePage() {
                             <Camera className="h-4 w-4" />
                         </Button>
                     </div>
-                     <p className="text-sm text-muted-foreground">Тээврийн хэрэгслийн зураг оруулах.</p>
+                     <p className="text-sm text-muted-foreground">Тээврийн хэрэгслийн зураг солих.</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="make" render={({ field }) => ( <FormItem><FormLabel>Үйлдвэрлэгч</FormLabel><FormControl><Input placeholder="Howo" {...field} /></FormControl><FormMessage /></FormItem> )}/>
@@ -218,7 +237,7 @@ export default function NewVehiclePage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="capacity" render={({ field }) => ( <FormItem><FormLabel>Даац / Хэмжээ</FormLabel><FormControl><Input placeholder="25тн, 90м3" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                    <FormField control={form.control} name="fuelType" render={({ field }) => ( <FormItem><FormLabel>Шатахууны төрөл</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{fuelTypes.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                    <FormField control={form.control} name="fuelType" render={({ field }) => ( <FormItem><FormLabel>Шатахууны төрөл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent>{fuelTypes.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem> )}/>
                 </div>
                  <FormField control={form.control} name="notes" render={({ field }) => ( <FormItem><FormLabel>Нэмэлт тэмдэглэл</FormLabel><FormControl><Textarea placeholder="Тээврийн хэрэгслийн талаарх нэмэлт мэдээлэл..." {...field} /></FormControl><FormMessage /></FormItem> )}/>
               
@@ -228,7 +247,7 @@ export default function NewVehiclePage() {
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Бүртгэх
+                Хадгалах
               </Button>
               </div>
             </form>
