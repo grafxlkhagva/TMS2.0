@@ -1140,6 +1140,11 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
                                                                 {sendingToSheet === quote.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>}
                                                                 Sheet-рүү
                                                             </Button>
+                                                            <Button variant="ghost" size="icon" asChild>
+                                                                <a href={`https://docs.google.com/spreadsheets/d/${process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID}`} target="_blank" rel="noopener noreferrer">
+                                                                    <ExternalLink className="h-4 w-4" />
+                                                                </a>
+                                                            </Button>
                                                             {item.acceptedQuoteId === quote.id ? (
                                                                     <Button size="sm" variant="destructive" onClick={() => handleRevertQuoteSelection(item)} disabled={isSubmitting || item.status === 'Shipped'}>
                                                                         <XCircle className="mr-2 h-4 w-4"/> Буцаах
@@ -1238,4 +1243,3 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
     </div>
   );
 }
-

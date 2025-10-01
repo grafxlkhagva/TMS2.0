@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
         const payload = convertDateFields(body);
         const { order, orderItem, quote, allData, customerEmployee, transportManager } = payload;
 
-        if (!process.env.GOOGLE_SHEETS_CLIENT_EMAIL || !process.env.GOOGLE_SHEETS_PRIVATE_KEY || !process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_SHEET_NAME) {
+        if (!process.env.GOOGLE_SHEETS_CLIENT_EMAIL || !process.env.GOOGLE_SHEETS_PRIVATE_KEY || !process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID || !process.env.GOOGLE_SHEET_NAME) {
             throw new Error("Google Sheets environment variables are not configured.");
         }
 
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
         ];
         
         await sheets.spreadsheets.values.append({
-            spreadsheetId: process.env.GOOGLE_SHEET_ID,
+            spreadsheetId: process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID,
             range: process.env.GOOGLE_SHEET_NAME,
             valueInputOption: 'USER_ENTERED',
             requestBody: {
