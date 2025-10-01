@@ -1141,7 +1141,7 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
                                                                 Sheet-рүү
                                                             </Button>
                                                             <Button variant="ghost" size="icon" asChild>
-                                                                <a href={`https://docs.google.com/spreadsheets/d/${process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID}`} target="_blank" rel="noopener noreferrer">
+                                                                <a href="https://docs.google.com/spreadsheets/d/1QYHh2wyugW1QKCvhKLYF37ApSROFl2CjD21z9v6UzC8/edit?gid=1943364164#gid=1943364164" target="_blank" rel="noopener noreferrer">
                                                                     <ExternalLink className="h-4 w-4" />
                                                                 </a>
                                                             </Button>
