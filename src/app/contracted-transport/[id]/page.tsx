@@ -5,12 +5,12 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CircleDollarSign, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Map } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CircleDollarSign, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Map, Car } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, ContractedTransportFrequency, Driver, ContractedTransportExecution, RouteStop } from '@/types';
+import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, ContractedTransportFrequency, Driver, ContractedTransportExecution, RouteStop, Vehicle } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +48,7 @@ const executionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
   driverId: z.string().optional(),
   driverName: z.string().min(1, "Жолоочийн нэрийг оруулна уу."),
+  vehicleId: z.string().optional(),
   vehicleLicense: z.string().optional(),
   price: z.coerce.number().min(0, "Үнийн дүн 0-ээс бага байж болохгүй."),
   routeStopId: z.string().min(1, "Зогсоол сонгоно уу."),
@@ -95,12 +96,18 @@ export default function ContractedTransportDetailPage() {
   const [contract, setContract] = React.useState<ContractedTransport | null>(null);
   const [executions, setExecutions] = React.useState<ContractedTransportExecution[]>([]);
   const [drivers, setDrivers] = React.useState<Driver[]>([]);
+  const [vehicles, setVehicles] = React.useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmittingExecution, setIsSubmittingExecution] = React.useState(false);
   const [isExecutionDialogOpen, setIsExecutionDialogOpen] = React.useState(false);
   const [executionToDelete, setExecutionToDelete] = React.useState<ContractedTransportExecution | null>(null);
+  
   const [isAddingDriver, setIsAddingDriver] = React.useState(false);
   const [addDriverPopoverOpen, setAddDriverPopoverOpen] = React.useState(false);
+  
+  const [isAddingVehicle, setIsAddingVehicle] = React.useState(false);
+  const [addVehiclePopoverOpen, setAddVehiclePopoverOpen] = React.useState(false);
+
   const [isSubmittingStop, setIsSubmittingStop] = React.useState(false);
   
   const [relatedData, setRelatedData] = React.useState({
@@ -116,9 +123,10 @@ export default function ContractedTransportDetailPage() {
     resolver: zodResolver(executionFormSchema),
     defaultValues: {
       date: new Date(),
-      vehicleLicense: '',
       driverId: '',
       driverName: '',
+      vehicleId: '',
+      vehicleLicense: '',
       price: contract?.pricePerShipment || 0,
       routeStopId: '',
     },
@@ -135,14 +143,19 @@ export default function ContractedTransportDetailPage() {
   const assignedDriverIds = React.useMemo(() => {
     return contract?.assignedDrivers.map(d => d.driverId) || [];
   }, [contract]);
+  
+  const assignedVehicleIds = React.useMemo(() => {
+    return contract?.assignedVehicles.map(v => v.vehicleId) || [];
+  }, [contract]);
 
   React.useEffect(() => {
     if (contract) {
         executionForm.reset({
             date: new Date(),
-            vehicleLicense: '',
             driverId: '',
             driverName: '',
+            vehicleId: '',
+            vehicleLicense: '',
             price: contract.pricePerShipment,
             routeStopId: '',
         });
@@ -171,6 +184,7 @@ export default function ContractedTransportDetailPage() {
           startDate: data.startDate.toDate(),
           endDate: data.endDate.toDate(),
           assignedDrivers: data.assignedDrivers || [],
+          assignedVehicles: data.assignedVehicles || [],
           routeStops: data.routeStops || [],
       } as ContractedTransport;
       setContract(fetchedContract);
@@ -184,6 +198,7 @@ export default function ContractedTransportDetailPage() {
           managerSnap,
           executionsSnap,
           driversSnap,
+          vehiclesSnap
       ] = await Promise.all([
           getDoc(doc(db, 'regions', fetchedContract.route.startRegionId)),
           getDoc(doc(db, 'regions', fetchedContract.route.endRegionId)),
@@ -193,9 +208,12 @@ export default function ContractedTransportDetailPage() {
           getDoc(doc(db, 'users', fetchedContract.transportManagerId)),
           getDocs(query(collection(db, 'contracted_transport_executions'), where('contractId', '==', id))),
           getDocs(query(collection(db, "Drivers"), where('status', '==', 'Active'))),
+          getDocs(query(collection(db, 'vehicles'))),
       ]);
       
       setDrivers(driversSnap.docs.map(d => ({id: d.id, ...d.data()} as Driver)));
+      setVehicles(vehiclesSnap.docs.map(v => ({id: v.id, ...v.data()} as Vehicle)));
+
 
       setRelatedData({
           startRegionName: startRegionSnap.data()?.name || '',
@@ -233,14 +251,16 @@ export default function ContractedTransportDetailPage() {
         setIsSubmittingExecution(true);
         try {
             
-            const driverId = values.driverId;
             let driverName = values.driverName;
-            
-            if (driverId) {
-                const selectedDriver = contract?.assignedDrivers.find(d => d.driverId === driverId);
-                if (selectedDriver) {
-                    driverName = selectedDriver.driverName;
-                }
+            if (values.driverId) {
+                const selectedDriver = contract?.assignedDrivers.find(d => d.driverId === values.driverId);
+                if (selectedDriver) driverName = selectedDriver.driverName;
+            }
+
+            let vehicleLicense = values.vehicleLicense;
+            if (values.vehicleId) {
+                const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
+                if (selectedVehicle) vehicleLicense = selectedVehicle.licensePlate;
             }
 
             const selectedStop = contract.routeStops.find(s => s.id === values.routeStopId);
@@ -248,6 +268,7 @@ export default function ContractedTransportDetailPage() {
             await addDoc(collection(db, 'contracted_transport_executions'), {
                 ...values,
                 driverName,
+                vehicleLicense,
                 routeStopName: selectedStop?.name || 'N/A',
                 contractId: id,
                 createdAt: serverTimestamp(),
@@ -311,6 +332,44 @@ export default function ContractedTransportDetailPage() {
             fetchContractData();
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч хасахад алдаа гарлаа.'});
+        }
+    }
+    
+    const handleAddVehicle = async (vehicleId: string) => {
+        if (!id || !vehicleId) return;
+        const vehicleToAdd = vehicles.find(v => v.id === vehicleId);
+        if (!vehicleToAdd) return;
+        setIsAddingVehicle(true);
+        try {
+            const contractRef = doc(db, 'contracted_transports', id);
+            await updateDoc(contractRef, {
+                assignedVehicles: arrayUnion({
+                    vehicleId: vehicleToAdd.id,
+                    licensePlate: vehicleToAdd.licensePlate,
+                    modelName: `${vehicleToAdd.makeName} ${vehicleToAdd.modelName}`
+                })
+            });
+            toast({ title: "Амжилттай", description: "Тээврийн хэрэгсэл нэмэгдлээ."});
+            setAddVehiclePopoverOpen(false);
+            fetchContractData();
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл нэмэхэд алдаа гарлаа.'});
+        } finally {
+            setIsAddingVehicle(false);
+        }
+    };
+
+    const handleRemoveVehicle = async (vehicleToRemove: {vehicleId: string}) => {
+        if (!id || !contract) return;
+        try {
+            const contractRef = doc(db, 'contracted_transports', id);
+            await updateDoc(contractRef, {
+                 assignedVehicles: arrayRemove(contract.assignedVehicles.find(v => v.vehicleId === vehicleToRemove.vehicleId))
+            });
+            toast({ title: "Амжилттай", description: "Тээврийн хэрэгслийг хаслаа."});
+            fetchContractData();
+        } catch(error) {
+             toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл хасахад алдаа гарлаа.'});
         }
     }
 
@@ -572,6 +631,59 @@ export default function ContractedTransportDetailPage() {
                      </Popover>
                 </CardFooter>
             </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Оноосон тээврийн хэрэгсэл</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                     {contract.assignedVehicles.length > 0 ? (
+                        contract.assignedVehicles.map(vehicle => (
+                            <div key={vehicle.vehicleId} className="flex justify-between items-center text-sm p-2 rounded-md hover:bg-muted">
+                                <div>
+                                    <p className="font-medium">{vehicle.modelName}</p>
+                                    <p className="text-xs text-muted-foreground font-mono">{vehicle.licensePlate}</p>
+                                </div>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveVehicle(vehicle)}>
+                                    <XCircle className="h-4 w-4 text-destructive"/>
+                                </Button>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-sm text-muted-foreground text-center py-2">Тээврийн хэрэгсэл оноогоогүй байна.</p>
+                    )}
+                </CardContent>
+                <CardFooter>
+                     <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full">
+                                <Car className="mr-2 h-4 w-4" />
+                                Тээврийн хэрэгсэл нэмэх
+                            </Button>
+                        </PopoverTrigger>
+                         <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            <Command>
+                                <CommandInput placeholder="Машин хайх..."/>
+                                <CommandList>
+                                    <CommandEmpty>Олдсонгүй.</CommandEmpty>
+                                    <CommandGroup>
+                                        {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
+                                            <CommandItem
+                                                key={v.id}
+                                                value={`${v.makeName} ${v.modelName} ${v.licensePlate}`}
+                                                onSelect={() => handleAddVehicle(v.id)}
+                                                disabled={isAddingVehicle}
+                                            >
+                                                <CheckIcon className={cn("mr-2 h-4 w-4", "opacity-0")}/>
+                                                <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                     </Popover>
+                </CardFooter>
+            </Card>
         </div>
        </div>
 
@@ -588,7 +700,11 @@ export default function ContractedTransportDetailPage() {
                          ) : (
                             <FormField control={executionForm.control} name="driverName" render={({ field }) => ( <FormItem><FormLabel>Жолоочийн нэр</FormLabel><FormControl><Input placeholder="Б.Болд" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                          )}
-                         <FormField control={executionForm.control} name="vehicleLicense" render={({ field }) => ( <FormItem><FormLabel>Машины дугаар</FormLabel><FormControl><Input placeholder="0000 УБA" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                          {contract.assignedVehicles.length > 0 ? (
+                            <FormField control={executionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Машин</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Машин сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.modelName} ({v.licensePlate})</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                         ) : (
+                            <FormField control={executionForm.control} name="vehicleLicense" render={({ field }) => ( <FormItem><FormLabel>Машины дугаар</FormLabel><FormControl><Input placeholder="0000 УБA" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                         )}
                          <FormField control={executionForm.control} name="routeStopId" render={({ field }) => ( <FormItem><FormLabel>Маршрутын зогсоол</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Зогсоол сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.routeStops.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                          <FormField control={executionForm.control} name="price" render={({ field }) => ( <FormItem><FormLabel>Тээврийн хөлс (₮)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                     </form>

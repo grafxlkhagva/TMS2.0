@@ -389,7 +389,9 @@ export type RouteStop = {
 
 export type ContractedTransportExecution = {
     id: string;
+    contractId: string;
     date: Date;
+    vehicleId?: string;
     vehicleLicense?: string;
     driverId?: string;
     driverName: string;
@@ -438,5 +440,10 @@ export type ContractedTransport = {
     driverId: string;
     driverName: string;
     driverPhone: string;
+  }[];
+  assignedVehicles: {
+    vehicleId: string;
+    licensePlate: string;
+    modelName: string;
   }[];
 };

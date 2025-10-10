@@ -195,6 +195,7 @@ export default function NewContractedTransportPage() {
                 name: `${user.lastName} ${user.firstName}`,
             },
             assignedDrivers: [],
+            assignedVehicles: [],
             routeStops: [],
         };
 
