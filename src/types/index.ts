@@ -401,6 +401,16 @@ export type ContractedTransportExecution = {
     createdAt: Date;
 }
 
+export type ContractedTransportCargoItem = {
+    id: string;
+    name: string;
+    unit: string;
+    packagingTypeId: string;
+    notes?: string;
+    price: number;
+};
+
+
 export type ContractedTransport = {
   id: string;
   contractNumber: string;
@@ -420,13 +430,7 @@ export type ContractedTransport = {
     totalDistance: number;
   };
   routeStops: RouteStop[];
-  cargoInfo: {
-    name: string;
-    unit: string;
-    packagingTypeId: string;
-    notes?: string;
-  };
-  pricePerShipment: number;
+  cargoItems: ContractedTransportCargoItem[];
   status: ContractedTransportStatus;
   createdAt: Date;
   updatedAt?: Date;

@@ -4,16 +4,16 @@
 
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, ArrowLeft, CalendarIcon, Plus } from 'lucide-react';
+import { Loader2, ArrowLeft, CalendarIcon, Plus, Trash2, PlusCircle } from 'lucide-react';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, where, doc, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
 
-import type { Customer, CustomerEmployee, SystemUser, ServiceType, Region, Warehouse, PackagingType, ContractedTransportFrequency } from '@/types';
+import type { Customer, SystemUser, ServiceType, Region, Warehouse, PackagingType, ContractedTransportFrequency, ContractedTransportCargoItem } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -34,6 +34,16 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import QuickAddDialog, { QuickAddDialogProps } from '@/components/quick-add-dialog';
+import { v4 as uuidv4 } from 'uuid';
+
+const cargoItemSchema = z.object({
+  id: z.string(),
+  name: z.string().min(2, "Ачааны нэрийг оруулна уу."),
+  unit: z.string().min(1, "Хэмжих нэгжийг оруулна уу."),
+  packagingTypeId: z.string().min(1, "Баглаа боодол сонгоно уу."),
+  notes: z.string().optional(),
+  price: z.coerce.number().min(1, "Тээврийн хөлс оруулна уу."),
+});
 
 
 const formSchema = z.object({
@@ -46,17 +56,13 @@ const formSchema = z.object({
   endRegionId: z.string().min(1, "Буулгах бүс сонгоно уу."),
   endWarehouseId: z.string().min(1, "Буулгах агуулах сонгоно уу."),
   totalDistance: z.coerce.number().min(1, "Нийт замыг оруулна уу."),
-  cargoName: z.string().min(2, "Ачааны нэрийг оруулна уу."),
-  cargoUnit: z.string().min(1, "Ачааны нэгжийг оруулна уу."),
-  packagingTypeId: z.string().min(1, "Баглаа боодол сонгоно уу."),
-  cargoNotes: z.string().optional(),
-  pricePerShipment: z.coerce.number().min(1, "Тээврийн хөлс оруулна уу."),
   dateRange: z.object({
     from: z.date({ required_error: "Гэрээний эхлэх огноо сонгоно уу." }),
     to: z.date({ required_error: "Гэрээний дуусах огноо сонгоно уу." }),
   }),
   frequency: z.custom<ContractedTransportFrequency>(),
   customFrequencyDetails: z.string().optional(),
+  cargoItems: z.array(cargoItemSchema).min(1, "Дор хаяж нэг ачаа нэмнэ үү."),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -114,15 +120,16 @@ export default function NewContractedTransportPage() {
       endRegionId: '',
       endWarehouseId: '',
       totalDistance: 0,
-      cargoName: '',
-      cargoUnit: '',
-      packagingTypeId: '',
-      cargoNotes: '',
-      pricePerShipment: 0,
       dateRange: undefined,
       frequency: undefined,
       customFrequencyDetails: '',
+      cargoItems: [{ id: uuidv4(), name: '', unit: 'тн', packagingTypeId: '', notes: '', price: 0 }],
     }
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "cargoItems"
   });
 
   React.useEffect(() => {
@@ -181,13 +188,7 @@ export default function NewContractedTransportPage() {
                 endWarehouseId: values.endWarehouseId,
                 totalDistance: values.totalDistance,
             },
-            cargoInfo: {
-                name: values.cargoName,
-                unit: values.cargoUnit,
-                packagingTypeId: values.packagingTypeId,
-                notes: values.cargoNotes,
-            },
-            pricePerShipment: values.pricePerShipment,
+            cargoItems: values.cargoItems,
             status: 'Active',
             createdAt: serverTimestamp(),
             createdBy: {
@@ -317,17 +318,31 @@ export default function NewContractedTransportPage() {
 
                  <Card>
                     <CardHeader>
-                        <CardTitle>Ачаа ба Үнэ</CardTitle>
+                        <CardTitle>Ачааны мэдээлэл ба Үнэ</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <FormField control={form.control} name="cargoName" render={({ field }) => ( <FormItem><FormLabel>Ачааны нэр</FormLabel><FormControl><Input placeholder="Цемент" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                            <FormField control={form.control} name="cargoUnit" render={({ field }) => ( <FormItem><FormLabel>Хэмжих нэгж</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Нэгж..." /></SelectTrigger></FormControl><SelectContent>{standardUnits.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                            <FormField control={form.control} name="packagingTypeId" render={({ field }) => ( <FormItem><FormLabel>Баглаа боодол</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{packagingTypes.map((p) => ( <SelectItem key={p.id} value={p.id}> {p.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('packaging_types', `packagingTypeId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                        {fields.map((field, index) => (
+                          <div key={field.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start p-3 border rounded-md">
+                                <FormField control={form.control} name={`cargoItems.${index}.name`} render={({ field }) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Нэр</FormLabel><FormControl><Input placeholder="Цемент" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`cargoItems.${index}.unit`} render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Нэгж</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Нэгж..." /></SelectTrigger></FormControl><SelectContent>{standardUnits.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`cargoItems.${index}.packagingTypeId`} render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Баглаа</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Сонгох..." /></SelectTrigger></FormControl><SelectContent>{packagingTypes.map((p) => ( <SelectItem key={p.id} value={p.id}> {p.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('packaging_types', `cargoItems.${index}.packagingTypeId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`cargoItems.${index}.price`} render={({ field }) => ( <FormItem className="md:col-span-2"><FormLabel className="text-xs">Тээврийн хөлс (₮)</FormLabel><FormControl><Input type="number" placeholder="1500000" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                                <FormField control={form.control} name={`cargoItems.${index}.notes`} render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Input placeholder="..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <div className="md:col-span-1 flex justify-end items-center h-full pt-6">
+                                  <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => remove(index)}><Trash2 className="h-4 w-4" /></Button>
+                                </div>
+                          </div>
+                        ))}
                         </div>
-                        <FormField control={form.control} name="cargoNotes" render={({ field }) => ( <FormItem><FormLabel>Ачааны тэмдэглэл</FormLabel><FormControl><Textarea placeholder="Нэмэлт мэдээлэл..." {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                         <Separator/>
-                        <FormField control={form.control} name="pricePerShipment" render={({ field }) => ( <FormItem><FormLabel>Нэг удаагийн тээврийн хөлс (₮)</FormLabel><FormControl><Input type="number" placeholder="1500000" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                         <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => append({ id: uuidv4(), name: '', unit: 'тн', packagingTypeId: '', notes: '', price: 0 })}
+                        >
+                            <PlusCircle className="mr-2 h-4 w-4" /> Ачаа нэмэх
+                        </Button>
                     </CardContent>
                  </Card>
 
@@ -337,5 +352,3 @@ export default function NewContractedTransportPage() {
     </div>
   );
 }
-
-    
