@@ -380,7 +380,6 @@ export type ShipmentUpdate = {
 
 export type ContractedTransportStatus = 'Active' | 'Expired' | 'Cancelled';
 export type ContractedTransportFrequency = 'Daily' | 'Weekly' | 'Monthly' | 'Custom';
-export type ContractedTransportUpdateStatus = 'On Schedule' | 'Delayed';
 
 export type ContractedTransport = {
   id: string;
@@ -421,18 +420,4 @@ export type ContractedTransport = {
     driverName: string;
     driverPhone: string;
   }[];
-};
-
-export type ContractedTransportUpdate = {
-  id: string;
-  contractId: string;
-  contractRef: DocumentReference;
-  createdAt: Date;
-  createdBy: {
-    uid: string;
-    name: string;
-  };
-  location: string;
-  status: ContractedTransportUpdateStatus;
-  notes?: string;
 };
