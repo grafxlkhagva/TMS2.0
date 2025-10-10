@@ -1,15 +1,16 @@
 
+
 'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CircleDollarSign, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CircleDollarSign, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, ContractedTransportFrequency } from '@/types';
+import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, ContractedTransportFrequency, Driver } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -36,11 +37,16 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useForm } from 'react-hook-form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { CheckIcon, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ContractExecution {
     id: string;
     date: Date;
-    vehicleLicense: string;
+    vehicleLicense?: string;
+    driverId?: string;
     driverName: string;
     price: number;
     notes?: string;
@@ -49,8 +55,9 @@ interface ContractExecution {
 
 const executionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
-  vehicleLicense: z.string().min(1, "Машины дугаарыг оруулна уу."),
+  driverId: z.string().optional(),
   driverName: z.string().min(1, "Жолоочийн нэрийг оруулна уу."),
+  vehicleLicense: z.string().optional(),
   price: z.coerce.number().min(0, "Үнийн дүн 0-ээс бага байж болохгүй."),
   notes: z.string().optional(),
 });
@@ -90,10 +97,14 @@ export default function ContractedTransportDetailPage() {
   const { toast } = useToast();
   const [contract, setContract] = React.useState<ContractedTransport | null>(null);
   const [executions, setExecutions] = React.useState<ContractExecution[]>([]);
+  const [drivers, setDrivers] = React.useState<Driver[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmittingExecution, setIsSubmittingExecution] = React.useState(false);
   const [isExecutionDialogOpen, setIsExecutionDialogOpen] = React.useState(false);
   const [executionToDelete, setExecutionToDelete] = React.useState<ContractExecution | null>(null);
+  const [isAddingDriver, setIsAddingDriver] = React.useState(false);
+  const [addDriverPopoverOpen, setAddDriverPopoverOpen] = React.useState(false);
+
 
   
   const [relatedData, setRelatedData] = React.useState({
@@ -110,23 +121,29 @@ export default function ContractedTransportDetailPage() {
     defaultValues: {
       date: new Date(),
       vehicleLicense: '',
+      driverId: '',
       driverName: '',
       price: contract?.pricePerShipment || 0,
       notes: '',
     },
   });
+  
+  const assignedDriverIds = React.useMemo(() => {
+    return contract?.assignedDrivers.map(d => d.driverId) || [];
+  }, [contract]);
 
   React.useEffect(() => {
     if (contract) {
         executionForm.reset({
             date: new Date(),
             vehicleLicense: '',
+            driverId: '',
             driverName: '',
             price: contract.pricePerShipment,
             notes: '',
         });
     }
-  }, [contract, executionForm]);
+  }, [contract, isExecutionDialogOpen, executionForm]);
 
 
   const fetchContractData = React.useCallback(async () => {
@@ -149,6 +166,7 @@ export default function ContractedTransportDetailPage() {
           createdAt: data.createdAt.toDate(),
           startDate: data.startDate.toDate(),
           endDate: data.endDate.toDate(),
+          assignedDrivers: data.assignedDrivers || [],
       } as ContractedTransport;
       setContract(fetchedContract);
       
@@ -160,6 +178,7 @@ export default function ContractedTransportDetailPage() {
           packagingTypeSnap,
           managerSnap,
           executionsSnap,
+          driversSnap,
       ] = await Promise.all([
           getDoc(doc(db, 'regions', fetchedContract.route.startRegionId)),
           getDoc(doc(db, 'regions', fetchedContract.route.endRegionId)),
@@ -168,7 +187,10 @@ export default function ContractedTransportDetailPage() {
           getDoc(doc(db, 'packaging_types', fetchedContract.cargoInfo.packagingTypeId)),
           getDoc(doc(db, 'users', fetchedContract.transportManagerId)),
           getDocs(query(collection(db, 'contracted_transport_executions'), where('contractId', '==', id))),
+          getDocs(query(collection(db, "Drivers"), where('status', '==', 'Active'))),
       ]);
+      
+      setDrivers(driversSnap.docs.map(d => ({id: d.id, ...d.data()} as Driver)));
 
       setRelatedData({
           startRegionName: startRegionSnap.data()?.name || '',
@@ -206,8 +228,20 @@ export default function ContractedTransportDetailPage() {
         if (!id) return;
         setIsSubmittingExecution(true);
         try {
+            
+            const driverId = values.driverId;
+            let driverName = values.driverName;
+            
+            if (driverId) {
+                const selectedDriver = contract?.assignedDrivers.find(d => d.driverId === driverId);
+                if (selectedDriver) {
+                    driverName = selectedDriver.driverName;
+                }
+            }
+
             await addDoc(collection(db, 'contracted_transport_executions'), {
                 ...values,
+                driverName,
                 contractId: id,
                 createdAt: serverTimestamp(),
             });
@@ -234,6 +268,44 @@ export default function ContractedTransportDetailPage() {
             setExecutionToDelete(null);
         }
     };
+    
+    const handleAddDriver = async (driverId: string) => {
+        if (!id || !driverId) return;
+        const driverToAdd = drivers.find(d => d.id === driverId);
+        if (!driverToAdd) return;
+        setIsAddingDriver(true);
+        try {
+            const contractRef = doc(db, 'contracted_transports', id);
+            await updateDoc(contractRef, {
+                assignedDrivers: arrayUnion({
+                    driverId: driverToAdd.id,
+                    driverName: driverToAdd.display_name,
+                    driverPhone: driverToAdd.phone_number,
+                })
+            });
+            toast({ title: "Амжилттай", description: "Жолооч нэмэгдлээ."});
+            setAddDriverPopoverOpen(false);
+            fetchContractData();
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч нэмэхэд алдаа гарлаа.'});
+        } finally {
+            setIsAddingDriver(false);
+        }
+    };
+    
+    const handleRemoveDriver = async (driverToRemove: {driverId: string}) => {
+        if (!id) return;
+        try {
+            const contractRef = doc(db, 'contracted_transports', id);
+            await updateDoc(contractRef, {
+                 assignedDrivers: arrayRemove(contract.assignedDrivers.find(d => d.driverId === driverToRemove.driverId))
+            });
+            toast({ title: "Амжилттай", description: "Жолоочийг хаслаа."});
+            fetchContractData();
+        } catch(error) {
+             toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч хасахад алдаа гарлаа.'});
+        }
+    }
 
 
   if (isLoading) {
@@ -367,6 +439,59 @@ export default function ContractedTransportDetailPage() {
                     <DetailItem icon={Calendar} label="Бүртгэсэн огноо" value={format(contract.createdAt, 'yyyy-MM-dd HH:mm')} />
                 </CardContent>
             </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Оноосон жолооч нар</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                    {contract.assignedDrivers.length > 0 ? (
+                        contract.assignedDrivers.map(driver => (
+                            <div key={driver.driverId} className="flex justify-between items-center text-sm p-2 rounded-md hover:bg-muted">
+                                <div>
+                                    <p className="font-medium">{driver.driverName}</p>
+                                    <p className="text-xs text-muted-foreground">{driver.driverPhone}</p>
+                                </div>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveDriver(driver)}>
+                                    <XCircle className="h-4 w-4 text-destructive"/>
+                                </Button>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-sm text-muted-foreground text-center py-2">Жолооч оноогоогүй байна.</p>
+                    )}
+                </CardContent>
+                <CardFooter>
+                     <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full">
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                Жолооч нэмэх
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            <Command>
+                                <CommandInput placeholder="Жолооч хайх..."/>
+                                <CommandList>
+                                    <CommandEmpty>Олдсонгүй.</CommandEmpty>
+                                    <CommandGroup>
+                                        {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
+                                            <CommandItem
+                                                key={d.id}
+                                                value={`${d.display_name} ${d.phone_number}`}
+                                                onSelect={() => handleAddDriver(d.id)}
+                                                disabled={isAddingDriver}
+                                            >
+                                                <CheckIcon className={cn("mr-2 h-4 w-4", "opacity-0")}/>
+                                                <span>{d.display_name} ({d.phone_number})</span>
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                     </Popover>
+                </CardFooter>
+            </Card>
         </div>
        </div>
 
@@ -378,8 +503,12 @@ export default function ContractedTransportDetailPage() {
                 <Form {...executionForm}>
                     <form onSubmit={executionForm.handleSubmit(onExecutionSubmit)} className="space-y-4 py-4" id="execution-form">
                          <FormField control={executionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
+                         {contract.assignedDrivers.length > 0 ? (
+                            <FormField control={executionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                         ) : (
+                            <FormField control={executionForm.control} name="driverName" render={({ field }) => ( <FormItem><FormLabel>Жолоочийн нэр</FormLabel><FormControl><Input placeholder="Б.Болд" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                         )}
                          <FormField control={executionForm.control} name="vehicleLicense" render={({ field }) => ( <FormItem><FormLabel>Машины дугаар</FormLabel><FormControl><Input placeholder="0000 УБA" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                         <FormField control={executionForm.control} name="driverName" render={({ field }) => ( <FormItem><FormLabel>Жолоочийн нэр</FormLabel><FormControl><Input placeholder="Б.Болд" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                          <FormField control={executionForm.control} name="price" render={({ field }) => ( <FormItem><FormLabel>Тээврийн хөлс (₮)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                          <FormField control={executionForm.control} name="notes" render={({ field }) => ( <FormItem><FormLabel>Тэмдэглэл</FormLabel><FormControl><Textarea placeholder="Нэмэлт мэдээлэл..." {...field} /></FormControl><FormMessage /></FormItem> )}/>
                     </form>

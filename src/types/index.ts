@@ -397,23 +397,27 @@ export type ContractedTransport = {
     startWarehouseId: string;
     endRegionId: string;
     endWarehouseId: string;
+    totalDistance: number;
   };
   cargoInfo: {
     name: string;
-    quantity: number;
     unit: string;
     packagingTypeId: string;
-  };
-  vehicleInfo: {
-    vehicleTypeId: string;
-    trailerTypeId: string;
-  };
-  driverInfo?: {
-    driverId: string;
-    driverName: string;
+    notes?: string;
   };
   pricePerShipment: number;
   status: ContractedTransportStatus;
   createdAt: Date;
   updatedAt?: Date;
+  transportManagerId: string;
+  transportManagerRef?: DocumentReference;
+  createdBy: {
+    uid: string;
+    name: string;
+  };
+  assignedDrivers: {
+    driverId: string;
+    driverName: string;
+    driverPhone: string;
+  }[];
 };

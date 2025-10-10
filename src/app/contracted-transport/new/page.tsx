@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -186,10 +187,6 @@ export default function NewContractedTransportPage() {
                 packagingTypeId: values.packagingTypeId,
                 notes: values.cargoNotes,
             },
-            vehicleInfo: {
-                vehicleTypeId: '', // These can be added later or in edit mode
-                trailerTypeId: '',
-            },
             pricePerShipment: values.pricePerShipment,
             status: 'Active',
             createdAt: serverTimestamp(),
@@ -197,6 +194,7 @@ export default function NewContractedTransportPage() {
                 uid: user.uid,
                 name: `${user.lastName} ${user.firstName}`,
             },
+            assignedDrivers: [],
         };
 
         const docRef = await addDoc(collection(db, 'contracted_transports'), dataToSave);
