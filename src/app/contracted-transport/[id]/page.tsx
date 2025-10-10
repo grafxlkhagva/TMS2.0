@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -10,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, ContractedTransportFrequency, Driver, ContractedTransportExecution, RouteStop, Vehicle } from '@/types';
+import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, ContractedTransportFrequency, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportCargoItem } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -75,7 +74,7 @@ const statusDetails = {
 };
 
 function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value?: string | React.ReactNode }) {
-  if (!value) return null;
+  if (!value && value !== 0) return null;
   return (
     <div className="flex items-start gap-3">
         <Icon className="h-4 w-4 mt-1 text-muted-foreground" />
@@ -115,7 +114,7 @@ export default function ContractedTransportDetailPage() {
       endRegionName: '',
       startWarehouseName: '',
       endWarehouseName: '',
-      packagingTypeName: '',
+      packagingTypes: new Map<string, string>(),
       transportManagerName: '',
   });
 
@@ -127,7 +126,7 @@ export default function ContractedTransportDetailPage() {
       driverName: '',
       vehicleId: '',
       vehicleLicense: '',
-      price: contract?.pricePerShipment || 0,
+      price: 0,
       routeStopId: '',
     },
   });
@@ -147,6 +146,10 @@ export default function ContractedTransportDetailPage() {
   const assignedVehicleIds = React.useMemo(() => {
     return contract?.assignedVehicles.map(v => v.vehicleId) || [];
   }, [contract]);
+  
+  const totalCargoPrice = React.useMemo(() => {
+    return contract?.cargoItems.reduce((acc, item) => acc + item.price, 0) || 0;
+  }, [contract]);
 
   React.useEffect(() => {
     if (contract) {
@@ -156,7 +159,7 @@ export default function ContractedTransportDetailPage() {
             driverName: '',
             vehicleId: '',
             vehicleLicense: '',
-            price: contract.pricePerShipment,
+            price: 0,
             routeStopId: '',
         });
     }
@@ -186,6 +189,7 @@ export default function ContractedTransportDetailPage() {
           assignedDrivers: data.assignedDrivers || [],
           assignedVehicles: data.assignedVehicles || [],
           routeStops: data.routeStops || [],
+          cargoItems: data.cargoItems || [],
       } as ContractedTransport;
       setContract(fetchedContract);
       
@@ -204,7 +208,7 @@ export default function ContractedTransportDetailPage() {
           getDoc(doc(db, 'regions', fetchedContract.route.endRegionId)),
           getDoc(doc(db, 'warehouses', fetchedContract.route.startWarehouseId)),
           getDoc(doc(db, 'warehouses', fetchedContract.route.endWarehouseId)),
-          getDoc(doc(db, 'packaging_types', fetchedContract.cargoInfo.packagingTypeId)),
+          getDocs(query(collection(db, 'packaging_types'))),
           getDoc(doc(db, 'users', fetchedContract.transportManagerId)),
           getDocs(query(collection(db, 'contracted_transport_executions'), where('contractId', '==', id))),
           getDocs(query(collection(db, "Drivers"), where('status', '==', 'Active'))),
@@ -220,7 +224,7 @@ export default function ContractedTransportDetailPage() {
           endRegionName: endRegionSnap.data()?.name || '',
           startWarehouseName: startWarehouseSnap.data()?.name || '',
           endWarehouseName: endWarehouseSnap.data()?.name || '',
-          packagingTypeName: packagingTypeSnap.data()?.name || '',
+          packagingTypes: new Map(packagingTypeSnap.docs.map(doc => [doc.id, doc.data().name])),
           transportManagerName: `${managerSnap.data()?.lastName || ''} ${managerSnap.data()?.firstName || ''}`,
       })
       
@@ -466,12 +470,26 @@ export default function ContractedTransportDetailPage() {
                         <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`}/>
                         <DetailItem icon={Truck} label="Нийт зам" value={`${contract.route.totalDistance} км`}/>
                     </div>
-                    <div className="p-4 border rounded-md bg-muted/50 space-y-3">
-                        <DetailItem icon={Package} label="Ачааны нэр" value={contract.cargoInfo.name}/>
-                        <DetailItem icon={Package} label="Нэгж" value={contract.cargoInfo.unit}/>
-                        <DetailItem icon={Package} label="Баглаа боодол" value={relatedData.packagingTypeName}/>
-                        <DetailItem icon={Package} label="Ачааны тэмдэглэл" value={contract.cargoInfo.notes}/>
-                    </div>
+                     <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Ачааны нэр</TableHead>
+                                <TableHead>Нэгж</TableHead>
+                                <TableHead>Баглаа боодол</TableHead>
+                                <TableHead className="text-right">Тээврийн хөлс</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {contract.cargoItems.map(item => (
+                                <TableRow key={item.id}>
+                                    <TableCell>{item.name}</TableCell>
+                                    <TableCell>{item.unit}</TableCell>
+                                    <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
+                                    <TableCell className="text-right font-mono">{item.price.toLocaleString()}₮</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 </CardContent>
             </Card>
 
@@ -572,7 +590,7 @@ export default function ContractedTransportDetailPage() {
                     <DetailItem icon={Calendar} label="Гэрээний хугацаа" value={`${format(contract.startDate, 'yyyy-MM-dd')} - ${format(contract.endDate, 'yyyy-MM-dd')}`} />
                     <DetailItem icon={Calendar} label="Давтамж" value={contract.frequency === 'Custom' ? `${frequencyTranslations[contract.frequency]} (${contract.customFrequencyDetails})` : frequencyTranslations[contract.frequency]} />
                      <Separator/>
-                    <DetailItem icon={CircleDollarSign} label="Нэг удаагийн тээврийн хөлс" value={`${contract.pricePerShipment.toLocaleString()}₮`} />
+                    <DetailItem icon={CircleDollarSign} label="Нийт үнийн дүн" value={`${totalCargoPrice.toLocaleString()}₮`} />
                      <Separator/>
                     <DetailItem icon={statusInfo.icon} label="Статус" value={<Badge variant={statusInfo.variant}>{statusInfo.text}</Badge>} />
                     <DetailItem icon={Calendar} label="Бүртгэсэн огноо" value={format(contract.createdAt, 'yyyy-MM-dd HH:mm')} />
@@ -735,3 +753,6 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
+
+    
