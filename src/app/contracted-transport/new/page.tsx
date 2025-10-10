@@ -103,6 +103,10 @@ export default function NewContractedTransportPage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+        cargoNotes: '',
+        customFrequencyDetails: '',
+    }
   });
 
   React.useEffect(() => {
