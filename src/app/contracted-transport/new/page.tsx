@@ -104,8 +104,23 @@ export default function NewContractedTransportPage() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-        cargoNotes: '',
-        customFrequencyDetails: '',
+      title: '',
+      customerId: '',
+      transportManagerId: '',
+      serviceTypeId: '',
+      startRegionId: '',
+      startWarehouseId: '',
+      endRegionId: '',
+      endWarehouseId: '',
+      totalDistance: 0,
+      cargoName: '',
+      cargoUnit: '',
+      packagingTypeId: '',
+      cargoNotes: '',
+      pricePerShipment: 0,
+      dateRange: undefined,
+      frequency: undefined,
+      customFrequencyDetails: '',
     }
   });
 
