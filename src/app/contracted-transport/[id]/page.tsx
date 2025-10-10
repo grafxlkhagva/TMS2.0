@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, ContractedTransportFrequency, Driver } from '@/types';
+import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, ContractedTransportFrequency, Driver, ContractedTransportUpdate, ContractedTransportUpdateStatus } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +37,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useForm } from 'react-hook-form';
+import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { CheckIcon, ChevronsUpDown } from 'lucide-react';
@@ -62,6 +63,13 @@ const executionFormSchema = z.object({
   notes: z.string().optional(),
 });
 type ExecutionFormValues = z.infer<typeof executionFormSchema>;
+
+const updateFormSchema = z.object({
+  location: z.string().min(3, { message: 'Байршил дор хаяж 3 тэмдэгттэй байх ёстой.' }),
+  status: z.custom<ContractedTransportUpdateStatus>(),
+  notes: z.string().optional(),
+});
+type UpdateFormValues = z.infer<typeof updateFormSchema>;
 
 
 const frequencyTranslations: Record<ContractedTransportFrequency, string> = {
@@ -94,12 +102,15 @@ function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, lab
 export default function ContractedTransportDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [contract, setContract] = React.useState<ContractedTransport | null>(null);
   const [executions, setExecutions] = React.useState<ContractExecution[]>([]);
+  const [updates, setUpdates] = React.useState<ContractedTransportUpdate[]>([]);
   const [drivers, setDrivers] = React.useState<Driver[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmittingExecution, setIsSubmittingExecution] = React.useState(false);
+  const [isSubmittingUpdate, setIsSubmittingUpdate] = React.useState(false);
   const [isExecutionDialogOpen, setIsExecutionDialogOpen] = React.useState(false);
   const [executionToDelete, setExecutionToDelete] = React.useState<ContractExecution | null>(null);
   const [isAddingDriver, setIsAddingDriver] = React.useState(false);
@@ -124,6 +135,15 @@ export default function ContractedTransportDetailPage() {
       driverId: '',
       driverName: '',
       price: contract?.pricePerShipment || 0,
+      notes: '',
+    },
+  });
+
+  const updateForm = useForm<UpdateFormValues>({
+    resolver: zodResolver(updateFormSchema),
+    defaultValues: {
+      location: '',
+      status: 'On Schedule',
       notes: '',
     },
   });
@@ -179,6 +199,7 @@ export default function ContractedTransportDetailPage() {
           managerSnap,
           executionsSnap,
           driversSnap,
+          updatesSnap,
       ] = await Promise.all([
           getDoc(doc(db, 'regions', fetchedContract.route.startRegionId)),
           getDoc(doc(db, 'regions', fetchedContract.route.endRegionId)),
@@ -188,6 +209,7 @@ export default function ContractedTransportDetailPage() {
           getDoc(doc(db, 'users', fetchedContract.transportManagerId)),
           getDocs(query(collection(db, 'contracted_transport_executions'), where('contractId', '==', id))),
           getDocs(query(collection(db, "Drivers"), where('status', '==', 'Active'))),
+          getDocs(query(collection(db, 'contracted_transport_updates'), where('contractId', '==', id))),
       ]);
       
       setDrivers(driversSnap.docs.map(d => ({id: d.id, ...d.data()} as Driver)));
@@ -210,6 +232,14 @@ export default function ContractedTransportDetailPage() {
 
         executionsData.sort((a, b) => b.date.getTime() - a.date.getTime());
         setExecutions(executionsData);
+        
+        const updatesData = updatesSnap.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt.toDate(),
+        } as ContractedTransportUpdate));
+        updatesData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        setUpdates(updatesData);
 
 
     } catch (error) {
@@ -306,6 +336,31 @@ export default function ContractedTransportDetailPage() {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч хасахад алдаа гарлаа.'});
         }
     }
+    
+    const handleUpdateSubmit = async (values: UpdateFormValues) => {
+    if (!contract || !user) return;
+    setIsSubmittingUpdate(true);
+    try {
+        await addDoc(collection(db, 'contracted_transport_updates'), {
+            ...values,
+            contractId: contract.id,
+            contractRef: doc(db, 'contracted_transports', contract.id),
+            createdAt: serverTimestamp(),
+            createdBy: {
+                uid: user.uid,
+                name: `${user.lastName} ${user.firstName}`,
+            },
+        });
+        toast({ title: "Амжилттай", description: "Явцын мэдээ нэмэгдлээ." });
+        updateForm.reset();
+        fetchContractData();
+    } catch (error) {
+        console.error("Error adding contract update:", error);
+        toast({ variant: "destructive", title: "Алдаа", description: "Явцын мэдээ нэмэхэд алдаа гарлаа."});
+    } finally {
+        setIsSubmittingUpdate(false);
+    }
+  }
 
 
   if (isLoading) {
@@ -372,6 +427,58 @@ export default function ContractedTransportDetailPage() {
                     </div>
                 </CardContent>
             </Card>
+
+             <Card>
+                <CardHeader>
+                    <CardTitle>Тээврийн явцын мэдээ нэмэх</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Form {...updateForm}>
+                        <form onSubmit={updateForm.handleSubmit(handleUpdateSubmit)} className="space-y-4">
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField control={updateForm.control} name="location" render={({ field }) => ( <FormItem><FormLabel>Байршил</FormLabel><FormControl><Input placeholder="Дархан" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                <FormField control={updateForm.control} name="status" render={({ field }) => ( <FormItem><FormLabel>Төлөв</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="On Schedule">Хэвийн</SelectItem><SelectItem value="Delayed">Саатсан</SelectItem></SelectContent></Select><FormMessage /></FormItem> )} />
+                            </div>
+                            <FormField control={updateForm.control} name="notes" render={({ field }) => ( <FormItem><FormLabel>Нэмэлт тэмдэглэл</FormLabel><FormControl><Textarea placeholder="Замд гарсан асуудал, нэмэлт мэдээлэл..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                            <Button type="submit" disabled={isSubmittingUpdate}>
+                                {isSubmittingUpdate ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <PlusCircle className="mr-2 h-4 w-4"/>}
+                                Мэдээ нэмэх
+                            </Button>
+                        </form>
+                    </Form>
+                </CardContent>
+             </Card>
+
+              <Card>
+                <CardHeader>
+                    <CardTitle>Тээвэрлэлтийн явцын түүх</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                     {updates.length > 0 ? (
+                        updates.map(update => (
+                            <Card key={update.id} className="bg-muted/50">
+                                <CardHeader className="p-4">
+                                    <CardTitle className="text-base flex justify-between items-center">
+                                        <span>{update.location}</span>
+                                            <Badge variant={update.status === 'Delayed' ? 'warning' : 'success'}>{update.status === 'Delayed' ? 'Саатсан' : 'Хэвийн'}</Badge>
+                                    </CardTitle>
+                                    <CardDescription className="text-xs">
+                                        {format(update.createdAt, 'yyyy-MM-dd HH:mm')} - {update.createdBy.name}
+                                    </CardDescription>
+                                </CardHeader>
+                                {update.notes && (
+                                <CardContent className="p-4 pt-0 text-sm">
+                                    <p><strong>Тэмдэглэл:</strong> {update.notes}</p>
+                                </CardContent>
+                                )}
+                            </Card>
+                        ))
+                    ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">Явцын мэдээлэл олдсонгүй.</p>
+                    )}
+                </CardContent>
+            </Card>
+
 
              <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
