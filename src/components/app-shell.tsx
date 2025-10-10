@@ -19,6 +19,7 @@ import {
   ChevronDown,
   Car,
   LayoutGrid,
+  FileSignature,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -55,6 +56,7 @@ import { cn } from '@/lib/utils';
 const baseNavItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/orders', icon: Briefcase, label: 'Захиалга' },
+  { href: '/contracted-transport', icon: FileSignature, label: 'Гэрээт тээвэр' },
   { href: '/shipments', icon: Truck, label: 'Тээвэрлэлт' },
   { href: '/customers', icon: Building2, label: 'Харилцагчид' },
   { href: '/warehouses', icon: Warehouse, label: 'Агуулах' },

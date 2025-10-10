@@ -377,3 +377,43 @@ export type ShipmentUpdate = {
   roadConditions: string;
   notes?: string;
 };
+
+export type ContractedTransportStatus = 'Active' | 'Expired' | 'Cancelled';
+export type ContractedTransportFrequency = 'Daily' | 'Weekly' | 'Monthly' | 'Custom';
+
+export type ContractedTransport = {
+  id: string;
+  contractNumber: string;
+  title: string;
+  customerId: string;
+  customerRef?: DocumentReference;
+  customerName: string;
+  startDate: Date;
+  endDate: Date;
+  frequency: ContractedTransportFrequency;
+  customFrequencyDetails?: string; // E.g., "Every Tuesday and Thursday"
+  route: {
+    startRegionId: string;
+    startWarehouseId: string;
+    endRegionId: string;
+    endWarehouseId: string;
+  };
+  cargoInfo: {
+    name: string;
+    quantity: number;
+    unit: string;
+    packagingTypeId: string;
+  };
+  vehicleInfo: {
+    vehicleTypeId: string;
+    trailerTypeId: string;
+  };
+  driverInfo?: {
+    driverId: string;
+    driverName: string;
+  };
+  pricePerShipment: number;
+  status: ContractedTransportStatus;
+  createdAt: Date;
+  updatedAt?: Date;
+};
