@@ -4,10 +4,10 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Eye } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Eye, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, writeBatch, where, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { ContractedTransport, ContractedTransportFrequency } from '@/types';
@@ -19,7 +19,18 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 
 const frequencyTranslations: Record<ContractedTransportFrequency, string> = {
@@ -32,6 +43,8 @@ const frequencyTranslations: Record<ContractedTransportFrequency, string> = {
 export default function ContractedTransportPage() {
   const [contracts, setContracts] = React.useState<ContractedTransport[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [itemToDelete, setItemToDelete] = React.useState<ContractedTransport | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const { toast } = useToast();
 
   const fetchContracts = React.useCallback(async () => {
@@ -66,6 +79,37 @@ export default function ContractedTransportPage() {
   React.useEffect(() => {
     fetchContracts();
   }, [fetchContracts]);
+  
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+    setIsDeleting(true);
+    try {
+      const batch = writeBatch(db);
+      
+      // Delete all executions associated with the contract
+      const executionsQuery = query(collection(db, 'contracted_transport_executions'), where('contractId', '==', itemToDelete.id));
+      const executionsSnapshot = await getDocs(executionsQuery);
+      executionsSnapshot.forEach(doc => {
+          batch.delete(doc.ref);
+      });
+
+      // Delete the contract itself
+      const contractRef = doc(db, 'contracted_transports', itemToDelete.id);
+      batch.delete(contractRef);
+
+      await batch.commit();
+
+      setContracts(prev => prev.filter(c => c.id !== itemToDelete.id));
+      toast({ title: 'Амжилттай', description: `"${itemToDelete.title}" гэрээг устгалаа.`});
+    } catch (error) {
+      console.error("Error deleting contract:", error);
+      toast({ variant: 'destructive', title: 'Алдаа', description: 'Гэрээ устгахад алдаа гарлаа.'});
+    } finally {
+      setIsDeleting(false);
+      setItemToDelete(null);
+    }
+  };
+
 
   return (
     <div className="container mx-auto py-6">
@@ -143,6 +187,11 @@ export default function ContractedTransportPage() {
                                     Дэлгэрэнгүй
                                   </Link>
                                 </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => setItemToDelete(contract)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                   <Trash2 className="mr-2 h-4 w-4"/>
+                                   Устгах
+                                </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -159,6 +208,24 @@ export default function ContractedTransportPage() {
           </Table>
         </CardContent>
       </Card>
+      
+       <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        "{itemToDelete?.title}" гэрээг устгах гэж байна. Энэ үйлдэл нь тухайн гэрээтэй холбоотой бүх гүйцэтгэлийн мэдээллийг хамт устгах болно.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setItemToDelete(null)}>Цуцлах</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                        {isDeleting ? "Устгаж байна..." : "Устгах"}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
     </div>
   );
 }
