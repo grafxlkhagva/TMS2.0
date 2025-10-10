@@ -4,7 +4,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CircleDollarSign, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, CheckIcon, ChevronsUpDown } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CircleDollarSign, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, CheckIcon, ChevronsUpDown, Map as MapIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -465,8 +465,8 @@ export default function ContractedTransportDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="p-4 border rounded-md bg-muted/50 space-y-3">
-                        <DetailItem icon={MapPin} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`}/>
-                        <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`}/>
+                        <DetailItem icon={MapIcon} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`}/>
+                        <DetailItem icon={MapIcon} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`}/>
                         <DetailItem icon={Truck} label="Нийт зам" value={`${contract.route.totalDistance} км`}/>
                     </div>
                      <Table>
@@ -479,8 +479,8 @@ export default function ContractedTransportDetailPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {contract.cargoItems.map(item => (
-                                <TableRow key={item.id}>
+                            {contract.cargoItems.map((item, index) => (
+                                <TableRow key={item.id || index}>
                                     <TableCell>{item.name}</TableCell>
                                     <TableCell>{item.unit}</TableCell>
                                     <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
@@ -752,6 +752,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
-
-    
