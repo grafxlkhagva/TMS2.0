@@ -146,12 +146,13 @@ export default function EditContractedTransportPage() {
             setPackagingTypes(packagingSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as PackagingType)));
             
             if (contractSnap.exists()) {
-                const contractData = contractSnap.data() as ContractedTransport;
+                const contractData = contractSnap.data() as any; // Use any to handle legacy data
                 form.reset({
                     title: contractData.title,
                     customerId: contractData.customerId,
                     transportManagerId: contractData.transportManagerId,
-                    serviceTypeId: contractData.cargoItems[0]?.serviceTypeId || '', // Legacy support
+                    // @ts-ignore - Handle legacy 'serviceTypeId' on cargoItems
+                    serviceTypeId: contractData.serviceTypeId || (contractData.cargoItems && contractData.cargoItems[0]?.serviceTypeId) || '',
                     startRegionId: contractData.route.startRegionId,
                     startWarehouseId: contractData.route.startWarehouseId,
                     endRegionId: contractData.route.endRegionId,
@@ -163,7 +164,7 @@ export default function EditContractedTransportPage() {
                     },
                     frequency: contractData.frequency,
                     customFrequencyDetails: contractData.customFrequencyDetails || '',
-                    cargoItems: contractData.cargoItems.map(item => ({...item, id: item.id || uuidv4()})),
+                    cargoItems: (contractData.cargoItems || []).map((item: any) => ({...item, id: item.id || uuidv4()})),
                 });
             } else {
                  toast({ variant: 'destructive', title: 'Алдаа', description: 'Гэрээт тээвэр олдсонгүй.' });
