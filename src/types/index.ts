@@ -168,7 +168,7 @@ export type OrderItemStatus = 'Pending' | 'Assigned' | 'Shipped' | 'In Transit' 
 
 export type LoadingUnloadingResponsibility = 'Захиалагч хариуцах' | 'Тээвэрлэгч хариуцах';
 export type VehicleAvailability = '8 цаг' | '12 цаг' | '24 цаг' | '48 цаг' | '7 хоног' | '14 хоног';
-export type PaymentTerm = 'Урьдчилгаа 30%' | 'Урьдчилгаа 40%' | 'Урьдчилгаа 50%' | 'Тээвэрлэлт дууссаад' | 'Гэрээгээр тохиролцоно';
+export type PaymentTerm = 'Урьдчилгаа 30%' | 'Урьдчилгаа 40%' | 'Урьдчилгаа 50%' | 'Тээвэрлэлт дуусаад' | 'Гэрээгээр тохиролцоно';
 
 export type TransportationConditions = {
     loading: LoadingUnloadingResponsibility;
@@ -381,6 +381,24 @@ export type ShipmentUpdate = {
 export type ContractedTransportStatus = 'Active' | 'Expired' | 'Cancelled';
 export type ContractedTransportFrequency = 'Daily' | 'Weekly' | 'Monthly' | 'Custom';
 
+export type RouteStop = {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export type ContractedTransportExecution = {
+    id: string;
+    date: Date;
+    vehicleLicense?: string;
+    driverId?: string;
+    driverName: string;
+    price: number;
+    routeStopId?: string;
+    routeStopName?: string;
+    createdAt: Date;
+}
+
 export type ContractedTransport = {
   id: string;
   contractNumber: string;
@@ -399,6 +417,7 @@ export type ContractedTransport = {
     endWarehouseId: string;
     totalDistance: number;
   };
+  routeStops: RouteStop[];
   cargoInfo: {
     name: string;
     unit: string;

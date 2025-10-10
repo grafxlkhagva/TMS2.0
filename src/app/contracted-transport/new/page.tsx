@@ -195,6 +195,7 @@ export default function NewContractedTransportPage() {
                 name: `${user.lastName} ${user.firstName}`,
             },
             assignedDrivers: [],
+            routeStops: [],
         };
 
         const docRef = await addDoc(collection(db, 'contracted_transports'), dataToSave);

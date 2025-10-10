@@ -5,12 +5,12 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CircleDollarSign, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CircleDollarSign, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Map } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, ContractedTransportFrequency, Driver } from '@/types';
+import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, ContractedTransportFrequency, Driver, ContractedTransportExecution, RouteStop } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -42,17 +42,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { CheckIcon, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface ContractExecution {
-    id: string;
-    date: Date;
-    vehicleLicense?: string;
-    driverId?: string;
-    driverName: string;
-    price: number;
-    notes?: string;
-    createdAt: Date;
-}
+import { v4 as uuidv4 } from 'uuid';
 
 const executionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
@@ -60,9 +50,15 @@ const executionFormSchema = z.object({
   driverName: z.string().min(1, "Жолоочийн нэрийг оруулна уу."),
   vehicleLicense: z.string().optional(),
   price: z.coerce.number().min(0, "Үнийн дүн 0-ээс бага байж болохгүй."),
-  notes: z.string().optional(),
+  routeStopId: z.string().min(1, "Зогсоол сонгоно уу."),
 });
 type ExecutionFormValues = z.infer<typeof executionFormSchema>;
+
+const routeStopFormSchema = z.object({
+  name: z.string().min(2, "Зогсоолын нэр дор хаяж 2 тэмдэгттэй байх ёстой."),
+  description: z.string().min(5, "Тайлбар дор хаяж 5 тэмдэгттэй байх ёстой."),
+});
+type RouteStopFormValues = z.infer<typeof routeStopFormSchema>;
 
 const frequencyTranslations: Record<ContractedTransportFrequency, string> = {
     Daily: 'Өдөр бүр',
@@ -97,14 +93,15 @@ export default function ContractedTransportDetailPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [contract, setContract] = React.useState<ContractedTransport | null>(null);
-  const [executions, setExecutions] = React.useState<ContractExecution[]>([]);
+  const [executions, setExecutions] = React.useState<ContractedTransportExecution[]>([]);
   const [drivers, setDrivers] = React.useState<Driver[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmittingExecution, setIsSubmittingExecution] = React.useState(false);
   const [isExecutionDialogOpen, setIsExecutionDialogOpen] = React.useState(false);
-  const [executionToDelete, setExecutionToDelete] = React.useState<ContractExecution | null>(null);
+  const [executionToDelete, setExecutionToDelete] = React.useState<ContractedTransportExecution | null>(null);
   const [isAddingDriver, setIsAddingDriver] = React.useState(false);
   const [addDriverPopoverOpen, setAddDriverPopoverOpen] = React.useState(false);
+  const [isSubmittingStop, setIsSubmittingStop] = React.useState(false);
   
   const [relatedData, setRelatedData] = React.useState({
       startRegionName: '',
@@ -123,8 +120,16 @@ export default function ContractedTransportDetailPage() {
       driverId: '',
       driverName: '',
       price: contract?.pricePerShipment || 0,
-      notes: '',
+      routeStopId: '',
     },
+  });
+
+  const routeStopForm = useForm<RouteStopFormValues>({
+    resolver: zodResolver(routeStopFormSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+    }
   });
 
   const assignedDriverIds = React.useMemo(() => {
@@ -139,7 +144,7 @@ export default function ContractedTransportDetailPage() {
             driverId: '',
             driverName: '',
             price: contract.pricePerShipment,
-            notes: '',
+            routeStopId: '',
         });
     }
   }, [contract, isExecutionDialogOpen, executionForm]);
@@ -166,6 +171,7 @@ export default function ContractedTransportDetailPage() {
           startDate: data.startDate.toDate(),
           endDate: data.endDate.toDate(),
           assignedDrivers: data.assignedDrivers || [],
+          routeStops: data.routeStops || [],
       } as ContractedTransport;
       setContract(fetchedContract);
       
@@ -205,7 +211,7 @@ export default function ContractedTransportDetailPage() {
             ...doc.data(),
             date: doc.data().date.toDate(),
             createdAt: doc.data().createdAt.toDate(),
-        } as ContractExecution));
+        } as ContractedTransportExecution));
 
         executionsData.sort((a, b) => b.date.getTime() - a.date.getTime());
         setExecutions(executionsData);
@@ -223,7 +229,7 @@ export default function ContractedTransportDetailPage() {
   }, [fetchContractData]);
 
    const onExecutionSubmit = async (values: ExecutionFormValues) => {
-        if (!id) return;
+        if (!id || !contract) return;
         setIsSubmittingExecution(true);
         try {
             
@@ -237,9 +243,12 @@ export default function ContractedTransportDetailPage() {
                 }
             }
 
+            const selectedStop = contract.routeStops.find(s => s.id === values.routeStopId);
+            
             await addDoc(collection(db, 'contracted_transport_executions'), {
                 ...values,
                 driverName,
+                routeStopName: selectedStop?.name || 'N/A',
                 contractId: id,
                 createdAt: serverTimestamp(),
             });
@@ -292,7 +301,7 @@ export default function ContractedTransportDetailPage() {
     };
     
     const handleRemoveDriver = async (driverToRemove: {driverId: string}) => {
-        if (!id) return;
+        if (!id || !contract) return;
         try {
             const contractRef = doc(db, 'contracted_transports', id);
             await updateDoc(contractRef, {
@@ -302,6 +311,42 @@ export default function ContractedTransportDetailPage() {
             fetchContractData();
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч хасахад алдаа гарлаа.'});
+        }
+    }
+
+    const onRouteStopSubmit = async (values: RouteStopFormValues) => {
+        if (!id || !contract) return;
+        setIsSubmittingStop(true);
+        try {
+            const newStop: RouteStop = {
+                id: uuidv4(),
+                ...values
+            };
+            const contractRef = doc(db, 'contracted_transports', id);
+            await updateDoc(contractRef, {
+                routeStops: arrayUnion(newStop),
+            });
+            toast({ title: "Амжилттай", description: "Маршрутын зогсоол нэмэгдлээ."});
+            routeStopForm.reset();
+            fetchContractData();
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Зогсоол нэмэхэд алдаа гарлаа.'});
+        } finally {
+            setIsSubmittingStop(false);
+        }
+    }
+
+    const handleRemoveStop = async (stopToRemove: RouteStop) => {
+        if (!id || !contract) return;
+        try {
+            const contractRef = doc(db, 'contracted_transports', id);
+            await updateDoc(contractRef, {
+                 routeStops: arrayRemove(stopToRemove)
+            });
+            toast({ title: "Амжилттай", description: "Зогсоол хасагдлаа."});
+            fetchContractData();
+        } catch(error) {
+             toast({ variant: 'destructive', title: 'Алдаа', description: 'Зогсоол хасахад алдаа гарлаа.'});
         }
     }
 
@@ -371,6 +416,41 @@ export default function ContractedTransportDetailPage() {
                 </CardContent>
             </Card>
 
+            <Card>
+                <CardHeader>
+                    <CardTitle>Маршрутын зогсоол батлах</CardTitle>
+                    <CardDescription>Тээвэрлэлтийн явцад бүртгэх дундын зогсоолуудыг тодорхойлно уу.</CardDescription>
+                </CardHeader>
+                 <CardContent>
+                    <Form {...routeStopForm}>
+                        <form onSubmit={routeStopForm.handleSubmit(onRouteStopSubmit)} className="flex items-start gap-4 mb-4">
+                            <FormField control={routeStopForm.control} name="name" render={({ field }) => ( <FormItem className="flex-1"><FormLabel className="sr-only">Зогсоолын нэр</FormLabel><FormControl><Input placeholder="Зогсоолын нэр" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                            <FormField control={routeStopForm.control} name="description" render={({ field }) => ( <FormItem className="flex-1"><FormLabel className="sr-only">Тайлбар</FormLabel><FormControl><Input placeholder="Тайлбар" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                            <Button type="submit" disabled={isSubmittingStop}>
+                                {isSubmittingStop ? <Loader2 className="h-4 w-4 animate-spin"/> : <PlusCircle className="h-4 w-4"/>}
+                            </Button>
+                        </form>
+                    </Form>
+                    <div className="space-y-2">
+                        {contract.routeStops.length > 0 ? (
+                            contract.routeStops.map(stop => (
+                                <div key={stop.id} className="flex justify-between items-start text-sm p-3 rounded-md border">
+                                    <div>
+                                        <p className="font-medium">{stop.name}</p>
+                                        <p className="text-xs text-muted-foreground">{stop.description}</p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveStop(stop)}>
+                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                    </Button>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-sm text-muted-foreground text-center py-4">Маршрутын зогсоол тодорхойлоогүй байна.</p>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
              <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
@@ -389,6 +469,7 @@ export default function ContractedTransportDetailPage() {
                                 <TableHead>Огноо</TableHead>
                                 <TableHead>Машины дугаар</TableHead>
                                 <TableHead>Жолооч</TableHead>
+                                <TableHead>Зогсоол</TableHead>
                                 <TableHead>Үнэ</TableHead>
                                 <TableHead className="text-right">Үйлдэл</TableHead>
                             </TableRow>
@@ -400,6 +481,7 @@ export default function ContractedTransportDetailPage() {
                                         <TableCell>{format(ex.date, 'yyyy-MM-dd')}</TableCell>
                                         <TableCell className="font-mono">{ex.vehicleLicense}</TableCell>
                                         <TableCell>{ex.driverName}</TableCell>
+                                        <TableCell>{ex.routeStopName}</TableCell>
                                         <TableCell>{ex.price.toLocaleString()}₮</TableCell>
                                         <TableCell className="text-right">
                                             <Button variant="ghost" size="icon" onClick={() => setExecutionToDelete(ex)}>
@@ -410,7 +492,7 @@ export default function ContractedTransportDetailPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24">Гүйцэтгэл бүртгэгдээгүй байна.</TableCell>
+                                    <TableCell colSpan={6} className="text-center h-24">Гүйцэтгэл бүртгэгдээгүй байна.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
@@ -507,8 +589,8 @@ export default function ContractedTransportDetailPage() {
                             <FormField control={executionForm.control} name="driverName" render={({ field }) => ( <FormItem><FormLabel>Жолоочийн нэр</FormLabel><FormControl><Input placeholder="Б.Болд" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                          )}
                          <FormField control={executionForm.control} name="vehicleLicense" render={({ field }) => ( <FormItem><FormLabel>Машины дугаар</FormLabel><FormControl><Input placeholder="0000 УБA" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                         <FormField control={executionForm.control} name="routeStopId" render={({ field }) => ( <FormItem><FormLabel>Маршрутын зогсоол</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Зогсоол сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.routeStops.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                          <FormField control={executionForm.control} name="price" render={({ field }) => ( <FormItem><FormLabel>Тээврийн хөлс (₮)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                         <FormField control={executionForm.control} name="notes" render={({ field }) => ( <FormItem><FormLabel>Тэмдэглэл</FormLabel><FormControl><Textarea placeholder="Нэмэлт мэдээлэл..." {...field} /></FormControl><FormMessage /></FormItem> )}/>
                     </form>
                 </Form>
                 <DialogFooter>
