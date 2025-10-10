@@ -188,7 +188,7 @@ export default function NewContractedTransportPage() {
                 endWarehouseId: values.endWarehouseId,
                 totalDistance: values.totalDistance,
             },
-            cargoItems: values.cargoItems,
+            cargoItems: values.cargoItems.map(({id, ...item}) => item), // Remove client-side id before saving,
             status: 'Active',
             createdAt: serverTimestamp(),
             createdBy: {

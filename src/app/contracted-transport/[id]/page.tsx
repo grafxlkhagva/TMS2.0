@@ -4,7 +4,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CircleDollarSign, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, CheckIcon, ChevronsUpDown, Map as MapIcon } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, CheckIcon, ChevronsUpDown, Map as MapIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -144,10 +144,6 @@ export default function ContractedTransportDetailPage() {
   
   const assignedVehicleIds = React.useMemo(() => {
     return contract?.assignedVehicles.map(v => v.vehicleId) || [];
-  }, [contract]);
-  
-  const totalCargoPrice = React.useMemo(() => {
-    return contract?.cargoItems.reduce((acc, item) => acc + item.price, 0) || 0;
   }, [contract]);
 
   React.useEffect(() => {
@@ -589,8 +585,6 @@ export default function ContractedTransportDetailPage() {
                     <DetailItem icon={Calendar} label="Гэрээний хугацаа" value={`${format(contract.startDate, 'yyyy-MM-dd')} - ${format(contract.endDate, 'yyyy-MM-dd')}`} />
                     <DetailItem icon={Calendar} label="Давтамж" value={contract.frequency === 'Custom' ? `${frequencyTranslations[contract.frequency]} (${contract.customFrequencyDetails})` : frequencyTranslations[contract.frequency]} />
                      <Separator/>
-                    <DetailItem icon={CircleDollarSign} label="Нийт үнийн дүн" value={`${totalCargoPrice.toLocaleString()}₮`} />
-                     <Separator/>
                     <DetailItem icon={statusInfo.icon} label="Статус" value={<Badge variant={statusInfo.variant}>{statusInfo.text}</Badge>} />
                     <DetailItem icon={Calendar} label="Бүртгэсэн огноо" value={format(contract.createdAt, 'yyyy-MM-dd HH:mm')} />
                 </CardContent>
@@ -752,3 +746,4 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
