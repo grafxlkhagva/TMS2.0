@@ -577,33 +577,32 @@ export default function ContractedTransportDetailPage() {
       </div>
       
         <div className="space-y-6">
-            <Card>
-                <CardHeader className="relative">
-                    <CardTitle>Гэрээний дэлгэрэнгүй</CardTitle>
-                     <div className="absolute top-4 right-4 flex items-center gap-2">
-                         <Badge variant={statusInfo.variant} className="py-1 px-3">
-                            <statusInfo.icon className="mr-1.5 h-3 w-3" />
-                            {statusInfo.text}
-                        </Badge>
-                        <Button asChild>
-                            <Link href={`/contracted-transport/${id}/edit`}>
-                                <Edit className="mr-2 h-4 w-4" /> Засварлах
-                            </Link>
-                        </Button>
+           <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <CardTitle>Гэрээний дэлгэрэнгүй</CardTitle>
+                        <div className="flex items-center gap-2">
+                             <Badge variant={statusInfo.variant} className="py-1 px-3">
+                                <statusInfo.icon className="mr-1.5 h-3 w-3" />
+                                {statusInfo.text}
+                            </Badge>
+                            <Button asChild size="sm">
+                                <Link href={`/contracted-transport/${id}/edit`}>
+                                    <Edit className="mr-2 h-4 w-4" /> Засварлах
+                                </Link>
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                  <CardContent className="space-y-6">
                     <Separator />
-                    <h3 className="font-semibold text-base">Ерөнхий мэдээлэл</h3>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
                         <DetailItem icon={User} label="Харилцагч" value={contract.customerName} />
                         <DetailItem icon={User} label="Тээврийн менежер" value={relatedData.transportManagerName} />
                         <DetailItem icon={Calendar} label="Гэрээний хугацаа" value={`${format(contract.startDate, 'yyyy-MM-dd')} - ${format(contract.endDate, 'yyyy-MM-dd')}`} />
                         <DetailItem icon={Calendar} label="Давтамж" value={contract.frequency === 'Custom' ? `${frequencyTranslations[contract.frequency]} (${contract.customFrequencyDetails})` : frequencyTranslations[contract.frequency]} />
-                        <DetailItem icon={Calendar} label="Бүртгэсэн огноо" value={format(contract.createdAt, 'yyyy-MM-dd HH:mm')} />
                     </div>
                     <Separator/>
-                    <h3 className="font-semibold text-base">Чиглэл ба Ачааны мэдээлэл</h3>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
                         <DetailItem icon={MapPin} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`} />
                         <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`} />
@@ -698,15 +697,17 @@ export default function ContractedTransportDetailPage() {
 
              <Card>
                 <CardHeader>
-                    <CardTitle>Тээвэрлэлтийн гүйцэтгэл</CardTitle>
-                    <CardDescription>Гэрээний дагуу хийгдэх тээвэрлэлтийн явцыг хянах хэсэг.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex justify-end mb-4">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle>Тээвэрлэлтийн гүйцэтгэл</CardTitle>
+                            <CardDescription>Гэрээний дагуу хийгдэх тээвэрлэлтийн явцыг хянах хэсэг.</CardDescription>
+                        </div>
                         <Button onClick={() => setIsExecutionDialogOpen(true)}>
                             <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
                         </Button>
                     </div>
+                </CardHeader>
+                <CardContent>
                     <DndContext
                         onDragEnd={handleDragEnd}
                         collisionDetection={closestCenter}
