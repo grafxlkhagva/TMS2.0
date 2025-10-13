@@ -1,10 +1,11 @@
 
+
 'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, Check, X, MoreHorizontal, MoveRight, Route } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
@@ -33,6 +34,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { Timestamp } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 
 const newExecutionFormSchema = z.object({
@@ -73,6 +76,26 @@ function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, lab
   );
 }
 
+const statusColorMap = {
+    'Хүлээгдэж буй': 'bg-gray-500',
+    'Ачиж буй': 'bg-blue-500',
+    'Буулгаж буй': 'bg-yellow-500',
+    'Хүргэгдсэн': 'bg-green-500',
+};
+
+
+const toDateSafe = (date: any): Date => {
+  if (date instanceof Timestamp) return date.toDate();
+  if (date instanceof Date) return date;
+  if (typeof date === 'string' || typeof date === 'number') {
+    const parsed = new Date(date);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+  return new Date(); 
+};
+
 export default function ContractedTransportDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -101,6 +124,8 @@ export default function ContractedTransportDetailPage() {
       transportManagerName: '',
   });
 
+  const [statusChange, setStatusChange] = React.useState<{ execution: ContractedTransportExecution, newStatus: string } | null>(null);
+
   const executionStatuses = React.useMemo(() => {
     if (!contract) return ['Хүлээгдэж буй', 'Ачиж буй', 'Буулгаж буй', 'Хүргэгдсэн'];
     return [
@@ -111,22 +136,6 @@ export default function ContractedTransportDetailPage() {
         'Хүргэгдсэн'
     ];
   }, [contract]);
-
-  const statusTranslation = React.useMemo(() => {
-    const baseTranslations: Record<string, string> = {
-        Pending: 'Хүлээгдэж буй',
-        Loading: 'Ачиж буй',
-        Unloading: 'Буулгаж буй',
-        Delivered: 'Хүргэгдсэн',
-    };
-    if (contract) {
-        contract.routeStops.forEach(stop => {
-            baseTranslations[stop.name] = stop.name;
-        });
-    }
-    return baseTranslations;
-  }, [contract]);
-
 
   const newExecutionForm = useForm<NewExecutionFormValues>({
     resolver: zodResolver(newExecutionFormSchema),
@@ -157,17 +166,17 @@ export default function ContractedTransportDetailPage() {
         }
         
         const data = contractDocSnap.data();
-        const fetchedContract = {
+        const fetchedContract: ContractedTransport = {
             id: contractDocSnap.id,
             ...data,
-            createdAt: data.createdAt.toDate(),
-            startDate: data.startDate.toDate(),
-            endDate: data.endDate.toDate(),
+            createdAt: toDateSafe(data.createdAt),
+            startDate: toDateSafe(data.startDate),
+            endDate: toDateSafe(data.endDate),
             assignedDrivers: data.assignedDrivers || [],
             assignedVehicles: data.assignedVehicles || [],
             routeStops: data.routeStops || [],
             cargoItems: data.cargoItems || [],
-        } as ContractedTransport;
+        };
         setContract(fetchedContract);
         
         const [
@@ -200,8 +209,8 @@ export default function ContractedTransportDetailPage() {
         const executionsData = executionsSnap.docs.map(doc => ({
               id: doc.id,
               ...doc.data(),
-              date: doc.data().date.toDate(),
-              createdAt: doc.data().createdAt.toDate(),
+              date: toDateSafe(doc.data().date),
+              createdAt: toDateSafe(doc.data().createdAt),
           } as ContractedTransportExecution));
 
         setExecutions(executionsData);
@@ -288,6 +297,7 @@ export default function ContractedTransportDetailPage() {
     
     const handleRemoveDriver = async (driverToRemove: {driverId: string}) => {
         if (!id || !contract) return;
+        setIsSubmitting(true);
         try {
             const batch = writeBatch(db);
             const contractRef = doc(db, 'contracted_transports', id);
@@ -296,7 +306,7 @@ export default function ContractedTransportDetailPage() {
                  batch.update(contractRef, { assignedDrivers: arrayRemove(driverDataToRemove) });
             }
             
-            const pendingExecs = executions.filter(e => e.status === 'Pending' && e.driverId === driverToRemove.driverId);
+            const pendingExecs = executions.filter(e => e.status === 'Хүлээгдэж буй' && e.driverId === driverToRemove.driverId);
             pendingExecs.forEach(exec => {
                 const execRef = doc(db, 'contracted_transport_executions', exec.id);
                 batch.update(execRef, { driverId: null, driverName: null });
@@ -305,10 +315,13 @@ export default function ContractedTransportDetailPage() {
             await batch.commit();
 
             setContract(prev => prev ? { ...prev, assignedDrivers: prev.assignedDrivers.filter(d => d.driverId !== driverToRemove.driverId) } : null);
+            setExecutions(prev => prev.map(e => pendingExecs.some(pe => pe.id === e.id) ? {...e, driverId: undefined, driverName: undefined} : e));
             
             toast({ title: "Амжилттай", description: "Жолоочийг хаслаа."});
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч хасахад алдаа гарлаа.'});
+        } finally {
+            setIsSubmitting(false);
         }
     }
     
@@ -340,6 +353,7 @@ export default function ContractedTransportDetailPage() {
 
     const handleRemoveVehicle = async (vehicleToRemove: {vehicleId: string}) => {
         if (!id || !contract) return;
+        setIsSubmitting(true);
         try {
             const batch = writeBatch(db);
             const contractRef = doc(db, 'contracted_transports', id);
@@ -349,16 +363,21 @@ export default function ContractedTransportDetailPage() {
                  batch.update(contractRef, { assignedVehicles: arrayRemove(vehicleDataToRemove) });
             }
 
-            const pendingExecs = executions.filter(e => e.status === 'Pending' && e.vehicleId === vehicleToRemove.vehicleId);
+            const pendingExecs = executions.filter(e => e.status === 'Хүлээгдэж буй' && e.vehicleId === vehicleToRemove.vehicleId);
             pendingExecs.forEach(exec => {
                 const execRef = doc(db, 'contracted_transport_executions', exec.id);
                 batch.update(execRef, { vehicleId: null, vehicleLicense: null });
             })
             await batch.commit();
+
             setContract(prev => prev ? { ...prev, assignedVehicles: prev.assignedVehicles.filter(v => v.vehicleId !== vehicleToRemove.vehicleId) } : null);
+            setExecutions(prev => prev.map(e => pendingExecs.some(pe => pe.id === e.id) ? {...e, vehicleId: undefined, vehicleLicense: undefined} : e));
+
             toast({ title: "Амжилттай", description: "Тээврийн хэрэгслийг хаслаа."});
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл хасахад алдаа гарлаа.'});
+        } finally {
+            setIsSubmitting(false);
         }
     }
 
@@ -399,8 +418,9 @@ export default function ContractedTransportDetailPage() {
         }
     }
     
-    const handleUpdateExecution = async (execution: ContractedTransportExecution, newStatus: string) => {
-        if (!execution) return;
+    const handleUpdateExecution = async () => {
+        if (!statusChange) return;
+        const { execution, newStatus } = statusChange;
     
         setIsSubmitting(true);
         try {
@@ -422,32 +442,17 @@ export default function ContractedTransportDetailPage() {
                 statusHistory: updatedStatusHistory as any
             } : ex));
 
-            toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${statusTranslation[newStatus] || newStatus}' төлөвт шилжлээ.` });
+            toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${newStatus}' төлөвт шилжлээ.` });
     
         } catch (error) {
             console.error("Error updating execution:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэлийн явц шинэчлэхэд алдаа гарлаа.' });
         } finally {
             setIsSubmitting(false);
+            setStatusChange(null);
         }
     }
     
-    const onMoveBackward = async (execution: ContractedTransportExecution) => {
-        const currentIndex = executionStatuses.indexOf(execution.status);
-        if (currentIndex > 0) {
-            const newStatus = executionStatuses[currentIndex - 1];
-            await handleUpdateExecution(execution, newStatus);
-        }
-    };
-    
-    const onMoveForward = async (execution: ContractedTransportExecution) => {
-        const currentIndex = executionStatuses.indexOf(execution.status);
-        if (currentIndex < executionStatuses.length - 1) {
-            const newStatus = executionStatuses[currentIndex + 1];
-            await handleUpdateExecution(execution, newStatus);
-        }
-    };
-
 
   if (isLoading) {
     return (
@@ -482,44 +487,33 @@ export default function ContractedTransportDetailPage() {
                 Гэрээний дугаар: {contract.contractNumber}
                 </p>
             </div>
+             <Button asChild size="sm">
+                <Link href={`/contracted-transport/${id}/edit`}>
+                    <Edit className="mr-2 h-4 w-4" /> Засварлах
+                </Link>
+            </Button>
         </div>
       </div>
       
-        <div className="space-y-6">
-           <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-start">
-                        <CardTitle>Гэрээний дэлгэрэнгүй</CardTitle>
-                         <div className="flex items-center gap-2">
-                            <Badge variant={statusInfo.variant} className="py-1 px-3">
-                                <statusInfo.icon className="mr-1.5 h-3 w-3" />
-                                {statusInfo.text}
-                            </Badge>
-                            <Button asChild size="sm">
-                                <Link href={`/contracted-transport/${id}/edit`}>
-                                    <Edit className="mr-2 h-4 w-4" /> Засварлах
-                                </Link>
-                            </Button>
-                         </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <Separator/>
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
-                        <DetailItem icon={User} label="Харилцагч" value={contract.customerName} />
-                        <DetailItem icon={User} label="Тээврийн менежер" value={relatedData.transportManagerName} />
-                        <DetailItem icon={Calendar} label="Гэрээний хугацаа" value={`${format(contract.startDate, 'yyyy-MM-dd')} - ${format(contract.endDate, 'yyyy-MM-dd')}`} />
-                        <DetailItem icon={Calendar} label="Давтамж" value={contract.frequency === 'Custom' ? `${frequencyTranslations[contract.frequency]} (${contract.customFrequencyDetails})` : frequencyTranslations[contract.frequency]} />
-                    </div>
-                </CardContent>
-            </Card>
-            
-             <div className="grid md:grid-cols-2 gap-6">
-                 <Card>
+        <div className="grid md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 space-y-6">
+                <Card>
                     <CardHeader>
-                         <div className="flex justify-between items-center">
-                            <CardTitle>Маршрут ба Ачаа</CardTitle>
+                        <CardTitle>Гэрээний дэлгэрэнгүй</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
+                            <DetailItem icon={User} label="Харилцагч" value={contract.customerName} />
+                            <DetailItem icon={User} label="Тээврийн менежер" value={relatedData.transportManagerName} />
+                            <DetailItem icon={Calendar} label="Гэрээний хугацаа" value={`${format(contract.startDate, 'yyyy-MM-dd')} - ${format(contract.endDate, 'yyyy-MM-dd')}`} />
+                            <DetailItem icon={Calendar} label="Давтамж" value={contract.frequency === 'Custom' ? `${frequencyTranslations[contract.frequency]} (${contract.customFrequencyDetails})` : frequencyTranslations[contract.frequency]} />
+                             <DetailItem icon={Info} label="Статус" value={<Badge variant={statusInfo.variant} className="py-1 px-3"><statusInfo.icon className="mr-1.5 h-3 w-3" />{statusInfo.text}</Badge>} />
                         </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Маршрут ба Ачаа</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid sm:grid-cols-2 gap-x-6 gap-y-6">
@@ -561,7 +555,9 @@ export default function ContractedTransportDetailPage() {
                         </Table>
                     </CardContent>
                 </Card>
-                <Card>
+            </div>
+            <div className="md:col-span-1">
+                 <Card>
                     <CardHeader>
                         <CardTitle>Оноосон Жолооч ба Т/Х</CardTitle>
                     </CardHeader>
@@ -579,7 +575,7 @@ export default function ContractedTransportDetailPage() {
                                         <Command><CommandInput placeholder="Жолооч хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
                                             {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
                                                 <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={() => handleAddDriver(d.id)} disabled={isSubmitting}>
-                                                    <Check className={cn("mr-2 h-4 w-4", assignedDriverIds.includes(d.id) ? "opacity-100" : "opacity-0")}/>
+                                                    <CheckCircle className={cn("mr-2 h-4 w-4", assignedDriverIds.includes(d.id) ? "opacity-100" : "opacity-0")}/>
                                                     <span>{d.display_name} ({d.phone_number})</span>
                                                 </CommandItem>
                                             ))}
@@ -591,7 +587,7 @@ export default function ContractedTransportDetailPage() {
                                 {contract.assignedDrivers.length > 0 ? ( contract.assignedDrivers.map(driver => (
                                     <div key={driver.driverId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
                                         <div><p className="font-medium">{driver.driverName}</p><p className="text-xs text-muted-foreground">{driver.driverPhone}</p></div>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveDriver(driver)}><XCircle className="h-4 w-4 text-destructive"/></Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveDriver(driver)} disabled={isSubmitting}><XCircle className="h-4 w-4 text-destructive"/></Button>
                                     </div>
                                 ))) : (<p className="text-sm text-muted-foreground text-center py-1">Жолооч оноогоогүй.</p>)}
                             </div>
@@ -610,7 +606,7 @@ export default function ContractedTransportDetailPage() {
                                         <Command><CommandInput placeholder="Машин хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
                                             {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
                                                 <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={() => handleAddVehicle(v.id)} disabled={isSubmitting}>
-                                                     <Check className={cn("mr-2 h-4 w-4", assignedVehicleIds.includes(v.id) ? "opacity-100" : "opacity-0")}/>
+                                                     <CheckCircle className={cn("mr-2 h-4 w-4", assignedVehicleIds.includes(v.id) ? "opacity-100" : "opacity-0")}/>
                                                     <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
                                                 </CommandItem>
                                             ))}
@@ -621,8 +617,8 @@ export default function ContractedTransportDetailPage() {
                              <div className="space-y-2">
                                 {contract.assignedVehicles.length > 0 ? ( contract.assignedVehicles.map(vehicle => (
                                     <div key={vehicle.vehicleId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
-                                        <div><p className="font-medium">{vehicle.modelName}</p><p className="text-xs text-muted-foreground font-mono">{vehicle.licensePlate} {vehicle.trailerLicensePlate && `/ ${vehicle.trailerLicensePlate}`}</p></div>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveVehicle(vehicle)}><XCircle className="h-4 w-4 text-destructive"/></Button>
+                                        <div><p className="font-medium">{vehicle.licensePlate}</p><p className="text-xs text-muted-foreground font-mono">{vehicle.modelName} {vehicle.trailerLicensePlate && `/ ${vehicle.trailerLicensePlate}`}</p></div>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveVehicle(vehicle)} disabled={isSubmitting}><XCircle className="h-4 w-4 text-destructive"/></Button>
                                     </div>
                                 ))) : (<p className="text-sm text-muted-foreground text-center py-1">Т/Х оноогоогүй.</p>)}
                             </div>
@@ -630,59 +626,72 @@ export default function ContractedTransportDetailPage() {
                     </CardContent>
                 </Card>
             </div>
+        </div>
             
-             <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <CardTitle>Тээвэрлэлтийн гүйцэтгэл</CardTitle>
-                            <CardDescription>Гэрээний дагуу хийгдэх тээвэрлэлтийн явцыг хянах хэсэг.</CardDescription>
-                        </div>
-                        <Button onClick={() => setIsExecutionDialogOpen(true)}>
-                            <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
-                        </Button>
+         <Card>
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle>Тээвэрлэлтийн гүйцэтгэл</CardTitle>
+                        <CardDescription>Гэрээний дагуу хийгдэх тээвэрлэлтийн явцыг хянах хэсэг.</CardDescription>
                     </div>
-                </CardHeader>
-                <CardContent className="overflow-x-auto">
-                   <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(180px, 1fr))`}}>
-                         {executionStatuses.map(status => (
-                            <div key={status} className="p-2 rounded-lg bg-muted/50">
-                                <h3 className="font-semibold text-center text-sm p-2">{statusTranslation[status] || status}</h3>
-                                <div className="space-y-2 min-h-24">
+                    <Button onClick={() => setIsExecutionDialogOpen(true)}>
+                        <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
+                    </Button>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="flex items-center justify-between mb-4 text-xs text-muted-foreground">
+                    <span>{executionStatuses[0]}</span>
+                    <span>{executionStatuses[executionStatuses.length - 1]}</span>
+                </div>
+                 <div className="relative pt-1">
+                    <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-muted">
+                    {executionStatuses.slice(0, -1).map((status, index) => {
+                        const color = statusColorMap[status as keyof typeof statusColorMap] || 'bg-gray-200';
+                        return <div key={status} style={{ width: `${100 / (executionStatuses.length-1)}%` }} className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${color}`}></div>
+                    })}
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(160px, 1fr))`}}>
+                        {executionStatuses.map(status => (
+                            <div key={status} className="p-1 rounded-lg">
+                                <h3 className={`font-semibold text-center text-xs p-2 rounded-md ${statusColorMap[status as keyof typeof statusColorMap] || 'bg-gray-200'} text-white`}>
+                                    {status}
+                                </h3>
+                                <div className="space-y-1 min-h-20 mt-2">
                                     {executions.filter(ex => ex.status === status).map(ex => (
-                                        <Card className="text-xs mb-2 touch-none" key={ex.id}>
-                                            <CardContent className="p-2 relative">
-                                                <DropdownMenu>
+                                        <Card 
+                                            key={ex.id} 
+                                            className="text-xs mb-2 touch-none cursor-grab"
+                                        >
+                                            <CardContent className="p-2">
+                                                <p className="font-semibold pr-6">Огноо: {format(ex.date, 'yyyy-MM-dd')}</p>
+                                                <div className="text-muted-foreground">
+                                                    <p>Жолооч: {ex.driverName || 'TBA'}</p>
+                                                    <p>Машин: {ex.vehicleLicense || 'TBA'}</p>
+                                                </div>
+                                                 <DropdownMenu>
                                                   <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6">
+                                                    <Button variant="ghost" size="icon" className="absolute top-0 right-0 h-6 w-6">
                                                       <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                   </DropdownMenuTrigger>
                                                   <DropdownMenuContent align="end">
-                                                     <DropdownMenuItem 
-                                                        onSelect={() => onMoveForward(ex)}
-                                                        disabled={isSubmitting || executionStatuses.indexOf(ex.status) === executionStatuses.length - 1}
-                                                     >
-                                                      <MoveRight className="mr-2 h-4 w-4" />
-                                                      <span>Урагшлуулах</span>
+                                                     <DropdownMenuItem onSelect={() => setStatusChange({execution: ex, newStatus: executionStatuses[executionStatuses.indexOf(ex.status) -1]})} disabled={isSubmitting || executionStatuses.indexOf(ex.status) === 0}>
+                                                      <ArrowLeft className="mr-2 h-4 w-4" /> Ухраах
                                                     </DropdownMenuItem>
-                                                     <DropdownMenuItem 
-                                                        onSelect={() => onMoveBackward(ex)}
-                                                        disabled={isSubmitting || executionStatuses.indexOf(ex.status) === 0}
-                                                     >
-                                                      <ArrowLeft className="mr-2 h-4 w-4" />
-                                                      <span>Ухраах</span>
+                                                     <DropdownMenuItem onSelect={() => setStatusChange({execution: ex, newStatus: executionStatuses[executionStatuses.indexOf(ex.status) + 1]})} disabled={isSubmitting || executionStatuses.indexOf(ex.status) === executionStatuses.length - 1}>
+                                                      <Route className="mr-2 h-4 w-4" /> Урагшлуулах
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem onSelect={() => setExecutionToDelete(ex)} className="text-destructive focus:text-destructive">
-                                                      <Trash2 className="mr-2 h-4 w-4" />
-                                                      <span>Устгах</span>
+                                                      <Trash2 className="mr-2 h-4 w-4" /> Устгах
                                                     </DropdownMenuItem>
                                                   </DropdownMenuContent>
                                                 </DropdownMenu>
-                                                <p className="font-semibold pr-6">Огноо: {format(ex.date, 'yyyy-MM-dd')}</p>
-                                                <p>Жолооч: {ex.driverName || 'TBA'}</p>
-                                                <p>Машин: {ex.vehicleLicense || 'TBA'}</p>
                                             </CardContent>
                                         </Card>
                                     ))}
@@ -690,9 +699,9 @@ export default function ContractedTransportDetailPage() {
                             </div>
                         ))}
                     </div>
-                </CardContent>
-            </Card>
-        </div>
+                </div>
+            </CardContent>
+        </Card>
 
 
         <Dialog open={isExecutionDialogOpen} onOpenChange={setIsExecutionDialogOpen}>
@@ -748,6 +757,25 @@ export default function ContractedTransportDetailPage() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        <AlertDialog open={!!statusChange} onOpenChange={() => setStatusChange(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Та статусыг өөрчлөхдөө итгэлтэй байна уу?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Та тээврийн явцыг "{statusChange?.execution.status}" төлвөөс 
+                    "{statusChange?.newStatus}" төлөв рүү шилжүүлэх гэж байна.
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setStatusChange(null)}>Цуцлах</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleUpdateExecution} disabled={isSubmitting}>
+                        {isSubmitting ? "Шинэчилж байна..." : "Тийм, шилжүүлэх"}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
+
