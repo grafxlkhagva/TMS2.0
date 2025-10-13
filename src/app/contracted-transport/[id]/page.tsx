@@ -40,6 +40,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { Timestamp } from 'firebase/firestore';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 
 const newExecutionFormSchema = z.object({
@@ -503,7 +504,49 @@ export default function ContractedTransportDetailPage() {
       </div>
        <div className="grid lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-6">
-            {/* Main content here, like Kanban board */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Тээвэрлэлтийн гүйцэтгэл</CardTitle>
+                    <CardDescription>Гэрээний дагуу хийгдэх тээвэрлэлтийн явцыг хянах хэсэг.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex justify-end mb-4">
+                        <Button onClick={() => setIsExecutionDialogOpen(true)}>
+                            <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
+                        </Button>
+                    </div>
+                    <div className="grid grid-cols-5 gap-4">
+                        {executionStatuses.map(status => (
+                            <div key={status} className="p-2 rounded-lg bg-muted/50">
+                                <h3 className="font-semibold text-center text-sm p-2">{statusTranslation[status]}</h3>
+                                <div className="space-y-2 min-h-24">
+                                {executions.filter(ex => ex.status === status).map(ex => (
+                                    <Card key={ex.id} className="text-xs">
+                                        <CardContent className="p-2">
+                                            <p className="font-semibold">Огноо: {format(ex.date, 'yyyy-MM-dd')}</p>
+                                            <p>Жолооч: {ex.driverName || 'TBA'}</p>
+                                            <p>Машин: {ex.vehicleLicense || 'TBA'}</p>
+                                            <div className="mt-2 flex justify-end gap-1">
+                                                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setExecutionToDelete(ex)}><Trash2 className="h-3 w-3 text-destructive"/></Button>
+                                                {status !== 'Delivered' && (
+                                                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => {
+                                                        setExecutionToUpdate(ex);
+                                                        setUpdateAction(status === 'Pending' ? 'load' : status === 'Unloading' ? 'unload' : null);
+                                                        if (status !== 'Pending' && status !== 'Unloading') handleUpdateExecution({});
+                                                    }}>
+                                                        <MoveRight className="h-3 w-3"/>
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
         </div>
         <div className="space-y-6 sticky top-6">
             <Card>
@@ -519,6 +562,31 @@ export default function ContractedTransportDetailPage() {
                      <Separator/>
                     <DetailItem icon={statusInfo.icon} label="Статус" value={<Badge variant={statusInfo.variant}>{statusInfo.text}</Badge>} />
                     <DetailItem icon={Calendar} label="Бүртгэсэн огноо" value={format(contract.createdAt, 'yyyy-MM-dd HH:mm')} />
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader><CardTitle>Чиглэл ба Ачааны мэдээлэл</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                    <DetailItem icon={MapPin} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`} />
+                    <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`} />
+                    <DetailItem icon={MapIcon} label="Нийт зам" value={`${contract.route.totalDistance} км`} />
+                    <Separator/>
+                     <Table>
+                        <TableHeader>
+                            <TableRow><TableHead>Ачаа</TableHead><TableHead className="text-right">Үнэ (₮)</TableHead></TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {contract.cargoItems.map((item, index) => (
+                            <TableRow key={item.id || index}>
+                                <TableCell>
+                                    <p className="font-medium">{item.name}</p>
+                                    <p className="text-xs text-muted-foreground">{item.quantity} {item.unit} ({relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId})</p>
+                                </TableCell>
+                                <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                     </Table>
                 </CardContent>
             </Card>
             <Card>
@@ -625,6 +693,35 @@ export default function ContractedTransportDetailPage() {
                      </Popover>
                 </CardFooter>
             </Card>
+             <Card>
+                <CardHeader>
+                    <CardTitle>Маршрутын зогсоол батлах</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Form {...routeStopForm}>
+                        <form onSubmit={routeStopForm.handleSubmit(onRouteStopSubmit)} className="space-y-4">
+                            <FormField control={routeStopForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын нэр</FormLabel><FormControl><Input placeholder="Эмээлт" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                            <FormField control={routeStopForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>Тайлбар</FormLabel><FormControl><Input placeholder="Бичиг баримт шалгуулах" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                            <Button type="submit" disabled={isSubmittingStop}>
+                                {isSubmittingStop && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                Зогсоол нэмэх
+                            </Button>
+                        </form>
+                    </Form>
+                     <Separator className="my-4"/>
+                     <div className="space-y-2">
+                        {contract.routeStops.map(stop => (
+                            <div key={stop.id} className="flex justify-between items-center text-sm p-2 rounded-md hover:bg-muted">
+                                <div>
+                                    <p className="font-medium">{stop.name}</p>
+                                    <p className="text-xs text-muted-foreground">{stop.description}</p>
+                                </div>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveStop(stop)}><XCircle className="h-4 w-4 text-destructive"/></Button>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
         </div>
        </div>
 
@@ -661,10 +758,37 @@ export default function ContractedTransportDetailPage() {
             </AlertDialogContent>
         </AlertDialog>
 
+        <Dialog open={!!executionToUpdate && updateAction === 'load'} onOpenChange={() => setExecutionToUpdate(null)}>
+             <DialogContent>
+                <DialogHeader><DialogTitle>Ачилт эхлүүлэх</DialogTitle></DialogHeader>
+                <Form {...loadingForm}>
+                    <form onSubmit={loadingForm.handleSubmit(handleUpdateExecution)} className="space-y-4 py-4" id="loading-form">
+                        <FormField control={loadingForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                        <FormField control={loadingForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Машин сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.modelName} ({v.licensePlate})</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                        <FormField control={loadingForm.control} name="loadingWeight" render={({ field }) => ( <FormItem><FormLabel>Ачсан жин (тонн)</FormLabel><FormControl><Input type="number" placeholder="25" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                    </form>
+                </Form>
+                <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                    <Button type="submit" form="loading-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Эхлүүлэх</Button>
+                </DialogFooter>
+             </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!executionToUpdate && updateAction === 'unload'} onOpenChange={() => setExecutionToUpdate(null)}>
+             <DialogContent>
+                <DialogHeader><DialogTitle>Буулгалт хийх</DialogTitle></DialogHeader>
+                 <Form {...unloadingForm}>
+                    <form onSubmit={unloadingForm.handleSubmit(handleUpdateExecution)} className="space-y-4 py-4" id="unloading-form">
+                        <FormField control={unloadingForm.control} name="unloadingWeight" render={({ field }) => ( <FormItem><FormLabel>Буулгасан жин (тонн)</FormLabel><FormControl><Input type="number" placeholder="25" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                    </form>
+                </Form>
+                <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                    <Button type="submit" form="unloading-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хүргэгдсэн болгох</Button>
+                </DialogFooter>
+             </DialogContent>
+        </Dialog>
     </div>
   );
 }
-
-    
-
-    
