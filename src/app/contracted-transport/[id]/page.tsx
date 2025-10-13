@@ -521,42 +521,36 @@ export default function ContractedTransportDetailPage() {
                 <CardTitle>Гэрээний дэлгэрэнгүй</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="grid lg:grid-cols-2 gap-6 items-start">
-                    <div className="space-y-4">
-                        <h3 className="font-semibold">Ерөнхий мэдээлэл</h3>
-                        <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
-                            <DetailItem icon={User} label="Харилцагч" value={contract.customerName} />
-                            <DetailItem icon={User} label="Тээврийн менежер" value={relatedData.transportManagerName} />
-                            <DetailItem icon={Calendar} label="Гэрээний хугацаа" value={`${format(contract.startDate, 'yyyy-MM-dd')} - ${format(contract.endDate, 'yyyy-MM-dd')}`} />
-                            <DetailItem icon={Calendar} label="Давтамж" value={contract.frequency === 'Custom' ? `${frequencyTranslations[contract.frequency]} (${contract.customFrequencyDetails})` : frequencyTranslations[contract.frequency]} />
-                            <DetailItem icon={statusInfo.icon} label="Статус" value={<Badge variant={statusInfo.variant}>{statusInfo.text}</Badge>} />
-                            <DetailItem icon={Calendar} label="Бүртгэсэн огноо" value={format(contract.createdAt, 'yyyy-MM-dd HH:mm')} />
-                        </div>
-                    </div>
-                     <div className="space-y-4">
-                        <h3 className="font-semibold">Чиглэл ба Ачааны мэдээлэл</h3>
-                        <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
-                            <DetailItem icon={MapPin} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`} />
-                            <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`} />
-                            <DetailItem icon={MapIcon} label="Нийт зам" value={`${contract.route.totalDistance} км`} />
-                        </div>
-                        <Separator/>
-                        <Table>
-                            <TableHeader><TableRow><TableHead>Ачаа</TableHead><TableHead>Баглаа</TableHead><TableHead className="text-right">Үнэ (₮)</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                            {contract.cargoItems.map((item, index) => (
-                                <TableRow key={item.id || index}>
-                                    <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
-                                    <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
-                                </TableRow>
-                            ))}
-                            </TableBody>
-                        </Table>
-                    </div>
+                <h3 className="font-semibold text-base">Ерөнхий мэдээлэл</h3>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+                    <DetailItem icon={User} label="Харилцагч" value={contract.customerName} />
+                    <DetailItem icon={User} label="Тээврийн менежер" value={relatedData.transportManagerName} />
+                    <DetailItem icon={Calendar} label="Гэрээний хугацаа" value={`${format(contract.startDate, 'yyyy-MM-dd')} - ${format(contract.endDate, 'yyyy-MM-dd')}`} />
+                    <DetailItem icon={Calendar} label="Давтамж" value={contract.frequency === 'Custom' ? `${frequencyTranslations[contract.frequency]} (${contract.customFrequencyDetails})` : frequencyTranslations[contract.frequency]} />
+                    <DetailItem icon={statusInfo.icon} label="Статус" value={<Badge variant={statusInfo.variant}>{statusInfo.text}</Badge>} />
+                    <DetailItem icon={Calendar} label="Бүртгэсэн огноо" value={format(contract.createdAt, 'yyyy-MM-dd HH:mm')} />
                 </div>
-                 <Separator/>
-                <div className="grid md:grid-cols-3 gap-6 pt-4">
+                <Separator/>
+                <h3 className="font-semibold text-base">Чиглэл ба Ачааны мэдээлэл</h3>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+                    <DetailItem icon={MapPin} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`} />
+                    <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`} />
+                    <DetailItem icon={MapIcon} label="Нийт зам" value={`${contract.route.totalDistance} км`} />
+                </div>
+                <Table>
+                    <TableHeader><TableRow><TableHead>Ачаа</TableHead><TableHead>Баглаа</TableHead><TableHead className="text-right">Үнэ (₮)</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                    {contract.cargoItems.map((item, index) => (
+                        <TableRow key={item.id || index}>
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
+                            <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
+                        </TableRow>
+                    ))}
+                    </TableBody>
+                </Table>
+                <Separator/>
+                 <div className="grid md:grid-cols-3 gap-6 pt-4">
                     <div>
                         <h3 className="font-semibold mb-2">Оноосон жолооч нар</h3>
                         <div className="space-y-2">
@@ -631,49 +625,49 @@ export default function ContractedTransportDetailPage() {
          </Card>
 
         <Card>
-                <CardHeader>
-                    <CardTitle>Тээвэрлэлтийн гүйцэтгэл</CardTitle>
-                    <CardDescription>Гэрээний дагуу хийгдэх тээвэрлэлтийн явцыг хянах хэсэг.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex justify-end mb-4">
-                        <Button onClick={() => setIsExecutionDialogOpen(true)}>
-                            <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
-                        </Button>
-                    </div>
-                    <div className="grid grid-cols-5 gap-4">
-                        {executionStatuses.map(status => (
-                            <div key={status} className="p-2 rounded-lg bg-muted/50">
-                                <h3 className="font-semibold text-center text-sm p-2">{statusTranslation[status]}</h3>
-                                <div className="space-y-2 min-h-24">
-                                {executions.filter(ex => ex.status === status).map(ex => (
-                                    <Card key={ex.id} className="text-xs">
-                                        <CardContent className="p-2">
-                                            <p className="font-semibold">Огноо: {format(ex.date, 'yyyy-MM-dd')}</p>
-                                            <p>Жолооч: {ex.driverName || 'TBA'}</p>
-                                            <p>Машин: {ex.vehicleLicense || 'TBA'}</p>
-                                            <div className="mt-2 flex justify-end gap-1">
-                                                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setExecutionToDelete(ex)}><Trash2 className="h-3 w-3 text-destructive"/></Button>
-                                                {status !== 'Delivered' && (
-                                                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => {
-                                                        setExecutionToUpdate(ex);
-                                                        setUpdateAction(status === 'Pending' ? 'load' : status === 'Unloading' ? 'unload' : null);
-                                                        if (status !== 'Pending' && status !== 'Unloading') handleUpdateExecution({});
-                                                    }}>
-                                                        <MoveRight className="h-3 w-3"/>
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                                </div>
+            <CardHeader>
+                <CardTitle>Тээвэрлэлтийн гүйцэтгэл</CardTitle>
+                <CardDescription>Гэрээний дагуу хийгдэх тээвэрлэлтийн явцыг хянах хэсэг.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex justify-end mb-4">
+                    <Button onClick={() => setIsExecutionDialogOpen(true)}>
+                        <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
+                    </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    {executionStatuses.map(status => (
+                        <div key={status} className="p-2 rounded-lg bg-muted/50">
+                            <h3 className="font-semibold text-center text-sm p-2">{statusTranslation[status]}</h3>
+                            <div className="space-y-2 min-h-24">
+                            {executions.filter(ex => ex.status === status).map(ex => (
+                                <Card key={ex.id} className="text-xs">
+                                    <CardContent className="p-2">
+                                        <p className="font-semibold">Огноо: {format(ex.date, 'yyyy-MM-dd')}</p>
+                                        <p>Жолооч: {ex.driverName || 'TBA'}</p>
+                                        <p>Машин: {ex.vehicleLicense || 'TBA'}</p>
+                                        <div className="mt-2 flex justify-end gap-1">
+                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setExecutionToDelete(ex)}><Trash2 className="h-3 w-3 text-destructive"/></Button>
+                                            {status !== 'Delivered' && (
+                                                <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => {
+                                                    setExecutionToUpdate(ex);
+                                                    setUpdateAction(status === 'Pending' ? 'load' : status === 'Unloading' ? 'unload' : null);
+                                                    if (status !== 'Pending' && status !== 'Unloading') handleUpdateExecution({});
+                                                }}>
+                                                    <MoveRight className="h-3 w-3"/>
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
                             </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
+      </div>
 
         <Dialog open={isExecutionDialogOpen} onOpenChange={setIsExecutionDialogOpen}>
             <DialogContent>
@@ -742,4 +736,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
