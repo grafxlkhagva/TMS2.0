@@ -113,7 +113,7 @@ export default function ContractedTransportDetailPage() {
 
   const [addDriverPopoverOpen, setAddDriverPopoverOpen] = React.useState(false);
   const [addVehiclePopoverOpen, setAddVehiclePopoverOpen] = React.useState(false);
-  const [isAddingStop, setIsAddingStop] = React.useState(false);
+  const [isStopDialogOpen, setIsStopDialogOpen] = React.useState(false);
   
   const [relatedData, setRelatedData] = React.useState({
       startRegionName: '',
@@ -266,24 +266,17 @@ export default function ContractedTransportDetailPage() {
         if (!id || !contract) return;
         setIsSubmitting(true);
         try {
-            const newDocRef = await addDoc(collection(db, 'contracted_transport_executions'), {
+            await addDoc(collection(db, 'contracted_transport_executions'), {
                 ...values,
                 contractId: id,
                 status: 'Pending',
                 statusHistory: [{ status: 'Pending', date: new Date() }],
                 createdAt: serverTimestamp(),
             });
-            const newDocSnap = await getDoc(newDocRef);
-            const newExecution = {
-              id: newDocSnap.id,
-              ...newDocSnap.data(),
-              date: newDocSnap.data()?.date.toDate(),
-              createdAt: newDocSnap.data()?.createdAt.toDate(),
-            } as ContractedTransportExecution;
-            setExecutions(prev => [...prev, newExecution])
-
+            
             toast({ title: 'Амжилттай', description: 'Шинэ гүйцэтгэл нэмэгдлээ.' });
             setIsExecutionDialogOpen(false);
+            fetchContractData();
         } catch (error) {
             console.error("Error adding execution:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэл нэмэхэд алдаа гарлаа.' });
@@ -420,7 +413,7 @@ export default function ContractedTransportDetailPage() {
             });
             toast({ title: "Амжилттай", description: "Маршрутын зогсоол нэмэгдлээ."});
             routeStopForm.reset();
-            setIsAddingStop(false);
+            setIsStopDialogOpen(false);
             fetchContractData();
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Зогсоол нэмэхэд алдаа гарлаа.'});
@@ -473,15 +466,21 @@ export default function ContractedTransportDetailPage() {
                 };
             }
             
-            const updatedData = {
+            const updatedExecutionData = {
+                ...execution,
                 ...dataToUpdate,
                 status: newStatus,
                 statusHistory: arrayUnion({ status: newStatus, date: Timestamp.now() }),
             };
     
-            await updateDoc(execRef, updatedData);
+            await updateDoc(execRef, {
+                ...dataToUpdate,
+                status: newStatus,
+                statusHistory: arrayUnion({ status: newStatus, date: Timestamp.now() }),
+            });
             
-            setExecutions(prev => prev.map(ex => ex.id === execution.id ? { ...ex, ...updatedData } : ex));
+            setExecutions(prev => prev.map(ex => ex.id === execution.id ? updatedExecutionData : ex));
+
             toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${statusTranslation[newStatus] || newStatus}' төлөвт шилжлээ.` });
     
         } catch (error) {
@@ -559,13 +558,13 @@ export default function ContractedTransportDetailPage() {
                 </CardContent>
             </Card>
 
-            <div className="grid md:grid-cols-3 gap-6">
-                 <Card className="md:col-span-2">
+            <div className="grid md:grid-cols-2 gap-6">
+                 <Card>
                     <CardHeader>
                         <CardTitle>Маршрут ба Ачаа</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
+                        <div className="grid sm:grid-cols-2 gap-x-6 gap-y-6">
                             <DetailItem icon={MapPin} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`} />
                             <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`} />
                             <DetailItem icon={MapIcon} label="Нийт зам" value={`${contract.route.totalDistance} км`} />
@@ -573,17 +572,21 @@ export default function ContractedTransportDetailPage() {
                         <Separator />
                          <div className="flex justify-between items-center">
                             <h3 className="font-semibold text-sm">Маршрутын зогсоол</h3>
-                            <Button variant="outline" size="sm" onClick={() => setIsAddingStop(true)}>
+                            <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
                                 <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
                             </Button>
                         </div>
                         <div className="space-y-1">
-                            {contract.routeStops.map(stop => (
-                                <div key={stop.id} className="flex justify-between items-center text-sm p-1 rounded-md hover:bg-muted">
-                                    <div><p className="font-medium">{stop.name}</p><p className="text-xs text-muted-foreground">{stop.description}</p></div>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveStop(stop)}><XCircle className="h-4 w-4 text-destructive"/></Button>
-                                </div>
-                            ))}
+                            {contract.routeStops.length > 0 ? (
+                                contract.routeStops.map(stop => (
+                                    <div key={stop.id} className="flex justify-between items-center text-sm p-1 rounded-md hover:bg-muted">
+                                        <div><p className="font-medium">{stop.name}</p><p className="text-xs text-muted-foreground">{stop.description}</p></div>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveStop(stop)}><XCircle className="h-4 w-4 text-destructive"/></Button>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-sm text-muted-foreground text-center py-1">Зогсоол бүртгэгдээгүй.</p>
+                            )}
                         </div>
                         <Separator />
                         <Table>
@@ -671,11 +674,17 @@ export default function ContractedTransportDetailPage() {
                                                     </Button>
                                                   </DropdownMenuTrigger>
                                                   <DropdownMenuContent align="end">
-                                                     <DropdownMenuItem onSelect={() => handleUpdateExecution(ex, executionStatuses[executionStatuses.indexOf(ex.status) + 1] as ContractedTransportExecutionStatus)}>
+                                                     <DropdownMenuItem 
+                                                        onSelect={() => handleUpdateExecution(ex, executionStatuses[executionStatuses.indexOf(ex.status) + 1] as ContractedTransportExecutionStatus)}
+                                                        disabled={executionStatuses.indexOf(ex.status) === executionStatuses.length - 1}
+                                                     >
                                                       <MoveRight className="mr-2 h-4 w-4" />
                                                       <span>Урагшлуулах</span>
                                                     </DropdownMenuItem>
-                                                     <DropdownMenuItem onSelect={() => handleUpdateExecution(ex, executionStatuses[executionStatuses.indexOf(ex.status) - 1] as ContractedTransportExecutionStatus)}>
+                                                     <DropdownMenuItem 
+                                                        onSelect={() => handleUpdateExecution(ex, executionStatuses[executionStatuses.indexOf(ex.status) - 1] as ContractedTransportExecutionStatus)}
+                                                        disabled={executionStatuses.indexOf(ex.status) === 0}
+                                                     >
                                                       <ArrowLeft className="mr-2 h-4 w-4" />
                                                       <span>Ухраах</span>
                                                     </DropdownMenuItem>
@@ -800,7 +809,7 @@ export default function ContractedTransportDetailPage() {
             </PopoverContent>
         </Popover>
         
-        <Dialog open={isAddingStop} onOpenChange={setIsAddingStop}>
+        <Dialog open={isStopDialogOpen} onOpenChange={setIsStopDialogOpen}>
             <DialogContent>
                  <DialogHeader>
                     <DialogTitle>Маршрутын зогсоол нэмэх</DialogTitle>
