@@ -372,7 +372,7 @@ export default function ContractedTransportDetailPage() {
             });
             toast({ title: "Амжилттай", description: "Жолооч нэмэгдлээ."});
             setAddDriverPopoverOpen(false);
-            await fetchContractData(false);
+            setContract(prev => prev ? ({...prev, assignedDrivers: [...prev.assignedDrivers, { driverId: driverToAdd.id, driverName: driverToAdd.display_name, driverPhone: driverToAdd.phone_number }]}) : null);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч нэмэхэд алдаа гарлаа.'});
         } finally {
@@ -385,9 +385,10 @@ export default function ContractedTransportDetailPage() {
         try {
             const batch = writeBatch(db);
             const contractRef = doc(db, 'contracted_transports', id);
-            batch.update(contractRef, {
-                 assignedDrivers: arrayRemove(contract.assignedDrivers.find(d => d.driverId === driverToRemove.driverId))
-            });
+            const driverDataToRemove = contract.assignedDrivers.find(d => d.driverId === driverToRemove.driverId);
+            if (driverDataToRemove) {
+                 batch.update(contractRef, { assignedDrivers: arrayRemove(driverDataToRemove) });
+            }
             
             const pendingExecs = executions.filter(e => e.status === 'Pending' && e.driverId === driverToRemove.driverId);
             pendingExecs.forEach(exec => {
@@ -398,7 +399,8 @@ export default function ContractedTransportDetailPage() {
             await batch.commit();
             
             toast({ title: "Амжилттай", description: "Жолоочийг хаслаа."});
-            await fetchContractData(false);
+             setContract(prev => prev ? ({ ...prev, assignedDrivers: prev.assignedDrivers.filter(d => d.driverId !== driverToRemove.driverId)}) : null);
+             setExecutions(prev => prev.map(e => e.driverId === driverToRemove.driverId && e.status === 'Pending' ? {...e, driverId: undefined, driverName: undefined} : e));
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч хасахад алдаа гарлаа.'});
         }
@@ -411,16 +413,17 @@ export default function ContractedTransportDetailPage() {
         setIsAddingVehicle(true);
         try {
             const contractRef = doc(db, 'contracted_transports', id);
+            const newVehicleData = {
+                vehicleId: vehicleToAdd.id,
+                licensePlate: vehicleToAdd.licensePlate,
+                modelName: `${vehicleToAdd.makeName} ${vehicleToAdd.modelName}`
+            };
             await updateDoc(contractRef, {
-                assignedVehicles: arrayUnion({
-                    vehicleId: vehicleToAdd.id,
-                    licensePlate: vehicleToAdd.licensePlate,
-                    modelName: `${vehicleToAdd.makeName} ${vehicleToAdd.modelName}`
-                })
+                assignedVehicles: arrayUnion(newVehicleData)
             });
             toast({ title: "Амжилттай", description: "Тээврийн хэрэгсэл нэмэгдлээ."});
             setAddVehiclePopoverOpen(false);
-            await fetchContractData(false);
+            setContract(prev => prev ? ({...prev, assignedVehicles: [...prev.assignedVehicles, newVehicleData]}) : null);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл нэмэхэд алдаа гарлаа.'});
         } finally {
@@ -433,9 +436,12 @@ export default function ContractedTransportDetailPage() {
         try {
              const batch = writeBatch(db);
             const contractRef = doc(db, 'contracted_transports', id);
-            batch.update(contractRef, {
-                 assignedVehicles: arrayRemove(contract.assignedVehicles.find(v => v.vehicleId === vehicleToRemove.vehicleId))
-            });
+            const vehicleDataToRemove = contract.assignedVehicles.find(v => v.vehicleId === vehicleToRemove.vehicleId);
+
+            if (vehicleDataToRemove) {
+                 batch.update(contractRef, { assignedVehicles: arrayRemove(vehicleDataToRemove) });
+            }
+
             const pendingExecs = executions.filter(e => e.status === 'Pending' && e.vehicleId === vehicleToRemove.vehicleId);
             pendingExecs.forEach(exec => {
                 const execRef = doc(db, 'contracted_transport_executions', exec.id);
@@ -444,7 +450,8 @@ export default function ContractedTransportDetailPage() {
             await batch.commit();
 
             toast({ title: "Амжилттай", description: "Тээврийн хэрэгслийг хаслаа."});
-            await fetchContractData(false);
+             setContract(prev => prev ? ({ ...prev, assignedVehicles: prev.assignedVehicles.filter(v => v.vehicleId !== vehicleToRemove.vehicleId)}) : null);
+            setExecutions(prev => prev.map(e => e.vehicleId === vehicleToRemove.vehicleId && e.status === 'Pending' ? {...e, vehicleId: undefined, vehicleLicense: undefined} : e));
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл хасахад алдаа гарлаа.'});
         }
@@ -464,7 +471,7 @@ export default function ContractedTransportDetailPage() {
             });
             toast({ title: "Амжилттай", description: "Маршрутын зогсоол нэмэгдлээ."});
             routeStopForm.reset();
-            await fetchContractData(false);
+            setContract(prev => prev ? ({...prev, routeStops: [...prev.routeStops, newStop]}) : null);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Зогсоол нэмэхэд алдаа гарлаа.'});
         } finally {
@@ -480,7 +487,7 @@ export default function ContractedTransportDetailPage() {
                  routeStops: arrayRemove(stopToRemove)
             });
             toast({ title: "Амжилттай", description: "Зогсоол хасагдлаа."});
-            await fetchContractData(false);
+            setContract(prev => prev ? ({...prev, routeStops: prev.routeStops.filter(s => s.id !== stopToRemove.id)}) : null);
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Зогсоол хасахад алдаа гарлаа.'});
         }
@@ -599,7 +606,7 @@ export default function ContractedTransportDetailPage() {
                 <CardHeader>
                     <div className="flex justify-between items-start">
                         <CardTitle>Гэрээний дэлгэрэнгүй</CardTitle>
-                        <div className="flex items-center gap-2">
+                         <div className="flex items-center gap-2">
                             <Badge variant={statusInfo.variant} className="py-1 px-3">
                                 <statusInfo.icon className="mr-1.5 h-3 w-3" />
                                 {statusInfo.text}
@@ -834,5 +841,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
-    
