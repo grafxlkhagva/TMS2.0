@@ -5,7 +5,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
@@ -33,9 +33,15 @@ import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { Timestamp } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 
 const newExecutionFormSchema = z.object({
@@ -567,7 +573,7 @@ export default function ContractedTransportDetailPage() {
                                 <h3 className="font-semibold text-sm">Оноосон жолооч нар</h3>
                                  <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm">
+                                        <Button variant="outline" size="sm" onClick={() => setAddDriverPopoverOpen(true)}>
                                             <PlusCircle className="mr-2 h-4 w-4"/> Жолооч нэмэх
                                         </Button>
                                     </PopoverTrigger>
@@ -575,7 +581,7 @@ export default function ContractedTransportDetailPage() {
                                         <Command><CommandInput placeholder="Жолооч хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
                                             {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
                                                 <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={() => handleAddDriver(d.id)} disabled={isSubmitting}>
-                                                    <CheckCircle className={cn("mr-2 h-4 w-4", assignedDriverIds.includes(d.id) ? "opacity-100" : "opacity-0")}/>
+                                                    <Check className={cn("mr-2 h-4 w-4", assignedDriverIds.includes(d.id) ? "opacity-100" : "opacity-0")}/>
                                                     <span>{d.display_name} ({d.phone_number})</span>
                                                 </CommandItem>
                                             ))}
@@ -598,7 +604,7 @@ export default function ContractedTransportDetailPage() {
                                 <h3 className="font-semibold text-sm">Оноосон тээврийн хэрэгсэл</h3>
                                 <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm">
+                                        <Button variant="outline" size="sm" onClick={() => setAddVehiclePopoverOpen(true)}>
                                             <PlusCircle className="mr-2 h-4 w-4"/> Т/Х нэмэх
                                         </Button>
                                     </PopoverTrigger>
@@ -606,7 +612,7 @@ export default function ContractedTransportDetailPage() {
                                         <Command><CommandInput placeholder="Машин хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
                                             {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
                                                 <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={() => handleAddVehicle(v.id)} disabled={isSubmitting}>
-                                                     <CheckCircle className={cn("mr-2 h-4 w-4", assignedVehicleIds.includes(v.id) ? "opacity-100" : "opacity-0")}/>
+                                                     <Check className={cn("mr-2 h-4 w-4", assignedVehicleIds.includes(v.id) ? "opacity-100" : "opacity-0")}/>
                                                     <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
                                                 </CommandItem>
                                             ))}
@@ -778,4 +784,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
