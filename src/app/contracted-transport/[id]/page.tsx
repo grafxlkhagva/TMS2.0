@@ -580,7 +580,7 @@ export default function ContractedTransportDetailPage() {
                             <TableRow key={item.id || index}>
                                 <TableCell>
                                     <p className="font-medium">{item.name}</p>
-                                    <p className="text-xs text-muted-foreground">{item.quantity} {item.unit} ({relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId})</p>
+                                    <p className="text-xs text-muted-foreground">{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</p>
                                 </TableCell>
                                 <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
                             </TableRow>
