@@ -4,7 +4,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, MoreHorizontal, MoveRight, ChevronsUpDown, Check, X } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, MoveRight, ChevronsUpDown, Check, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
@@ -48,18 +48,6 @@ const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
 });
 type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
-
-const loadingFormSchema = z.object({
-  driverId: z.string().min(1, "Жолооч сонгоно уу."),
-  vehicleId: z.string().min(1, "Машин сонгоно уу."),
-  loadingWeight: z.coerce.number().min(0.1, "Ачсан жинг оруулна уу."),
-});
-type LoadingFormValues = z.infer<typeof loadingFormSchema>;
-
-const unloadingFormSchema = z.object({
-  unloadingWeight: z.coerce.number().min(0.1, "Буулгасан жинг оруулна уу."),
-});
-type UnloadingFormValues = z.infer<typeof unloadingFormSchema>;
 
 const routeStopFormSchema = z.object({
   name: z.string().min(2, "Зогсоолын нэр дор хаяж 2 тэмдэгттэй байх ёстой."),
@@ -107,8 +95,6 @@ export default function ContractedTransportDetailPage() {
   
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isExecutionDialogOpen, setIsExecutionDialogOpen] = React.useState(false);
-  const [executionToUpdate, setExecutionToUpdate] = React.useState<ContractedTransportExecution | null>(null);
-  const [updateAction, setUpdateAction] = React.useState<'load' | 'unload' | null>(null);
   const [executionToDelete, setExecutionToDelete] = React.useState<ContractedTransportExecution | null>(null);
 
   const [addDriverPopoverOpen, setAddDriverPopoverOpen] = React.useState(false);
@@ -156,16 +142,6 @@ export default function ContractedTransportDetailPage() {
     defaultValues: { date: new Date() },
   });
   
-  const loadingForm = useForm<LoadingFormValues>({
-    resolver: zodResolver(loadingFormSchema),
-    defaultValues: { driverId: '', vehicleId: '', loadingWeight: 0 },
-  });
-  
-  const unloadingForm = useForm<UnloadingFormValues>({
-    resolver: zodResolver(unloadingFormSchema),
-    defaultValues: { unloadingWeight: 0 },
-  });
-
   const routeStopForm = useForm<RouteStopFormValues>({
     resolver: zodResolver(routeStopFormSchema),
     defaultValues: { name: '', description: '' }
@@ -255,12 +231,6 @@ export default function ContractedTransportDetailPage() {
       newExecutionForm.reset({ date: new Date() });
   }, [isExecutionDialogOpen, newExecutionForm]);
 
-  React.useEffect(() => {
-    if (executionToUpdate) {
-        if(updateAction === 'load') loadingForm.reset({ driverId: '', vehicleId: '', loadingWeight: 0 });
-        if(updateAction === 'unload') unloadingForm.reset({ unloadingWeight: 0});
-    }
-  }, [executionToUpdate, updateAction, loadingForm, unloadingForm]);
 
    const onNewExecutionSubmit = async (values: NewExecutionFormValues) => {
         if (!id || !contract) return;
@@ -436,45 +406,20 @@ export default function ContractedTransportDetailPage() {
         }
     }
     
-    const handleUpdateExecution = async (execution: ContractedTransportExecution, newStatus: ContractedTransportExecutionStatus, values?: LoadingFormValues | UnloadingFormValues) => {
+    const handleUpdateExecution = async (execution: ContractedTransportExecution, newStatus: ContractedTransportExecutionStatus) => {
         if (!execution) return;
     
         setIsSubmitting(true);
-        let dataToUpdate: any = {};
-
         try {
             const execRef = doc(db, 'contracted_transport_executions', execution.id);
             
-            if (newStatus === 'Loading' && values && 'loadingWeight' in values) {
-                const driver = contract?.assignedDrivers.find(d => d.driverId === values.driverId);
-                const vehicle = contract?.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
-                dataToUpdate = {
-                    ...values,
-                    driverName: driver?.driverName,
-                    vehicleLicense: vehicle?.licensePlate,
-                };
-            } else if (newStatus === 'Delivered' && values && 'unloadingWeight' in values) {
-                dataToUpdate = values;
-            } else if (newStatus === 'Pending') {
-                 dataToUpdate = {
-                    driverId: null,
-                    driverName: null,
-                    vehicleId: null,
-                    vehicleLicense: null,
-                    loadingWeight: null,
-                    unloadingWeight: null,
-                };
-            }
-            
             const updatedExecutionData = {
                 ...execution,
-                ...dataToUpdate,
                 status: newStatus,
                 statusHistory: arrayUnion({ status: newStatus, date: Timestamp.now() }),
             };
     
             await updateDoc(execRef, {
-                ...dataToUpdate,
                 status: newStatus,
                 statusHistory: arrayUnion({ status: newStatus, date: Timestamp.now() }),
             });
@@ -488,8 +433,6 @@ export default function ContractedTransportDetailPage() {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэлийн явц шинэчлэхэд алдаа гарлаа.' });
         } finally {
             setIsSubmitting(false);
-            setExecutionToUpdate(null);
-            setUpdateAction(null);
         }
     }
 
@@ -561,7 +504,12 @@ export default function ContractedTransportDetailPage() {
             <div className="grid md:grid-cols-2 gap-6">
                  <Card>
                     <CardHeader>
-                        <CardTitle>Маршрут ба Ачаа</CardTitle>
+                         <div className="flex justify-between items-center">
+                            <CardTitle>Маршрут ба Ачаа</CardTitle>
+                            <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
+                                <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid sm:grid-cols-2 gap-x-6 gap-y-6">
@@ -572,9 +520,6 @@ export default function ContractedTransportDetailPage() {
                         <Separator />
                          <div className="flex justify-between items-center">
                             <h3 className="font-semibold text-sm">Маршрутын зогсоол</h3>
-                             <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
-                                <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
-                            </Button>
                         </div>
                         <div className="space-y-1">
                             {contract.routeStops.length > 0 ? (
@@ -611,9 +556,23 @@ export default function ContractedTransportDetailPage() {
                         <div>
                              <div className="flex justify-between items-center mb-2">
                                 <h3 className="font-semibold text-sm">Оноосон жолооч нар</h3>
-                                <Button variant="outline" size="sm" onClick={() => setAddDriverPopoverOpen(true)}>
-                                    <PlusCircle className="mr-2 h-4 w-4"/> Жолооч нэмэх
-                                </Button>
+                                <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="sm">
+                                            <PlusCircle className="mr-2 h-4 w-4"/> Жолооч нэмэх
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80 p-0">
+                                        <Command><CommandInput placeholder="Жолооч хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
+                                            {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
+                                                <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={() => handleAddDriver(d.id)} disabled={isSubmitting}>
+                                                    <Check className={cn("mr-2 h-4 w-4", assignedDriverIds.includes(d.id) ? "opacity-100" : "opacity-0")}/>
+                                                    <span>{d.display_name} ({d.phone_number})</span>
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup></CommandList></Command>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                             <div className="space-y-2">
                                 {contract.assignedDrivers.length > 0 ? ( contract.assignedDrivers.map(driver => (
@@ -669,7 +628,7 @@ export default function ContractedTransportDetailPage() {
                                                 <DropdownMenu>
                                                   <DropdownMenuTrigger asChild>
                                                     <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6">
-                                                      <MoreHorizontal className="h-4 w-4" />
+                                                      <XCircle className="h-4 w-4" />
                                                     </Button>
                                                   </DropdownMenuTrigger>
                                                   <DropdownMenuContent align="end">
@@ -744,54 +703,6 @@ export default function ContractedTransportDetailPage() {
             </AlertDialogContent>
         </AlertDialog>
 
-        <Dialog open={!!executionToUpdate && updateAction === 'load'} onOpenChange={() => { setExecutionToUpdate(null); setUpdateAction(null); }}>
-             <DialogContent>
-                <DialogHeader><DialogTitle>Ачилт эхлүүлэх</DialogTitle></DialogHeader>
-                <Form {...loadingForm}>
-                    <form onSubmit={loadingForm.handleSubmit((values) => handleUpdateExecution(executionToUpdate!, 'Loading', values))} className="space-y-4 py-4" id="loading-form">
-                        <FormField control={loadingForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                        <FormField control={loadingForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Машин сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.modelName} ({v.licensePlate})</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                        <FormField control={loadingForm.control} name="loadingWeight" render={({ field }) => ( <FormItem><FormLabel>Ачсан жин (тонн)</FormLabel><FormControl><Input type="number" placeholder="25" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                    </form>
-                </Form>
-                <DialogFooter>
-                    <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                    <Button type="submit" form="loading-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Эхлүүлэх</Button>
-                </DialogFooter>
-             </DialogContent>
-        </Dialog>
-
-        <Dialog open={!!executionToUpdate && updateAction === 'unload'} onOpenChange={() => { setExecutionToUpdate(null); setUpdateAction(null); }}>
-             <DialogContent>
-                <DialogHeader><DialogTitle>Буулгалт хийх</DialogTitle></DialogHeader>
-                 <Form {...unloadingForm}>
-                    <form onSubmit={unloadingForm.handleSubmit((values) => handleUpdateExecution(executionToUpdate!, 'Delivered', values))} className="space-y-4 py-4" id="unloading-form">
-                        <FormField control={unloadingForm.control} name="unloadingWeight" render={({ field }) => ( <FormItem><FormLabel>Буулгасан жин (тонн)</FormLabel><FormControl><Input type="number" placeholder="25" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                    </form>
-                </Form>
-                <DialogFooter>
-                    <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                    <Button type="submit" form="unloading-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хүргэгдсэн болгох</Button>
-                </DialogFooter>
-             </DialogContent>
-        </Dialog>
-        
-        <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
-            <PopoverTrigger asChild>
-                <span/>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-0">
-                <Command><CommandInput placeholder="Жолооч хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
-                    {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
-                        <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={() => handleAddDriver(d.id)} disabled={isSubmitting}>
-                            <Check className={cn("mr-2 h-4 w-4", assignedDriverIds.includes(d.id) ? "opacity-100" : "opacity-0")}/>
-                            <span>{d.display_name} ({d.phone_number})</span>
-                        </CommandItem>
-                    ))}
-                </CommandGroup></CommandList></Command>
-            </PopoverContent>
-        </Popover>
-
         <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
              <PopoverTrigger asChild>
                 <span/>
@@ -828,3 +739,4 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
