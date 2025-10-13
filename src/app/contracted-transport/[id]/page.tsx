@@ -120,6 +120,8 @@ function ExecutionCard({ execution, onUpdate, onDelete }: { execution: Contracte
         zIndex: isDragging ? 10 : 'auto',
         boxShadow: isDragging ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '',
         transformOrigin: '50% 50%',
+        scale: isDragging ? '1.05' : '1',
+        rotate: isDragging ? '2deg' : '0deg',
     };
 
     return (
@@ -129,8 +131,7 @@ function ExecutionCard({ execution, onUpdate, onDelete }: { execution: Contracte
             {...attributes}
             {...listeners}
             className={cn(
-              "text-xs mb-2 touch-none transform-gpu",
-              isDragging && "scale-105 rotate-2"
+              "text-xs mb-2 touch-none",
             )}
         >
             <CardContent className="p-2">
@@ -474,17 +475,15 @@ export default function ContractedTransportDetailPage() {
         }
     }
     
-    const handleUpdateExecution = async (values: LoadingFormValues | UnloadingFormValues | {}) => {
+    const handleUpdateExecution = async (newStatus: ContractedTransportExecutionStatus, values?: LoadingFormValues | UnloadingFormValues) => {
         if (!executionToUpdate) return;
 
         setIsSubmitting(true);
         try {
             const execRef = doc(db, 'contracted_transport_executions', executionToUpdate.id);
-            const currentStatus = executionToUpdate.status;
-            let nextStatus: ContractedTransportExecutionStatus | null = null;
             let dataToUpdate: any = {};
             
-            if (currentStatus === 'Pending' && 'loadingWeight' in values) {
+            if (newStatus === 'Loading' && values && 'loadingWeight' in values) {
                 const driver = contract?.assignedDrivers.find(d => d.driverId === values.driverId);
                 const vehicle = contract?.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
                 dataToUpdate = {
@@ -492,27 +491,27 @@ export default function ContractedTransportDetailPage() {
                     driverName: driver?.driverName,
                     vehicleLicense: vehicle?.licensePlate,
                 };
-                nextStatus = 'Loading';
-            } else if (currentStatus === 'Unloading' && 'unloadingWeight' in values) {
+            } else if (newStatus === 'Delivered' && values && 'unloadingWeight' in values) {
                 dataToUpdate = values;
-                nextStatus = 'Delivered';
-            } else {
-                 const currentIndex = executionStatuses.indexOf(currentStatus);
-                 if (currentIndex < executionStatuses.length - 1) {
-                     nextStatus = executionStatuses[currentIndex + 1];
-                 }
+            } else if (newStatus === 'Pending') {
+                 dataToUpdate = {
+                    driverId: null,
+                    driverName: null,
+                    vehicleId: null,
+                    vehicleLicense: null,
+                    loadingWeight: null,
+                    unloadingWeight: null,
+                };
             }
             
-            if (nextStatus) {
-                await updateDoc(execRef, {
-                    ...dataToUpdate,
-                    status: nextStatus,
-                    statusHistory: arrayUnion({ status: nextStatus, date: Timestamp.now() }),
-                });
+            await updateDoc(execRef, {
+                ...dataToUpdate,
+                status: newStatus,
+                statusHistory: arrayUnion({ status: newStatus, date: Timestamp.now() }),
+            });
 
-                toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${statusTranslation[nextStatus]}' төлөвт шилжлээ.` });
-                fetchContractData();
-            }
+            toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${statusTranslation[newStatus]}' төлөвт шилжлээ.` });
+            fetchContractData();
 
         } catch (error) {
             console.error("Error updating execution:", error);
@@ -532,14 +531,14 @@ export default function ContractedTransportDetailPage() {
             const newStatus = over.id as ContractedTransportExecutionStatus;
             
             if (activeExecution && activeExecution.status !== newStatus) {
-                 setExecutionToUpdate(activeExecution);
-                 if (newStatus === 'Loading' && activeExecution.status === 'Pending') {
+                setExecutionToUpdate(activeExecution);
+                if (newStatus === 'Loading' && activeExecution.status === 'Pending') {
                     setUpdateAction('load');
-                 } else if (newStatus === 'Delivered' && activeExecution.status === 'Unloading') {
+                } else if (newStatus === 'Delivered' && activeExecution.status === 'Unloading') {
                     setUpdateAction('unload');
-                 } else {
-                    handleUpdateExecution({});
-                 }
+                } else {
+                    handleUpdateExecution(newStatus);
+                }
             }
         }
     };
@@ -584,10 +583,10 @@ export default function ContractedTransportDetailPage() {
         <div className="space-y-6">
            <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-start">
                         <CardTitle>Гэрээний дэлгэрэнгүй</CardTitle>
-                         <div className="flex items-center gap-4">
-                             <Badge variant={statusInfo.variant} className="py-1 px-3">
+                        <div className="flex items-center gap-2">
+                            <Badge variant={statusInfo.variant} className="py-1 px-3">
                                 <statusInfo.icon className="mr-1.5 h-3 w-3" />
                                 {statusInfo.text}
                             </Badge>
@@ -600,33 +599,35 @@ export default function ContractedTransportDetailPage() {
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <Separator />
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+                    <Separator/>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
                         <DetailItem icon={User} label="Харилцагч" value={contract.customerName} />
                         <DetailItem icon={User} label="Тээврийн менежер" value={relatedData.transportManagerName} />
                         <DetailItem icon={Calendar} label="Гэрээний хугацаа" value={`${format(contract.startDate, 'yyyy-MM-dd')} - ${format(contract.endDate, 'yyyy-MM-dd')}`} />
                         <DetailItem icon={Calendar} label="Давтамж" value={contract.frequency === 'Custom' ? `${frequencyTranslations[contract.frequency]} (${contract.customFrequencyDetails})` : frequencyTranslations[contract.frequency]} />
                     </div>
                     <Separator/>
-                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-                        <DetailItem icon={MapPin} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`} />
-                        <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`} />
-                        <DetailItem icon={MapIcon} label="Нийт зам" value={`${contract.route.totalDistance} км`} />
+                     <div className="space-y-4">
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
+                            <DetailItem icon={MapPin} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`} />
+                            <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`} />
+                            <DetailItem icon={MapIcon} label="Нийт зам" value={`${contract.route.totalDistance} км`} />
+                        </div>
+                        <Table>
+                            <TableHeader><TableRow><TableHead>Ачаа</TableHead><TableHead>Баглаа</TableHead><TableHead className="text-right">Үнэ (₮)</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                            {contract.cargoItems.map((item, index) => (
+                                <TableRow key={item.id || index}>
+                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                    <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
+                                    <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
+                                </TableRow>
+                            ))}
+                            </TableBody>
+                        </Table>
                     </div>
-                    <Table>
-                        <TableHeader><TableRow><TableHead>Ачаа</TableHead><TableHead>Баглаа</TableHead><TableHead className="text-right">Үнэ (₮)</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                        {contract.cargoItems.map((item, index) => (
-                            <TableRow key={item.id || index}>
-                                <TableCell className="font-medium">{item.name}</TableCell>
-                                <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
-                                <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
                     <Separator/>
-                     <div className="grid md:grid-cols-3 gap-6 pt-4">
+                     <div className="grid md:grid-cols-3 gap-6 pt-2">
                         <div>
                             <h3 className="font-semibold mb-2">Оноосон жолооч нар</h3>
                             <div className="space-y-2">
@@ -728,10 +729,16 @@ export default function ContractedTransportDetailPage() {
                                                 onDelete={() => setExecutionToDelete(ex)}
                                                 onUpdate={() => {
                                                     setExecutionToUpdate(ex);
-                                                    if (ex.status !== 'Pending' && ex.status !== 'Unloading') {
-                                                        handleUpdateExecution({});
-                                                    } else {
-                                                        setUpdateAction(ex.status === 'Pending' ? 'load' : 'unload');
+                                                    const currentIndex = executionStatuses.indexOf(ex.status);
+                                                    if (currentIndex < executionStatuses.length - 1) {
+                                                        const nextStatus = executionStatuses[currentIndex + 1];
+                                                        if (nextStatus === 'Loading') {
+                                                            setUpdateAction('load');
+                                                        } else if (nextStatus === 'Delivered') {
+                                                            setUpdateAction('unload');
+                                                        } else {
+                                                            handleUpdateExecution(nextStatus);
+                                                        }
                                                     }
                                                 }}
                                             />
@@ -743,7 +750,6 @@ export default function ContractedTransportDetailPage() {
                     </DndContext>
                 </CardContent>
             </Card>
-
         </div>
 
 
@@ -780,11 +786,11 @@ export default function ContractedTransportDetailPage() {
             </AlertDialogContent>
         </AlertDialog>
 
-        <Dialog open={!!executionToUpdate && updateAction === 'load'} onOpenChange={() => setExecutionToUpdate(null)}>
+        <Dialog open={!!executionToUpdate && updateAction === 'load'} onOpenChange={() => { setExecutionToUpdate(null); setUpdateAction(null); }}>
              <DialogContent>
                 <DialogHeader><DialogTitle>Ачилт эхлүүлэх</DialogTitle></DialogHeader>
                 <Form {...loadingForm}>
-                    <form onSubmit={loadingForm.handleSubmit(handleUpdateExecution)} className="space-y-4 py-4" id="loading-form">
+                    <form onSubmit={loadingForm.handleSubmit((values) => handleUpdateExecution('Loading', values))} className="space-y-4 py-4" id="loading-form">
                         <FormField control={loadingForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                         <FormField control={loadingForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Машин сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.modelName} ({v.licensePlate})</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                         <FormField control={loadingForm.control} name="loadingWeight" render={({ field }) => ( <FormItem><FormLabel>Ачсан жин (тонн)</FormLabel><FormControl><Input type="number" placeholder="25" {...field} /></FormControl><FormMessage /></FormItem> )}/>
@@ -797,11 +803,11 @@ export default function ContractedTransportDetailPage() {
              </DialogContent>
         </Dialog>
 
-        <Dialog open={!!executionToUpdate && updateAction === 'unload'} onOpenChange={() => setExecutionToUpdate(null)}>
+        <Dialog open={!!executionToUpdate && updateAction === 'unload'} onOpenChange={() => { setExecutionToUpdate(null); setUpdateAction(null); }}>
              <DialogContent>
                 <DialogHeader><DialogTitle>Буулгалт хийх</DialogTitle></DialogHeader>
                  <Form {...unloadingForm}>
-                    <form onSubmit={unloadingForm.handleSubmit(handleUpdateExecution)} className="space-y-4 py-4" id="unloading-form">
+                    <form onSubmit={unloadingForm.handleSubmit((values) => handleUpdateExecution('Delivered', values))} className="space-y-4 py-4" id="unloading-form">
                         <FormField control={unloadingForm.control} name="unloadingWeight" render={({ field }) => ( <FormItem><FormLabel>Буулгасан жин (тонн)</FormLabel><FormControl><Input type="number" placeholder="25" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                     </form>
                 </Form>
