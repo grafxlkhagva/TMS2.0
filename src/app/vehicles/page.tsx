@@ -19,7 +19,7 @@ import type { Vehicle, VehicleStatus, Driver, VehicleType, TrailerType } from '@
 import { useToast } from '@/hooks/use-toast';
 import { collection, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { PlusCircle, RefreshCw, MoreHorizontal, Eye, Edit } from 'lucide-react';
+import { PlusCircle, RefreshCw, MoreHorizontal, Eye, Edit, Search } from 'lucide-react';
 import Link from 'next/link';
 import {
   DropdownMenu,
@@ -32,6 +32,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 
 
 function StatusBadge({ status }: { status: VehicleStatus }) {
@@ -104,11 +105,15 @@ function AssignDriverDialog({
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = React.useState<Vehicle[]>([]);
   const [drivers, setDrivers] = React.useState<Driver[]>([]);
-  const [vehicleTypes, setVehicleTypes] = React.useState<Map<string, string>>(new Map());
+  const [vehicleTypes, setVehicleTypes] = React.useState<VehicleType[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [selectedVehicle, setSelectedVehicle] = React.useState<Vehicle | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const { toast } = useToast();
+  
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState('all');
+  const [typeFilter, setTypeFilter] = React.useState('all');
   
   const fetchData = React.useCallback(async () => {
       setIsLoading(true);
@@ -116,7 +121,7 @@ export default function VehiclesPage() {
         const [vehiclesSnapshot, driversSnapshot, vehicleTypesSnapshot] = await Promise.all([
           getDocs(query(collection(db, 'vehicles'), orderBy('createdAt', 'desc'))),
           getDocs(query(collection(db, 'Drivers'), orderBy('display_name'))),
-          getDocs(query(collection(db, 'vehicle_types'))),
+          getDocs(query(collection(db, 'vehicle_types'), orderBy('name'))),
         ]);
 
         const vehiclesData = vehiclesSnapshot.docs.map(doc => ({
@@ -131,8 +136,8 @@ export default function VehiclesPage() {
         } as Driver));
         setDrivers(driversData);
         
-        const vehicleTypesMap = new Map(vehicleTypesSnapshot.docs.map(doc => [doc.id, doc.data().name]));
-        setVehicleTypes(vehicleTypesMap);
+        const vehicleTypesData = vehicleTypesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as VehicleType));
+        setVehicleTypes(vehicleTypesData);
           
       } catch (error) {
         console.error("Error fetching data: ", error);
@@ -182,6 +187,28 @@ export default function VehiclesPage() {
     }
   };
 
+  const filteredVehicles = React.useMemo(() => {
+    return vehicles
+      .filter(vehicle => {
+        if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
+          return false;
+        }
+        if (typeFilter !== 'all' && vehicle.vehicleTypeId !== typeFilter) {
+          return false;
+        }
+        if (searchTerm) {
+          const lowerCaseSearch = searchTerm.toLowerCase();
+          return (
+            vehicle.licensePlate.toLowerCase().includes(lowerCaseSearch) ||
+            vehicle.makeName.toLowerCase().includes(lowerCaseSearch) ||
+            vehicle.modelName.toLowerCase().includes(lowerCaseSearch) ||
+            (vehicle.driverName && vehicle.driverName.toLowerCase().includes(lowerCaseSearch))
+          );
+        }
+        return true;
+      });
+  }, [vehicles, searchTerm, statusFilter, typeFilter]);
+
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6 flex items-center justify-between">
@@ -192,6 +219,37 @@ export default function VehiclesPage() {
             </p>
         </div>
          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Хайх..."
+                className="pl-9 w-40"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Төлөв..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Бүх төлөв</SelectItem>
+                <SelectItem value="Available">Сул</SelectItem>
+                <SelectItem value="In Use">Ашиглаж буй</SelectItem>
+                <SelectItem value="Maintenance">Засварт</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Төрөл..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Бүх төрөл</SelectItem>
+                {vehicleTypes.map(type => (
+                  <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading}>
                 <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
             </Button>
@@ -207,7 +265,7 @@ export default function VehiclesPage() {
       <Card>
         <CardHeader>
           <CardTitle>Тээврийн хэрэгслийн парк</CardTitle>
-          <CardDescription>Танай байгууллагын бүх тээврийн хэрэгслийн жагсаалт.</CardDescription>
+          <CardDescription>Олдсон: {filteredVehicles.length} / Нийт: {vehicles.length}</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -218,7 +276,7 @@ export default function VehiclesPage() {
                 <TableHead>Үйлдвэрлэгч</TableHead>
                 <TableHead>Загвар</TableHead>
                 <TableHead>Даац</TableHead>
-                <TableHead>Статус</TableHead>
+                <TableHead>Төлөв</TableHead>
                 <TableHead>Оноосон жолооч</TableHead>
                 <TableHead className="text-right">Үйлдэл</TableHead>
               </TableRow>
@@ -237,8 +295,8 @@ export default function VehiclesPage() {
                         <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto"/></TableCell>
                     </TableRow>
                 ))
-              ) : vehicles.length > 0 ? (
-                vehicles.map((vehicle) => (
+              ) : filteredVehicles.length > 0 ? (
+                filteredVehicles.map((vehicle) => (
                     <TableRow key={vehicle.id}>
                         <TableCell>
                             <Avatar>
