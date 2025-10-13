@@ -88,15 +88,6 @@ const statusDetails = {
     Cancelled: { text: 'Цуцлагдсан', variant: 'destructive' as const, icon: XCircle }
 };
 
-const executionStatuses: ContractedTransportExecutionStatus[] = ['Pending', 'Loading', 'In-Transit', 'Unloading', 'Delivered'];
-
-const statusTranslation: Record<ContractedTransportExecutionStatus, string> = {
-    Pending: 'Хүлээгдэж буй',
-    Loading: 'Ачиж буй',
-    'In-Transit': 'Замд яваа',
-    Unloading: 'Буулгаж буй',
-    Delivered: 'Хүргэгдсэн',
-}
 
 function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value?: string | React.ReactNode }) {
   if (!value && value !== 0) return null;
@@ -132,8 +123,6 @@ function ExecutionCard({ execution, onUpdate, onDelete, onMoveBackward }: { exec
         rotate: isDragging ? '2deg' : '0deg',
     };
     
-    const currentIndex = executionStatuses.indexOf(execution.status);
-
     return (
         <Card
             ref={setNodeRef}
@@ -150,11 +139,11 @@ function ExecutionCard({ execution, onUpdate, onDelete, onMoveBackward }: { exec
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={onUpdate} disabled={currentIndex === executionStatuses.length - 1}>
+                    <DropdownMenuItem onSelect={onUpdate}>
                       <MoveRight className="mr-2 h-4 w-4" />
                       <span>Урагшлуулах</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={onMoveBackward} disabled={currentIndex === 0}>
+                    <DropdownMenuItem onSelect={onMoveBackward}>
                       <ArrowLeft className="mr-2 h-4 w-4" />
                       <span>Ухраах</span>
                     </DropdownMenuItem>
@@ -173,11 +162,11 @@ function ExecutionCard({ execution, onUpdate, onDelete, onMoveBackward }: { exec
     );
 }
 
-function KanbanColumn({ status, children }: { status: string, children: React.ReactNode }) {
+function KanbanColumn({ status, children, title }: { status: string, children: React.ReactNode, title: string }) {
     const { setNodeRef } = useSortable({ id: status });
     return (
         <div ref={setNodeRef} className="p-2 rounded-lg bg-muted/50">
-            <h3 className="font-semibold text-center text-sm p-2">{statusTranslation[status as ContractedTransportExecutionStatus]}</h3>
+            <h3 className="font-semibold text-center text-sm p-2">{title}</h3>
             <div className="space-y-2 min-h-24">
                 {children}
             </div>
@@ -219,6 +208,33 @@ export default function ContractedTransportDetailPage() {
       packagingTypes: new Map<string, string>(),
       transportManagerName: '',
   });
+
+  const executionStatuses = React.useMemo(() => {
+    if (!contract) return ['Pending', 'Loading', 'Unloading', 'Delivered'];
+    return [
+        'Pending', 
+        'Loading', 
+        ...contract.routeStops.map(s => s.name),
+        'Unloading', 
+        'Delivered'
+    ];
+  }, [contract]);
+
+  const statusTranslation = React.useMemo(() => {
+    const baseTranslations: Record<string, string> = {
+        Pending: 'Хүлээгдэж буй',
+        Loading: 'Ачиж буй',
+        Unloading: 'Буулгаж буй',
+        Delivered: 'Хүргэгдсэн',
+    };
+    if (contract) {
+        contract.routeStops.forEach(stop => {
+            baseTranslations[stop.name] = stop.name;
+        });
+    }
+    return baseTranslations;
+  }, [contract]);
+
 
   const newExecutionForm = useForm<NewExecutionFormValues>({
     resolver: zodResolver(newExecutionFormSchema),
@@ -518,6 +534,7 @@ export default function ContractedTransportDetailPage() {
     
         setIsSubmitting(true);
         let dataToUpdate: any = {};
+        let localUpdate: any = {};
         try {
             const execRef = doc(db, 'contracted_transport_executions', executionToUpdate.id);
             
@@ -529,8 +546,10 @@ export default function ContractedTransportDetailPage() {
                     driverName: driver?.driverName,
                     vehicleLicense: vehicle?.licensePlate,
                 };
+                localUpdate = { ...dataToUpdate };
             } else if (newStatus === 'Delivered' && values && 'unloadingWeight' in values) {
                 dataToUpdate = values;
+                localUpdate = { ...dataToUpdate };
             } else if (newStatus === 'Pending') {
                  dataToUpdate = {
                     driverId: null,
@@ -540,6 +559,7 @@ export default function ContractedTransportDetailPage() {
                     loadingWeight: null,
                     unloadingWeight: null,
                 };
+                localUpdate = { ...dataToUpdate, driverId: undefined, driverName: undefined, vehicleId: undefined, vehicleLicense: undefined, loadingWeight: undefined, unloadingWeight: undefined };
             }
             
             const updatedData = {
@@ -550,8 +570,8 @@ export default function ContractedTransportDetailPage() {
     
             await updateDoc(execRef, updatedData);
             
-            setExecutions(prev => prev.map(ex => ex.id === executionToUpdate.id ? { ...ex, ...updatedData } : ex));
-            toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${statusTranslation[newStatus]}' төлөвт шилжлээ.` });
+            setExecutions(prev => prev.map(ex => ex.id === executionToUpdate.id ? { ...ex, ...localUpdate, status: newStatus } : ex));
+            toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${statusTranslation[newStatus] || newStatus}' төлөвт шилжлээ.` });
     
         } catch (error) {
             console.error("Error updating execution:", error);
@@ -566,7 +586,7 @@ export default function ContractedTransportDetailPage() {
     const onMoveBackward = (execution: ContractedTransportExecution) => {
         const currentIndex = executionStatuses.indexOf(execution.status);
         if (currentIndex > 0) {
-            const prevStatus = executionStatuses[currentIndex - 1];
+            const prevStatus = executionStatuses[currentIndex - 1] as ContractedTransportExecutionStatus;
             setExecutionToUpdate(execution);
             handleUpdateExecution(prevStatus);
         }
@@ -575,11 +595,11 @@ export default function ContractedTransportDetailPage() {
     const onMoveForward = (execution: ContractedTransportExecution) => {
         const currentIndex = executionStatuses.indexOf(execution.status);
         if (currentIndex < executionStatuses.length - 1) {
-            const nextStatus = executionStatuses[currentIndex + 1];
+            const nextStatus = executionStatuses[currentIndex + 1] as ContractedTransportExecutionStatus;
             setExecutionToUpdate(execution);
-            if (nextStatus === 'Loading') {
+            if (nextStatus === 'Loading' && execution.status === 'Pending') {
                 setUpdateAction('load');
-            } else if (nextStatus === 'Delivered') {
+            } else if (nextStatus === 'Delivered' && execution.status === 'Unloading') {
                 setUpdateAction('unload');
             } else {
                 handleUpdateExecution(nextStatus);
@@ -778,14 +798,14 @@ export default function ContractedTransportDetailPage() {
                         </Button>
                     </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="overflow-x-auto">
                     <DndContext
                         onDragEnd={handleDragEnd}
                         collisionDetection={closestCenter}
                     >
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(180px, 1fr))`}}>
                             {executionStatuses.map(status => (
-                                <KanbanColumn key={status} status={status}>
+                                <KanbanColumn key={status} status={status} title={statusTranslation[status] || status}>
                                     <SortableContext items={executions.filter(ex => ex.status === status).map(e => e.id)} strategy={verticalListSortingStrategy}>
                                         {executions.filter(ex => ex.status === status).map(ex => (
                                             <ExecutionCard
@@ -875,3 +895,6 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
+
+    
