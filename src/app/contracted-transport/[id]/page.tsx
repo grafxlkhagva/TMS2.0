@@ -113,11 +113,13 @@ function ExecutionCard({ execution, onUpdate, onDelete }: { execution: Contracte
         isDragging
     } = useSortable({ id: execution.id });
 
-    const style = {
+    const style: React.CSSProperties = {
         transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.5 : 1,
+        transition: transition || 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
+        opacity: isDragging ? 0.8 : 1,
         zIndex: isDragging ? 10 : 'auto',
+        boxShadow: isDragging ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '',
+        transformOrigin: '50% 50%',
     };
 
     return (
@@ -126,7 +128,10 @@ function ExecutionCard({ execution, onUpdate, onDelete }: { execution: Contracte
             style={style}
             {...attributes}
             {...listeners}
-            className="text-xs mb-2 touch-none"
+            className={cn(
+              "text-xs mb-2 touch-none transform-gpu",
+              isDragging && "scale-105 rotate-2"
+            )}
         >
             <CardContent className="p-2">
                 <p className="font-semibold">Огноо: {format(execution.date, 'yyyy-MM-dd')}</p>
@@ -594,7 +599,7 @@ export default function ContractedTransportDetailPage() {
                          </div>
                     </div>
                 </CardHeader>
-                 <CardContent className="space-y-6">
+                <CardContent className="space-y-6">
                     <Separator />
                     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
                         <DetailItem icon={User} label="Харилцагч" value={contract.customerName} />
@@ -603,7 +608,7 @@ export default function ContractedTransportDetailPage() {
                         <DetailItem icon={Calendar} label="Давтамж" value={contract.frequency === 'Custom' ? `${frequencyTranslations[contract.frequency]} (${contract.customFrequencyDetails})` : frequencyTranslations[contract.frequency]} />
                     </div>
                     <Separator/>
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
                         <DetailItem icon={MapPin} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`} />
                         <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`} />
                         <DetailItem icon={MapIcon} label="Нийт зам" value={`${contract.route.totalDistance} км`} />
