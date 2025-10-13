@@ -142,8 +142,21 @@ export default function ContractedTransportDetailPage() {
     defaultValues: { date: new Date() },
   });
   
-  const loadingForm = useForm<LoadingFormValues>();
-  const unloadingForm = useForm<UnloadingFormValues>();
+  const loadingForm = useForm<LoadingFormValues>({
+    resolver: zodResolver(loadingFormSchema),
+    defaultValues: {
+      driverId: '',
+      vehicleId: '',
+      loadingWeight: 0,
+    },
+  });
+  
+  const unloadingForm = useForm<UnloadingFormValues>({
+    resolver: zodResolver(unloadingFormSchema),
+    defaultValues: {
+      unloadingWeight: 0,
+    },
+  });
 
   const routeStopForm = useForm<RouteStopFormValues>({
     resolver: zodResolver(routeStopFormSchema),
@@ -159,8 +172,8 @@ export default function ContractedTransportDetailPage() {
 
   React.useEffect(() => {
     if (executionToUpdate) {
-        if(updateAction === 'load') loadingForm.reset();
-        if(updateAction === 'unload') unloadingForm.reset();
+        if(updateAction === 'load') loadingForm.reset({ driverId: '', vehicleId: '', loadingWeight: 0 });
+        if(updateAction === 'unload') unloadingForm.reset({ unloadingWeight: 0});
     }
   }, [executionToUpdate, updateAction, loadingForm, unloadingForm]);
 
