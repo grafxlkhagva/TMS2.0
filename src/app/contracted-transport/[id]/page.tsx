@@ -691,28 +691,41 @@ export default function ContractedTransportDetailPage() {
                         <DetailItem icon={Calendar} label="Гэрээний хугацаа" value={`${format(contract.startDate, 'yyyy-MM-dd')} - ${format(contract.endDate, 'yyyy-MM-dd')}`} />
                         <DetailItem icon={Calendar} label="Давтамж" value={contract.frequency === 'Custom' ? `${frequencyTranslations[contract.frequency]} (${contract.customFrequencyDetails})` : frequencyTranslations[contract.frequency]} />
                     </div>
-                    <Separator/>
-                     <div className="space-y-4">
-                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
-                            <DetailItem icon={MapPin} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`} />
-                            <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`} />
-                            <DetailItem icon={MapIcon} label="Нийт зам" value={`${contract.route.totalDistance} км`} />
-                        </div>
-                        <Table>
-                            <TableHeader><TableRow><TableHead>Ачаа</TableHead><TableHead>Баглаа</TableHead><TableHead className="text-right">Үнэ (₮)</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                            {contract.cargoItems.map((item, index) => (
-                                <TableRow key={item.id || index}>
-                                    <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
-                                    <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
-                                </TableRow>
-                            ))}
-                            </TableBody>
-                        </Table>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Маршрут ба Ачаа</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
+                        <DetailItem icon={MapPin} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`} />
+                        <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`} />
+                        <DetailItem icon={MapIcon} label="Нийт зам" value={`${contract.route.totalDistance} км`} />
                     </div>
-                    <Separator/>
-                     <div className="grid md:grid-cols-3 gap-6 pt-2">
+                    <Separator />
+                    <Table>
+                        <TableHeader><TableRow><TableHead>Ачаа</TableHead><TableHead>Баглаа</TableHead><TableHead className="text-right">Үнэ (₮)</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                        {contract.cargoItems.map((item, index) => (
+                            <TableRow key={item.id || index}>
+                                <TableCell className="font-medium">{item.name}</TableCell>
+                                <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
+                                <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>Оноосон Жолооч, Т/Х ба Зогсоол</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid md:grid-cols-3 gap-6 pt-2">
                         <div>
                             <h3 className="font-semibold mb-2">Оноосон жолооч нар</h3>
                             <div className="space-y-2">
@@ -896,5 +909,3 @@ export default function ContractedTransportDetailPage() {
   );
 }
 
-
-    
