@@ -4,7 +4,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, MoveRight, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, MoreHorizontal, MoveRight, ChevronsUpDown, CheckIcon, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
@@ -33,22 +33,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { Timestamp } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  DndContext,
-  closestCenter,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 
 
@@ -102,7 +94,52 @@ function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, lab
   );
 }
 
-function ExecutionCard({ execution, onUpdate, onDelete, onMoveBackward }: { execution: ContractedTransportExecution, onUpdate: () => void, onDelete: () => void, onMoveBackward: () => void }) {
+function StatusTimeline({ 
+  statuses,
+  currentStatus,
+  onStatusClick
+}: { 
+  statuses: string[];
+  currentStatus: string;
+  onStatusClick: (newStatus: string) => void;
+}) {
+  const currentIndex = statuses.indexOf(currentStatus);
+
+  return (
+      <div className="flex justify-between items-start px-4 pt-2">
+          {statuses.map((status, index) => (
+              <React.Fragment key={status}>
+                  <div 
+                      className={cn("flex flex-col items-center cursor-pointer group")}
+                      onClick={() => onStatusClick(status)}
+                  >
+                      <div className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors",
+                          index <= currentIndex ? "bg-primary border-primary text-primary-foreground" : "bg-muted border-border group-hover:border-primary"
+                      )}>
+                         {index < currentIndex ? <Check className="h-5 w-5" /> : <span className="text-xs font-bold">{index + 1}</span>}
+                      </div>
+                      <p className={cn(
+                         "text-xs mt-2 text-center w-20 transition-colors", 
+                         index <= currentIndex ? "font-semibold text-primary" : "text-muted-foreground group-hover:text-primary"
+                      )}>
+                         {status}
+                      </p>
+                  </div>
+                  {index < statuses.length - 1 && (
+                       <div className={cn(
+                           "flex-1 h-1 mt-4 transition-colors",
+                           index < currentIndex ? "bg-primary" : "bg-border",
+                           index === currentIndex && "bg-gradient-to-r from-primary to-border",
+                       )}></div>
+                  )}
+              </React.Fragment>
+          ))}
+      </div>
+  )
+}
+
+function ExecutionCard({ execution, onUpdate, onDelete, onMoveBackward, statuses }: { execution: ContractedTransportExecution, onUpdate: () => void, onDelete: () => void, onMoveBackward: () => void, statuses: string[] }) {
     const {
         attributes,
         listeners,
@@ -118,9 +155,6 @@ function ExecutionCard({ execution, onUpdate, onDelete, onMoveBackward }: { exec
         opacity: isDragging ? 0.9 : 1,
         zIndex: isDragging ? 10 : 'auto',
         boxShadow: isDragging ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '',
-        transformOrigin: isDragging ? '50% 50%' : undefined,
-        scale: isDragging ? '1.05' : '1',
-        rotate: isDragging ? '2deg' : '0deg',
     };
     
     return (
@@ -139,11 +173,11 @@ function ExecutionCard({ execution, onUpdate, onDelete, onMoveBackward }: { exec
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={onUpdate}>
+                    <DropdownMenuItem onSelect={onUpdate} disabled={statuses.indexOf(execution.status) === statuses.length - 1}>
                       <MoveRight className="mr-2 h-4 w-4" />
                       <span>Урагшлуулах</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={onMoveBackward}>
+                    <DropdownMenuItem onSelect={onMoveBackward} disabled={statuses.indexOf(execution.status) === 0}>
                       <ArrowLeft className="mr-2 h-4 w-4" />
                       <span>Ухраах</span>
                     </DropdownMenuItem>
@@ -162,19 +196,6 @@ function ExecutionCard({ execution, onUpdate, onDelete, onMoveBackward }: { exec
     );
 }
 
-function KanbanColumn({ status, children, title }: { status: string, children: React.ReactNode, title: string }) {
-    const { setNodeRef } = useSortable({ id: status });
-    return (
-        <div ref={setNodeRef} className="p-2 rounded-lg bg-muted/50">
-            <h3 className="font-semibold text-center text-sm p-2">{title}</h3>
-            <div className="space-y-2 min-h-24">
-                {children}
-            </div>
-        </div>
-    );
-}
-
-
 export default function ContractedTransportDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -192,13 +213,9 @@ export default function ContractedTransportDetailPage() {
   const [updateAction, setUpdateAction] = React.useState<'load' | 'unload' | null>(null);
   const [executionToDelete, setExecutionToDelete] = React.useState<ContractedTransportExecution | null>(null);
 
-  const [isAddingDriver, setIsAddingDriver] = React.useState(false);
   const [addDriverPopoverOpen, setAddDriverPopoverOpen] = React.useState(false);
-  
-  const [isAddingVehicle, setIsAddingVehicle] = React.useState(false);
   const [addVehiclePopoverOpen, setAddVehiclePopoverOpen] = React.useState(false);
-
-  const [isSubmittingStop, setIsSubmittingStop] = React.useState(false);
+  const [isAddingStop, setIsAddingStop] = React.useState(false);
   
   const [relatedData, setRelatedData] = React.useState({
       startRegionName: '',
@@ -396,7 +413,7 @@ export default function ContractedTransportDetailPage() {
         if (!id || !driverId) return;
         const driverToAdd = drivers.find(d => d.id === driverId);
         if (!driverToAdd) return;
-        setIsAddingDriver(true);
+        setIsSubmitting(true);
         try {
             const contractRef = doc(db, 'contracted_transports', id);
             await updateDoc(contractRef, {
@@ -408,11 +425,11 @@ export default function ContractedTransportDetailPage() {
             });
             toast({ title: "Амжилттай", description: "Жолооч нэмэгдлээ."});
             setAddDriverPopoverOpen(false);
-            setContract(prev => prev ? ({...prev, assignedDrivers: [...prev.assignedDrivers, { driverId: driverToAdd.id, driverName: driverToAdd.display_name, driverPhone: driverToAdd.phone_number }]}) : null);
+            fetchContractData();
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч нэмэхэд алдаа гарлаа.'});
         } finally {
-            setIsAddingDriver(false);
+            setIsSubmitting(false);
         }
     };
     
@@ -435,8 +452,7 @@ export default function ContractedTransportDetailPage() {
             await batch.commit();
             
             toast({ title: "Амжилттай", description: "Жолоочийг хаслаа."});
-             setContract(prev => prev ? ({ ...prev, assignedDrivers: prev.assignedDrivers.filter(d => d.driverId !== driverToRemove.driverId)}) : null);
-             setExecutions(prev => prev.map(e => e.driverId === driverToRemove.driverId && e.status === 'Pending' ? {...e, driverId: undefined, driverName: undefined} : e));
+             fetchContractData();
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч хасахад алдаа гарлаа.'});
         }
@@ -446,7 +462,7 @@ export default function ContractedTransportDetailPage() {
         if (!id || !vehicleId) return;
         const vehicleToAdd = vehicles.find(v => v.id === vehicleId);
         if (!vehicleToAdd) return;
-        setIsAddingVehicle(true);
+        setIsSubmitting(true);
         try {
             const contractRef = doc(db, 'contracted_transports', id);
             const newVehicleData = {
@@ -459,11 +475,11 @@ export default function ContractedTransportDetailPage() {
             });
             toast({ title: "Амжилттай", description: "Тээврийн хэрэгсэл нэмэгдлээ."});
             setAddVehiclePopoverOpen(false);
-            setContract(prev => prev ? ({...prev, assignedVehicles: [...prev.assignedVehicles, newVehicleData]}) : null);
+            fetchContractData();
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл нэмэхэд алдаа гарлаа.'});
         } finally {
-            setIsAddingVehicle(false);
+            setIsSubmitting(false);
         }
     };
 
@@ -486,8 +502,7 @@ export default function ContractedTransportDetailPage() {
             await batch.commit();
 
             toast({ title: "Амжилттай", description: "Тээврийн хэрэгслийг хаслаа."});
-             setContract(prev => prev ? ({ ...prev, assignedVehicles: prev.assignedVehicles.filter(v => v.vehicleId !== vehicleToRemove.vehicleId)}) : null);
-            setExecutions(prev => prev.map(e => e.vehicleId === vehicleToRemove.vehicleId && e.status === 'Pending' ? {...e, vehicleId: undefined, vehicleLicense: undefined} : e));
+            fetchContractData();
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл хасахад алдаа гарлаа.'});
         }
@@ -495,7 +510,7 @@ export default function ContractedTransportDetailPage() {
 
     const onRouteStopSubmit = async (values: RouteStopFormValues) => {
         if (!id || !contract) return;
-        setIsSubmittingStop(true);
+        setIsSubmitting(true);
         try {
             const newStop: RouteStop = {
                 id: uuidv4(),
@@ -507,11 +522,12 @@ export default function ContractedTransportDetailPage() {
             });
             toast({ title: "Амжилттай", description: "Маршрутын зогсоол нэмэгдлээ."});
             routeStopForm.reset();
-            setContract(prev => prev ? ({...prev, routeStops: [...prev.routeStops, newStop]}) : null);
+            setIsAddingStop(false);
+            fetchContractData();
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Зогсоол нэмэхэд алдаа гарлаа.'});
         } finally {
-            setIsSubmittingStop(false);
+            setIsSubmitting(false);
         }
     }
 
@@ -523,7 +539,7 @@ export default function ContractedTransportDetailPage() {
                  routeStops: arrayRemove(stopToRemove)
             });
             toast({ title: "Амжилттай", description: "Зогсоол хасагдлаа."});
-            setContract(prev => prev ? ({...prev, routeStops: prev.routeStops.filter(s => s.id !== stopToRemove.id)}) : null);
+            fetchContractData();
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Зогсоол хасахад алдаа гарлаа.'});
         }
@@ -534,7 +550,7 @@ export default function ContractedTransportDetailPage() {
     
         setIsSubmitting(true);
         let dataToUpdate: any = {};
-        let localUpdate: any = {};
+
         try {
             const execRef = doc(db, 'contracted_transport_executions', executionToUpdate.id);
             
@@ -546,10 +562,8 @@ export default function ContractedTransportDetailPage() {
                     driverName: driver?.driverName,
                     vehicleLicense: vehicle?.licensePlate,
                 };
-                localUpdate = { ...dataToUpdate };
             } else if (newStatus === 'Delivered' && values && 'unloadingWeight' in values) {
                 dataToUpdate = values;
-                localUpdate = { ...dataToUpdate };
             } else if (newStatus === 'Pending') {
                  dataToUpdate = {
                     driverId: null,
@@ -559,7 +573,6 @@ export default function ContractedTransportDetailPage() {
                     loadingWeight: null,
                     unloadingWeight: null,
                 };
-                localUpdate = { ...dataToUpdate, driverId: undefined, driverName: undefined, vehicleId: undefined, vehicleLicense: undefined, loadingWeight: undefined, unloadingWeight: undefined };
             }
             
             const updatedData = {
@@ -570,8 +583,8 @@ export default function ContractedTransportDetailPage() {
     
             await updateDoc(execRef, updatedData);
             
-            setExecutions(prev => prev.map(ex => ex.id === executionToUpdate.id ? { ...ex, ...localUpdate, status: newStatus } : ex));
             toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${statusTranslation[newStatus] || newStatus}' төлөвт шилжлээ.` });
+            fetchContractData();
     
         } catch (error) {
             console.error("Error updating execution:", error);
@@ -606,28 +619,6 @@ export default function ContractedTransportDetailPage() {
             }
         }
     }
-
-    const handleDragEnd = (event: DragEndEvent) => {
-        const { active, over } = event;
-    
-        if (over && active.id !== over.id) {
-            const activeExecution = executions.find(ex => ex.id === active.id);
-            const newStatus = over.id as ContractedTransportExecutionStatus;
-            
-            if (activeExecution && activeExecution.status !== newStatus) {
-                if (newStatus === 'Loading' && activeExecution.status === 'Pending') {
-                    setExecutionToUpdate(activeExecution);
-                    setUpdateAction('load');
-                } else if (newStatus === 'Delivered' && activeExecution.status === 'Unloading') {
-                    setExecutionToUpdate(activeExecution);
-                    setUpdateAction('unload');
-                } else {
-                    handleUpdateExecution(newStatus, { ...activeExecution });
-                }
-            }
-        }
-    };
-
 
   if (isLoading) {
     return (
@@ -694,98 +685,75 @@ export default function ContractedTransportDetailPage() {
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Маршрут ба Ачаа</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
-                        <DetailItem icon={MapPin} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`} />
-                        <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`} />
-                        <DetailItem icon={MapIcon} label="Нийт зам" value={`${contract.route.totalDistance} км`} />
-                    </div>
-                    <Separator />
-                    <Table>
-                        <TableHeader><TableRow><TableHead>Ачаа</TableHead><TableHead>Баглаа</TableHead><TableHead className="text-right">Үнэ (₮)</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                        {contract.cargoItems.map((item, index) => (
-                            <TableRow key={item.id || index}>
-                                <TableCell className="font-medium">{item.name}</TableCell>
-                                <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
-                                <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-            
-            <Card>
-                <CardHeader>
-                    <CardTitle>Оноосон Жолооч, Т/Х ба Зогсоол</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid md:grid-cols-3 gap-6 pt-2">
+            <div className="grid md:grid-cols-3 gap-6">
+                 <Card className="md:col-span-2">
+                    <CardHeader>
+                        <CardTitle>Маршрут ба Ачаа</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
+                            <DetailItem icon={MapPin} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`} />
+                            <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`} />
+                            <DetailItem icon={MapIcon} label="Нийт зам" value={`${contract.route.totalDistance} км`} />
+                        </div>
+                        <Separator />
+                        <Table>
+                            <TableHeader><TableRow><TableHead>Ачаа</TableHead><TableHead>Баглаа</TableHead><TableHead className="text-right">Үнэ (₮)</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                            {contract.cargoItems.map((item, index) => (
+                                <TableRow key={item.id || index}>
+                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                    <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
+                                    <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
+                                </TableRow>
+                            ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <div className="flex justify-between items-center">
+                            <CardTitle>Оноосон Жолооч, Т/Х ба Зогсоол</CardTitle>
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4"/>Нэмэх</Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuItem onSelect={() => setAddDriverPopoverOpen(true)}>Жолооч нэмэх</DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => setAddVehiclePopoverOpen(true)}>Т/Х нэмэх</DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => setIsAddingStop(true)}>Зогсоол нэмэх</DropdownMenuItem>
+                                </DropdownMenuContent>
+                             </DropdownMenu>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
                         <div>
-                            <h3 className="font-semibold mb-2">Оноосон жолооч нар</h3>
+                            <h3 className="font-semibold mb-2 text-sm">Оноосон жолооч нар</h3>
                             <div className="space-y-2">
                                 {contract.assignedDrivers.length > 0 ? ( contract.assignedDrivers.map(driver => (
-                                    <div key={driver.driverId} className="flex justify-between items-center text-sm p-2 rounded-md hover:bg-muted">
+                                    <div key={driver.driverId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
                                         <div><p className="font-medium">{driver.driverName}</p><p className="text-xs text-muted-foreground">{driver.driverPhone}</p></div>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveDriver(driver)}><XCircle className="h-4 w-4 text-destructive"/></Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveDriver(driver)}><XCircle className="h-4 w-4 text-destructive"/></Button>
                                     </div>
-                                ))) : (<p className="text-sm text-muted-foreground text-center py-2">Жолооч оноогоогүй байна.</p>)}
+                                ))) : (<p className="text-sm text-muted-foreground text-center py-1">Жолооч оноогоогүй.</p>)}
                             </div>
-                            <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" className="w-full mt-2"><UserPlus className="mr-2 h-4 w-4" /> Жолооч нэмэх</Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                    <Command><CommandInput placeholder="Жолооч хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
-                                        {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
-                                            <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={() => handleAddDriver(d.id)} disabled={isAddingDriver}>
-                                                <span>{d.display_name} ({d.phone_number})</span>
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup></CommandList></Command>
-                                </PopoverContent>
-                            </Popover>
                         </div>
+                        <Separator/>
                         <div>
-                            <h3 className="font-semibold mb-2">Оноосон тээврийн хэрэгсэл</h3>
+                            <h3 className="font-semibold mb-2 text-sm">Оноосон тээврийн хэрэгсэл</h3>
                             <div className="space-y-2">
                                 {contract.assignedVehicles.length > 0 ? ( contract.assignedVehicles.map(vehicle => (
-                                    <div key={vehicle.vehicleId} className="flex justify-between items-center text-sm p-2 rounded-md hover:bg-muted">
+                                    <div key={vehicle.vehicleId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
                                         <div><p className="font-medium">{vehicle.modelName}</p><p className="text-xs text-muted-foreground font-mono">{vehicle.licensePlate}</p></div>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveVehicle(vehicle)}><XCircle className="h-4 w-4 text-destructive"/></Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveVehicle(vehicle)}><XCircle className="h-4 w-4 text-destructive"/></Button>
                                     </div>
-                                ))) : (<p className="text-sm text-muted-foreground text-center py-2">Тээврийн хэрэгсэл оноогоогүй байна.</p>)}
+                                ))) : (<p className="text-sm text-muted-foreground text-center py-1">Т/Х оноогоогүй.</p>)}
                             </div>
-                            <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" className="w-full mt-2"><Car className="mr-2 h-4 w-4" /> Т/Х нэмэх</Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                    <Command><CommandInput placeholder="Машин хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
-                                        {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
-                                            <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={() => handleAddVehicle(v.id)} disabled={isAddingVehicle}>
-                                                <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup></CommandList></Command>
-                                </PopoverContent>
-                            </Popover>
                         </div>
+                        <Separator/>
                         <div>
-                            <h3 className="font-semibold mb-2">Маршрутын зогсоол батлах</h3>
-                            <Form {...routeStopForm}>
-                                <form onSubmit={routeStopForm.handleSubmit(onRouteStopSubmit)} className="space-y-2">
-                                    <FormField control={routeStopForm.control} name="name" render={({ field }) => ( <FormItem><FormControl><Input placeholder="Зогсоолын нэр..." {...field} /></FormControl><FormMessage /></FormItem> )} />
-                                    <FormField control={routeStopForm.control} name="description" render={({ field }) => ( <FormItem><FormControl><Input placeholder="Тайлбар..." {...field} /></FormControl><FormMessage /></FormItem> )} />
-                                    <Button type="submit" size="sm" className="w-full" disabled={isSubmittingStop}>{isSubmittingStop && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Зогсоол нэмэх</Button>
-                                </form>
-                            </Form>
-                            <Separator className="my-2"/>
+                            <h3 className="font-semibold mb-2 text-sm">Маршрутын зогсоол</h3>
                             <div className="space-y-1">
                                 {contract.routeStops.map(stop => (
                                     <div key={stop.id} className="flex justify-between items-center text-sm p-1 rounded-md hover:bg-muted">
@@ -795,10 +763,10 @@ export default function ContractedTransportDetailPage() {
                                 ))}
                             </div>
                         </div>
-                    </div>
-                </CardContent>
-            </Card>
-
+                    </CardContent>
+                </Card>
+            </div>
+            
              <Card>
                 <CardHeader>
                     <div className="flex justify-between items-center">
@@ -812,28 +780,25 @@ export default function ContractedTransportDetailPage() {
                     </div>
                 </CardHeader>
                 <CardContent className="overflow-x-auto">
-                    <DndContext
-                        onDragEnd={handleDragEnd}
-                        collisionDetection={closestCenter}
-                    >
-                        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(180px, 1fr))`}}>
-                            {executionStatuses.map(status => (
-                                <KanbanColumn key={status} status={status} title={statusTranslation[status] || status}>
-                                    <SortableContext items={executions.filter(ex => ex.status === status).map(e => e.id)} strategy={verticalListSortingStrategy}>
-                                        {executions.filter(ex => ex.status === status).map(ex => (
-                                            <ExecutionCard
-                                                key={ex.id}
-                                                execution={ex}
-                                                onDelete={() => setExecutionToDelete(ex)}
-                                                onUpdate={() => onMoveForward(ex)}
-                                                onMoveBackward={() => onMoveBackward(ex)}
-                                            />
-                                        ))}
-                                    </SortableContext>
-                                </KanbanColumn>
-                            ))}
-                        </div>
-                    </DndContext>
+                   <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(180px, 1fr))`}}>
+                         {executionStatuses.map(status => (
+                            <div key={status} className="p-2 rounded-lg bg-muted/50">
+                                <h3 className="font-semibold text-center text-sm p-2">{statusTranslation[status] || status}</h3>
+                                <div className="space-y-2 min-h-24">
+                                    {executions.filter(ex => ex.status === status).map(ex => (
+                                        <ExecutionCard
+                                            key={ex.id}
+                                            execution={ex}
+                                            onDelete={() => setExecutionToDelete(ex)}
+                                            onUpdate={() => onMoveForward(ex)}
+                                            onMoveBackward={() => onMoveBackward(ex)}
+                                            statuses={executionStatuses}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </CardContent>
             </Card>
         </div>
@@ -905,7 +870,56 @@ export default function ContractedTransportDetailPage() {
                 </DialogFooter>
              </DialogContent>
         </Dialog>
+        
+        <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
+            <PopoverTrigger asChild>
+                <span/>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0">
+                <Command><CommandInput placeholder="Жолооч хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
+                    {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
+                        <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={() => handleAddDriver(d.id)} disabled={isSubmitting}>
+                            <CheckIcon className={cn("mr-2 h-4 w-4", assignedDriverIds.includes(d.id) ? "opacity-100" : "opacity-0")}/>
+                            <span>{d.display_name} ({d.phone_number})</span>
+                        </CommandItem>
+                    ))}
+                </CommandGroup></CommandList></Command>
+            </PopoverContent>
+        </Popover>
+
+        <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
+             <PopoverTrigger asChild>
+                <span/>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0">
+                <Command><CommandInput placeholder="Машин хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
+                    {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
+                        <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={() => handleAddVehicle(v.id)} disabled={isSubmitting}>
+                             <CheckIcon className={cn("mr-2 h-4 w-4", assignedVehicleIds.includes(v.id) ? "opacity-100" : "opacity-0")}/>
+                            <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
+                        </CommandItem>
+                    ))}
+                </CommandGroup></CommandList></Command>
+            </PopoverContent>
+        </Popover>
+        
+        <Dialog open={isAddingStop} onOpenChange={setIsAddingStop}>
+            <DialogContent>
+                 <DialogHeader>
+                    <DialogTitle>Маршрутын зогсоол нэмэх</DialogTitle>
+                </DialogHeader>
+                <Form {...routeStopForm}>
+                     <form onSubmit={routeStopForm.handleSubmit(onRouteStopSubmit)} className="space-y-4 py-4" id="route-stop-form">
+                        <FormField control={routeStopForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын нэр</FormLabel><FormControl><Input placeholder="Даваа-1" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={routeStopForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>Тайлбар</FormLabel><FormControl><Input placeholder="Амрах, хооллох" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                    </form>
+                </Form>
+                 <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                    <Button type="submit" form="route-stop-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Нэмэх</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
-
