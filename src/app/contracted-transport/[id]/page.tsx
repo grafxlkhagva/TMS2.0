@@ -493,7 +493,7 @@ export default function ContractedTransportDetailPage() {
 
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto py-6 space-y-6">
       <div className="mb-6">
         <Button variant="outline" size="sm" asChild className="mb-4">
              <Link href="/contracted-transport">
@@ -508,26 +508,32 @@ export default function ContractedTransportDetailPage() {
                 Гэрээний дугаар: {contract.contractNumber}
                 </p>
             </div>
-             <Button asChild>
-                <Link href={`/contracted-transport/${id}/edit`}>
-                    <Edit className="mr-2 h-4 w-4" /> Засварлах
-                </Link>
-            </Button>
         </div>
       </div>
-      <div className="space-y-6">
-         <Card>
-            <CardHeader>
+      
+        <Card>
+            <CardHeader className="relative">
                 <CardTitle>Гэрээний дэлгэрэнгүй</CardTitle>
+                 <div className="absolute top-4 right-4 flex items-center gap-2">
+                    <Badge variant={statusInfo.variant} className="py-1 px-3">
+                        <statusInfo.icon className="mr-1.5 h-3 w-3" />
+                        {statusInfo.text}
+                    </Badge>
+                    <Button asChild>
+                        <Link href={`/contracted-transport/${id}/edit`}>
+                            <Edit className="mr-2 h-4 w-4" /> Засварлах
+                        </Link>
+                    </Button>
+                </div>
             </CardHeader>
             <CardContent className="space-y-6">
+                <Separator />
                 <h3 className="font-semibold text-base">Ерөнхий мэдээлэл</h3>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
                     <DetailItem icon={User} label="Харилцагч" value={contract.customerName} />
                     <DetailItem icon={User} label="Тээврийн менежер" value={relatedData.transportManagerName} />
                     <DetailItem icon={Calendar} label="Гэрээний хугацаа" value={`${format(contract.startDate, 'yyyy-MM-dd')} - ${format(contract.endDate, 'yyyy-MM-dd')}`} />
                     <DetailItem icon={Calendar} label="Давтамж" value={contract.frequency === 'Custom' ? `${frequencyTranslations[contract.frequency]} (${contract.customFrequencyDetails})` : frequencyTranslations[contract.frequency]} />
-                    <DetailItem icon={statusInfo.icon} label="Статус" value={<Badge variant={statusInfo.variant}>{statusInfo.text}</Badge>} />
                     <DetailItem icon={Calendar} label="Бүртгэсэн огноо" value={format(contract.createdAt, 'yyyy-MM-dd HH:mm')} />
                 </div>
                 <Separator/>
@@ -667,7 +673,6 @@ export default function ContractedTransportDetailPage() {
                 </div>
             </CardContent>
         </Card>
-      </div>
 
         <Dialog open={isExecutionDialogOpen} onOpenChange={setIsExecutionDialogOpen}>
             <DialogContent>
@@ -736,3 +741,5 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
+    
