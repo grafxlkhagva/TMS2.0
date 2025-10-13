@@ -42,8 +42,6 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
 
 const newExecutionFormSchema = z.object({
@@ -858,7 +856,7 @@ export default function ContractedTransportDetailPage() {
                 <Command><CommandInput placeholder="Жолооч хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
                     {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
                         <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={() => handleAddDriver(d.id)} disabled={isSubmitting}>
-                            <CheckIcon className={cn("mr-2 h-4 w-4", assignedDriverIds.includes(d.id) ? "opacity-100" : "opacity-0")}/>
+                            <Check className={cn("mr-2 h-4 w-4", assignedDriverIds.includes(d.id) ? "opacity-100" : "opacity-0")}/>
                             <span>{d.display_name} ({d.phone_number})</span>
                         </CommandItem>
                     ))}
@@ -874,7 +872,7 @@ export default function ContractedTransportDetailPage() {
                 <Command><CommandInput placeholder="Машин хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
                     {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
                         <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={() => handleAddVehicle(v.id)} disabled={isSubmitting}>
-                             <CheckIcon className={cn("mr-2 h-4 w-4", assignedVehicleIds.includes(v.id) ? "opacity-100" : "opacity-0")}/>
+                             <Check className={cn("mr-2 h-4 w-4", assignedVehicleIds.includes(v.id) ? "opacity-100" : "opacity-0")}/>
                             <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
                         </CommandItem>
                     ))}
@@ -902,3 +900,4 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
