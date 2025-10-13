@@ -94,86 +94,6 @@ function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, lab
   );
 }
 
-function StatusTimeline({ 
-  statuses,
-  currentStatus,
-  onStatusClick
-}: { 
-  statuses: string[];
-  currentStatus: string;
-  onStatusClick: (newStatus: string) => void;
-}) {
-  const currentIndex = statuses.indexOf(currentStatus);
-
-  return (
-      <div className="flex justify-between items-start px-4 pt-2">
-          {statuses.map((status, index) => (
-              <React.Fragment key={status}>
-                  <div 
-                      className={cn("flex flex-col items-center cursor-pointer group")}
-                      onClick={() => onStatusClick(status)}
-                  >
-                      <div className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors",
-                          index <= currentIndex ? "bg-primary border-primary text-primary-foreground" : "bg-muted border-border group-hover:border-primary"
-                      )}>
-                         {index < currentIndex ? <Check className="h-5 w-5" /> : <span className="text-xs font-bold">{index + 1}</span>}
-                      </div>
-                      <p className={cn(
-                         "text-xs mt-2 text-center w-20 transition-colors", 
-                         index <= currentIndex ? "font-semibold text-primary" : "text-muted-foreground group-hover:text-primary"
-                      )}>
-                         {status}
-                      </p>
-                  </div>
-                  {index < statuses.length - 1 && (
-                       <div className={cn(
-                           "flex-1 h-1 mt-4 transition-colors",
-                           index < currentIndex ? "bg-primary" : "bg-border",
-                           index === currentIndex && "bg-gradient-to-r from-primary to-border",
-                       )}></div>
-                  )}
-              </React.Fragment>
-          ))}
-      </div>
-  )
-}
-
-function ExecutionCard({ execution, onUpdate, onDelete, onMoveBackward }: { execution: ContractedTransportExecution, onUpdate: () => void, onDelete: () => void, onMoveBackward: () => void; }) {
-    
-    return (
-        <Card className="text-xs mb-2 touch-none">
-            <CardContent className="p-2 relative">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={onUpdate}>
-                      <MoveRight className="mr-2 h-4 w-4" />
-                      <span>Урагшлуулах</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={onMoveBackward}>
-                      <ArrowLeft className="mr-2 h-4 w-4" />
-                      <span>Ухраах</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      <span>Устгах</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <p className="font-semibold pr-6">Огноо: {format(execution.date, 'yyyy-MM-dd')}</p>
-                <p>Жолооч: {execution.driverName || 'TBA'}</p>
-                <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
-            </CardContent>
-        </Card>
-    );
-}
-
 export default function ContractedTransportDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -523,14 +443,14 @@ export default function ContractedTransportDetailPage() {
         }
     }
     
-    const handleUpdateExecution = async (newStatus: ContractedTransportExecutionStatus, values?: LoadingFormValues | UnloadingFormValues) => {
-        if (!executionToUpdate) return;
+    const handleUpdateExecution = async (execution: ContractedTransportExecution, newStatus: ContractedTransportExecutionStatus, values?: LoadingFormValues | UnloadingFormValues) => {
+        if (!execution) return;
     
         setIsSubmitting(true);
         let dataToUpdate: any = {};
 
         try {
-            const execRef = doc(db, 'contracted_transport_executions', executionToUpdate.id);
+            const execRef = doc(db, 'contracted_transport_executions', execution.id);
             
             if (newStatus === 'Loading' && values && 'loadingWeight' in values) {
                 const driver = contract?.assignedDrivers.find(d => d.driverId === values.driverId);
@@ -561,7 +481,7 @@ export default function ContractedTransportDetailPage() {
     
             await updateDoc(execRef, updatedData);
             
-            setExecutions(prev => prev.map(ex => ex.id === executionToUpdate.id ? {...ex, ...updatedData } : ex));
+            setExecutions(prev => prev.map(ex => ex.id === execution.id ? { ...ex, ...updatedData } : ex));
             toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${statusTranslation[newStatus] || newStatus}' төлөвт шилжлээ.` });
     
         } catch (error) {
@@ -571,30 +491,6 @@ export default function ContractedTransportDetailPage() {
             setIsSubmitting(false);
             setExecutionToUpdate(null);
             setUpdateAction(null);
-        }
-    }
-    
-    const onMoveBackward = (execution: ContractedTransportExecution) => {
-        const currentIndex = executionStatuses.indexOf(execution.status);
-        if (currentIndex > 0) {
-            const prevStatus = executionStatuses[currentIndex - 1] as ContractedTransportExecutionStatus;
-            setExecutionToUpdate(execution);
-            handleUpdateExecution(prevStatus);
-        }
-    }
-
-    const onMoveForward = (execution: ContractedTransportExecution) => {
-        const currentIndex = executionStatuses.indexOf(execution.status);
-        if (currentIndex < executionStatuses.length - 1) {
-            const nextStatus = executionStatuses[currentIndex + 1] as ContractedTransportExecutionStatus;
-            setExecutionToUpdate(execution);
-            if (nextStatus === 'Loading' && execution.status === 'Pending') {
-                setUpdateAction('load');
-            } else if (nextStatus === 'Delivered' && execution.status === 'Unloading') {
-                setUpdateAction('unload');
-            } else {
-                handleUpdateExecution(nextStatus);
-            }
         }
     }
 
@@ -675,6 +571,16 @@ export default function ContractedTransportDetailPage() {
                             <DetailItem icon={MapIcon} label="Нийт зам" value={`${contract.route.totalDistance} км`} />
                         </div>
                         <Separator />
+                        <h3 className="font-semibold mb-2 text-sm">Маршрутын зогсоол</h3>
+                        <div className="space-y-1">
+                            {contract.routeStops.map(stop => (
+                                <div key={stop.id} className="flex justify-between items-center text-sm p-1 rounded-md hover:bg-muted">
+                                    <div><p className="font-medium">{stop.name}</p><p className="text-xs text-muted-foreground">{stop.description}</p></div>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveStop(stop)}><XCircle className="h-4 w-4 text-destructive"/></Button>
+                                </div>
+                            ))}
+                        </div>
+                        <Separator />
                         <Table>
                             <TableHeader><TableRow><TableHead>Ачаа</TableHead><TableHead>Баглаа</TableHead><TableHead className="text-right">Үнэ (₮)</TableHead></TableRow></TableHeader>
                             <TableBody>
@@ -692,7 +598,7 @@ export default function ContractedTransportDetailPage() {
                 <Card>
                     <CardHeader>
                         <div className="flex justify-between items-center">
-                            <CardTitle>Оноосон Жолооч, Т/Х ба Зогсоол</CardTitle>
+                            <CardTitle>Оноосон Жолооч ба Т/Х</CardTitle>
                              <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4"/>Нэмэх</Button>
@@ -729,18 +635,6 @@ export default function ContractedTransportDetailPage() {
                                 ))) : (<p className="text-sm text-muted-foreground text-center py-1">Т/Х оноогоогүй.</p>)}
                             </div>
                         </div>
-                        <Separator/>
-                        <div>
-                            <h3 className="font-semibold mb-2 text-sm">Маршрутын зогсоол</h3>
-                            <div className="space-y-1">
-                                {contract.routeStops.map(stop => (
-                                    <div key={stop.id} className="flex justify-between items-center text-sm p-1 rounded-md hover:bg-muted">
-                                        <div><p className="font-medium">{stop.name}</p><p className="text-xs text-muted-foreground">{stop.description}</p></div>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveStop(stop)}><XCircle className="h-4 w-4 text-destructive"/></Button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
                     </CardContent>
                 </Card>
             </div>
@@ -764,13 +658,35 @@ export default function ContractedTransportDetailPage() {
                                 <h3 className="font-semibold text-center text-sm p-2">{statusTranslation[status] || status}</h3>
                                 <div className="space-y-2 min-h-24">
                                     {executions.filter(ex => ex.status === status).map(ex => (
-                                        <ExecutionCard
-                                            key={ex.id}
-                                            execution={ex}
-                                            onDelete={() => setExecutionToDelete(ex)}
-                                            onUpdate={() => onMoveForward(ex)}
-                                            onMoveBackward={() => onMoveBackward(ex)}
-                                        />
+                                        <Card className="text-xs mb-2 touch-none" key={ex.id}>
+                                            <CardContent className="p-2 relative">
+                                                <DropdownMenu>
+                                                  <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6">
+                                                      <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                  </DropdownMenuTrigger>
+                                                  <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onSelect={() => handleUpdateExecution(ex, executionStatuses[executionStatuses.indexOf(ex.status) + 1] as ContractedTransportExecutionStatus)}>
+                                                      <MoveRight className="mr-2 h-4 w-4" />
+                                                      <span>Урагшлуулах</span>
+                                                    </DropdownMenuItem>
+                                                     <DropdownMenuItem onSelect={() => handleUpdateExecution(ex, executionStatuses[executionStatuses.indexOf(ex.status) - 1] as ContractedTransportExecutionStatus)}>
+                                                      <ArrowLeft className="mr-2 h-4 w-4" />
+                                                      <span>Ухраах</span>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem onSelect={() => setExecutionToDelete(ex)} className="text-destructive focus:text-destructive">
+                                                      <Trash2 className="mr-2 h-4 w-4" />
+                                                      <span>Устгах</span>
+                                                    </DropdownMenuItem>
+                                                  </DropdownMenuContent>
+                                                </DropdownMenu>
+                                                <p className="font-semibold pr-6">Огноо: {format(ex.date, 'yyyy-MM-dd')}</p>
+                                                <p>Жолооч: {ex.driverName || 'TBA'}</p>
+                                                <p>Машин: {ex.vehicleLicense || 'TBA'}</p>
+                                            </CardContent>
+                                        </Card>
                                     ))}
                                 </div>
                             </div>
@@ -820,7 +736,7 @@ export default function ContractedTransportDetailPage() {
              <DialogContent>
                 <DialogHeader><DialogTitle>Ачилт эхлүүлэх</DialogTitle></DialogHeader>
                 <Form {...loadingForm}>
-                    <form onSubmit={loadingForm.handleSubmit((values) => handleUpdateExecution('Loading', values))} className="space-y-4 py-4" id="loading-form">
+                    <form onSubmit={loadingForm.handleSubmit((values) => handleUpdateExecution(executionToUpdate!, 'Loading', values))} className="space-y-4 py-4" id="loading-form">
                         <FormField control={loadingForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                         <FormField control={loadingForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Машин сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.modelName} ({v.licensePlate})</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                         <FormField control={loadingForm.control} name="loadingWeight" render={({ field }) => ( <FormItem><FormLabel>Ачсан жин (тонн)</FormLabel><FormControl><Input type="number" placeholder="25" {...field} /></FormControl><FormMessage /></FormItem> )}/>
@@ -837,7 +753,7 @@ export default function ContractedTransportDetailPage() {
              <DialogContent>
                 <DialogHeader><DialogTitle>Буулгалт хийх</DialogTitle></DialogHeader>
                  <Form {...unloadingForm}>
-                    <form onSubmit={unloadingForm.handleSubmit((values) => handleUpdateExecution('Delivered', values))} className="space-y-4 py-4" id="unloading-form">
+                    <form onSubmit={unloadingForm.handleSubmit((values) => handleUpdateExecution(executionToUpdate!, 'Delivered', values))} className="space-y-4 py-4" id="unloading-form">
                         <FormField control={unloadingForm.control} name="unloadingWeight" render={({ field }) => ( <FormItem><FormLabel>Буулгасан жин (тонн)</FormLabel><FormControl><Input type="number" placeholder="25" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                     </form>
                 </Form>
@@ -900,4 +816,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
