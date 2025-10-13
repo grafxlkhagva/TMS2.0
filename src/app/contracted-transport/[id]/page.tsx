@@ -4,7 +4,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, MoveRight, ChevronsUpDown, Check, X } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, MoveRight, ChevronsUpDown, Check, X, MoreHorizontal } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
@@ -500,15 +500,12 @@ export default function ContractedTransportDetailPage() {
                     </div>
                 </CardContent>
             </Card>
-
+            
             <div className="grid md:grid-cols-2 gap-6">
                  <Card>
                     <CardHeader>
                          <div className="flex justify-between items-center">
                             <CardTitle>Маршрут ба Ачаа</CardTitle>
-                            <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
-                                <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
-                            </Button>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -520,6 +517,9 @@ export default function ContractedTransportDetailPage() {
                         <Separator />
                          <div className="flex justify-between items-center">
                             <h3 className="font-semibold text-sm">Маршрутын зогсоол</h3>
+                            <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
+                                <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
+                            </Button>
                         </div>
                         <div className="space-y-1">
                             {contract.routeStops.length > 0 ? (
@@ -587,9 +587,23 @@ export default function ContractedTransportDetailPage() {
                         <div>
                             <div className="flex justify-between items-center mb-2">
                                 <h3 className="font-semibold text-sm">Оноосон тээврийн хэрэгсэл</h3>
-                                <Button variant="outline" size="sm" onClick={() => setAddVehiclePopoverOpen(true)}>
-                                    <PlusCircle className="mr-2 h-4 w-4"/> Т/Х нэмэх
-                                </Button>
+                                <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="sm">
+                                            <PlusCircle className="mr-2 h-4 w-4"/> Т/Х нэмэх
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80 p-0">
+                                        <Command><CommandInput placeholder="Машин хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
+                                            {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
+                                                <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={() => handleAddVehicle(v.id)} disabled={isSubmitting}>
+                                                     <Check className={cn("mr-2 h-4 w-4", assignedVehicleIds.includes(v.id) ? "opacity-100" : "opacity-0")}/>
+                                                    <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup></CommandList></Command>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                             <div className="space-y-2">
                                 {contract.assignedVehicles.length > 0 ? ( contract.assignedVehicles.map(vehicle => (
@@ -628,20 +642,20 @@ export default function ContractedTransportDetailPage() {
                                                 <DropdownMenu>
                                                   <DropdownMenuTrigger asChild>
                                                     <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6">
-                                                      <XCircle className="h-4 w-4" />
+                                                      <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                   </DropdownMenuTrigger>
                                                   <DropdownMenuContent align="end">
                                                      <DropdownMenuItem 
                                                         onSelect={() => handleUpdateExecution(ex, executionStatuses[executionStatuses.indexOf(ex.status) + 1] as ContractedTransportExecutionStatus)}
-                                                        disabled={executionStatuses.indexOf(ex.status) === executionStatuses.length - 1}
+                                                        disabled={isSubmitting || executionStatuses.indexOf(ex.status) === executionStatuses.length - 1}
                                                      >
                                                       <MoveRight className="mr-2 h-4 w-4" />
                                                       <span>Урагшлуулах</span>
                                                     </DropdownMenuItem>
                                                      <DropdownMenuItem 
                                                         onSelect={() => handleUpdateExecution(ex, executionStatuses[executionStatuses.indexOf(ex.status) - 1] as ContractedTransportExecutionStatus)}
-                                                        disabled={executionStatuses.indexOf(ex.status) === 0}
+                                                        disabled={isSubmitting || executionStatuses.indexOf(ex.status) === 0}
                                                      >
                                                       <ArrowLeft className="mr-2 h-4 w-4" />
                                                       <span>Ухраах</span>
@@ -703,21 +717,6 @@ export default function ContractedTransportDetailPage() {
             </AlertDialogContent>
         </AlertDialog>
 
-        <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
-             <PopoverTrigger asChild>
-                <span/>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-0">
-                <Command><CommandInput placeholder="Машин хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
-                    {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
-                        <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={() => handleAddVehicle(v.id)} disabled={isSubmitting}>
-                             <Check className={cn("mr-2 h-4 w-4", assignedVehicleIds.includes(v.id) ? "opacity-100" : "opacity-0")}/>
-                            <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
-                        </CommandItem>
-                    ))}
-                </CommandGroup></CommandList></Command>
-            </PopoverContent>
-        </Popover>
         
         <Dialog open={isStopDialogOpen} onOpenChange={setIsStopDialogOpen}>
             <DialogContent>
@@ -739,4 +738,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
