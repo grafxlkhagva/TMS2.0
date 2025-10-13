@@ -5,7 +5,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Info, Check } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Info, Check, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
@@ -493,13 +493,11 @@ export default function ContractedTransportDetailPage() {
         if (!over) return;
 
         const activeId = active.id as string;
-        const overId = over.id as string;
         
-        // Find the container for the `over` element
-        const overContainerId = over.data.current?.sortable?.containerId || overId;
-        const activeContainerId = active.data.current?.sortable?.containerId || '';
+        const overContainerId = over.data.current?.sortable?.containerId;
+        const activeContainerId = active.data.current?.sortable?.containerId;
 
-        if (activeContainerId !== overContainerId) {
+        if (overContainerId && activeContainerId && activeContainerId !== overContainerId) {
             const execution = executions.find(ex => ex.id === activeId);
             const newStatus = overContainerId;
             
@@ -624,7 +622,7 @@ export default function ContractedTransportDetailPage() {
                                 <h3 className="font-semibold text-sm">Оноосон жолооч нар</h3>
                                 <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm" onClick={() => setAddDriverPopoverOpen(true)}>
+                                        <Button variant="outline" size="sm">
                                             <PlusCircle className="mr-2 h-4 w-4"/> Жолооч нэмэх
                                         </Button>
                                     </PopoverTrigger>
@@ -655,7 +653,7 @@ export default function ContractedTransportDetailPage() {
                                 <h3 className="font-semibold text-sm">Оноосон тээврийн хэрэгсэл</h3>
                                 <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm" onClick={() => setAddVehiclePopoverOpen(true)}>
+                                        <Button variant="outline" size="sm">
                                             <PlusCircle className="mr-2 h-4 w-4"/> Т/Х нэмэх
                                         </Button>
                                     </PopoverTrigger>
