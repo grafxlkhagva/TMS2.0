@@ -453,6 +453,7 @@ export type ContractedTransport = {
   assignedVehicles: {
     vehicleId: string;
     licensePlate: string;
+    trailerLicensePlate?: string;
     modelName: string;
   }[];
 };

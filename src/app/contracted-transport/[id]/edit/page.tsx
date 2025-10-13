@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -209,6 +210,7 @@ export default function EditContractedTransportPage() {
             },
             cargoItems: values.cargoItems.map(({id, ...item}) => item), // Remove client-side id before saving
             updatedAt: serverTimestamp(),
+            assignedVehicles: contract.assignedVehicles,
         };
 
         await updateDoc(contractRef, dataToSave);

@@ -1,14 +1,15 @@
+
 'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, MoveRight, ChevronsUpDown, Check, X, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, Check, X, MoreHorizontal, MoveRight, Route } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportCargoItem, ContractedTransportExecutionStatus } from '@/types';
+import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportExecutionStatus } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -31,16 +32,7 @@ import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { Timestamp } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
 
 const newExecutionFormSchema = z.object({
@@ -329,6 +321,7 @@ export default function ContractedTransportDetailPage() {
             const newVehicleData = {
                 vehicleId: vehicleToAdd.id,
                 licensePlate: vehicleToAdd.licensePlate,
+                trailerLicensePlate: vehicleToAdd.trailerLicensePlate || '',
                 modelName: `${vehicleToAdd.makeName} ${vehicleToAdd.modelName}`
             };
             const contractRef = doc(db, 'contracted_transports', id);
@@ -521,7 +514,7 @@ export default function ContractedTransportDetailPage() {
                 </CardContent>
             </Card>
             
-            <div className="grid md:grid-cols-2 gap-6">
+             <div className="grid md:grid-cols-2 gap-6">
                  <Card>
                     <CardHeader>
                          <div className="flex justify-between items-center">
@@ -625,10 +618,10 @@ export default function ContractedTransportDetailPage() {
                                     </PopoverContent>
                                 </Popover>
                             </div>
-                            <div className="space-y-2">
+                             <div className="space-y-2">
                                 {contract.assignedVehicles.length > 0 ? ( contract.assignedVehicles.map(vehicle => (
                                     <div key={vehicle.vehicleId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
-                                        <div><p className="font-medium">{vehicle.modelName}</p><p className="text-xs text-muted-foreground font-mono">{vehicle.licensePlate}</p></div>
+                                        <div><p className="font-medium">{vehicle.modelName}</p><p className="text-xs text-muted-foreground font-mono">{vehicle.licensePlate} {vehicle.trailerLicensePlate && `/ ${vehicle.trailerLicensePlate}`}</p></div>
                                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveVehicle(vehicle)}><XCircle className="h-4 w-4 text-destructive"/></Button>
                                     </div>
                                 ))) : (<p className="text-sm text-muted-foreground text-center py-1">Т/Х оноогоогүй.</p>)}
