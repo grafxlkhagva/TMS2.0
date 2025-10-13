@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -220,7 +221,88 @@ export default function ContractedTransportDetailPage() {
   const assignedDriverIds = React.useMemo(() => contract?.assignedDrivers.map(d => d.driverId) || [], [contract]);
   const assignedVehicleIds = React.useMemo(() => contract?.assignedVehicles.map(v => v.vehicleId) || [], [contract]);
 
+  const fetchContractData = React.useCallback(async (refetchExecutions = true) => {
+    if (!id) return;
+    
+    if (refetchExecutions) setIsLoading(true);
+
+    try {
+      if (!contract) {
+        const contractDocRef = doc(db, 'contracted_transports', id);
+        const contractDocSnap = await getDoc(contractDocRef);
+
+        if (!contractDocSnap.exists()) {
+          toast({ variant: 'destructive', title: 'Алдаа', description: 'Гэрээт тээвэр олдсонгүй.' });
+          router.push('/contracted-transport');
+          return;
+        }
+        
+        const data = contractDocSnap.data();
+        const fetchedContract = {
+            id: contractDocSnap.id,
+            ...data,
+            createdAt: data.createdAt.toDate(),
+            startDate: data.startDate.toDate(),
+            endDate: data.endDate.toDate(),
+            assignedDrivers: data.assignedDrivers || [],
+            assignedVehicles: data.assignedVehicles || [],
+            routeStops: data.routeStops || [],
+            cargoItems: data.cargoItems || [],
+        } as ContractedTransport;
+        setContract(fetchedContract);
+        
+        const [
+            startRegionSnap, endRegionSnap, startWarehouseSnap, endWarehouseSnap, packagingTypeSnap,
+            managerSnap, driversSnap, vehiclesSnap
+        ] = await Promise.all([
+            getDoc(doc(db, 'regions', fetchedContract.route.startRegionId)),
+            getDoc(doc(db, 'regions', fetchedContract.route.endRegionId)),
+            getDoc(doc(db, 'warehouses', fetchedContract.route.startWarehouseId)),
+            getDoc(doc(db, 'warehouses', fetchedContract.route.endWarehouseId)),
+            getDocs(query(collection(db, 'packaging_types'))),
+            getDoc(doc(db, 'users', fetchedContract.transportManagerId)),
+            getDocs(query(collection(db, "Drivers"), where('status', '==', 'Active'))),
+            getDocs(query(collection(db, 'vehicles'))),
+        ]);
+        
+        setDrivers(driversSnap.docs.map(d => ({id: d.id, ...d.data()} as Driver)));
+        setVehicles(vehiclesSnap.docs.map(v => ({id: v.id, ...v.data()} as Vehicle)));
+
+        setRelatedData({
+            startRegionName: startRegionSnap.data()?.name || '',
+            endRegionName: endRegionSnap.data()?.name || '',
+            startWarehouseName: startWarehouseSnap.data()?.name || '',
+            endWarehouseName: endWarehouseSnap.data()?.name || '',
+            packagingTypes: new Map(packagingTypeSnap.docs.map(doc => [doc.id, doc.data().name])),
+            transportManagerName: `${managerSnap.data()?.lastName || ''} ${managerSnap.data()?.firstName || ''}`,
+        })
+      }
+      
+       if (refetchExecutions) {
+        const executionsSnap = await getDocs(query(collection(db, 'contracted_transport_executions'), where('contractId', '==', id)))
+        const executionsData = executionsSnap.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data(),
+              date: doc.data().date.toDate(),
+              createdAt: doc.data().createdAt.toDate(),
+          } as ContractedTransportExecution));
+
+          setExecutions(executionsData);
+       }
+
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({ variant: 'destructive', title: 'Алдаа', description: 'Мэдээлэл татахад алдаа гарлаа.' });
+    } finally {
+      if (refetchExecutions) setIsLoading(false);
+    }
+  }, [id, router, toast, contract]);
+
   React.useEffect(() => {
+    fetchContractData(true);
+  }, [fetchContractData]);
+
+   React.useEffect(() => {
       newExecutionForm.reset({ date: new Date() });
   }, [isExecutionDialogOpen, newExecutionForm]);
 
@@ -231,96 +313,28 @@ export default function ContractedTransportDetailPage() {
     }
   }, [executionToUpdate, updateAction, loadingForm, unloadingForm]);
 
-
-  const fetchContractData = React.useCallback(async () => {
-    if (!id) return;
-    setIsLoading(true);
-    try {
-      const contractDocRef = doc(db, 'contracted_transports', id);
-      const contractDocSnap = await getDoc(contractDocRef);
-
-      if (!contractDocSnap.exists()) {
-        toast({ variant: 'destructive', title: 'Алдаа', description: 'Гэрээт тээвэр олдсонгүй.' });
-        router.push('/contracted-transport');
-        return;
-      }
-      
-      const data = contractDocSnap.data();
-      const fetchedContract = {
-          id: contractDocSnap.id,
-          ...data,
-          createdAt: data.createdAt.toDate(),
-          startDate: data.startDate.toDate(),
-          endDate: data.endDate.toDate(),
-          assignedDrivers: data.assignedDrivers || [],
-          assignedVehicles: data.assignedVehicles || [],
-          routeStops: data.routeStops || [],
-          cargoItems: data.cargoItems || [],
-      } as ContractedTransport;
-      setContract(fetchedContract);
-      
-      const [
-          startRegionSnap, endRegionSnap, startWarehouseSnap, endWarehouseSnap, packagingTypeSnap,
-          managerSnap, executionsSnap, driversSnap, vehiclesSnap
-      ] = await Promise.all([
-          getDoc(doc(db, 'regions', fetchedContract.route.startRegionId)),
-          getDoc(doc(db, 'regions', fetchedContract.route.endRegionId)),
-          getDoc(doc(db, 'warehouses', fetchedContract.route.startWarehouseId)),
-          getDoc(doc(db, 'warehouses', fetchedContract.route.endWarehouseId)),
-          getDocs(query(collection(db, 'packaging_types'))),
-          getDoc(doc(db, 'users', fetchedContract.transportManagerId)),
-          getDocs(query(collection(db, 'contracted_transport_executions'), where('contractId', '==', id))),
-          getDocs(query(collection(db, "Drivers"), where('status', '==', 'Active'))),
-          getDocs(query(collection(db, 'vehicles'))),
-      ]);
-      
-      setDrivers(driversSnap.docs.map(d => ({id: d.id, ...d.data()} as Driver)));
-      setVehicles(vehiclesSnap.docs.map(v => ({id: v.id, ...v.data()} as Vehicle)));
-
-      setRelatedData({
-          startRegionName: startRegionSnap.data()?.name || '',
-          endRegionName: endRegionSnap.data()?.name || '',
-          startWarehouseName: startWarehouseSnap.data()?.name || '',
-          endWarehouseName: endWarehouseSnap.data()?.name || '',
-          packagingTypes: new Map(packagingTypeSnap.docs.map(doc => [doc.id, doc.data().name])),
-          transportManagerName: `${managerSnap.data()?.lastName || ''} ${managerSnap.data()?.firstName || ''}`,
-      })
-      
-       const executionsData = executionsSnap.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            date: doc.data().date.toDate(),
-            createdAt: doc.data().createdAt.toDate(),
-        } as ContractedTransportExecution));
-
-        setExecutions(executionsData);
-
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      toast({ variant: 'destructive', title: 'Алдаа', description: 'Мэдээлэл татахад алдаа гарлаа.' });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [id, router, toast]);
-
-  React.useEffect(() => {
-    fetchContractData();
-  }, [fetchContractData]);
-
    const onNewExecutionSubmit = async (values: NewExecutionFormValues) => {
         if (!id || !contract) return;
         setIsSubmitting(true);
         try {
-            await addDoc(collection(db, 'contracted_transport_executions'), {
+            const newDocRef = await addDoc(collection(db, 'contracted_transport_executions'), {
                 ...values,
                 contractId: id,
                 status: 'Pending',
                 statusHistory: [{ status: 'Pending', date: new Date() }],
                 createdAt: serverTimestamp(),
             });
+            const newDocSnap = await getDoc(newDocRef);
+            const newExecution = {
+              id: newDocSnap.id,
+              ...newDocSnap.data(),
+              date: newDocSnap.data()?.date.toDate(),
+              createdAt: newDocSnap.data()?.createdAt.toDate(),
+            } as ContractedTransportExecution;
+            setExecutions(prev => [...prev, newExecution])
+
             toast({ title: 'Амжилттай', description: 'Шинэ гүйцэтгэл нэмэгдлээ.' });
             setIsExecutionDialogOpen(false);
-            fetchContractData(); // Refetch all data
         } catch (error) {
             console.error("Error adding execution:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэл нэмэхэд алдаа гарлаа.' });
@@ -358,7 +372,7 @@ export default function ContractedTransportDetailPage() {
             });
             toast({ title: "Амжилттай", description: "Жолооч нэмэгдлээ."});
             setAddDriverPopoverOpen(false);
-            fetchContractData();
+            await fetchContractData(false);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч нэмэхэд алдаа гарлаа.'});
         } finally {
@@ -375,7 +389,6 @@ export default function ContractedTransportDetailPage() {
                  assignedDrivers: arrayRemove(contract.assignedDrivers.find(d => d.driverId === driverToRemove.driverId))
             });
             
-            // Unassign this driver from any pending executions
             const pendingExecs = executions.filter(e => e.status === 'Pending' && e.driverId === driverToRemove.driverId);
             pendingExecs.forEach(exec => {
                 const execRef = doc(db, 'contracted_transport_executions', exec.id);
@@ -385,7 +398,7 @@ export default function ContractedTransportDetailPage() {
             await batch.commit();
             
             toast({ title: "Амжилттай", description: "Жолоочийг хаслаа."});
-            fetchContractData();
+            await fetchContractData(false);
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч хасахад алдаа гарлаа.'});
         }
@@ -407,7 +420,7 @@ export default function ContractedTransportDetailPage() {
             });
             toast({ title: "Амжилттай", description: "Тээврийн хэрэгсэл нэмэгдлээ."});
             setAddVehiclePopoverOpen(false);
-            fetchContractData();
+            await fetchContractData(false);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл нэмэхэд алдаа гарлаа.'});
         } finally {
@@ -423,7 +436,6 @@ export default function ContractedTransportDetailPage() {
             batch.update(contractRef, {
                  assignedVehicles: arrayRemove(contract.assignedVehicles.find(v => v.vehicleId === vehicleToRemove.vehicleId))
             });
-             // Unassign this vehicle from any pending executions
             const pendingExecs = executions.filter(e => e.status === 'Pending' && e.vehicleId === vehicleToRemove.vehicleId);
             pendingExecs.forEach(exec => {
                 const execRef = doc(db, 'contracted_transport_executions', exec.id);
@@ -432,7 +444,7 @@ export default function ContractedTransportDetailPage() {
             await batch.commit();
 
             toast({ title: "Амжилттай", description: "Тээврийн хэрэгслийг хаслаа."});
-            fetchContractData();
+            await fetchContractData(false);
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл хасахад алдаа гарлаа.'});
         }
@@ -452,7 +464,7 @@ export default function ContractedTransportDetailPage() {
             });
             toast({ title: "Амжилттай", description: "Маршрутын зогсоол нэмэгдлээ."});
             routeStopForm.reset();
-            fetchContractData();
+            await fetchContractData(false);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Зогсоол нэмэхэд алдаа гарлаа.'});
         } finally {
@@ -468,7 +480,7 @@ export default function ContractedTransportDetailPage() {
                  routeStops: arrayRemove(stopToRemove)
             });
             toast({ title: "Амжилттай", description: "Зогсоол хасагдлаа."});
-            fetchContractData();
+            await fetchContractData(false);
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Зогсоол хасахад алдаа гарлаа.'});
         }
@@ -478,7 +490,7 @@ export default function ContractedTransportDetailPage() {
         if (!executionToUpdate) return;
 
         setIsSubmitting(true);
-        let updatedExecution: ContractedTransportExecution | null = null;
+        let updatedExecutionData: any = {};
         try {
             const execRef = doc(db, 'contracted_transport_executions', executionToUpdate.id);
             let dataToUpdate: any = {};
@@ -504,19 +516,15 @@ export default function ContractedTransportDetailPage() {
                 };
             }
             
+            updatedExecutionData = { ...executionToUpdate, ...dataToUpdate, status: newStatus };
+
             await updateDoc(execRef, {
                 ...dataToUpdate,
                 status: newStatus,
                 statusHistory: arrayUnion({ status: newStatus, date: Timestamp.now() }),
             });
             
-            updatedExecution = {
-                ...executionToUpdate,
-                ...dataToUpdate,
-                status: newStatus,
-            };
-
-            setExecutions(prev => prev.map(ex => ex.id === executionToUpdate.id ? updatedExecution! : ex));
+            setExecutions(prev => prev.map(ex => ex.id === executionToUpdate.id ? updatedExecutionData : ex));
 
             toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${statusTranslation[newStatus]}' төлөвт шилжлээ.` });
         } catch (error) {
@@ -826,3 +834,5 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
+    
