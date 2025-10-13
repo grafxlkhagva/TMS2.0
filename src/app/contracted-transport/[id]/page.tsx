@@ -29,9 +29,8 @@ import {
     AlertDialogCancel,
     AlertDialogContent,
     AlertDialogDescription,
-    AlertDialogFooter,
     AlertDialogHeader,
-    AlertDialogTitle,
+    AlertDialogFooter,
 } from "@/components/ui/alert-dialog"
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/hooks/use-auth';
@@ -515,8 +514,49 @@ export default function ContractedTransportDetailPage() {
             </Button>
         </div>
       </div>
-       <div className="grid lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-2 space-y-6">
+       <div className="grid lg:grid-cols-2 gap-6 items-start mb-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Ерөнхий мэдээлэл</CardTitle>
+                </CardHeader>
+                <CardContent className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
+                    <DetailItem icon={User} label="Харилцагч" value={contract.customerName} />
+                    <DetailItem icon={User} label="Тээврийн менежер" value={relatedData.transportManagerName} />
+                    <DetailItem icon={Calendar} label="Гэрээний хугацаа" value={`${format(contract.startDate, 'yyyy-MM-dd')} - ${format(contract.endDate, 'yyyy-MM-dd')}`} />
+                    <DetailItem icon={Calendar} label="Давтамж" value={contract.frequency === 'Custom' ? `${frequencyTranslations[contract.frequency]} (${contract.customFrequencyDetails})` : frequencyTranslations[contract.frequency]} />
+                    <DetailItem icon={statusInfo.icon} label="Статус" value={<Badge variant={statusInfo.variant}>{statusInfo.text}</Badge>} />
+                    <DetailItem icon={Calendar} label="Бүртгэсэн огноо" value={format(contract.createdAt, 'yyyy-MM-dd HH:mm')} />
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader><CardTitle>Чиглэл ба Ачааны мэдээлэл</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
+                      <DetailItem icon={MapPin} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`} />
+                      <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`} />
+                      <DetailItem icon={MapIcon} label="Нийт зам" value={`${contract.route.totalDistance} км`} />
+                    </div>
+                    <Separator/>
+                     <Table>
+                        <TableHeader>
+                            <TableRow><TableHead>Ачаа</TableHead><TableHead className="text-right">Үнэ (₮)</TableHead></TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {contract.cargoItems.map((item, index) => (
+                            <TableRow key={item.id || index}>
+                                <TableCell>
+                                    <p className="font-medium">{item.name}</p>
+                                    <p className="text-xs text-muted-foreground">{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</p>
+                                </TableCell>
+                                <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                     </Table>
+                </CardContent>
+            </Card>
+        </div>
+        <div className="space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle>Тээвэрлэлтийн гүйцэтгэл</CardTitle>
@@ -560,183 +600,143 @@ export default function ContractedTransportDetailPage() {
                     </div>
                 </CardContent>
             </Card>
-        </div>
-        <div className="space-y-6 sticky top-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Ерөнхий мэдээлэл</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <DetailItem icon={User} label="Харилцагч" value={contract.customerName} />
-                    <DetailItem icon={User} label="Тээврийн менежер" value={relatedData.transportManagerName} />
-                    <Separator/>
-                    <DetailItem icon={Calendar} label="Гэрээний хугацаа" value={`${format(contract.startDate, 'yyyy-MM-dd')} - ${format(contract.endDate, 'yyyy-MM-dd')}`} />
-                    <DetailItem icon={Calendar} label="Давтамж" value={contract.frequency === 'Custom' ? `${frequencyTranslations[contract.frequency]} (${contract.customFrequencyDetails})` : frequencyTranslations[contract.frequency]} />
-                     <Separator/>
-                    <DetailItem icon={statusInfo.icon} label="Статус" value={<Badge variant={statusInfo.variant}>{statusInfo.text}</Badge>} />
-                    <DetailItem icon={Calendar} label="Бүртгэсэн огноо" value={format(contract.createdAt, 'yyyy-MM-dd HH:mm')} />
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader><CardTitle>Чиглэл ба Ачааны мэдээлэл</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                    <DetailItem icon={MapPin} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`} />
-                    <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`} />
-                    <DetailItem icon={MapIcon} label="Нийт зам" value={`${contract.route.totalDistance} км`} />
-                    <Separator/>
-                     <Table>
-                        <TableHeader>
-                            <TableRow><TableHead>Ачаа</TableHead><TableHead className="text-right">Үнэ (₮)</TableHead></TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {contract.cargoItems.map((item, index) => (
-                            <TableRow key={item.id || index}>
-                                <TableCell>
-                                    <p className="font-medium">{item.name}</p>
-                                    <p className="text-xs text-muted-foreground">{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</p>
-                                </TableCell>
-                                <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                     </Table>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Оноосон жолооч нар</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                    {contract.assignedDrivers.length > 0 ? (
-                        contract.assignedDrivers.map(driver => (
-                            <div key={driver.driverId} className="flex justify-between items-center text-sm p-2 rounded-md hover:bg-muted">
-                                <div>
-                                    <p className="font-medium">{driver.driverName}</p>
-                                    <p className="text-xs text-muted-foreground">{driver.driverPhone}</p>
+
+            <div className="grid md:grid-cols-3 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Оноосон жолооч нар</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        {contract.assignedDrivers.length > 0 ? (
+                            contract.assignedDrivers.map(driver => (
+                                <div key={driver.driverId} className="flex justify-between items-center text-sm p-2 rounded-md hover:bg-muted">
+                                    <div>
+                                        <p className="font-medium">{driver.driverName}</p>
+                                        <p className="text-xs text-muted-foreground">{driver.driverPhone}</p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveDriver(driver)}>
+                                        <XCircle className="h-4 w-4 text-destructive"/>
+                                    </Button>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveDriver(driver)}>
-                                    <XCircle className="h-4 w-4 text-destructive"/>
+                            ))
+                        ) : (
+                            <p className="text-sm text-muted-foreground text-center py-2">Жолооч оноогоогүй байна.</p>
+                        )}
+                    </CardContent>
+                    <CardFooter>
+                        <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="w-full">
+                                    <UserPlus className="mr-2 h-4 w-4" />
+                                    Жолооч нэмэх
                                 </Button>
-                            </div>
-                        ))
-                    ) : (
-                        <p className="text-sm text-muted-foreground text-center py-2">Жолооч оноогоогүй байна.</p>
-                    )}
-                </CardContent>
-                <CardFooter>
-                     <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full">
-                                <UserPlus className="mr-2 h-4 w-4" />
-                                Жолооч нэмэх
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                            <Command>
-                                <CommandInput placeholder="Жолооч хайх..."/>
-                                <CommandList>
-                                    <CommandEmpty>Олдсонгүй.</CommandEmpty>
-                                    <CommandGroup>
-                                        {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
-                                            <CommandItem
-                                                key={d.id}
-                                                value={`${d.display_name} ${d.phone_number}`}
-                                                onSelect={() => handleAddDriver(d.id)}
-                                                disabled={isAddingDriver}
-                                            >
-                                                <span>{d.display_name} ({d.phone_number})</span>
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                     </Popover>
-                </CardFooter>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Оноосон тээврийн хэрэгсэл</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                     {contract.assignedVehicles.length > 0 ? (
-                        contract.assignedVehicles.map(vehicle => (
-                            <div key={vehicle.vehicleId} className="flex justify-between items-center text-sm p-2 rounded-md hover:bg-muted">
-                                <div>
-                                    <p className="font-medium">{vehicle.modelName}</p>
-                                    <p className="text-xs text-muted-foreground font-mono">{vehicle.licensePlate}</p>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                <Command>
+                                    <CommandInput placeholder="Жолооч хайх..."/>
+                                    <CommandList>
+                                        <CommandEmpty>Олдсонгүй.</CommandEmpty>
+                                        <CommandGroup>
+                                            {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
+                                                <CommandItem
+                                                    key={d.id}
+                                                    value={`${d.display_name} ${d.phone_number}`}
+                                                    onSelect={() => handleAddDriver(d.id)}
+                                                    disabled={isAddingDriver}
+                                                >
+                                                    <span>{d.display_name} ({d.phone_number})</span>
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                    </CardFooter>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Оноосон тээврийн хэрэгсэл</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        {contract.assignedVehicles.length > 0 ? (
+                            contract.assignedVehicles.map(vehicle => (
+                                <div key={vehicle.vehicleId} className="flex justify-between items-center text-sm p-2 rounded-md hover:bg-muted">
+                                    <div>
+                                        <p className="font-medium">{vehicle.modelName}</p>
+                                        <p className="text-xs text-muted-foreground font-mono">{vehicle.licensePlate}</p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveVehicle(vehicle)}>
+                                        <XCircle className="h-4 w-4 text-destructive"/>
+                                    </Button>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveVehicle(vehicle)}>
-                                    <XCircle className="h-4 w-4 text-destructive"/>
+                            ))
+                        ) : (
+                            <p className="text-sm text-muted-foreground text-center py-2">Тээврийн хэрэгсэл оноогоогүй байна.</p>
+                        )}
+                    </CardContent>
+                    <CardFooter>
+                        <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="w-full">
+                                    <Car className="mr-2 h-4 w-4" />
+                                    Тээврийн хэрэгсэл нэмэх
                                 </Button>
-                            </div>
-                        ))
-                    ) : (
-                        <p className="text-sm text-muted-foreground text-center py-2">Тээврийн хэрэгсэл оноогоогүй байна.</p>
-                    )}
-                </CardContent>
-                <CardFooter>
-                     <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full">
-                                <Car className="mr-2 h-4 w-4" />
-                                Тээврийн хэрэгсэл нэмэх
-                            </Button>
-                        </PopoverTrigger>
-                         <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                            <Command>
-                                <CommandInput placeholder="Машин хайх..."/>
-                                <CommandList>
-                                    <CommandEmpty>Олдсонгүй.</CommandEmpty>
-                                    <CommandGroup>
-                                        {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
-                                            <CommandItem
-                                                key={v.id}
-                                                value={`${v.makeName} ${v.modelName} ${v.licensePlate}`}
-                                                onSelect={() => handleAddVehicle(v.id)}
-                                                disabled={isAddingVehicle}
-                                            >
-                                                <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                     </Popover>
-                </CardFooter>
-            </Card>
-             <Card>
-                <CardHeader>
-                    <CardTitle>Маршрутын зогсоол батлах</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Form {...routeStopForm}>
-                        <form onSubmit={routeStopForm.handleSubmit(onRouteStopSubmit)} className="space-y-4">
-                            <FormField control={routeStopForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын нэр</FormLabel><FormControl><Input placeholder="Эмээлт" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                            <FormField control={routeStopForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>Тайлбар</FormLabel><FormControl><Input placeholder="Бичиг баримт шалгуулах" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                            <Button type="submit" disabled={isSubmittingStop}>
-                                {isSubmittingStop && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                                Зогсоол нэмэх
-                            </Button>
-                        </form>
-                    </Form>
-                     <Separator className="my-4"/>
-                     <div className="space-y-2">
-                        {contract.routeStops.map(stop => (
-                            <div key={stop.id} className="flex justify-between items-center text-sm p-2 rounded-md hover:bg-muted">
-                                <div>
-                                    <p className="font-medium">{stop.name}</p>
-                                    <p className="text-xs text-muted-foreground">{stop.description}</p>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                <Command>
+                                    <CommandInput placeholder="Машин хайх..."/>
+                                    <CommandList>
+                                        <CommandEmpty>Олдсонгүй.</CommandEmpty>
+                                        <CommandGroup>
+                                            {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
+                                                <CommandItem
+                                                    key={v.id}
+                                                    value={`${v.makeName} ${v.modelName} ${v.licensePlate}`}
+                                                    onSelect={() => handleAddVehicle(v.id)}
+                                                    disabled={isAddingVehicle}
+                                                >
+                                                    <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                    </CardFooter>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Маршрутын зогсоол батлах</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Form {...routeStopForm}>
+                            <form onSubmit={routeStopForm.handleSubmit(onRouteStopSubmit)} className="space-y-4">
+                                <FormField control={routeStopForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын нэр</FormLabel><FormControl><Input placeholder="Эмээлт" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                <FormField control={routeStopForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>Тайлбар</FormLabel><FormControl><Input placeholder="Бичиг баримт шалгуулах" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                <Button type="submit" disabled={isSubmittingStop}>
+                                    {isSubmittingStop && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                    Зогсоол нэмэх
+                                </Button>
+                            </form>
+                        </Form>
+                        <Separator className="my-4"/>
+                        <div className="space-y-2">
+                            {contract.routeStops.map(stop => (
+                                <div key={stop.id} className="flex justify-between items-center text-sm p-2 rounded-md hover:bg-muted">
+                                    <div>
+                                        <p className="font-medium">{stop.name}</p>
+                                        <p className="text-xs text-muted-foreground">{stop.description}</p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveStop(stop)}><XCircle className="h-4 w-4 text-destructive"/></Button>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveStop(stop)}><XCircle className="h-4 w-4 text-destructive"/></Button>
-                            </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
-       </div>
 
         <Dialog open={isExecutionDialogOpen} onOpenChange={setIsExecutionDialogOpen}>
             <DialogContent>
