@@ -41,7 +41,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 
@@ -163,13 +163,23 @@ export default function ContractedTransportDetailPage() {
 
   const executionStatuses = React.useMemo(() => {
     if (!contract) return ['Хүлээгдэж буй', 'Ачиж буй', 'Буулгаж буй', 'Хүргэгдсэн'];
-    return [
+    const baseStatuses = [
         'Хүлээгдэж буй', 
         'Ачиж буй', 
-        ...contract.routeStops.map(s => s.name),
+    ];
+    const inTransitStatuses = contract.routeStops.map(s => s.name);
+    const endStatuses = [
         'Буулгаж буй', 
         'Хүргэгдсэн'
     ];
+    
+    // Add "In Transit" if there are no route stops to ensure it's always an option
+    if (inTransitStatuses.length === 0) {
+        return [...baseStatuses, 'Тээвэрлэж буй', ...endStatuses];
+    }
+    
+    return [...baseStatuses, ...inTransitStatuses, ...endStatuses];
+
   }, [contract]);
 
   const newExecutionForm = useForm<NewExecutionFormValues>({
@@ -486,24 +496,19 @@ export default function ContractedTransportDetailPage() {
     }
     
     async function handleDragEnd(event: DragEndEvent) {
-        const { active, over } = event;
-
-        if (over && active.id !== over.id) {
-            const activeContainer = active.data.current?.sortable.containerId;
-            const overContainer = over.data.current?.sortable.containerId;
-            
-            if (activeContainer === overContainer) {
-                // Reordering within the same column - not implemented yet
-            } else {
-                 const executionId = active.id;
-                 const newStatus = overContainer;
-                 const execution = executions.find(ex => ex.id === executionId);
-
-                 if (execution && newStatus) {
-                    await handleUpdateExecution(execution, newStatus);
-                 }
-            }
+      const { active, over } = event;
+    
+      if (over && active.id !== over.id) {
+        const executionId = active.id as string;
+        const newStatus = over.id as string;
+    
+        const execution = executions.find(ex => ex.id === executionId);
+    
+        // Check if `over.id` is a valid status/column, not another card
+        if (execution && executionStatuses.includes(newStatus)) {
+          await handleUpdateExecution(execution, newStatus);
         }
+      }
     }
 
   if (isLoading) {
@@ -621,7 +626,7 @@ export default function ContractedTransportDetailPage() {
                                 <h3 className="font-semibold text-sm">Оноосон жолооч нар</h3>
                                  <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm">
+                                        <Button variant="outline" size="sm" onClick={() => setAddDriverPopoverOpen(true)}>
                                             <PlusCircle className="mr-2 h-4 w-4"/> Жолооч нэмэх
                                         </Button>
                                     </PopoverTrigger>
@@ -652,7 +657,7 @@ export default function ContractedTransportDetailPage() {
                                 <h3 className="font-semibold text-sm">Оноосон тээврийн хэрэгсэл</h3>
                                 <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm">
+                                        <Button variant="outline" size="sm" onClick={() => setAddVehiclePopoverOpen(true)}>
                                             <PlusCircle className="mr-2 h-4 w-4"/> Т/Х нэмэх
                                         </Button>
                                     </PopoverTrigger>
@@ -715,7 +720,7 @@ export default function ContractedTransportDetailPage() {
                     <div className="overflow-x-auto">
                         <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(180px, 1fr))`}}>
                             {executionStatuses.map(status => (
-                                 <SortableContext key={status} items={executions.filter(ex => ex.status === status).map(ex => ex.id)}>
+                                 <SortableContext key={status} id={status} items={executions.filter(ex => ex.status === status).map(ex => ex.id)} strategy={verticalListSortingStrategy}>
                                     <div id={status} className="p-1 rounded-lg bg-muted/50 min-h-40">
                                         <h3 className={`font-semibold text-center text-xs p-2 rounded-md ${statusColorMap[status as keyof typeof statusColorMap] || 'bg-gray-200'} text-white`}>
                                             {status}
