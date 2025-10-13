@@ -572,7 +572,7 @@ export default function ContractedTransportDetailPage() {
                         <Separator />
                          <div className="flex justify-between items-center">
                             <h3 className="font-semibold text-sm">Маршрутын зогсоол</h3>
-                            <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
+                             <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
                                 <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
                             </Button>
                         </div>
@@ -605,22 +605,16 @@ export default function ContractedTransportDetailPage() {
                 </Card>
                 <Card>
                     <CardHeader>
-                        <div className="flex justify-between items-center">
-                            <CardTitle>Оноосон Жолооч ба Т/Х</CardTitle>
-                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4"/>Нэмэх</Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                    <DropdownMenuItem onSelect={() => setAddDriverPopoverOpen(true)}>Жолооч нэмэх</DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => setAddVehiclePopoverOpen(true)}>Т/Х нэмэх</DropdownMenuItem>
-                                </DropdownMenuContent>
-                             </DropdownMenu>
-                        </div>
+                        <CardTitle>Оноосон Жолооч ба Т/Х</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div>
-                            <h3 className="font-semibold mb-2 text-sm">Оноосон жолооч нар</h3>
+                             <div className="flex justify-between items-center mb-2">
+                                <h3 className="font-semibold text-sm">Оноосон жолооч нар</h3>
+                                <Button variant="outline" size="sm" onClick={() => setAddDriverPopoverOpen(true)}>
+                                    <PlusCircle className="mr-2 h-4 w-4"/> Жолооч нэмэх
+                                </Button>
+                            </div>
                             <div className="space-y-2">
                                 {contract.assignedDrivers.length > 0 ? ( contract.assignedDrivers.map(driver => (
                                     <div key={driver.driverId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
@@ -632,7 +626,12 @@ export default function ContractedTransportDetailPage() {
                         </div>
                         <Separator/>
                         <div>
-                            <h3 className="font-semibold mb-2 text-sm">Оноосон тээврийн хэрэгсэл</h3>
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="font-semibold text-sm">Оноосон тээврийн хэрэгсэл</h3>
+                                <Button variant="outline" size="sm" onClick={() => setAddVehiclePopoverOpen(true)}>
+                                    <PlusCircle className="mr-2 h-4 w-4"/> Т/Х нэмэх
+                                </Button>
+                            </div>
                             <div className="space-y-2">
                                 {contract.assignedVehicles.length > 0 ? ( contract.assignedVehicles.map(vehicle => (
                                     <div key={vehicle.vehicleId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
