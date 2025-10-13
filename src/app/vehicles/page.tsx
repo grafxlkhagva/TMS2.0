@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -200,6 +201,7 @@ export default function VehiclesPage() {
           const lowerCaseSearch = searchTerm.toLowerCase();
           return (
             vehicle.licensePlate.toLowerCase().includes(lowerCaseSearch) ||
+            (vehicle.trailerLicensePlate && vehicle.trailerLicensePlate.toLowerCase().includes(lowerCaseSearch)) ||
             vehicle.makeName.toLowerCase().includes(lowerCaseSearch) ||
             vehicle.modelName.toLowerCase().includes(lowerCaseSearch) ||
             (vehicle.driverName && vehicle.driverName.toLowerCase().includes(lowerCaseSearch))
@@ -273,6 +275,7 @@ export default function VehiclesPage() {
               <TableRow>
                 <TableHead>Зураг</TableHead>
                 <TableHead>Улсын дугаар</TableHead>
+                <TableHead>Чиргүүлийн дугаар</TableHead>
                 <TableHead>Үйлдвэрлэгч</TableHead>
                 <TableHead>Загвар</TableHead>
                 <TableHead>Даац</TableHead>
@@ -286,6 +289,7 @@ export default function VehiclesPage() {
                 Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
                         <TableCell><Skeleton className="h-10 w-10 rounded-full"/></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24"/></TableCell>
                         <TableCell><Skeleton className="h-5 w-24"/></TableCell>
                         <TableCell><Skeleton className="h-5 w-20"/></TableCell>
                         <TableCell><Skeleton className="h-5 w-20"/></TableCell>
@@ -305,6 +309,7 @@ export default function VehiclesPage() {
                             </Avatar>
                         </TableCell>
                       <TableCell className="font-mono">{vehicle.licensePlate}</TableCell>
+                      <TableCell className="font-mono">{vehicle.trailerLicensePlate || '-'}</TableCell>
                       <TableCell>{vehicle.makeName}</TableCell>
                       <TableCell className="font-medium">{vehicle.modelName}</TableCell>
                       <TableCell>{vehicle.capacity}</TableCell>
@@ -345,7 +350,7 @@ export default function VehiclesPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center h-24">
+                  <TableCell colSpan={9} className="text-center h-24">
                     Тээврийн хэрэгсэл бүртгэлгүй байна.
                   </TableCell>
                 </TableRow>

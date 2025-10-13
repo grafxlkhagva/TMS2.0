@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -198,6 +199,7 @@ export default function DriversPage() {
                 <TableHead>Утас</TableHead>
                 <TableHead>Статус</TableHead>
                 <TableHead>Улсын дугаар</TableHead>
+                <TableHead>Чиргүүлийн дугаар</TableHead>
                 <TableHead>Даац</TableHead>
                 <TableHead>Төрөл / Тэвш</TableHead>
                 <TableHead>Бүртгүүлсэн</TableHead>
@@ -212,6 +214,7 @@ export default function DriversPage() {
                     <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
@@ -236,6 +239,7 @@ export default function DriversPage() {
                       <TableCell>{driver.phone_number}</TableCell>
                       <TableCell><StatusBadge status={driver.status} /></TableCell>
                        <TableCell>{driver.vehicle?.licensePlate || 'Оноогоогүй'}</TableCell>
+                      <TableCell>{driver.vehicle?.trailerLicensePlate || '-'}</TableCell>
                       <TableCell>{driver.vehicle?.capacity || '-'}</TableCell>
                       <TableCell>{driver.vehicle ? `${driver.vehicle.vehicleTypeName} / ${driver.vehicle.trailerTypeName}` : '-'}</TableCell>
                       <TableCell>{toDateSafe(driver.created_time).toLocaleDateString()}</TableCell>
@@ -273,7 +277,7 @@ export default function DriversPage() {
                 ))
               ) : (
                  <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
+                    <TableCell colSpan={10} className="h-24 text-center">
                         Бүртгэлтэй жолооч олдсонгүй.
                     </TableCell>
                  </TableRow>

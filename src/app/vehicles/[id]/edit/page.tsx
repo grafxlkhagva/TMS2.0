@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -45,6 +46,7 @@ const formSchema = z.object({
   licensePlateChar1: z.string().min(1, "Үсэг сонгоно уу."),
   licensePlateChar2: z.string().min(1, "Үсэг сонгоно уу."),
   licensePlateChar3: z.string().min(1, "Үсэг сонгоно уу."),
+  trailerLicensePlate: z.string().optional(),
   vin: z.string().min(1, "Арлын дугаарыг оруулна уу."),
   vehicleTypeId: z.string().min(1, "Машины төрөл сонгоно уу."),
   trailerTypeId: z.string().min(1, "Тэвшний төрөл сонгоно уу."),
@@ -125,6 +127,7 @@ export default function EditVehiclePage() {
                 licensePlateChar1: vehicleData.licensePlateChars?.[0] || '',
                 licensePlateChar2: vehicleData.licensePlateChars?.[1] || '',
                 licensePlateChar3: vehicleData.licensePlateChars?.[2] || '',
+                trailerLicensePlate: vehicleData.trailerLicensePlate || '',
                 makeId: vehicleData.makeId,
                 modelId: vehicleData.modelId,
             });
@@ -320,6 +323,7 @@ export default function EditVehiclePage() {
                         <FormField control={form.control} name="licensePlateChar3" render={({ field }) => ( <FormItem className="flex-1"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{mongolianAlphabet.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                     </div>
                 </div>
+                <FormField control={form.control} name="trailerLicensePlate" render={({ field }) => ( <FormItem><FormLabel>Чиргүүлийн дугаар (Сонголттой)</FormLabel><FormControl><Input placeholder="1234 ААА" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                 <FormField control={form.control} name="vin" render={({ field }) => ( <FormItem><FormLabel>Арлын дугаар (VIN)</FormLabel><FormControl><Input placeholder="Арлын дугаар" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="vehicleTypeId" render={({ field }) => (<FormItem><FormLabel>Машины төрөл</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{vehicleTypes.map((s) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('vehicle_types', 'vehicleTypeId')}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
@@ -348,5 +352,3 @@ export default function EditVehiclePage() {
     </div>
   );
 }
-
-    

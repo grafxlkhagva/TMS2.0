@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -45,6 +46,7 @@ const formSchema = z.object({
   licensePlateChar1: z.string().min(1, "Үсэг сонгоно уу."),
   licensePlateChar2: z.string().min(1, "Үсэг сонгоно уу."),
   licensePlateChar3: z.string().min(1, "Үсэг сонгоно уу."),
+  trailerLicensePlate: z.string().optional(),
   vin: z.string().min(1, "Арлын дугаарыг оруулна уу."),
   vehicleTypeId: z.string().min(1, "Машины төрөл сонгоно уу."),
   trailerTypeId: z.string().min(1, "Тэвшний төрөл сонгоно уу."),
@@ -79,6 +81,7 @@ export default function NewVehiclePage() {
       licensePlateChar1: '',
       licensePlateChar2: '',
       licensePlateChar3: '',
+      trailerLicensePlate: '',
       vin: '',
       vehicleTypeId: '',
       trailerTypeId: '',
@@ -268,6 +271,7 @@ export default function NewVehiclePage() {
                         <FormField control={form.control} name="licensePlateChar3" render={({ field }) => ( <FormItem className="flex-1"><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{mongolianAlphabet.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                     </div>
                 </div>
+                <FormField control={form.control} name="trailerLicensePlate" render={({ field }) => ( <FormItem><FormLabel>Чиргүүлийн дугаар (Сонголттой)</FormLabel><FormControl><Input placeholder="1234 ААА" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                 <FormField control={form.control} name="vin" render={({ field }) => ( <FormItem><FormLabel>Арлын дугаар (VIN)</FormLabel><FormControl><Input placeholder="Арлын дугаар" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField control={form.control} name="vehicleTypeId" render={({ field }) => (<FormItem><FormLabel>Машины төрөл</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{vehicleTypes.map((s) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('vehicle_types', 'vehicleTypeId')}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
@@ -296,9 +300,3 @@ export default function NewVehiclePage() {
     </div>
   );
 }
-
-    
-
-    
-
-    

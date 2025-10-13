@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -178,6 +179,7 @@ export default function VehicleDetailPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <DetailItem icon={Calendar} label="Үйлдвэрлэсэн / Орж ирсэн он" value={`${vehicle.year} / ${vehicle.importedYear}`} />
+            <DetailItem icon={Hash} label="Чиргүүлийн дугаар" value={vehicle.trailerLicensePlate} />
             <DetailItem icon={Hash} label="Арлын дугаар (VIN)" value={vehicle.vin} />
             <DetailItem icon={Car} label="Машины төрөл" value={vehicleTypeName} />
             <DetailItem icon={Container} label="Тэвшний төрөл" value={trailerTypeName} />

@@ -17,6 +17,7 @@ export type Vehicle = {
   licensePlate: string;
   licensePlateDigits: string;
   licensePlateChars: string;
+  trailerLicensePlate?: string;
   vin: string;
   vehicleTypeId: string;
   trailerTypeId: string;
@@ -453,5 +454,3 @@ export type ContractedTransport = {
     modelName: string;
   }[];
 };
-
-    
