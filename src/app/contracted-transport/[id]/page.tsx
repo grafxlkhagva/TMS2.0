@@ -1,10 +1,9 @@
-
 'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, MoveRight } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, MoveRight, MoreHorizontal } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
@@ -43,6 +42,13 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
 
 const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
@@ -103,7 +109,7 @@ function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, lab
   );
 }
 
-function ExecutionCard({ execution, onUpdate, onDelete }: { execution: ContractedTransportExecution, onUpdate: () => void, onDelete: () => void }) {
+function ExecutionCard({ execution, onUpdate, onDelete, onMoveBackward }: { execution: ContractedTransportExecution, onUpdate: () => void, onDelete: () => void, onMoveBackward: () => void }) {
     const {
         attributes,
         listeners,
@@ -123,6 +129,8 @@ function ExecutionCard({ execution, onUpdate, onDelete }: { execution: Contracte
         scale: isDragging ? '1.05' : '1',
         rotate: isDragging ? '2deg' : '0deg',
     };
+    
+    const currentIndex = executionStatuses.indexOf(execution.status);
 
     return (
         <Card
@@ -130,22 +138,34 @@ function ExecutionCard({ execution, onUpdate, onDelete }: { execution: Contracte
             style={style}
             {...attributes}
             {...listeners}
-            className={cn(
-              "text-xs mb-2 touch-none",
-            )}
+            className="text-xs mb-2 touch-none"
         >
-            <CardContent className="p-2">
-                <p className="font-semibold">Огноо: {format(execution.date, 'yyyy-MM-dd')}</p>
+            <CardContent className="p-2 relative">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={onUpdate} disabled={currentIndex === executionStatuses.length - 1}>
+                      <MoveRight className="mr-2 h-4 w-4" />
+                      <span>Урагшлуулах</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onMoveBackward} disabled={currentIndex === 0}>
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      <span>Ухраах</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      <span>Устгах</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <p className="font-semibold pr-6">Огноо: {format(execution.date, 'yyyy-MM-dd')}</p>
                 <p>Жолооч: {execution.driverName || 'TBA'}</p>
                 <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
-                <div className="mt-2 flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onDelete}><Trash2 className="h-3 w-3 text-destructive"/></Button>
-                    {execution.status !== 'Delivered' && (
-                        <Button variant="outline" size="icon" className="h-6 w-6" onClick={onUpdate}>
-                            <MoveRight className="h-3 w-3"/>
-                        </Button>
-                    )}
-                </div>
             </CardContent>
         </Card>
     );
@@ -221,13 +241,12 @@ export default function ContractedTransportDetailPage() {
   const assignedDriverIds = React.useMemo(() => contract?.assignedDrivers.map(d => d.driverId) || [], [contract]);
   const assignedVehicleIds = React.useMemo(() => contract?.assignedVehicles.map(v => v.vehicleId) || [], [contract]);
 
-  const fetchContractData = React.useCallback(async (refetchExecutions = true) => {
+  const fetchContractData = React.useCallback(async () => {
     if (!id) return;
     
-    if (refetchExecutions) setIsLoading(true);
+    setIsLoading(true);
 
     try {
-      if (!contract) {
         const contractDocRef = doc(db, 'contracted_transports', id);
         const contractDocSnap = await getDoc(contractDocRef);
 
@@ -253,7 +272,7 @@ export default function ContractedTransportDetailPage() {
         
         const [
             startRegionSnap, endRegionSnap, startWarehouseSnap, endWarehouseSnap, packagingTypeSnap,
-            managerSnap, driversSnap, vehiclesSnap
+            managerSnap, driversSnap, vehiclesSnap, executionsSnap
         ] = await Promise.all([
             getDoc(doc(db, 'regions', fetchedContract.route.startRegionId)),
             getDoc(doc(db, 'regions', fetchedContract.route.endRegionId)),
@@ -263,6 +282,7 @@ export default function ContractedTransportDetailPage() {
             getDoc(doc(db, 'users', fetchedContract.transportManagerId)),
             getDocs(query(collection(db, "Drivers"), where('status', '==', 'Active'))),
             getDocs(query(collection(db, 'vehicles'))),
+            getDocs(query(collection(db, 'contracted_transport_executions'), where('contractId', '==', id))),
         ]);
         
         setDrivers(driversSnap.docs.map(d => ({id: d.id, ...d.data()} as Driver)));
@@ -276,10 +296,7 @@ export default function ContractedTransportDetailPage() {
             packagingTypes: new Map(packagingTypeSnap.docs.map(doc => [doc.id, doc.data().name])),
             transportManagerName: `${managerSnap.data()?.lastName || ''} ${managerSnap.data()?.firstName || ''}`,
         })
-      }
       
-       if (refetchExecutions) {
-        const executionsSnap = await getDocs(query(collection(db, 'contracted_transport_executions'), where('contractId', '==', id)))
         const executionsData = executionsSnap.docs.map(doc => ({
               id: doc.id,
               ...doc.data(),
@@ -287,19 +304,18 @@ export default function ContractedTransportDetailPage() {
               createdAt: doc.data().createdAt.toDate(),
           } as ContractedTransportExecution));
 
-          setExecutions(executionsData);
-       }
+        setExecutions(executionsData);
 
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({ variant: 'destructive', title: 'Алдаа', description: 'Мэдээлэл татахад алдаа гарлаа.' });
     } finally {
-      if (refetchExecutions) setIsLoading(false);
+      setIsLoading(false);
     }
-  }, [id, router, toast, contract]);
+  }, [id, router, toast]);
 
   React.useEffect(() => {
-    fetchContractData(true);
+    fetchContractData();
   }, [fetchContractData]);
 
    React.useEffect(() => {
@@ -499,10 +515,9 @@ export default function ContractedTransportDetailPage() {
         if (!executionToUpdate) return;
 
         setIsSubmitting(true);
-        let updatedExecutionData: any = {};
+        let dataToUpdate: any = {};
         try {
             const execRef = doc(db, 'contracted_transport_executions', executionToUpdate.id);
-            let dataToUpdate: any = {};
             
             if (newStatus === 'Loading' && values && 'loadingWeight' in values) {
                 const driver = contract?.assignedDrivers.find(d => d.driverId === values.driverId);
@@ -525,17 +540,15 @@ export default function ContractedTransportDetailPage() {
                 };
             }
             
-            updatedExecutionData = { ...executionToUpdate, ...dataToUpdate, status: newStatus };
-
             await updateDoc(execRef, {
                 ...dataToUpdate,
                 status: newStatus,
                 statusHistory: arrayUnion({ status: newStatus, date: Timestamp.now() }),
             });
             
-            setExecutions(prev => prev.map(ex => ex.id === executionToUpdate.id ? updatedExecutionData : ex));
-
+            setExecutions(prev => prev.map(ex => ex.id === executionToUpdate.id ? { ...ex, ...dataToUpdate, status: newStatus } : ex));
             toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${statusTranslation[newStatus]}' төлөвт шилжлээ.` });
+
         } catch (error) {
             console.error("Error updating execution:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэлийн явц шинэчлэхэд алдаа гарлаа.' });
@@ -543,6 +556,30 @@ export default function ContractedTransportDetailPage() {
             setIsSubmitting(false);
             setExecutionToUpdate(null);
             setUpdateAction(null);
+        }
+    }
+    
+    const onMoveBackward = (execution: ContractedTransportExecution) => {
+        const currentIndex = executionStatuses.indexOf(execution.status);
+        if (currentIndex > 0) {
+            const prevStatus = executionStatuses[currentIndex - 1];
+            setExecutionToUpdate(execution);
+            handleUpdateExecution(prevStatus);
+        }
+    }
+
+    const onMoveForward = (execution: ContractedTransportExecution) => {
+        const currentIndex = executionStatuses.indexOf(execution.status);
+        if (currentIndex < executionStatuses.length - 1) {
+            const nextStatus = executionStatuses[currentIndex + 1];
+            setExecutionToUpdate(execution);
+            if (nextStatus === 'Loading') {
+                setUpdateAction('load');
+            } else if (nextStatus === 'Delivered') {
+                setUpdateAction('unload');
+            } else {
+                handleUpdateExecution(nextStatus);
+            }
         }
     }
 
@@ -750,20 +787,8 @@ export default function ContractedTransportDetailPage() {
                                                 key={ex.id}
                                                 execution={ex}
                                                 onDelete={() => setExecutionToDelete(ex)}
-                                                onUpdate={() => {
-                                                    setExecutionToUpdate(ex);
-                                                    const currentIndex = executionStatuses.indexOf(ex.status);
-                                                    if (currentIndex < executionStatuses.length - 1) {
-                                                        const nextStatus = executionStatuses[currentIndex + 1];
-                                                        if (nextStatus === 'Loading') {
-                                                            setUpdateAction('load');
-                                                        } else if (nextStatus === 'Delivered') {
-                                                            setUpdateAction('unload');
-                                                        } else {
-                                                            handleUpdateExecution(nextStatus);
-                                                        }
-                                                    }
-                                                }}
+                                                onUpdate={() => onMoveForward(ex)}
+                                                onMoveBackward={() => onMoveBackward(ex)}
                                             />
                                         ))}
                                     </SortableContext>
@@ -845,4 +870,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
