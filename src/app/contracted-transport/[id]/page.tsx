@@ -5,7 +5,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Info, Check } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Info, Check } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
@@ -319,14 +319,15 @@ export default function ContractedTransportDetailPage() {
         if (!id || !driverId) return;
         const driverToAdd = drivers.find(d => d.id === driverId);
         if (!driverToAdd) return;
-        setIsSubmitting(true);
+        
+        const newDriverData = {
+            driverId: driverToAdd.id,
+            driverName: driverToAdd.display_name,
+            driverPhone: driverToAdd.phone_number,
+        };
+        const contractRef = doc(db, 'contracted_transports', id);
+
         try {
-            const newDriverData = {
-                driverId: driverToAdd.id,
-                driverName: driverToAdd.display_name,
-                driverPhone: driverToAdd.phone_number,
-            };
-            const contractRef = doc(db, 'contracted_transports', id);
             await updateDoc(contractRef, {
                 assignedDrivers: arrayUnion(newDriverData)
             });
@@ -335,28 +336,26 @@ export default function ContractedTransportDetailPage() {
             setAddDriverPopoverOpen(false);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч нэмэхэд алдаа гарлаа.'});
-        } finally {
-            setIsSubmitting(false);
         }
     };
     
     const handleRemoveDriver = async (driverToRemove: {driverId: string}) => {
         if (!id || !contract) return;
-        setIsSubmitting(true);
-        try {
-            const batch = writeBatch(db);
-            const contractRef = doc(db, 'contracted_transports', id);
-            const driverDataToRemove = contract.assignedDrivers.find(d => d.driverId === driverToRemove.driverId);
-            if (driverDataToRemove) {
-                 batch.update(contractRef, { assignedDrivers: arrayRemove(driverDataToRemove) });
-            }
-            
-            const pendingExecs = executions.filter(e => e.status === 'Хүлээгдэж буй' && e.driverId === driverToRemove.driverId);
-            pendingExecs.forEach(exec => {
-                const execRef = doc(db, 'contracted_transport_executions', exec.id);
-                batch.update(execRef, { driverId: null, driverName: null });
-            })
+        
+        const driverDataToRemove = contract.assignedDrivers.find(d => d.driverId === driverToRemove.driverId);
+        if (!driverDataToRemove) return;
 
+        const batch = writeBatch(db);
+        const contractRef = doc(db, 'contracted_transports', id);
+        batch.update(contractRef, { assignedDrivers: arrayRemove(driverDataToRemove) });
+        
+        const pendingExecs = executions.filter(e => e.status === 'Хүлээгдэж буй' && e.driverId === driverToRemove.driverId);
+        pendingExecs.forEach(exec => {
+            const execRef = doc(db, 'contracted_transport_executions', exec.id);
+            batch.update(execRef, { driverId: null, driverName: null });
+        })
+
+        try {
             await batch.commit();
 
             setContract(prev => prev ? { ...prev, assignedDrivers: prev.assignedDrivers.filter(d => d.driverId !== driverToRemove.driverId) } : null);
@@ -365,8 +364,6 @@ export default function ContractedTransportDetailPage() {
             toast({ title: "Амжилттай", description: "Жолоочийг хаслаа."});
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч хасахад алдаа гарлаа.'});
-        } finally {
-            setIsSubmitting(false);
         }
     }
     
@@ -374,15 +371,15 @@ export default function ContractedTransportDetailPage() {
         if (!id || !vehicleId) return;
         const vehicleToAdd = vehicles.find(v => v.id === vehicleId);
         if (!vehicleToAdd) return;
-        setIsSubmitting(true);
+
+        const newVehicleData = {
+            vehicleId: vehicleToAdd.id,
+            licensePlate: vehicleToAdd.licensePlate,
+            trailerLicensePlate: vehicleToAdd.trailerLicensePlate || '',
+            modelName: `${vehicleToAdd.makeName} ${vehicleToAdd.modelName}`
+        };
+        const contractRef = doc(db, 'contracted_transports', id);
         try {
-            const newVehicleData = {
-                vehicleId: vehicleToAdd.id,
-                licensePlate: vehicleToAdd.licensePlate,
-                trailerLicensePlate: vehicleToAdd.trailerLicensePlate || '',
-                modelName: `${vehicleToAdd.makeName} ${vehicleToAdd.modelName}`
-            };
-            const contractRef = doc(db, 'contracted_transports', id);
             await updateDoc(contractRef, {
                 assignedVehicles: arrayUnion(newVehicleData)
             });
@@ -391,28 +388,25 @@ export default function ContractedTransportDetailPage() {
             setAddVehiclePopoverOpen(false);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл нэмэхэд алдаа гарлаа.'});
-        } finally {
-            setIsSubmitting(false);
         }
     };
 
     const handleRemoveVehicle = async (vehicleToRemove: {vehicleId: string}) => {
         if (!id || !contract) return;
-        setIsSubmitting(true);
+        
+        const vehicleDataToRemove = contract.assignedVehicles.find(v => v.vehicleId === vehicleToRemove.vehicleId);
+        if (!vehicleDataToRemove) return;
+
+        const batch = writeBatch(db);
+        const contractRef = doc(db, 'contracted_transports', id);
+        batch.update(contractRef, { assignedVehicles: arrayRemove(vehicleDataToRemove) });
+
+        const pendingExecs = executions.filter(e => e.status === 'Хүлээгдэж буй' && e.vehicleId === vehicleToRemove.vehicleId);
+        pendingExecs.forEach(exec => {
+            const execRef = doc(db, 'contracted_transport_executions', exec.id);
+            batch.update(execRef, { vehicleId: null, vehicleLicense: null });
+        })
         try {
-            const batch = writeBatch(db);
-            const contractRef = doc(db, 'contracted_transports', id);
-            const vehicleDataToRemove = contract.assignedVehicles.find(v => v.vehicleId === vehicleToRemove.vehicleId);
-
-            if (vehicleDataToRemove) {
-                 batch.update(contractRef, { assignedVehicles: arrayRemove(vehicleDataToRemove) });
-            }
-
-            const pendingExecs = executions.filter(e => e.status === 'Хүлээгдэж буй' && e.vehicleId === vehicleToRemove.vehicleId);
-            pendingExecs.forEach(exec => {
-                const execRef = doc(db, 'contracted_transport_executions', exec.id);
-                batch.update(execRef, { vehicleId: null, vehicleLicense: null });
-            })
             await batch.commit();
 
             setContract(prev => prev ? { ...prev, assignedVehicles: prev.assignedVehicles.filter(v => v.vehicleId !== vehicleToRemove.vehicleId) } : null);
@@ -421,8 +415,6 @@ export default function ContractedTransportDetailPage() {
             toast({ title: "Амжилттай", description: "Тээврийн хэрэгслийг хаслаа."});
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл хасахад алдаа гарлаа.'});
-        } finally {
-            setIsSubmitting(false);
         }
     }
 
@@ -496,19 +488,25 @@ export default function ContractedTransportDetailPage() {
     }
     
     async function handleDragEnd(event: DragEndEvent) {
-      const { active, over } = event;
-    
-      if (over && active.id !== over.id) {
-        const executionId = active.id as string;
-        const newStatus = over.id as string;
-    
-        const execution = executions.find(ex => ex.id === executionId);
-    
-        // Check if `over.id` is a valid status/column, not another card
-        if (execution && executionStatuses.includes(newStatus)) {
-          await handleUpdateExecution(execution, newStatus);
+        const { active, over } = event;
+
+        if (!over) return;
+
+        const activeId = active.id as string;
+        const overId = over.id as string;
+        
+        // Find the container for the `over` element
+        const overContainerId = over.data.current?.sortable?.containerId || overId;
+        const activeContainerId = active.data.current?.sortable?.containerId || '';
+
+        if (activeContainerId !== overContainerId) {
+            const execution = executions.find(ex => ex.id === activeId);
+            const newStatus = overContainerId;
+            
+            if (execution && executionStatuses.includes(newStatus)) {
+                await handleUpdateExecution(execution, newStatus);
+            }
         }
-      }
     }
 
   if (isLoading) {
@@ -624,7 +622,7 @@ export default function ContractedTransportDetailPage() {
                         <div>
                              <div className="flex justify-between items-center mb-2">
                                 <h3 className="font-semibold text-sm">Оноосон жолооч нар</h3>
-                                 <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
+                                <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
                                     <PopoverTrigger asChild>
                                         <Button variant="outline" size="sm" onClick={() => setAddDriverPopoverOpen(true)}>
                                             <PlusCircle className="mr-2 h-4 w-4"/> Жолооч нэмэх
