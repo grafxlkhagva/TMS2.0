@@ -23,16 +23,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogFooter,
-} from "@/components/ui/alert-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog"
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -41,7 +32,17 @@ import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { Timestamp } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-
+import {
+  DndContext,
+  closestCenter,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
@@ -102,6 +103,60 @@ function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, lab
   );
 }
 
+function ExecutionCard({ execution, onUpdate, onDelete }: { execution: ContractedTransportExecution, onUpdate: () => void, onDelete: () => void }) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: execution.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        zIndex: isDragging ? 10 : 'auto',
+    };
+
+    return (
+        <Card
+            ref={setNodeRef}
+            style={style}
+            {...attributes}
+            {...listeners}
+            className="text-xs mb-2 touch-none"
+        >
+            <CardContent className="p-2">
+                <p className="font-semibold">Огноо: {format(execution.date, 'yyyy-MM-dd')}</p>
+                <p>Жолооч: {execution.driverName || 'TBA'}</p>
+                <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
+                <div className="mt-2 flex justify-end gap-1">
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onDelete}><Trash2 className="h-3 w-3 text-destructive"/></Button>
+                    {execution.status !== 'Delivered' && (
+                        <Button variant="outline" size="icon" className="h-6 w-6" onClick={onUpdate}>
+                            <MoveRight className="h-3 w-3"/>
+                        </Button>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+function KanbanColumn({ status, executions, children }: { status: string, executions: ContractedTransportExecution[], children: React.ReactNode }) {
+    const { setNodeRef } = useSortable({ id: status });
+    return (
+        <div ref={setNodeRef} className="p-2 rounded-lg bg-muted/50">
+            <h3 className="font-semibold text-center text-sm p-2">{statusTranslation[status as ContractedTransportExecutionStatus]}</h3>
+            <div className="space-y-2 min-h-24">
+                {children}
+            </div>
+        </div>
+    );
+}
+
 
 export default function ContractedTransportDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -144,18 +199,12 @@ export default function ContractedTransportDetailPage() {
   
   const loadingForm = useForm<LoadingFormValues>({
     resolver: zodResolver(loadingFormSchema),
-    defaultValues: {
-      driverId: '',
-      vehicleId: '',
-      loadingWeight: 0,
-    },
+    defaultValues: { driverId: '', vehicleId: '', loadingWeight: 0 },
   });
   
   const unloadingForm = useForm<UnloadingFormValues>({
     resolver: zodResolver(unloadingFormSchema),
-    defaultValues: {
-      unloadingWeight: 0,
-    },
+    defaultValues: { unloadingWeight: 0 },
   });
 
   const routeStopForm = useForm<RouteStopFormValues>({
@@ -420,7 +469,7 @@ export default function ContractedTransportDetailPage() {
         }
     }
     
-    const handleUpdateExecution = async (values: LoadingFormValues | UnloadingFormValues) => {
+    const handleUpdateExecution = async (values: LoadingFormValues | UnloadingFormValues | {}) => {
         if (!executionToUpdate) return;
 
         setIsSubmitting(true);
@@ -470,18 +519,34 @@ export default function ContractedTransportDetailPage() {
         }
     }
 
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+    
+        if (over && active.id !== over.id) {
+            const activeExecution = executions.find(ex => ex.id === active.id);
+            const newStatus = over.id as ContractedTransportExecutionStatus;
+            
+            if (activeExecution && activeExecution.status !== newStatus) {
+                 setExecutionToUpdate(activeExecution);
+                 if (newStatus === 'Loading' && activeExecution.status === 'Pending') {
+                    setUpdateAction('load');
+                 } else if (newStatus === 'Delivered' && activeExecution.status === 'Unloading') {
+                    setUpdateAction('unload');
+                 } else {
+                    handleUpdateExecution({});
+                 }
+            }
+        }
+    };
+
 
   if (isLoading) {
     return (
         <div className="container mx-auto py-6">
             <div className="mb-6"><Skeleton className="h-8 w-24 mb-4" /><Skeleton className="h-8 w-1/3" /></div>
-            <div className="grid md:grid-cols-3 gap-6">
-                <div className="md:col-span-2 space-y-6">
-                    <Card><CardHeader><Skeleton className="h-6 w-1/2"/></CardHeader><CardContent><Skeleton className="h-40 w-full"/></CardContent></Card>
-                </div>
-                <div className="space-y-6">
-                    <Card><CardHeader><Skeleton className="h-6 w-1/2"/></CardHeader><CardContent><Skeleton className="h-32 w-full"/></CardContent></Card>
-                </div>
+            <div className="space-y-6">
+                <Card><CardHeader><Skeleton className="h-6 w-1/2"/></CardHeader><CardContent><Skeleton className="h-40 w-full"/></CardContent></Card>
+                <Card><CardHeader><Skeleton className="h-6 w-1/2"/></CardHeader><CardContent><Skeleton className="h-40 w-full"/></CardContent></Card>
             </div>
         </div>
     )
@@ -515,8 +580,8 @@ export default function ContractedTransportDetailPage() {
             <Card>
                 <CardHeader className="relative">
                     <CardTitle>Гэрээний дэлгэрэнгүй</CardTitle>
-                    <div className="absolute top-4 right-4 flex items-center gap-2">
-                        <Badge variant={statusInfo.variant} className="py-1 px-3">
+                     <div className="absolute top-4 right-4 flex items-center gap-2">
+                         <Badge variant={statusInfo.variant} className="py-1 px-3">
                             <statusInfo.icon className="mr-1.5 h-3 w-3" />
                             {statusInfo.text}
                         </Badge>
@@ -527,7 +592,7 @@ export default function ContractedTransportDetailPage() {
                         </Button>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                 <CardContent className="space-y-6">
                     <Separator />
                     <h3 className="font-semibold text-base">Ерөнхий мэдээлэл</h3>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
@@ -557,7 +622,7 @@ export default function ContractedTransportDetailPage() {
                         </TableBody>
                     </Table>
                     <Separator/>
-                    <div className="grid md:grid-cols-3 gap-6 pt-4">
+                     <div className="grid md:grid-cols-3 gap-6 pt-4">
                         <div>
                             <h3 className="font-semibold mb-2">Оноосон жолооч нар</h3>
                             <div className="space-y-2">
@@ -631,7 +696,7 @@ export default function ContractedTransportDetailPage() {
                 </CardContent>
             </Card>
 
-            <Card>
+             <Card>
                 <CardHeader>
                     <CardTitle>Тээвэрлэлтийн гүйцэтгэл</CardTitle>
                     <CardDescription>Гэрээний дагуу хийгдэх тээвэрлэлтийн явцыг хянах хэсэг.</CardDescription>
@@ -642,38 +707,37 @@ export default function ContractedTransportDetailPage() {
                             <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
                         </Button>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                        {executionStatuses.map(status => (
-                            <div key={status} className="p-2 rounded-lg bg-muted/50">
-                                <h3 className="font-semibold text-center text-sm p-2">{statusTranslation[status]}</h3>
-                                <div className="space-y-2 min-h-24">
-                                {executions.filter(ex => ex.status === status).map(ex => (
-                                    <Card key={ex.id} className="text-xs">
-                                        <CardContent className="p-2">
-                                            <p className="font-semibold">Огноо: {format(ex.date, 'yyyy-MM-dd')}</p>
-                                            <p>Жолооч: {ex.driverName || 'TBA'}</p>
-                                            <p>Машин: {ex.vehicleLicense || 'TBA'}</p>
-                                            <div className="mt-2 flex justify-end gap-1">
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setExecutionToDelete(ex)}><Trash2 className="h-3 w-3 text-destructive"/></Button>
-                                                {status !== 'Delivered' && (
-                                                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => {
-                                                        setExecutionToUpdate(ex);
-                                                        setUpdateAction(status === 'Pending' ? 'load' : status === 'Unloading' ? 'unload' : null);
-                                                        if (status !== 'Pending' && status !== 'Unloading') handleUpdateExecution({});
-                                                    }}>
-                                                        <MoveRight className="h-3 w-3"/>
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    <DndContext
+                        onDragEnd={handleDragEnd}
+                        collisionDetection={closestCenter}
+                    >
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                            {executionStatuses.map(status => (
+                                <KanbanColumn key={status} status={status} executions={executions.filter(ex => ex.status === status)}>
+                                    <SortableContext items={executions.filter(ex => ex.status === status).map(e => e.id)} strategy={verticalListSortingStrategy}>
+                                        {executions.filter(ex => ex.status === status).map(ex => (
+                                            <ExecutionCard
+                                                key={ex.id}
+                                                execution={ex}
+                                                onDelete={() => setExecutionToDelete(ex)}
+                                                onUpdate={() => {
+                                                    setExecutionToUpdate(ex);
+                                                    if (ex.status !== 'Pending' && ex.status !== 'Unloading') {
+                                                        handleUpdateExecution({});
+                                                    } else {
+                                                        setUpdateAction(ex.status === 'Pending' ? 'load' : 'unload');
+                                                    }
+                                                }}
+                                            />
+                                        ))}
+                                    </SortableContext>
+                                </KanbanColumn>
+                            ))}
+                        </div>
+                    </DndContext>
                 </CardContent>
             </Card>
+
         </div>
 
 
@@ -744,6 +808,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
-    
-
