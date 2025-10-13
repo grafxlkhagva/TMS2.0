@@ -116,7 +116,7 @@ function ExecutionCard({ execution, onUpdate, onDelete }: { execution: Contracte
     const style: React.CSSProperties = {
         transform: CSS.Transform.toString(transform),
         transition: transition || 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
-        opacity: isDragging ? 0.8 : 1,
+        opacity: isDragging ? 0.9 : 1,
         zIndex: isDragging ? 10 : 'auto',
         boxShadow: isDragging ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '',
         transformOrigin: '50% 50%',
