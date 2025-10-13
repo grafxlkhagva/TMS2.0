@@ -380,6 +380,7 @@ export type ShipmentUpdate = {
 
 export type ContractedTransportStatus = 'Active' | 'Expired' | 'Cancelled';
 export type ContractedTransportFrequency = 'Daily' | 'Weekly' | 'Monthly' | 'Custom';
+export type ContractedTransportExecutionStatus = 'Pending' | 'Loading' | 'In-Transit' | 'Unloading' | 'Delivered';
 
 export type RouteStop = {
   id: string;
@@ -391,13 +392,14 @@ export type ContractedTransportExecution = {
     id: string;
     contractId: string;
     date: Date;
+    status: ContractedTransportExecutionStatus;
+    statusHistory: { status: ContractedTransportExecutionStatus, date: Date | Timestamp }[];
     vehicleId?: string;
     vehicleLicense?: string;
     driverId?: string;
-    driverName: string;
-    price: number;
-    routeStopId?: string;
-    routeStopName?: string;
+    driverName?: string;
+    loadingWeight?: number;
+    unloadingWeight?: number;
     createdAt: Date;
 }
 
@@ -451,3 +453,5 @@ export type ContractedTransport = {
     modelName: string;
   }[];
 };
+
+    

@@ -4,22 +4,20 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, CheckIcon, ChevronsUpDown, Map as MapIcon } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, MoveRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, ContractedTransportFrequency, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportCargoItem } from '@/types';
+import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportCargoItem, ContractedTransportExecutionStatus } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -31,7 +29,6 @@ import {
     AlertDialogCancel,
     AlertDialogContent,
     AlertDialogDescription,
-    AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
@@ -41,17 +38,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
+import { Timestamp } from 'firebase/firestore';
 
-const executionFormSchema = z.object({
+
+const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
-  driverId: z.string().optional(),
-  driverName: z.string().min(1, "Жолоочийн нэрийг оруулна уу."),
-  vehicleId: z.string().optional(),
-  vehicleLicense: z.string().optional(),
-  price: z.coerce.number().min(0, "Үнийн дүн 0-ээс бага байж болохгүй."),
-  routeStopId: z.string().min(1, "Зогсоол сонгоно уу."),
 });
-type ExecutionFormValues = z.infer<typeof executionFormSchema>;
+type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
+
+const loadingFormSchema = z.object({
+  driverId: z.string().min(1, "Жолооч сонгоно уу."),
+  vehicleId: z.string().min(1, "Машин сонгоно уу."),
+  loadingWeight: z.coerce.number().min(0.1, "Ачсан жинг оруулна уу."),
+});
+type LoadingFormValues = z.infer<typeof loadingFormSchema>;
+
+const unloadingFormSchema = z.object({
+  unloadingWeight: z.coerce.number().min(0.1, "Буулгасан жинг оруулна уу."),
+});
+type UnloadingFormValues = z.infer<typeof unloadingFormSchema>;
 
 const routeStopFormSchema = z.object({
   name: z.string().min(2, "Зогсоолын нэр дор хаяж 2 тэмдэгттэй байх ёстой."),
@@ -59,7 +64,7 @@ const routeStopFormSchema = z.object({
 });
 type RouteStopFormValues = z.infer<typeof routeStopFormSchema>;
 
-const frequencyTranslations: Record<ContractedTransportFrequency, string> = {
+const frequencyTranslations: Record<ContractedTransport['frequency'], string> = {
     Daily: 'Өдөр бүр',
     Weekly: '7 хоног тутам',
     Monthly: 'Сар тутам',
@@ -71,6 +76,16 @@ const statusDetails = {
     Expired: { text: 'Хугацаа дууссан', variant: 'secondary' as const, icon: Clock },
     Cancelled: { text: 'Цуцлагдсан', variant: 'destructive' as const, icon: XCircle }
 };
+
+const executionStatuses: ContractedTransportExecutionStatus[] = ['Pending', 'Loading', 'In-Transit', 'Unloading', 'Delivered'];
+
+const statusTranslation: Record<ContractedTransportExecutionStatus, string> = {
+    Pending: 'Хүлээгдэж буй',
+    Loading: 'Ачиж буй',
+    'In-Transit': 'Замд яваа',
+    Unloading: 'Буулгаж буй',
+    Delivered: 'Хүргэгдсэн',
+}
 
 function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value?: string | React.ReactNode }) {
   if (!value && value !== 0) return null;
@@ -96,10 +111,13 @@ export default function ContractedTransportDetailPage() {
   const [drivers, setDrivers] = React.useState<Driver[]>([]);
   const [vehicles, setVehicles] = React.useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [isSubmittingExecution, setIsSubmittingExecution] = React.useState(false);
-  const [isExecutionDialogOpen, setIsExecutionDialogOpen] = React.useState(false);
-  const [executionToDelete, setExecutionToDelete] = React.useState<ContractedTransportExecution | null>(null);
   
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isExecutionDialogOpen, setIsExecutionDialogOpen] = React.useState(false);
+  const [executionToUpdate, setExecutionToUpdate] = React.useState<ContractedTransportExecution | null>(null);
+  const [updateAction, setUpdateAction] = React.useState<'load' | 'unload' | null>(null);
+  const [executionToDelete, setExecutionToDelete] = React.useState<ContractedTransportExecution | null>(null);
+
   const [isAddingDriver, setIsAddingDriver] = React.useState(false);
   const [addDriverPopoverOpen, setAddDriverPopoverOpen] = React.useState(false);
   
@@ -117,48 +135,32 @@ export default function ContractedTransportDetailPage() {
       transportManagerName: '',
   });
 
-  const executionForm = useForm<ExecutionFormValues>({
-    resolver: zodResolver(executionFormSchema),
-    defaultValues: {
-      date: new Date(),
-      driverId: '',
-      driverName: '',
-      vehicleId: '',
-      vehicleLicense: '',
-      price: 0,
-      routeStopId: '',
-    },
+  const newExecutionForm = useForm<NewExecutionFormValues>({
+    resolver: zodResolver(newExecutionFormSchema),
+    defaultValues: { date: new Date() },
   });
+  
+  const loadingForm = useForm<LoadingFormValues>();
+  const unloadingForm = useForm<UnloadingFormValues>();
 
   const routeStopForm = useForm<RouteStopFormValues>({
     resolver: zodResolver(routeStopFormSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-    }
+    defaultValues: { name: '', description: '' }
   });
 
-  const assignedDriverIds = React.useMemo(() => {
-    return contract?.assignedDrivers.map(d => d.driverId) || [];
-  }, [contract]);
-  
-  const assignedVehicleIds = React.useMemo(() => {
-    return contract?.assignedVehicles.map(v => v.vehicleId) || [];
-  }, [contract]);
+  const assignedDriverIds = React.useMemo(() => contract?.assignedDrivers.map(d => d.driverId) || [], [contract]);
+  const assignedVehicleIds = React.useMemo(() => contract?.assignedVehicles.map(v => v.vehicleId) || [], [contract]);
 
   React.useEffect(() => {
-    if (contract) {
-        executionForm.reset({
-            date: new Date(),
-            driverId: '',
-            driverName: '',
-            vehicleId: '',
-            vehicleLicense: '',
-            price: 0,
-            routeStopId: '',
-        });
+      newExecutionForm.reset({ date: new Date() });
+  }, [isExecutionDialogOpen, newExecutionForm]);
+
+  React.useEffect(() => {
+    if (executionToUpdate) {
+        if(updateAction === 'load') loadingForm.reset();
+        if(updateAction === 'unload') unloadingForm.reset();
     }
-  }, [contract, isExecutionDialogOpen, executionForm]);
+  }, [executionToUpdate, updateAction, loadingForm, unloadingForm]);
 
 
   const fetchContractData = React.useCallback(async () => {
@@ -189,15 +191,8 @@ export default function ContractedTransportDetailPage() {
       setContract(fetchedContract);
       
       const [
-          startRegionSnap, 
-          endRegionSnap, 
-          startWarehouseSnap, 
-          endWarehouseSnap, 
-          packagingTypeSnap,
-          managerSnap,
-          executionsSnap,
-          driversSnap,
-          vehiclesSnap
+          startRegionSnap, endRegionSnap, startWarehouseSnap, endWarehouseSnap, packagingTypeSnap,
+          managerSnap, executionsSnap, driversSnap, vehiclesSnap
       ] = await Promise.all([
           getDoc(doc(db, 'regions', fetchedContract.route.startRegionId)),
           getDoc(doc(db, 'regions', fetchedContract.route.endRegionId)),
@@ -212,7 +207,6 @@ export default function ContractedTransportDetailPage() {
       
       setDrivers(driversSnap.docs.map(d => ({id: d.id, ...d.data()} as Driver)));
       setVehicles(vehiclesSnap.docs.map(v => ({id: v.id, ...v.data()} as Vehicle)));
-
 
       setRelatedData({
           startRegionName: startRegionSnap.data()?.name || '',
@@ -230,7 +224,6 @@ export default function ContractedTransportDetailPage() {
             createdAt: doc.data().createdAt.toDate(),
         } as ContractedTransportExecution));
 
-        executionsData.sort((a, b) => b.date.getTime() - a.date.getTime());
         setExecutions(executionsData);
 
     } catch (error) {
@@ -245,41 +238,25 @@ export default function ContractedTransportDetailPage() {
     fetchContractData();
   }, [fetchContractData]);
 
-   const onExecutionSubmit = async (values: ExecutionFormValues) => {
+   const onNewExecutionSubmit = async (values: NewExecutionFormValues) => {
         if (!id || !contract) return;
-        setIsSubmittingExecution(true);
+        setIsSubmitting(true);
         try {
-            
-            let driverName = values.driverName;
-            if (values.driverId) {
-                const selectedDriver = contract?.assignedDrivers.find(d => d.driverId === values.driverId);
-                if (selectedDriver) driverName = selectedDriver.driverName;
-            }
-
-            let vehicleLicense = values.vehicleLicense;
-            if (values.vehicleId) {
-                const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
-                if (selectedVehicle) vehicleLicense = selectedVehicle.licensePlate;
-            }
-
-            const selectedStop = contract.routeStops.find(s => s.id === values.routeStopId);
-            
             await addDoc(collection(db, 'contracted_transport_executions'), {
                 ...values,
-                driverName,
-                vehicleLicense,
-                routeStopName: selectedStop?.name || 'N/A',
                 contractId: id,
+                status: 'Pending',
+                statusHistory: [{ status: 'Pending', date: new Date() }],
                 createdAt: serverTimestamp(),
             });
-            toast({ title: 'Амжилттай', description: 'Гүйцэтгэл нэмэгдлээ.' });
+            toast({ title: 'Амжилттай', description: 'Шинэ гүйцэтгэл нэмэгдлээ.' });
             setIsExecutionDialogOpen(false);
             fetchContractData(); // Refetch all data
         } catch (error) {
             console.error("Error adding execution:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэл нэмэхэд алдаа гарлаа.' });
         } finally {
-            setIsSubmittingExecution(false);
+            setIsSubmitting(false);
         }
     };
     
@@ -323,10 +300,21 @@ export default function ContractedTransportDetailPage() {
     const handleRemoveDriver = async (driverToRemove: {driverId: string}) => {
         if (!id || !contract) return;
         try {
+            const batch = writeBatch(db);
             const contractRef = doc(db, 'contracted_transports', id);
-            await updateDoc(contractRef, {
+            batch.update(contractRef, {
                  assignedDrivers: arrayRemove(contract.assignedDrivers.find(d => d.driverId === driverToRemove.driverId))
             });
+            
+            // Unassign this driver from any pending executions
+            const pendingExecs = executions.filter(e => e.status === 'Pending' && e.driverId === driverToRemove.driverId);
+            pendingExecs.forEach(exec => {
+                const execRef = doc(db, 'contracted_transport_executions', exec.id);
+                batch.update(execRef, { driverId: null, driverName: null });
+            })
+
+            await batch.commit();
+            
             toast({ title: "Амжилттай", description: "Жолоочийг хаслаа."});
             fetchContractData();
         } catch(error) {
@@ -361,10 +349,19 @@ export default function ContractedTransportDetailPage() {
     const handleRemoveVehicle = async (vehicleToRemove: {vehicleId: string}) => {
         if (!id || !contract) return;
         try {
+             const batch = writeBatch(db);
             const contractRef = doc(db, 'contracted_transports', id);
-            await updateDoc(contractRef, {
+            batch.update(contractRef, {
                  assignedVehicles: arrayRemove(contract.assignedVehicles.find(v => v.vehicleId === vehicleToRemove.vehicleId))
             });
+             // Unassign this vehicle from any pending executions
+            const pendingExecs = executions.filter(e => e.status === 'Pending' && e.vehicleId === vehicleToRemove.vehicleId);
+            pendingExecs.forEach(exec => {
+                const execRef = doc(db, 'contracted_transport_executions', exec.id);
+                batch.update(execRef, { vehicleId: null, vehicleLicense: null });
+            })
+            await batch.commit();
+
             toast({ title: "Амжилттай", description: "Тээврийн хэрэгслийг хаслаа."});
             fetchContractData();
         } catch(error) {
@@ -405,6 +402,56 @@ export default function ContractedTransportDetailPage() {
             fetchContractData();
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Зогсоол хасахад алдаа гарлаа.'});
+        }
+    }
+    
+    const handleUpdateExecution = async (values: LoadingFormValues | UnloadingFormValues) => {
+        if (!executionToUpdate) return;
+
+        setIsSubmitting(true);
+        try {
+            const execRef = doc(db, 'contracted_transport_executions', executionToUpdate.id);
+            const currentStatus = executionToUpdate.status;
+            let nextStatus: ContractedTransportExecutionStatus | null = null;
+            let dataToUpdate: any = {};
+            
+            if (currentStatus === 'Pending' && 'loadingWeight' in values) {
+                const driver = contract?.assignedDrivers.find(d => d.driverId === values.driverId);
+                const vehicle = contract?.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
+                dataToUpdate = {
+                    ...values,
+                    driverName: driver?.driverName,
+                    vehicleLicense: vehicle?.licensePlate,
+                };
+                nextStatus = 'Loading';
+            } else if (currentStatus === 'Unloading' && 'unloadingWeight' in values) {
+                dataToUpdate = values;
+                nextStatus = 'Delivered';
+            } else {
+                 const currentIndex = executionStatuses.indexOf(currentStatus);
+                 if (currentIndex < executionStatuses.length - 1) {
+                     nextStatus = executionStatuses[currentIndex + 1];
+                 }
+            }
+            
+            if (nextStatus) {
+                await updateDoc(execRef, {
+                    ...dataToUpdate,
+                    status: nextStatus,
+                    statusHistory: arrayUnion({ status: nextStatus, date: Timestamp.now() }),
+                });
+
+                toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${statusTranslation[nextStatus]}' төлөвт шилжлээ.` });
+                fetchContractData();
+            }
+
+        } catch (error) {
+            console.error("Error updating execution:", error);
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэлийн явц шинэчлэхэд алдаа гарлаа.' });
+        } finally {
+            setIsSubmitting(false);
+            setExecutionToUpdate(null);
+            setUpdateAction(null);
         }
     }
 
@@ -453,125 +500,9 @@ export default function ContractedTransportDetailPage() {
             </Button>
         </div>
       </div>
-       <div className="grid md:grid-cols-3 gap-6 items-start">
-        <div className="md:col-span-2 space-y-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Чиглэл ба Ачааны мэдээлэл</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="p-4 border rounded-md bg-muted/50 space-y-3">
-                        <DetailItem icon={MapIcon} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`}/>
-                        <DetailItem icon={MapIcon} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`}/>
-                        <DetailItem icon={Truck} label="Нийт зам" value={`${contract.route.totalDistance} км`}/>
-                    </div>
-                     <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Ачааны нэр</TableHead>
-                                <TableHead>Нэгж</TableHead>
-                                <TableHead>Баглаа боодол</TableHead>
-                                <TableHead className="text-right">Тээврийн хөлс</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {contract.cargoItems.map((item, index) => (
-                                <TableRow key={item.id || index}>
-                                    <TableCell>{item.name}</TableCell>
-                                    <TableCell>{item.unit}</TableCell>
-                                    <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
-                                    <TableCell className="text-right font-mono">{item.price.toLocaleString()}₮</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Маршрутын зогсоол батлах</CardTitle>
-                    <CardDescription>Тээвэрлэлтийн явцад бүртгэх дундын зогсоолуудыг тодорхойлно уу.</CardDescription>
-                </CardHeader>
-                 <CardContent>
-                    <Form {...routeStopForm}>
-                        <form onSubmit={routeStopForm.handleSubmit(onRouteStopSubmit)} className="flex items-start gap-4 mb-4">
-                            <FormField control={routeStopForm.control} name="name" render={({ field }) => ( <FormItem className="flex-1"><FormLabel className="sr-only">Зогсоолын нэр</FormLabel><FormControl><Input placeholder="Зогсоолын нэр" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                            <FormField control={routeStopForm.control} name="description" render={({ field }) => ( <FormItem className="flex-1"><FormLabel className="sr-only">Тайлбар</FormLabel><FormControl><Input placeholder="Тайлбар" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                            <Button type="submit" disabled={isSubmittingStop}>
-                                {isSubmittingStop ? <Loader2 className="h-4 w-4 animate-spin"/> : <PlusCircle className="h-4 w-4"/>}
-                            </Button>
-                        </form>
-                    </Form>
-                    <div className="space-y-2">
-                        {contract.routeStops.length > 0 ? (
-                            contract.routeStops.map(stop => (
-                                <div key={stop.id} className="flex justify-between items-start text-sm p-3 rounded-md border">
-                                    <div>
-                                        <p className="font-medium">{stop.name}</p>
-                                        <p className="text-xs text-muted-foreground">{stop.description}</p>
-                                    </div>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveStop(stop)}>
-                                        <Trash2 className="h-4 w-4 text-destructive"/>
-                                    </Button>
-                                </div>
-                            ))
-                        ) : (
-                            <p className="text-sm text-muted-foreground text-center py-4">Маршрутын зогсоол тодорхойлоогүй байна.</p>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-
-             <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle>Тээвэрлэлтийн гүйцэтгэл</CardTitle>
-                        <CardDescription>Энэ гэрээний дагуу хийгдсэн тээвэрлэлтүүд.</CardDescription>
-                    </div>
-                    <Button size="sm" onClick={() => setIsExecutionDialogOpen(true)}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Гүйцэтгэл нэмэх
-                    </Button>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Огноо</TableHead>
-                                <TableHead>Машины дугаар</TableHead>
-                                <TableHead>Жолооч</TableHead>
-                                <TableHead>Зогсоол</TableHead>
-                                <TableHead>Үнэ</TableHead>
-                                <TableHead className="text-right">Үйлдэл</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {executions.length > 0 ? (
-                                executions.map((ex) => (
-                                    <TableRow key={ex.id}>
-                                        <TableCell>{format(ex.date, 'yyyy-MM-dd')}</TableCell>
-                                        <TableCell className="font-mono">{ex.vehicleLicense}</TableCell>
-                                        <TableCell>{ex.driverName}</TableCell>
-                                        <TableCell>{ex.routeStopName}</TableCell>
-                                        <TableCell>{ex.price.toLocaleString()}₮</TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => setExecutionToDelete(ex)}>
-                                                <Trash2 className="h-4 w-4 text-destructive"/>
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="text-center h-24">Гүйцэтгэл бүртгэгдээгүй байна.</TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-
+       <div className="grid lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-2 space-y-6">
+            {/* Main content here, like Kanban board */}
         </div>
         <div className="space-y-6 sticky top-6">
             <Card>
@@ -631,7 +562,6 @@ export default function ContractedTransportDetailPage() {
                                                 onSelect={() => handleAddDriver(d.id)}
                                                 disabled={isAddingDriver}
                                             >
-                                                <CheckIcon className={cn("mr-2 h-4 w-4", "opacity-0")}/>
                                                 <span>{d.display_name} ({d.phone_number})</span>
                                             </CommandItem>
                                         ))}
@@ -684,7 +614,6 @@ export default function ContractedTransportDetailPage() {
                                                 onSelect={() => handleAddVehicle(v.id)}
                                                 disabled={isAddingVehicle}
                                             >
-                                                <CheckIcon className={cn("mr-2 h-4 w-4", "opacity-0")}/>
                                                 <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
                                             </CommandItem>
                                         ))}
@@ -703,27 +632,15 @@ export default function ContractedTransportDetailPage() {
                 <DialogHeader>
                     <DialogTitle>Шинэ гүйцэтгэл нэмэх</DialogTitle>
                 </DialogHeader>
-                <Form {...executionForm}>
-                    <form onSubmit={executionForm.handleSubmit(onExecutionSubmit)} className="space-y-4 py-4" id="execution-form">
-                         <FormField control={executionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
-                         {contract.assignedDrivers.length > 0 ? (
-                            <FormField control={executionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                         ) : (
-                            <FormField control={executionForm.control} name="driverName" render={({ field }) => ( <FormItem><FormLabel>Жолоочийн нэр</FormLabel><FormControl><Input placeholder="Б.Болд" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                         )}
-                          {contract.assignedVehicles.length > 0 ? (
-                            <FormField control={executionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Машин</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Машин сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.modelName} ({v.licensePlate})</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                         ) : (
-                            <FormField control={executionForm.control} name="vehicleLicense" render={({ field }) => ( <FormItem><FormLabel>Машины дугаар</FormLabel><FormControl><Input placeholder="0000 УБA" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                         )}
-                         <FormField control={executionForm.control} name="routeStopId" render={({ field }) => ( <FormItem><FormLabel>Маршрутын зогсоол</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Зогсоол сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.routeStops.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                         <FormField control={executionForm.control} name="price" render={({ field }) => ( <FormItem><FormLabel>Тээврийн хөлс (₮)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                <Form {...newExecutionForm}>
+                    <form onSubmit={newExecutionForm.handleSubmit(onNewExecutionSubmit)} className="space-y-4 py-4" id="new-execution-form">
+                         <FormField control={newExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
                     </form>
                 </Form>
                 <DialogFooter>
                     <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                    <Button type="submit" form="execution-form" disabled={isSubmittingExecution}>
-                        {isSubmittingExecution && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                    <Button type="submit" form="new-execution-form" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                         Хадгалах
                     </Button>
                 </DialogFooter>
@@ -747,3 +664,4 @@ export default function ContractedTransportDetailPage() {
   );
 }
 
+    
