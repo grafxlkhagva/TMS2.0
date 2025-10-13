@@ -18,6 +18,8 @@ export type Vehicle = {
   licensePlateDigits: string;
   licensePlateChars: string;
   trailerLicensePlate?: string;
+  trailerLicensePlateDigits?: string;
+  trailerLicensePlateChars?: string;
   vin: string;
   vehicleTypeId: string;
   trailerTypeId: string;
