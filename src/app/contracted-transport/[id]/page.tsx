@@ -571,7 +571,12 @@ export default function ContractedTransportDetailPage() {
                             <DetailItem icon={MapIcon} label="Нийт зам" value={`${contract.route.totalDistance} км`} />
                         </div>
                         <Separator />
-                        <h3 className="font-semibold mb-2 text-sm">Маршрутын зогсоол</h3>
+                         <div className="flex justify-between items-center">
+                            <h3 className="font-semibold text-sm">Маршрутын зогсоол</h3>
+                            <Button variant="outline" size="sm" onClick={() => setIsAddingStop(true)}>
+                                <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
+                            </Button>
+                        </div>
                         <div className="space-y-1">
                             {contract.routeStops.map(stop => (
                                 <div key={stop.id} className="flex justify-between items-center text-sm p-1 rounded-md hover:bg-muted">
@@ -606,7 +611,6 @@ export default function ContractedTransportDetailPage() {
                                 <DropdownMenuContent>
                                     <DropdownMenuItem onSelect={() => setAddDriverPopoverOpen(true)}>Жолооч нэмэх</DropdownMenuItem>
                                     <DropdownMenuItem onSelect={() => setAddVehiclePopoverOpen(true)}>Т/Х нэмэх</DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => setIsAddingStop(true)}>Зогсоол нэмэх</DropdownMenuItem>
                                 </DropdownMenuContent>
                              </DropdownMenu>
                         </div>
@@ -667,7 +671,7 @@ export default function ContractedTransportDetailPage() {
                                                     </Button>
                                                   </DropdownMenuTrigger>
                                                   <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onSelect={() => handleUpdateExecution(ex, executionStatuses[executionStatuses.indexOf(ex.status) + 1] as ContractedTransportExecutionStatus)}>
+                                                     <DropdownMenuItem onSelect={() => handleUpdateExecution(ex, executionStatuses[executionStatuses.indexOf(ex.status) + 1] as ContractedTransportExecutionStatus)}>
                                                       <MoveRight className="mr-2 h-4 w-4" />
                                                       <span>Урагшлуулах</span>
                                                     </DropdownMenuItem>
