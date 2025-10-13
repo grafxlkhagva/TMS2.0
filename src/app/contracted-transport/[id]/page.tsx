@@ -5,7 +5,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Info } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Info, Check } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
@@ -33,8 +33,6 @@ import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { Timestamp } from 'firebase/firestore';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -519,7 +517,12 @@ export default function ContractedTransportDetailPage() {
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Маршрут ба Ачаа</CardTitle>
+                         <div className="flex justify-between items-center">
+                            <CardTitle>Маршрут ба Ачаа</CardTitle>
+                             <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
+                                <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid sm:grid-cols-2 gap-x-6 gap-y-6">
@@ -530,9 +533,6 @@ export default function ContractedTransportDetailPage() {
                         <Separator />
                          <div className="flex justify-between items-center">
                             <h3 className="font-semibold text-sm">Маршрутын зогсоол</h3>
-                            <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
-                                <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
-                            </Button>
                         </div>
                         <div className="space-y-1">
                             {contract.routeStops.length > 0 ? (
@@ -573,7 +573,7 @@ export default function ContractedTransportDetailPage() {
                                 <h3 className="font-semibold text-sm">Оноосон жолооч нар</h3>
                                  <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm" onClick={() => setAddDriverPopoverOpen(true)}>
+                                        <Button variant="outline" size="sm">
                                             <PlusCircle className="mr-2 h-4 w-4"/> Жолооч нэмэх
                                         </Button>
                                     </PopoverTrigger>
@@ -604,7 +604,7 @@ export default function ContractedTransportDetailPage() {
                                 <h3 className="font-semibold text-sm">Оноосон тээврийн хэрэгсэл</h3>
                                 <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm" onClick={() => setAddVehiclePopoverOpen(true)}>
+                                        <Button variant="outline" size="sm">
                                             <PlusCircle className="mr-2 h-4 w-4"/> Т/Х нэмэх
                                         </Button>
                                     </PopoverTrigger>
