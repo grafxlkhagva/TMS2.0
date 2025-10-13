@@ -30,6 +30,7 @@ import {
     AlertDialogContent,
     AlertDialogDescription,
     AlertDialogHeader,
+    AlertDialogTitle,
     AlertDialogFooter,
 } from "@/components/ui/alert-dialog"
 import { useForm } from 'react-hook-form';
@@ -539,15 +540,17 @@ export default function ContractedTransportDetailPage() {
                     <Separator/>
                      <Table>
                         <TableHeader>
-                            <TableRow><TableHead>Ачаа</TableHead><TableHead className="text-right">Үнэ (₮)</TableHead></TableRow>
+                            <TableRow>
+                                <TableHead>Ачаа</TableHead>
+                                <TableHead>Баглаа</TableHead>
+                                <TableHead className="text-right">Үнэ (₮)</TableHead>
+                            </TableRow>
                         </TableHeader>
                         <TableBody>
                         {contract.cargoItems.map((item, index) => (
-                            <TableRow key={item.id || index}>
-                                <TableCell>
-                                    <p className="font-medium">{item.name}</p>
-                                    <p className="text-xs text-muted-foreground">{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</p>
-                                </TableCell>
+                             <TableRow key={item.id || index}>
+                                <TableCell className="font-medium">{item.name}</TableCell>
+                                <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
                                 <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
                             </TableRow>
                         ))}
