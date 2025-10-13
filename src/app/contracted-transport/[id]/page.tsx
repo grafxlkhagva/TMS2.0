@@ -40,6 +40,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 
 const newExecutionFormSchema = z.object({
@@ -99,6 +102,34 @@ const toDateSafe = (date: any): Date => {
   }
   return new Date(); 
 };
+
+function SortableExecutionCard({ execution }: { execution: ContractedTransportExecution }) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: execution.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <Card 
+      ref={setNodeRef} 
+      style={style} 
+      {...attributes} 
+      {...listeners}
+      key={execution.id} 
+      className="text-xs mb-2 touch-none cursor-grab"
+    >
+      <CardContent className="p-2">
+        <p className="font-semibold pr-6">Огноо: {format(execution.date, 'yyyy-MM-dd')}</p>
+        <div className="text-muted-foreground">
+          <p>Жолооч: {execution.driverName || 'TBA'}</p>
+          <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function ContractedTransportDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -422,10 +453,7 @@ export default function ContractedTransportDetailPage() {
         }
     }
     
-    const handleUpdateExecution = async () => {
-        if (!statusChange) return;
-        const { execution, newStatus } = statusChange;
-    
+    const handleUpdateExecution = async (execution: ContractedTransportExecution, newStatus: string) => {
         setIsSubmitting(true);
         try {
             const execRef = doc(db, 'contracted_transport_executions', execution.id);
@@ -457,6 +485,26 @@ export default function ContractedTransportDetailPage() {
         }
     }
     
+    async function handleDragEnd(event: DragEndEvent) {
+        const { active, over } = event;
+
+        if (over && active.id !== over.id) {
+            const activeContainer = active.data.current?.sortable.containerId;
+            const overContainer = over.data.current?.sortable.containerId;
+            
+            if (activeContainer === overContainer) {
+                // Reordering within the same column - not implemented yet
+            } else {
+                 const executionId = active.id;
+                 const newStatus = overContainer;
+                 const execution = executions.find(ex => ex.id === executionId);
+
+                 if (execution && newStatus) {
+                    await handleUpdateExecution(execution, newStatus);
+                 }
+            }
+        }
+    }
 
   if (isLoading) {
     return (
@@ -623,7 +671,10 @@ export default function ContractedTransportDetailPage() {
                              <div className="space-y-2">
                                 {contract.assignedVehicles.length > 0 ? ( contract.assignedVehicles.map(vehicle => (
                                     <div key={vehicle.vehicleId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
-                                        <div><p className="font-medium">{vehicle.licensePlate}</p><p className="text-xs text-muted-foreground font-mono">{vehicle.modelName} {vehicle.trailerLicensePlate && `/ ${vehicle.trailerLicensePlate}`}</p></div>
+                                        <div>
+                                            <p className="font-medium font-mono">{vehicle.licensePlate}</p>
+                                            <p className="text-xs text-muted-foreground font-mono">{vehicle.modelName} {vehicle.trailerLicensePlate && `/ ${vehicle.trailerLicensePlate}`}</p>
+                                        </div>
                                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveVehicle(vehicle)} disabled={isSubmitting}><XCircle className="h-4 w-4 text-destructive"/></Button>
                                     </div>
                                 ))) : (<p className="text-sm text-muted-foreground text-center py-1">Т/Х оноогоогүй.</p>)}
@@ -634,80 +685,54 @@ export default function ContractedTransportDetailPage() {
             </div>
         </div>
             
-         <Card>
-            <CardHeader>
-                <div className="flex justify-between items-center">
-                    <div>
-                        <CardTitle>Тээвэрлэлтийн гүйцэтгэл</CardTitle>
-                        <CardDescription>Гэрээний дагуу хийгдэх тээвэрлэлтийн явцыг хянах хэсэг.</CardDescription>
+        <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle>Тээвэрлэлтийн гүйцэтгэл</CardTitle>
+                            <CardDescription>Гэрээний дагуу хийгдэх тээвэрлэлтийн явцыг хянах хэсэг.</CardDescription>
+                        </div>
+                        <Button onClick={() => setIsExecutionDialogOpen(true)}>
+                            <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
+                        </Button>
                     </div>
-                    <Button onClick={() => setIsExecutionDialogOpen(true)}>
-                        <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
-                    </Button>
-                </div>
-            </CardHeader>
-            <CardContent>
-                <div className="flex items-center justify-between mb-4 text-xs text-muted-foreground">
-                    <span>{executionStatuses[0]}</span>
-                    <span>{executionStatuses[executionStatuses.length - 1]}</span>
-                </div>
-                 <div className="relative pt-1">
-                    <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-muted">
-                    {executionStatuses.slice(0, -1).map((status, index) => {
-                        const color = statusColorMap[status as keyof typeof statusColorMap] || 'bg-gray-200';
-                        return <div key={status} style={{ width: `${100 / (executionStatuses.length-1)}%` }} className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${color}`}></div>
-                    })}
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center justify-between mb-4 text-xs text-muted-foreground">
+                        <span>{executionStatuses[0]}</span>
+                        <span>{executionStatuses[executionStatuses.length - 1]}</span>
                     </div>
-                </div>
+                    <div className="relative pt-1">
+                        <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-muted">
+                        {executionStatuses.slice(0, -1).map((status, index) => {
+                            const color = statusColorMap[status as keyof typeof statusColorMap] || 'bg-gray-200';
+                            return <div key={status} style={{ width: `${100 / (executionStatuses.length-1)}%` }} className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${color}`}></div>
+                        })}
+                        </div>
+                    </div>
 
-                <div className="overflow-x-auto">
-                    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(160px, 1fr))`}}>
-                        {executionStatuses.map(status => (
-                            <div key={status} className="p-1 rounded-lg">
-                                <h3 className={`font-semibold text-center text-xs p-2 rounded-md ${statusColorMap[status as keyof typeof statusColorMap] || 'bg-gray-200'} text-white`}>
-                                    {status}
-                                </h3>
-                                <div className="space-y-1 min-h-20 mt-2">
-                                    {executions.filter(ex => ex.status === status).map(ex => (
-                                        <Card 
-                                            key={ex.id} 
-                                            className="text-xs mb-2 touch-none cursor-grab"
-                                        >
-                                            <CardContent className="p-2">
-                                                <p className="font-semibold pr-6">Огноо: {format(ex.date, 'yyyy-MM-dd')}</p>
-                                                <div className="text-muted-foreground">
-                                                    <p>Жолооч: {ex.driverName || 'TBA'}</p>
-                                                    <p>Машин: {ex.vehicleLicense || 'TBA'}</p>
-                                                </div>
-                                                 <DropdownMenu>
-                                                  <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="absolute top-0 right-0 h-6 w-6">
-                                                      <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                  </DropdownMenuTrigger>
-                                                  <DropdownMenuContent align="end">
-                                                     <DropdownMenuItem onSelect={() => setStatusChange({execution: ex, newStatus: executionStatuses[executionStatuses.indexOf(ex.status) -1]})} disabled={isSubmitting || executionStatuses.indexOf(ex.status) === 0}>
-                                                      <ArrowLeft className="mr-2 h-4 w-4" /> Ухраах
-                                                    </DropdownMenuItem>
-                                                     <DropdownMenuItem onSelect={() => setStatusChange({execution: ex, newStatus: executionStatuses[executionStatuses.indexOf(ex.status) + 1]})} disabled={isSubmitting || executionStatuses.indexOf(ex.status) === executionStatuses.length - 1}>
-                                                      <Route className="mr-2 h-4 w-4" /> Урагшлуулах
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onSelect={() => setExecutionToDelete(ex)} className="text-destructive focus:text-destructive">
-                                                      <Trash2 className="mr-2 h-4 w-4" /> Устгах
-                                                    </DropdownMenuItem>
-                                                  </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
+                    <div className="overflow-x-auto">
+                        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(180px, 1fr))`}}>
+                            {executionStatuses.map(status => (
+                                 <SortableContext key={status} items={executions.filter(ex => ex.status === status).map(ex => ex.id)}>
+                                    <div id={status} className="p-1 rounded-lg bg-muted/50 min-h-40">
+                                        <h3 className={`font-semibold text-center text-xs p-2 rounded-md ${statusColorMap[status as keyof typeof statusColorMap] || 'bg-gray-200'} text-white`}>
+                                            {status}
+                                        </h3>
+                                        <div className="space-y-1 min-h-20 mt-2">
+                                            {executions.filter(ex => ex.status === status).map(ex => (
+                                               <SortableExecutionCard key={ex.id} execution={ex} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                </SortableContext>
+                            ))}
+                        </div>
                     </div>
-                </div>
-            </CardContent>
-        </Card>
+                </CardContent>
+            </Card>
+        </DndContext>
 
 
         <Dialog open={isExecutionDialogOpen} onOpenChange={setIsExecutionDialogOpen}>
@@ -775,7 +800,7 @@ export default function ContractedTransportDetailPage() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel onClick={() => setStatusChange(null)}>Цуцлах</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleUpdateExecution} disabled={isSubmitting}>
+                    <AlertDialogAction onClick={() => handleUpdateExecution(statusChange!.execution, statusChange!.newStatus)} disabled={isSubmitting}>
                         {isSubmitting ? "Шинэчилж байна..." : "Тийм, шилжүүлэх"}
                     </AlertDialogAction>
                 </AlertDialogFooter>
