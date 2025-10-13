@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -111,13 +110,13 @@ export default function ContractedTransportDetailPage() {
   });
 
   const executionStatuses = React.useMemo(() => {
-    if (!contract) return ['Pending', 'Loading', 'Unloading', 'Delivered'];
+    if (!contract) return ['Хүлээгдэж буй', 'Ачиж буй', 'Буулгаж буй', 'Хүргэгдсэн'];
     return [
-        'Pending', 
-        'Loading', 
+        'Хүлээгдэж буй', 
+        'Ачиж буй', 
         ...contract.routeStops.map(s => s.name),
-        'Unloading', 
-        'Delivered'
+        'Буулгаж буй', 
+        'Хүргэгдсэн'
     ];
   }, [contract]);
 
@@ -239,8 +238,8 @@ export default function ContractedTransportDetailPage() {
             await addDoc(collection(db, 'contracted_transport_executions'), {
                 ...values,
                 contractId: id,
-                status: 'Pending',
-                statusHistory: [{ status: 'Pending', date: new Date() }],
+                status: 'Хүлээгдэж буй',
+                statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }],
                 createdAt: serverTimestamp(),
             });
             
@@ -276,17 +275,18 @@ export default function ContractedTransportDetailPage() {
         if (!driverToAdd) return;
         setIsSubmitting(true);
         try {
+            const newDriverData = {
+                driverId: driverToAdd.id,
+                driverName: driverToAdd.display_name,
+                driverPhone: driverToAdd.phone_number,
+            };
             const contractRef = doc(db, 'contracted_transports', id);
             await updateDoc(contractRef, {
-                assignedDrivers: arrayUnion({
-                    driverId: driverToAdd.id,
-                    driverName: driverToAdd.display_name,
-                    driverPhone: driverToAdd.phone_number,
-                })
+                assignedDrivers: arrayUnion(newDriverData)
             });
+            setContract(prev => prev ? { ...prev, assignedDrivers: [...prev.assignedDrivers, newDriverData] } : null);
             toast({ title: "Амжилттай", description: "Жолооч нэмэгдлээ."});
             setAddDriverPopoverOpen(false);
-            fetchContractData();
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч нэмэхэд алдаа гарлаа.'});
         } finally {
@@ -311,9 +311,10 @@ export default function ContractedTransportDetailPage() {
             })
 
             await batch.commit();
+
+            setContract(prev => prev ? { ...prev, assignedDrivers: prev.assignedDrivers.filter(d => d.driverId !== driverToRemove.driverId) } : null);
             
             toast({ title: "Амжилттай", description: "Жолоочийг хаслаа."});
-             fetchContractData();
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч хасахад алдаа гарлаа.'});
         }
@@ -325,18 +326,18 @@ export default function ContractedTransportDetailPage() {
         if (!vehicleToAdd) return;
         setIsSubmitting(true);
         try {
-            const contractRef = doc(db, 'contracted_transports', id);
             const newVehicleData = {
                 vehicleId: vehicleToAdd.id,
                 licensePlate: vehicleToAdd.licensePlate,
                 modelName: `${vehicleToAdd.makeName} ${vehicleToAdd.modelName}`
             };
+            const contractRef = doc(db, 'contracted_transports', id);
             await updateDoc(contractRef, {
                 assignedVehicles: arrayUnion(newVehicleData)
             });
+            setContract(prev => prev ? { ...prev, assignedVehicles: [...prev.assignedVehicles, newVehicleData] } : null);
             toast({ title: "Амжилттай", description: "Тээврийн хэрэгсэл нэмэгдлээ."});
             setAddVehiclePopoverOpen(false);
-            fetchContractData();
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл нэмэхэд алдаа гарлаа.'});
         } finally {
@@ -347,7 +348,7 @@ export default function ContractedTransportDetailPage() {
     const handleRemoveVehicle = async (vehicleToRemove: {vehicleId: string}) => {
         if (!id || !contract) return;
         try {
-             const batch = writeBatch(db);
+            const batch = writeBatch(db);
             const contractRef = doc(db, 'contracted_transports', id);
             const vehicleDataToRemove = contract.assignedVehicles.find(v => v.vehicleId === vehicleToRemove.vehicleId);
 
@@ -361,9 +362,8 @@ export default function ContractedTransportDetailPage() {
                 batch.update(execRef, { vehicleId: null, vehicleLicense: null });
             })
             await batch.commit();
-
+            setContract(prev => prev ? { ...prev, assignedVehicles: prev.assignedVehicles.filter(v => v.vehicleId !== vehicleToRemove.vehicleId) } : null);
             toast({ title: "Амжилттай", description: "Тээврийн хэрэгслийг хаслаа."});
-            fetchContractData();
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл хасахад алдаа гарлаа.'});
         }
@@ -381,10 +381,10 @@ export default function ContractedTransportDetailPage() {
             await updateDoc(contractRef, {
                 routeStops: arrayUnion(newStop),
             });
+            setContract(prev => prev ? { ...prev, routeStops: [...prev.routeStops, newStop] } : null);
             toast({ title: "Амжилттай", description: "Маршрутын зогсоол нэмэгдлээ."});
             routeStopForm.reset();
             setIsStopDialogOpen(false);
-            fetchContractData();
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Зогсоол нэмэхэд алдаа гарлаа.'});
         } finally {
@@ -399,32 +399,35 @@ export default function ContractedTransportDetailPage() {
             await updateDoc(contractRef, {
                  routeStops: arrayRemove(stopToRemove)
             });
+            setContract(prev => prev ? { ...prev, routeStops: prev.routeStops.filter(s => s.id !== stopToRemove.id) } : null);
             toast({ title: "Амжилттай", description: "Зогсоол хасагдлаа."});
-            fetchContractData();
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Зогсоол хасахад алдаа гарлаа.'});
         }
     }
     
-    const handleUpdateExecution = async (execution: ContractedTransportExecution, newStatus: ContractedTransportExecutionStatus) => {
+    const handleUpdateExecution = async (execution: ContractedTransportExecution, newStatus: string) => {
         if (!execution) return;
     
         setIsSubmitting(true);
         try {
             const execRef = doc(db, 'contracted_transport_executions', execution.id);
             
-            const updatedExecutionData = {
-                ...execution,
-                status: newStatus,
-                statusHistory: arrayUnion({ status: newStatus, date: Timestamp.now() }),
-            };
+            const updatedStatusHistory = [
+                ...execution.statusHistory,
+                 { status: newStatus as ContractedTransportExecutionStatus, date: Timestamp.now() }
+            ];
     
             await updateDoc(execRef, {
                 status: newStatus,
-                statusHistory: arrayUnion({ status: newStatus, date: Timestamp.now() }),
+                statusHistory: updatedStatusHistory,
             });
             
-            setExecutions(prev => prev.map(ex => ex.id === execution.id ? updatedExecutionData : ex));
+            setExecutions(prev => prev.map(ex => ex.id === execution.id ? {
+                ...ex,
+                status: newStatus as ContractedTransportExecutionStatus,
+                statusHistory: updatedStatusHistory as any
+            } : ex));
 
             toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${statusTranslation[newStatus] || newStatus}' төлөвт шилжлээ.` });
     
@@ -435,6 +438,23 @@ export default function ContractedTransportDetailPage() {
             setIsSubmitting(false);
         }
     }
+    
+    const onMoveBackward = async (execution: ContractedTransportExecution) => {
+        const currentIndex = executionStatuses.indexOf(execution.status);
+        if (currentIndex > 0) {
+            const newStatus = executionStatuses[currentIndex - 1];
+            await handleUpdateExecution(execution, newStatus);
+        }
+    };
+    
+    const onMoveForward = async (execution: ContractedTransportExecution) => {
+        const currentIndex = executionStatuses.indexOf(execution.status);
+        if (currentIndex < executionStatuses.length - 1) {
+            const newStatus = executionStatuses[currentIndex + 1];
+            await handleUpdateExecution(execution, newStatus);
+        }
+    };
+
 
   if (isLoading) {
     return (
@@ -556,7 +576,7 @@ export default function ContractedTransportDetailPage() {
                         <div>
                              <div className="flex justify-between items-center mb-2">
                                 <h3 className="font-semibold text-sm">Оноосон жолооч нар</h3>
-                                <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
+                                 <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
                                     <PopoverTrigger asChild>
                                         <Button variant="outline" size="sm">
                                             <PlusCircle className="mr-2 h-4 w-4"/> Жолооч нэмэх
@@ -647,14 +667,14 @@ export default function ContractedTransportDetailPage() {
                                                   </DropdownMenuTrigger>
                                                   <DropdownMenuContent align="end">
                                                      <DropdownMenuItem 
-                                                        onSelect={() => handleUpdateExecution(ex, executionStatuses[executionStatuses.indexOf(ex.status) + 1] as ContractedTransportExecutionStatus)}
+                                                        onSelect={() => onMoveForward(ex)}
                                                         disabled={isSubmitting || executionStatuses.indexOf(ex.status) === executionStatuses.length - 1}
                                                      >
                                                       <MoveRight className="mr-2 h-4 w-4" />
                                                       <span>Урагшлуулах</span>
                                                     </DropdownMenuItem>
                                                      <DropdownMenuItem 
-                                                        onSelect={() => handleUpdateExecution(ex, executionStatuses[executionStatuses.indexOf(ex.status) - 1] as ContractedTransportExecutionStatus)}
+                                                        onSelect={() => onMoveBackward(ex)}
                                                         disabled={isSubmitting || executionStatuses.indexOf(ex.status) === 0}
                                                      >
                                                       <ArrowLeft className="mr-2 h-4 w-4" />
