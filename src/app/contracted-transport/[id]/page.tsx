@@ -4,7 +4,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, MoreHorizontal, MoveRight, ChevronsUpDown, CheckIcon, X } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, CheckCircle, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, MoreHorizontal, MoveRight, ChevronsUpDown, Check, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
@@ -42,6 +42,8 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 
 const newExecutionFormSchema = z.object({
@@ -139,32 +141,10 @@ function StatusTimeline({
   )
 }
 
-function ExecutionCard({ execution, onUpdate, onDelete, onMoveBackward, statuses }: { execution: ContractedTransportExecution, onUpdate: () => void, onDelete: () => void, onMoveBackward: () => void, statuses: string[] }) {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging
-    } = useSortable({ id: execution.id });
-
-    const style: React.CSSProperties = {
-        transform: CSS.Transform.toString(transform),
-        transition: transition || 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
-        opacity: isDragging ? 0.9 : 1,
-        zIndex: isDragging ? 10 : 'auto',
-        boxShadow: isDragging ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '',
-    };
+function ExecutionCard({ execution, onUpdate, onDelete, onMoveBackward }: { execution: ContractedTransportExecution, onUpdate: () => void, onDelete: () => void, onMoveBackward: () => void; }) {
     
     return (
-        <Card
-            ref={setNodeRef}
-            style={style}
-            {...attributes}
-            {...listeners}
-            className="text-xs mb-2 touch-none"
-        >
+        <Card className="text-xs mb-2 touch-none">
             <CardContent className="p-2 relative">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -173,11 +153,11 @@ function ExecutionCard({ execution, onUpdate, onDelete, onMoveBackward, statuses
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={onUpdate} disabled={statuses.indexOf(execution.status) === statuses.length - 1}>
+                    <DropdownMenuItem onSelect={onUpdate}>
                       <MoveRight className="mr-2 h-4 w-4" />
                       <span>Урагшлуулах</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={onMoveBackward} disabled={statuses.indexOf(execution.status) === 0}>
+                    <DropdownMenuItem onSelect={onMoveBackward}>
                       <ArrowLeft className="mr-2 h-4 w-4" />
                       <span>Ухраах</span>
                     </DropdownMenuItem>
@@ -583,8 +563,8 @@ export default function ContractedTransportDetailPage() {
     
             await updateDoc(execRef, updatedData);
             
+            setExecutions(prev => prev.map(ex => ex.id === executionToUpdate.id ? {...ex, ...updatedData } : ex));
             toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${statusTranslation[newStatus] || newStatus}' төлөвт шилжлээ.` });
-            fetchContractData();
     
         } catch (error) {
             console.error("Error updating execution:", error);
@@ -792,7 +772,6 @@ export default function ContractedTransportDetailPage() {
                                             onDelete={() => setExecutionToDelete(ex)}
                                             onUpdate={() => onMoveForward(ex)}
                                             onMoveBackward={() => onMoveBackward(ex)}
-                                            statuses={executionStatuses}
                                         />
                                     ))}
                                 </div>
