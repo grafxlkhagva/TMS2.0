@@ -515,7 +515,7 @@ export default function ContractedTransportDetailPage() {
     
     const handleUpdateExecution = async (newStatus: ContractedTransportExecutionStatus, values?: LoadingFormValues | UnloadingFormValues) => {
         if (!executionToUpdate) return;
-
+    
         setIsSubmitting(true);
         let dataToUpdate: any = {};
         try {
@@ -542,15 +542,17 @@ export default function ContractedTransportDetailPage() {
                 };
             }
             
-            await updateDoc(execRef, {
+            const updatedData = {
                 ...dataToUpdate,
                 status: newStatus,
                 statusHistory: arrayUnion({ status: newStatus, date: Timestamp.now() }),
-            });
+            };
+    
+            await updateDoc(execRef, updatedData);
             
-            setExecutions(prev => prev.map(ex => ex.id === executionToUpdate.id ? { ...ex, ...dataToUpdate, status: newStatus } : ex));
+            setExecutions(prev => prev.map(ex => ex.id === executionToUpdate.id ? { ...ex, ...updatedData } : ex));
             toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${statusTranslation[newStatus]}' төлөвт шилжлээ.` });
-
+    
         } catch (error) {
             console.error("Error updating execution:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэлийн явц шинэчлэхэд алдаа гарлаа.' });
@@ -593,13 +595,14 @@ export default function ContractedTransportDetailPage() {
             const newStatus = over.id as ContractedTransportExecutionStatus;
             
             if (activeExecution && activeExecution.status !== newStatus) {
-                setExecutionToUpdate(activeExecution);
-                 if (newStatus === 'Loading' && activeExecution.status === 'Pending') {
+                if (newStatus === 'Loading' && activeExecution.status === 'Pending') {
+                    setExecutionToUpdate(activeExecution);
                     setUpdateAction('load');
                 } else if (newStatus === 'Delivered' && activeExecution.status === 'Unloading') {
+                    setExecutionToUpdate(activeExecution);
                     setUpdateAction('unload');
                 } else {
-                    handleUpdateExecution(newStatus);
+                    handleUpdateExecution(newStatus, { ...activeExecution });
                 }
             }
         }
