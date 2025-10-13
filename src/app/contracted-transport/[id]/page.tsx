@@ -127,7 +127,7 @@ function ExecutionCard({ execution, onUpdate, onDelete, onMoveBackward }: { exec
         opacity: isDragging ? 0.9 : 1,
         zIndex: isDragging ? 10 : 'auto',
         boxShadow: isDragging ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '',
-        transformOrigin: '50% 50%',
+        transformOrigin: isDragging ? '50% 50%' : undefined,
         scale: isDragging ? '1.05' : '1',
         rotate: isDragging ? '2deg' : '0deg',
     };
@@ -150,16 +150,16 @@ function ExecutionCard({ execution, onUpdate, onDelete, onMoveBackward }: { exec
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={onUpdate} disabled={currentIndex === executionStatuses.length - 1}>
+                    <DropdownMenuItem onSelect={onUpdate} disabled={currentIndex === executionStatuses.length - 1}>
                       <MoveRight className="mr-2 h-4 w-4" />
                       <span>Урагшлуулах</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={onMoveBackward} disabled={currentIndex === 0}>
+                    <DropdownMenuItem onSelect={onMoveBackward} disabled={currentIndex === 0}>
                       <ArrowLeft className="mr-2 h-4 w-4" />
                       <span>Ухраах</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+                    <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
                       <Trash2 className="mr-2 h-4 w-4" />
                       <span>Устгах</span>
                     </DropdownMenuItem>
