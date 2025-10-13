@@ -145,7 +145,7 @@ function ExecutionCard({ execution, onUpdate, onDelete }: { execution: Contracte
     );
 }
 
-function KanbanColumn({ status, executions, children }: { status: string, executions: ContractedTransportExecution[], children: React.ReactNode }) {
+function KanbanColumn({ status, children }: { status: string, children: React.ReactNode }) {
     const { setNodeRef } = useSortable({ id: status });
     return (
         <div ref={setNodeRef} className="p-2 rounded-lg bg-muted/50">
@@ -581,7 +581,7 @@ export default function ContractedTransportDetailPage() {
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <CardTitle>Гэрээний дэлгэрэнгүй</CardTitle>
-                        <div className="flex items-center gap-2">
+                         <div className="flex items-center gap-4">
                              <Badge variant={statusInfo.variant} className="py-1 px-3">
                                 <statusInfo.icon className="mr-1.5 h-3 w-3" />
                                 {statusInfo.text}
@@ -591,7 +591,7 @@ export default function ContractedTransportDetailPage() {
                                     <Edit className="mr-2 h-4 w-4" /> Засварлах
                                 </Link>
                             </Button>
-                        </div>
+                         </div>
                     </div>
                 </CardHeader>
                  <CardContent className="space-y-6">
@@ -714,7 +714,7 @@ export default function ContractedTransportDetailPage() {
                     >
                         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                             {executionStatuses.map(status => (
-                                <KanbanColumn key={status} status={status} executions={executions.filter(ex => ex.status === status)}>
+                                <KanbanColumn key={status} status={status}>
                                     <SortableContext items={executions.filter(ex => ex.status === status).map(e => e.id)} strategy={verticalListSortingStrategy}>
                                         {executions.filter(ex => ex.status === status).map(ex => (
                                             <ExecutionCard
