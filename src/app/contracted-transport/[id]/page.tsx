@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -479,6 +478,7 @@ export default function ContractedTransportDetailPage() {
         if (!executionToUpdate) return;
 
         setIsSubmitting(true);
+        let updatedExecution: ContractedTransportExecution | null = null;
         try {
             const execRef = doc(db, 'contracted_transport_executions', executionToUpdate.id);
             let dataToUpdate: any = {};
@@ -509,10 +509,16 @@ export default function ContractedTransportDetailPage() {
                 status: newStatus,
                 statusHistory: arrayUnion({ status: newStatus, date: Timestamp.now() }),
             });
+            
+            updatedExecution = {
+                ...executionToUpdate,
+                ...dataToUpdate,
+                status: newStatus,
+            };
+
+            setExecutions(prev => prev.map(ex => ex.id === executionToUpdate.id ? updatedExecution! : ex));
 
             toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${statusTranslation[newStatus]}' төлөвт шилжлээ.` });
-            fetchContractData();
-
         } catch (error) {
             console.error("Error updating execution:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэлийн явц шинэчлэхэд алдаа гарлаа.' });
@@ -532,7 +538,7 @@ export default function ContractedTransportDetailPage() {
             
             if (activeExecution && activeExecution.status !== newStatus) {
                 setExecutionToUpdate(activeExecution);
-                if (newStatus === 'Loading' && activeExecution.status === 'Pending') {
+                 if (newStatus === 'Loading' && activeExecution.status === 'Pending') {
                     setUpdateAction('load');
                 } else if (newStatus === 'Delivered' && activeExecution.status === 'Unloading') {
                     setUpdateAction('unload');
