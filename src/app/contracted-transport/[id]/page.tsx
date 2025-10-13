@@ -345,14 +345,16 @@ export default function ContractedTransportDetailPage() {
     
     const handleDeleteExecution = async () => {
         if (!executionToDelete) return;
+        setIsSubmitting(true);
         try {
             await deleteDoc(doc(db, 'contracted_transport_executions', executionToDelete.id));
-            toast({ title: 'Амжилттай', description: 'Гүйцэтгэл устгагдлаа.' });
             setExecutions(prev => prev.filter(ex => ex.id !== executionToDelete.id));
+            toast({ title: 'Амжилттай', description: 'Гүйцэтгэл устгагдлаа.' });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэл устгахад алдаа гарлаа.' });
         } finally {
             setExecutionToDelete(null);
+            setIsSubmitting(false);
         }
     };
     
@@ -802,7 +804,9 @@ export default function ContractedTransportDetailPage() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Цуцлах</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteExecution} className="bg-destructive hover:bg-destructive/90">Устгах</AlertDialogAction>
+                    <AlertDialogAction onClick={handleDeleteExecution} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90">
+                        {isSubmitting ? 'Устгаж байна...' : 'Устгах'}
+                    </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
@@ -841,3 +845,4 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
