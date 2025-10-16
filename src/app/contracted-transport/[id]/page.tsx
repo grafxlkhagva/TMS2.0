@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -33,7 +32,7 @@ import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { Timestamp } from 'firebase/firestore';
 import { DndContext, closestCenter, type DragEndEvent, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy, type SortableContextProps } from '@dnd-kit/sortable';
+import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CSS } from '@dnd-kit/utilities';
@@ -111,7 +110,7 @@ const statusColorMap: Record<string, string> = {
 
 
 const toDateSafe = (date: any): Date => {
-    if (!date) return new Date();
+    if (!date) return new Date(); // Or handle as an error
     if (date instanceof Date) return date;
     if (date instanceof Timestamp) return date.toDate();
     // Handle Firestore-like object structure from serialization
@@ -123,12 +122,11 @@ const toDateSafe = (date: any): Date => {
     // Handle date strings (like ISO strings)
     if (typeof date === 'string') {
         const parsedDate = new Date(date);
-         if (!isNaN(parsedDate.getTime()) && (date.includes('T') || date.includes('-')) && date.length > 10) {
+        if (!isNaN(parsedDate.getTime())) {
             return parsedDate;
         }
     }
-    
-    return new Date(); 
+    return new Date(); // Fallback
 };
 
 function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: ContractedTransportExecution, onEdit: () => void, onDelete: () => void }) {
@@ -400,7 +398,7 @@ export default function ContractedTransportDetailPage() {
           cargoName: c.name,
           cargoUnit: c.unit,
           loadedQuantity: 0
-        }))
+        })) || []
       });
     }
   }, [isExecutionDialogOpen, contract, newExecutionForm]);
@@ -413,13 +411,13 @@ export default function ContractedTransportDetailPage() {
 
   React.useEffect(() => {
     if (executionToEdit && contract) {
+      const existingCargoMap = new Map(executionToEdit.loadedCargo?.map(c => [c.cargoItemId, c.loadedQuantity]));
       const formCargo = contract.cargoItems.map(contractCargo => {
-        const executionCargo = executionToEdit.loadedCargo?.find(ec => ec.cargoItemId === contractCargo.id);
         return {
           cargoItemId: contractCargo.id,
           cargoName: contractCargo.name,
           cargoUnit: contractCargo.unit,
-          loadedQuantity: executionCargo?.loadedQuantity || 0
+          loadedQuantity: existingCargoMap.get(contractCargo.id) || 0,
         };
       });
 
@@ -1105,4 +1103,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
