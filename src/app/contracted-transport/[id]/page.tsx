@@ -392,7 +392,7 @@ export default function ContractedTransportDetailPage() {
         }))
       });
     }
-  }, [isExecutionDialogOpen, contract]);
+  }, [isExecutionDialogOpen, contract, newExecutionForm]);
 
   React.useEffect(() => {
     if (stopToEdit) {
@@ -432,7 +432,7 @@ export default function ContractedTransportDetailPage() {
             const selectedDriver = driverId ? contract.assignedDrivers.find(d => d.driverId === driverId) : undefined;
             const selectedVehicle = vehicleId ? contract.assignedVehicles.find(v => v.vehicleId === vehicleId) : undefined;
             
-            const cargoToLoad = values.loadedCargo?.filter(c => c.loadedQuantity > 0) || [];
+            const cargoToLoad = (values.loadedCargo || []).filter(c => c.loadedQuantity > 0);
             
             const newExecutionData = {
                 date: values.date,
@@ -494,7 +494,7 @@ export default function ContractedTransportDetailPage() {
             const selectedDriver = driverId ? contract.assignedDrivers.find(d => d.driverId === driverId) : undefined;
             const selectedVehicle = vehicleId ? contract.assignedVehicles.find(v => v.vehicleId === vehicleId) : undefined;
             
-            const cargoToLoad = values.loadedCargo?.filter(c => c.loadedQuantity > 0) || [];
+            const cargoToLoad = (values.loadedCargo || []).filter(c => c.loadedQuantity > 0);
 
             const updateData: Partial<ContractedTransportExecution> = {
               date: values.date,
@@ -688,41 +688,44 @@ export default function ContractedTransportDetailPage() {
             statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
         }).catch((error) => {
             console.error("Error updating execution status:", error);
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Явцын төлөв шинэчлэхэд алдаа гарлаа. Хуудсыг дахин ачааллана уу.'});
         });
     };
     
-    const onDragEnd = (event: DragEndEvent) => {
+    const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
     
         if (over && active.id !== over.id) {
-            setExecutions((items) => {
-                const activeIndex = items.findIndex((item) => item.id === active.id);
-                const overIndex = items.findIndex((item) => item.id === over.id);
-                
-                const newItems = arrayMove(items, activeIndex, overIndex);
-                
-                const overContainerId = findContainer(over.id);
-                
-                if (overContainerId && newItems[overIndex]) {
-                    newItems[overIndex] = {
-                        ...newItems[overIndex],
-                        status: overContainerId
-                    };
-                    handleExecutionStatusChange(newItems[overIndex].id, overContainerId);
-                }
+             const activeContainer = findContainer(active.id as string);
+             const overContainer = findContainer(over.id as string);
 
-                return newItems;
+             if (!activeContainer || !overContainer) return;
+             
+            setExecutions((prev) => {
+                const activeIndex = prev.findIndex((item) => item.id === active.id);
+                if (activeIndex === -1) return prev;
+
+                const updatedExecutions = [...prev];
+                updatedExecutions[activeIndex] = {
+                    ...updatedExecutions[activeIndex],
+                    status: overContainer,
+                };
+                
+                // Firestore update
+                handleExecutionStatusChange(active.id as string, overContainer);
+                
+                return updatedExecutions;
             });
         }
-
-        function findContainer(id: string | number) {
-            if (id in executionStatuses) {
-                return executionStatuses[id as number];
-            }
-            return executions.find((item) => item.id === id)?.status;
-        }
     };
+    
+    function findContainer(id: string) {
+        if (executionStatuses.includes(id)) {
+            return id;
+        }
+
+        const execution = executions.find((item) => item.id === id);
+        return execution?.status;
+    }
     
 
   if (isLoading) {
@@ -883,7 +886,7 @@ export default function ContractedTransportDetailPage() {
             </div>
         </div>
             
-        <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <Card className="mt-6">
                 <CardHeader>
                     <div className="flex justify-between items-center">
@@ -1097,5 +1100,6 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
 
 
