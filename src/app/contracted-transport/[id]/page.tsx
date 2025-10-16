@@ -101,7 +101,7 @@ const statusColorMap: Record<string, string> = {
 const toDateSafe = (date: any): Date => {
   if (date instanceof Timestamp) return date.toDate();
   if (date instanceof Date) return date;
-   if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in date) {
+   if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in data) {
     if (typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
       return new Timestamp(date.seconds, date.nanoseconds).toDate();
     }
@@ -325,7 +325,7 @@ export default function ContractedTransportDetailPage() {
             const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
             const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
 
-            await addDoc(collection(db, 'contracted_transport_executions'), {
+            const docRef = await addDoc(collection(db, 'contracted_transport_executions'), {
                 date: values.date,
                 driverId: values.driverId || null,
                 driverName: selectedDriver?.driverName || null,
@@ -336,10 +336,23 @@ export default function ContractedTransportDetailPage() {
                 statusHistory: [{ status: 'Хүлээгдэж буй', date: serverTimestamp() }],
                 createdAt: serverTimestamp(),
             });
+
+            const newExecution: ContractedTransportExecution = {
+                id: docRef.id,
+                date: values.date,
+                driverId: values.driverId || undefined,
+                driverName: selectedDriver?.driverName || undefined,
+                vehicleId: values.vehicleId || undefined,
+                vehicleLicense: selectedVehicle?.licensePlate || undefined,
+                contractId: id,
+                status: 'Хүлээгдэж буй',
+                statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }],
+                createdAt: new Date(),
+            };
+            setExecutions(prev => [...prev, newExecution]);
             
             toast({ title: 'Амжилттай', description: 'Шинэ гүйцэтгэл нэмэгдлээ.' });
             setIsExecutionDialogOpen(false);
-            await fetchContractData();
         } catch (error) {
             console.error("Error adding execution:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэл нэмэхэд алдаа гарлаа.' });
@@ -590,18 +603,13 @@ export default function ContractedTransportDetailPage() {
     
     async function handleDragEnd(event: DragEndEvent) {
         const { active, over } = event;
-
-        if (!over || active.id === over.id) return;
-        
-        const activeContainerId = active.data.current?.sortable?.containerId;
-        const overContainerId = over.data.current?.sortable?.containerId;
-
-        if (overContainerId && activeContainerId && activeContainerId !== overContainerId) {
-            const execution = executions.find(ex => ex.id === active.id);
-            const newStatus = overContainerId;
+    
+        if (over && active.id !== over.id) {
+            const overContainerId = over.data.current?.sortable?.containerId;
+            const activeExecution = executions.find(ex => ex.id === active.id);
             
-            if (execution && executionStatuses.includes(newStatus)) {
-                await handleExecutionStatusChange(active.id as string, newStatus);
+            if (overContainerId && activeExecution && activeExecution.status !== overContainerId) {
+                await handleExecutionStatusChange(active.id as string, overContainerId);
             }
         }
     }
@@ -787,9 +795,9 @@ export default function ContractedTransportDetailPage() {
                         <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(200px, 1fr))`}}>
                             {executionStatuses.map(status => {
                                 const stop = contract.routeStops.find(s => s.name === status);
-                                const items = executions.filter(ex => ex.status === status).map(ex => ex.id);
+                                const itemsForStatus = executions.filter(ex => ex.status === status);
                                 return (
-                                    <SortableContext key={status} id={status} items={items}>
+                                    <SortableContext key={status} id={status} items={itemsForStatus.map(i => i.id)}>
                                         <div className="p-2 rounded-lg bg-muted/50 min-h-40">
                                             <div className="font-semibold text-center text-sm p-2 rounded-md relative group/stop-header">
                                                 <h3 className={`${statusColorMap[status] || 'bg-purple-500'} text-white p-2 rounded-md`}>
@@ -816,7 +824,7 @@ export default function ContractedTransportDetailPage() {
                                                 </div>
                                             )}
                                             <div className="space-y-1 min-h-20 mt-2">
-                                                {executions.filter(ex => ex.status === status).map(ex => (
+                                                {itemsForStatus.map(ex => (
                                                     <SortableExecutionCard 
                                                         key={ex.id} 
                                                         execution={ex}
