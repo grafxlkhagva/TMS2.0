@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -101,7 +100,7 @@ const statusColorMap: Record<string, string> = {
 const toDateSafe = (date: any): Date => {
   if (date instanceof Timestamp) return date.toDate();
   if (date instanceof Date) return date;
-   if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in data) {
+   if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in date) {
     if (typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
       return new Timestamp(date.seconds, date.nanoseconds).toDate();
     }
@@ -601,18 +600,18 @@ export default function ContractedTransportDetailPage() {
         }
     }, [executions, toast]);
     
-    async function handleDragEnd(event: DragEndEvent) {
-        const { active, over } = event;
-    
-        if (over && active.id !== over.id) {
-            const overContainerId = over.data.current?.sortable?.containerId;
-            const activeExecution = executions.find(ex => ex.id === active.id);
-            
-            if (overContainerId && activeExecution && activeExecution.status !== overContainerId) {
-                await handleExecutionStatusChange(active.id as string, overContainerId);
-            }
-        }
-    }
+    const handleDragEnd = React.useCallback(async (event: DragEndEvent) => {
+      const { active, over } = event;
+
+      if (over && active.id !== over.id) {
+          const activeContainer = executions.find(ex => ex.id === active.id)?.status;
+          const overContainerId = over.data.current?.sortable?.containerId || (executions.find(ex => ex.id === over.id)?.status);
+          
+          if (overContainerId && activeContainer !== overContainerId) {
+              await handleExecutionStatusChange(active.id as string, overContainerId as string);
+          }
+      }
+    }, [executions, handleExecutionStatusChange]);
 
   if (isLoading) {
     return (
