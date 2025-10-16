@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -38,7 +37,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -103,6 +101,11 @@ const statusColorMap: Record<string, string> = {
 const toDateSafe = (date: any): Date => {
   if (date instanceof Timestamp) return date.toDate();
   if (date instanceof Date) return date;
+   if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in date) {
+    if (typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
+      return new Timestamp(date.seconds, date.nanoseconds).toDate();
+    }
+  }
   if (typeof date === 'string' || typeof date === 'number') {
     const parsed = new Date(date);
     if (!isNaN(parsed.getTime())) {
@@ -221,9 +224,6 @@ export default function ContractedTransportDetailPage() {
   const fetchContractData = React.useCallback(async () => {
     if (!id) return;
     
-    // Do not set loading to true here to avoid flickering on re-fetches
-    // setIsLoading(true);
-
     try {
         const contractDocRef = doc(db, 'contracted_transports', id);
         const contractDocSnap = await getDoc(contractDocRef);
@@ -310,7 +310,7 @@ export default function ContractedTransportDetailPage() {
   React.useEffect(() => {
     if (executionToEdit) {
       editExecutionForm.reset({
-        date: executionToEdit.date,
+        date: toDateSafe(executionToEdit.date),
         driverId: executionToEdit.driverId,
         vehicleId: executionToEdit.vehicleId,
       });
@@ -333,13 +333,13 @@ export default function ContractedTransportDetailPage() {
                 vehicleLicense: selectedVehicle?.licensePlate || null,
                 contractId: id,
                 status: 'Хүлээгдэж буй',
-                statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }],
+                statusHistory: [{ status: 'Хүлээгдэж буй', date: serverTimestamp() }],
                 createdAt: serverTimestamp(),
             });
             
             toast({ title: 'Амжилттай', description: 'Шинэ гүйцэтгэл нэмэгдлээ.' });
             setIsExecutionDialogOpen(false);
-            fetchContractData();
+            await fetchContractData();
         } catch (error) {
             console.error("Error adding execution:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэл нэмэхэд алдаа гарлаа.' });
@@ -381,7 +381,7 @@ export default function ContractedTransportDetailPage() {
 
             await updateDoc(execRef, updateData);
             
-            setExecutions(prev => prev.map(ex => ex.id === executionToEdit.id ? { ...ex, ...updateData } : ex));
+            setExecutions(prev => prev.map(ex => ex.id === executionToEdit.id ? { ...ex, ...updateData, date: values.date } : ex));
             toast({ title: 'Амжилттай', description: 'Гүйцэтгэл шинэчлэгдлээ.' });
             setExecutionToEdit(null);
         } catch (error) {
@@ -554,14 +554,17 @@ export default function ContractedTransportDetailPage() {
         }
     }
     
-    const handleExecutionStatusChange = async (execution: ContractedTransportExecution, newStatus: string) => {
+    const handleExecutionStatusChange = React.useCallback(async (executionId: string, newStatus: string) => {
+        const execution = executions.find(ex => ex.id === executionId);
+        if (!execution) return;
+
         setIsSubmitting(true);
         try {
             const execRef = doc(db, 'contracted_transport_executions', execution.id);
             
             const updatedStatusHistory = [
                 ...execution.statusHistory,
-                 { status: newStatus as ContractedTransportExecutionStatus, date: Timestamp.now() }
+                 { status: newStatus as ContractedTransportExecutionStatus, date: serverTimestamp() }
             ];
     
             await updateDoc(execRef, {
@@ -572,7 +575,7 @@ export default function ContractedTransportDetailPage() {
             setExecutions(prev => prev.map(ex => ex.id === execution.id ? {
                 ...ex,
                 status: newStatus as ContractedTransportExecutionStatus,
-                statusHistory: updatedStatusHistory as any
+                statusHistory: [...ex.statusHistory, { status: newStatus as ContractedTransportExecutionStatus, date: new Date() }]
             } : ex));
 
             toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${newStatus}' төлөвт шилжлээ.` });
@@ -583,7 +586,7 @@ export default function ContractedTransportDetailPage() {
         } finally {
             setIsSubmitting(false);
         }
-    }
+    }, [executions, toast]);
     
     async function handleDragEnd(event: DragEndEvent) {
         const { active, over } = event;
@@ -598,7 +601,7 @@ export default function ContractedTransportDetailPage() {
             const newStatus = overContainerId;
             
             if (execution && executionStatuses.includes(newStatus)) {
-                await handleExecutionStatusChange(execution, newStatus);
+                await handleExecutionStatusChange(active.id as string, newStatus);
             }
         }
     }
@@ -784,8 +787,9 @@ export default function ContractedTransportDetailPage() {
                         <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(200px, 1fr))`}}>
                             {executionStatuses.map(status => {
                                 const stop = contract.routeStops.find(s => s.name === status);
+                                const items = executions.filter(ex => ex.status === status).map(ex => ex.id);
                                 return (
-                                    <SortableContext key={status} id={status} items={executions.filter(ex => ex.status === status).map(ex => ex.id)} strategy={verticalListSortingStrategy}>
+                                    <SortableContext key={status} id={status} items={items}>
                                         <div className="p-2 rounded-lg bg-muted/50 min-h-40">
                                             <div className="font-semibold text-center text-sm p-2 rounded-md relative group/stop-header">
                                                 <h3 className={`${statusColorMap[status] || 'bg-purple-500'} text-white p-2 rounded-md`}>
@@ -950,9 +954,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
-
-
-
-
-
