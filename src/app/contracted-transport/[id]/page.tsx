@@ -116,9 +116,10 @@ const statusColorMap: Record<string, string> = {
 
 
 const toDateSafe = (date: any): Date => {
-  if (date instanceof Timestamp) return date.toDate();
+  if (!date) return new Date();
   if (date instanceof Date) return date;
-   if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in date) {
+  if (date instanceof Timestamp) return date.toDate();
+  if (typeof date === 'object' && 'seconds' in date && 'nanoseconds' in date) {
     if (typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
       return new Timestamp(date.seconds, date.nanoseconds).toDate();
     }
@@ -276,7 +277,7 @@ export default function ContractedTransportDetailPage() {
     defaultValues: { date: new Date(), driverId: 'no-selection', vehicleId: 'no-selection', loadedCargo: [] },
   });
 
-  const { fields: cargoFields, append: appendCargo, remove: removeCargo } = useFieldArray({
+  useFieldArray({
     control: newExecutionForm.control,
     name: "loadedCargo"
   });
@@ -294,7 +295,7 @@ export default function ContractedTransportDetailPage() {
     resolver: zodResolver(editExecutionFormSchema),
   });
 
-  const { fields: editCargoFields, control: editCargoControl } = useFieldArray({
+  useFieldArray({
     control: editExecutionForm.control,
     name: "loadedCargo"
   });
@@ -943,9 +944,9 @@ export default function ContractedTransportDetailPage() {
                         <div>
                           <FormLabel>Ачих ачаа ба хэмжээ</FormLabel>
                           <div className="space-y-2 mt-2">
-                             {cargoFields.map((field, index) => (
-                               <div key={field.id} className="flex items-center gap-2">
-                                 <span className="flex-1 text-sm">{newExecutionForm.getValues(`loadedCargo.${index}.cargoName`)} ({newExecutionForm.getValues(`loadedCargo.${index}.cargoUnit`)})</span>
+                             {newExecutionForm.getValues('loadedCargo')?.map((field, index) => (
+                               <div key={field.cargoItemId} className="flex items-center gap-2">
+                                 <span className="flex-1 text-sm">{field.cargoName} ({field.cargoUnit})</span>
                                  <FormField
                                    control={newExecutionForm.control}
                                    name={`loadedCargo.${index}.loadedQuantity`}
@@ -1005,9 +1006,9 @@ export default function ContractedTransportDetailPage() {
                             <div>
                                 <FormLabel>Ачсан ачаа ба хэмжээ</FormLabel>
                                 <div className="space-y-2 mt-2">
-                                    {editCargoFields.map((field, index) => (
-                                    <div key={field.id} className="flex items-center gap-2">
-                                        <span className="flex-1 text-sm">{editExecutionForm.getValues(`loadedCargo.${index}.cargoName`)} ({editExecutionForm.getValues(`loadedCargo.${index}.cargoUnit`)})</span>
+                                    {editExecutionForm.getValues('loadedCargo')?.map((field, index) => (
+                                    <div key={field.cargoItemId} className="flex items-center gap-2">
+                                        <span className="flex-1 text-sm">{field.cargoName} ({field.cargoUnit})</span>
                                         <FormField
                                         control={editExecutionForm.control}
                                         name={`loadedCargo.${index}.loadedQuantity`}
@@ -1091,6 +1092,7 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
 
 
 
