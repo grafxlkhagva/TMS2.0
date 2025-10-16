@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch, type DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportExecutionStatus, ContractedTransportStatus } from '@/types';
 import { useToast } from '@/hooks/use-toast';
@@ -262,7 +262,7 @@ export default function ContractedTransportDetailPage() {
         ]);
         
         setDrivers(driversSnap.docs.map(d => ({id: d.id, ...d.data()} as Driver)));
-        setVehicles(vehiclesSnap.docs.map(v => ({id: v.id, ...v.data()} as Vehicle)));
+        setVehicles(vehiclesSnap.docs.map(v => ({id: d.id, ...v.data()} as Vehicle)));
 
         setRelatedData({
             startRegionName: startRegionSnap.data()?.name || '',
@@ -324,25 +324,28 @@ export default function ContractedTransportDetailPage() {
             const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
             const now = new Date();
 
-            const newExecutionData = {
+            const newExecutionData: Omit<ContractedTransportExecution, 'id'> = {
                 date: values.date,
-                driverId: values.driverId || null,
-                driverName: selectedDriver?.driverName || null,
-                vehicleId: values.vehicleId || null,
-                vehicleLicense: selectedVehicle?.licensePlate || null,
+                driverId: values.driverId || undefined,
+                driverName: selectedDriver?.driverName || undefined,
+                vehicleId: values.vehicleId || undefined,
+                vehicleLicense: selectedVehicle?.licensePlate || undefined,
                 contractId: id,
                 status: 'Хүлээгдэж буй' as ContractedTransportExecutionStatus,
-                statusHistory: [{ status: 'Хүлээгдэж буй' as ContractedTransportExecutionStatus, date: now }],
-                createdAt: serverTimestamp(),
+                statusHistory: [{ status: 'Хүлээгдэж буй', date: now }],
+                createdAt: serverTimestamp() as any, // Will be replaced by server
             };
 
             const docRef = await addDoc(collection(db, 'contracted_transport_executions'), newExecutionData);
             
-            setExecutions(prev => [...prev, {
+            const newExecutionForState: ContractedTransportExecution = {
                 ...newExecutionData,
                 id: docRef.id,
                 createdAt: now,
-            }]);
+                date: values.date,
+            };
+
+            setExecutions(prev => [...prev, newExecutionForState]);
             
             toast({ title: 'Амжилттай', description: 'Шинэ гүйцэтгэл нэмэгдлээ.' });
             setIsExecutionDialogOpen(false);
@@ -377,15 +380,15 @@ export default function ContractedTransportDetailPage() {
             const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
             const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
 
-            const updateData = {
+            const updateData: Partial<ContractedTransportExecution> = {
               date: values.date,
-              driverId: values.driverId || null,
-              driverName: selectedDriver?.driverName || null,
-              vehicleId: values.vehicleId || null,
-              vehicleLicense: selectedVehicle?.licensePlate || null,
+              driverId: values.driverId || undefined,
+              driverName: selectedDriver?.driverName || undefined,
+              vehicleId: values.vehicleId || undefined,
+              vehicleLicense: selectedVehicle?.licensePlate || undefined,
             };
 
-            await updateDoc(execRef, updateData);
+            await updateDoc(execRef, updateData as DocumentData);
             
             setExecutions(prev => prev.map(ex => ex.id === executionToEdit.id ? { ...ex, ...updateData, date: values.date } : ex));
             toast({ title: 'Амжилттай', description: 'Гүйцэтгэл шинэчлэгдлээ.' });
@@ -560,7 +563,7 @@ export default function ContractedTransportDetailPage() {
         }
     }
     
-    const handleExecutionStatusChange = React.useCallback(async (executionId: string, newStatus: string) => {
+    const handleExecutionStatusChange = React.useCallback(async (executionId: string, newStatus: ContractedTransportExecutionStatus) => {
         const execution = executions.find(ex => ex.id === executionId);
         if (!execution) return;
 
@@ -569,7 +572,7 @@ export default function ContractedTransportDetailPage() {
             
             const updatedStatusHistory = [
                 ...execution.statusHistory,
-                 { status: newStatus as ContractedTransportExecutionStatus, date: serverTimestamp() }
+                 { status: newStatus, date: serverTimestamp() }
             ];
     
             await updateDoc(execRef, {
@@ -577,36 +580,37 @@ export default function ContractedTransportDetailPage() {
                 statusHistory: updatedStatusHistory,
             });
             
-             // To ensure UI updates, refetching might be the most reliable
-            await fetchContractData();
-
             toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${newStatus}' төлөвт шилжлээ.` });
     
         } catch (error) {
-            console.error("Error updating execution:", error);
+            console.error("Error updating execution status:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэлийн явц шинэчлэхэд алдаа гарлаа.' });
+            // Revert UI change on error
+            setExecutions(prev => prev.map(ex => ex.id === executionId ? { ...ex, status: execution.status } : ex));
         }
-    }, [executions, toast, fetchContractData]);
+    }, [executions, toast]);
     
     const handleDragEnd = React.useCallback((event: DragEndEvent) => {
       const { active, over } = event;
 
       if (over && active.id !== over.id) {
-          const activeContainer = executions.find(ex => ex.id === active.id)?.status;
-          const overContainerId = over.data.current?.sortable?.containerId;
+          const activeItem = executions.find(ex => ex.id === active.id);
+          const overContainerId = over.data.current?.sortable?.containerId as ContractedTransportExecutionStatus;
           
-          if (overContainerId && activeContainer !== overContainerId) {
+          if (activeItem && overContainerId && activeItem.status !== overContainerId) {
                 setExecutions(prev => {
                     const activeIndex = prev.findIndex(ex => ex.id === active.id);
                     if (activeIndex === -1) return prev;
                     
-                    const updatedExecution = { ...prev[activeIndex], status: overContainerId as ContractedTransportExecutionStatus };
-                    const newExecutions = [...prev];
-                    newExecutions[activeIndex] = updatedExecution;
+                    const updatedExecutions = [...prev];
+                    updatedExecutions[activeIndex] = {
+                        ...updatedExecutions[activeIndex],
+                        status: overContainerId
+                    };
                     
-                    return newExecutions;
+                    return updatedExecutions;
                 });
-                handleExecutionStatusChange(active.id as string, overContainerId as string);
+                handleExecutionStatusChange(active.id as string, overContainerId);
           }
       }
     }, [executions, handleExecutionStatusChange]);
