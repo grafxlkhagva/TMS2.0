@@ -576,15 +576,13 @@ export default function ContractedTransportDetailPage() {
             });
             
             toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${newStatus}' төлөвт шилжлээ.` });
-            // The optimistic update is handled in handleDragEnd.
-            // We can re-fetch here to ensure consistency if needed, but it might cause a flicker.
-            // await fetchContractData(); 
+            await fetchContractData(); 
     
         } catch (error) {
             console.error("Error updating execution status:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэлийн явц шинэчлэхэд алдаа гарлаа.' });
         }
-    }, [executions, toast]);
+    }, [executions, toast, fetchContractData]);
     
     const handleDragEnd = React.useCallback((event: DragEndEvent) => {
         const { active, over } = event;
@@ -593,14 +591,12 @@ export default function ContractedTransportDetailPage() {
     
         const activeId = String(active.id);
         const overId = String(over.id);
-    
-        // Determine if we're dropping into a new container (status column)
         const overIsContainer = executionStatuses.includes(overId as ContractedTransportExecutionStatus);
-        
+    
         if (overIsContainer) {
-            const activeExecution = executions.find(ex => ex.id === activeId);
             const newStatus = overId as ContractedTransportExecutionStatus;
-            
+            const activeExecution = executions.find(ex => ex.id === activeId);
+
             if (activeExecution && activeExecution.status !== newStatus) {
                 // Optimistic UI Update
                 setExecutions(prev => 
@@ -962,5 +958,7 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
+    
 
     
