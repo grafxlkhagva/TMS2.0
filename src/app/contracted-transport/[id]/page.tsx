@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -272,7 +273,7 @@ export default function ContractedTransportDetailPage() {
 
   const newExecutionForm = useForm<NewExecutionFormValues>({
     resolver: zodResolver(newExecutionFormSchema),
-    defaultValues: { date: new Date(), driverId: '', vehicleId: '', loadedCargo: [] },
+    defaultValues: { date: new Date(), driverId: 'no-selection', vehicleId: 'no-selection', loadedCargo: [] },
   });
 
   const { fields: cargoFields, append: appendCargo, remove: removeCargo } = useFieldArray({
@@ -381,8 +382,8 @@ export default function ContractedTransportDetailPage() {
     if (isExecutionDialogOpen && contract) {
       newExecutionForm.reset({ 
         date: new Date(), 
-        driverId: '', 
-        vehicleId: '',
+        driverId: 'no-selection', 
+        vehicleId: 'no-selection',
         loadedCargo: contract.cargoItems.map(c => ({
           cargoItemId: c.id,
           cargoName: c.name,
@@ -391,7 +392,7 @@ export default function ContractedTransportDetailPage() {
         }))
       });
     }
-  }, [isExecutionDialogOpen, newExecutionForm, contract]);
+  }, [isExecutionDialogOpen, contract]);
 
   React.useEffect(() => {
     if (stopToEdit) {
@@ -425,16 +426,20 @@ export default function ContractedTransportDetailPage() {
         if (!id || !contract) return;
         setIsSubmitting(true);
         try {
-            const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
-            const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
+            const driverId = values.driverId === 'no-selection' ? undefined : values.driverId;
+            const vehicleId = values.vehicleId === 'no-selection' ? undefined : values.vehicleId;
+            
+            const selectedDriver = driverId ? contract.assignedDrivers.find(d => d.driverId === driverId) : undefined;
+            const selectedVehicle = vehicleId ? contract.assignedVehicles.find(v => v.vehicleId === vehicleId) : undefined;
+            
             const cargoToLoad = values.loadedCargo?.filter(c => c.loadedQuantity > 0) || [];
             
             const newExecutionData = {
                 date: values.date,
-                driverId: selectedDriver ? selectedDriver.driverId : undefined,
-                driverName: selectedDriver ? selectedDriver.driverName : undefined,
-                vehicleId: selectedVehicle ? selectedVehicle.vehicleId : undefined,
-                vehicleLicense: selectedVehicle ? selectedVehicle.licensePlate : undefined,
+                driverId: selectedDriver?.driverId,
+                driverName: selectedDriver?.driverName,
+                vehicleId: selectedVehicle?.vehicleId,
+                vehicleLicense: selectedVehicle?.licensePlate,
                 contractId: id,
                 status: 'Хүлээгдэж буй' as ContractedTransportExecutionStatus,
                 statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }], 
@@ -483,16 +488,20 @@ export default function ContractedTransportDetailPage() {
         setIsSubmitting(true);
         try {
             const execRef = doc(db, 'contracted_transport_executions', executionToEdit.id);
-            const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
-            const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
+            const driverId = values.driverId === 'no-selection' ? undefined : values.driverId;
+            const vehicleId = values.vehicleId === 'no-selection' ? undefined : values.vehicleId;
+
+            const selectedDriver = driverId ? contract.assignedDrivers.find(d => d.driverId === driverId) : undefined;
+            const selectedVehicle = vehicleId ? contract.assignedVehicles.find(v => v.vehicleId === vehicleId) : undefined;
+            
             const cargoToLoad = values.loadedCargo?.filter(c => c.loadedQuantity > 0) || [];
 
             const updateData: Partial<ContractedTransportExecution> = {
               date: values.date,
-              driverId: selectedDriver ? selectedDriver.driverId : undefined,
-              driverName: selectedDriver ? selectedDriver.driverName : undefined,
-              vehicleId: selectedVehicle ? selectedVehicle.vehicleId : undefined,
-              vehicleLicense: selectedVehicle ? selectedVehicle.licensePlate : undefined,
+              driverId: selectedDriver?.driverId,
+              driverName: selectedDriver?.driverName,
+              vehicleId: selectedVehicle?.vehicleId,
+              vehicleLicense: selectedVehicle?.licensePlate,
               loadedCargo: cargoToLoad,
             };
 
@@ -679,43 +688,41 @@ export default function ContractedTransportDetailPage() {
             statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
         }).catch((error) => {
             console.error("Error updating execution status:", error);
-            // Optionally revert UI change or show toast
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Явцын төлөв шинэчлэхэд алдаа гарлаа. Хуудсыг дахин ачааллана уу.'});
         });
     };
     
     const onDragEnd = (event: DragEndEvent) => {
-      const { active, over } = event;
-      if (!over || active.id === over.id) {
-          return;
-      }
-  
-      const activeId = String(active.id);
-      const overId = String(over.id);
-  
-      setExecutions((prevExecutions) => {
-          const oldIndex = prevExecutions.findIndex((e) => e.id === activeId);
-          const newIndex = prevExecutions.findIndex((e) => e.id === overId);
-  
-          if (oldIndex === -1 || newIndex === -1) {
-              return prevExecutions;
-          }
-  
-          let newExecutions = arrayMove(prevExecutions, oldIndex, newIndex);
-          const activeExecution = newExecutions.find(e => e.id === activeId);
-          const overContainerId = prevExecutions[newIndex].status;
-          const activeContainerId = prevExecutions[oldIndex].status;
-  
-          if (activeExecution && activeContainerId !== overContainerId) {
-              newExecutions = newExecutions.map(e => 
-                  e.id === activeId ? { ...e, status: overContainerId as ContractedTransportExecutionStatus } : e
-              );
-              handleExecutionStatusChange(activeId, overContainerId);
-          }
-  
-          return newExecutions;
-      });
-  };
+        const { active, over } = event;
+    
+        if (over && active.id !== over.id) {
+            setExecutions((items) => {
+                const activeIndex = items.findIndex((item) => item.id === active.id);
+                const overIndex = items.findIndex((item) => item.id === over.id);
+                
+                const newItems = arrayMove(items, activeIndex, overIndex);
+                
+                const overContainerId = findContainer(over.id);
+                
+                if (overContainerId && newItems[overIndex]) {
+                    newItems[overIndex] = {
+                        ...newItems[overIndex],
+                        status: overContainerId
+                    };
+                    handleExecutionStatusChange(newItems[overIndex].id, overContainerId);
+                }
+
+                return newItems;
+            });
+        }
+
+        function findContainer(id: string | number) {
+            if (id in executionStatuses) {
+                return executionStatuses[id as number];
+            }
+            return executions.find((item) => item.id === id)?.status;
+        }
+    };
     
 
   if (isLoading) {
@@ -1090,4 +1097,5 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
 
