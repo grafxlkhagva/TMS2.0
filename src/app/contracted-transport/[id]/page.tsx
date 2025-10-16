@@ -119,7 +119,7 @@ const toDateSafe = (date: any): Date => {
   if (!date) return new Date();
   if (date instanceof Date) return date;
   if (date instanceof Timestamp) return date.toDate();
-  if (typeof date === 'object' && 'seconds' in date && 'nanoseconds' in date) {
+  if (typeof date === 'object' && date !== null && 'seconds' in date && 'nanoseconds' in date) {
     if (typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
       return new Timestamp(date.seconds, date.nanoseconds).toDate();
     }
@@ -1092,6 +1092,7 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
 
 
 
