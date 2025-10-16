@@ -114,16 +114,21 @@ const toDateSafe = (date: any): Date => {
     if (!date) return new Date();
     if (date instanceof Date) return date;
     if (date instanceof Timestamp) return date.toDate();
-    if (typeof date === 'object' && date !== null && typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
-      return new Timestamp(date.seconds, date.nanoseconds).toDate();
+    // Handle Firestore-like object structure from serialization
+    if (typeof date === 'object' && date !== null && 'seconds' in date && 'nanoseconds' in date) {
+        if (typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
+            return new Timestamp(date.seconds, date.nanoseconds).toDate();
+        }
     }
-    if (typeof date === 'string' || typeof date === 'number') {
-      const parsed = new Date(date);
-      if (!isNaN(parsed.getTime())) {
-        return parsed;
-      }
+    // Handle date strings (like ISO strings)
+    if (typeof date === 'string') {
+        const parsedDate = new Date(data);
+         if (!isNaN(parsedDate.getTime()) && data.includes('T') && data.length > 10) {
+            return parsedDate;
+        }
     }
-    return new Date();
+    
+    return new Date(); 
 };
 
 function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: ContractedTransportExecution, onEdit: () => void, onDelete: () => void }) {
@@ -1091,10 +1096,13 @@ export default function ContractedTransportDetailPage() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Цуцлах</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleRemoveStop} className="bg-destructive hover:bg-destructive/90">Устгах</AlertDialogAction>
+                    <AlertDialogAction onClick={handleRemoveStop} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90">
+                       {isSubmitting ? "Устгаж байна..." : "Устгах"}
+                    </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
     </div>
   );
 }
+
