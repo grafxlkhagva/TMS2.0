@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -77,7 +78,7 @@ const toDateSafe = (date: any): Date | null => {
     if (date instanceof Date) return date;
     if (date instanceof Timestamp) return date.toDate();
     // Handle Firestore-like object structure from serialization
-    if (typeof date === 'object' && date !== null && 'seconds' in date && 'nanoseconds' in date && typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
+    if (typeof date === 'object' && date !== null && 'seconds' in date && typeof date.seconds === 'number' && 'nanoseconds' in date && typeof date.nanoseconds === 'number') {
         return new Timestamp(date.seconds, date.nanoseconds).toDate();
     }
     if (typeof date === 'string') {
