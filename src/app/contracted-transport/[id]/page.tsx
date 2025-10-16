@@ -122,8 +122,8 @@ const toDateSafe = (date: any): Date => {
     }
     // Handle date strings (like ISO strings)
     if (typeof date === 'string') {
-        const parsedDate = new Date(data);
-         if (!isNaN(parsedDate.getTime()) && data.includes('T') && data.length > 10) {
+        const parsedDate = new Date(date);
+         if (!isNaN(parsedDate.getTime()) && (date.includes('T') || date.includes('-')) && date.length > 10) {
             return parsedDate;
         }
     }
@@ -171,8 +171,8 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
             <div className="mt-1 pt-1 border-t text-muted-foreground">
                 <p className="font-medium text-xs">Ачсан ачаа:</p>
                 <ul className="list-disc list-inside">
-                    {execution.loadedCargo.map(cargo => (
-                        <li key={cargo.cargoItemId} className="text-xs">{cargo.cargoName}: {cargo.loadedQuantity} {cargo.cargoUnit}</li>
+                    {execution.loadedCargo.map((cargo, index) => (
+                        <li key={cargo.cargoItemId || index} className="text-xs">{cargo.cargoName}: {cargo.loadedQuantity} {cargo.cargoUnit}</li>
                     ))}
                 </ul>
             </div>
