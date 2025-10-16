@@ -337,14 +337,12 @@ export default function ContractedTransportDetailPage() {
             };
 
             const docRef = await addDoc(collection(db, 'contracted_transport_executions'), newExecutionData);
-
-            const newExecutionForState: ContractedTransportExecution = {
+            
+            setExecutions(prev => [...prev, {
                 ...newExecutionData,
                 id: docRef.id,
-                statusHistory: [{ status: 'Хүлээгдэж буй', date: now }],
                 createdAt: now,
-            };
-            setExecutions(prev => [...prev, newExecutionForState]);
+            }]);
             
             toast({ title: 'Амжилттай', description: 'Шинэ гүйцэтгэл нэмэгдлээ.' });
             setIsExecutionDialogOpen(false);
@@ -579,11 +577,8 @@ export default function ContractedTransportDetailPage() {
                 statusHistory: updatedStatusHistory,
             });
             
-            setExecutions(prev => prev.map(ex => ex.id === executionId ? {
-                ...ex,
-                status: newStatus as ContractedTransportExecutionStatus,
-                statusHistory: [...ex.statusHistory, { status: newStatus as ContractedTransportExecutionStatus, date: new Date() }]
-            } : ex));
+             // To ensure UI updates, refetching might be the most reliable
+            await fetchContractData();
 
             toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${newStatus}' төлөвт шилжлээ.` });
     
@@ -591,7 +586,7 @@ export default function ContractedTransportDetailPage() {
             console.error("Error updating execution:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэлийн явц шинэчлэхэд алдаа гарлаа.' });
         }
-    }, [executions, toast]);
+    }, [executions, toast, fetchContractData]);
     
     const handleDragEnd = React.useCallback((event: DragEndEvent) => {
       const { active, over } = event;
@@ -601,7 +596,17 @@ export default function ContractedTransportDetailPage() {
           const overContainerId = over.data.current?.sortable?.containerId;
           
           if (overContainerId && activeContainer !== overContainerId) {
-              handleExecutionStatusChange(active.id as string, overContainerId as string);
+                setExecutions(prev => {
+                    const activeIndex = prev.findIndex(ex => ex.id === active.id);
+                    if (activeIndex === -1) return prev;
+                    
+                    const updatedExecution = { ...prev[activeIndex], status: overContainerId as ContractedTransportExecutionStatus };
+                    const newExecutions = [...prev];
+                    newExecutions[activeIndex] = updatedExecution;
+                    
+                    return newExecutions;
+                });
+                handleExecutionStatusChange(active.id as string, overContainerId as string);
           }
       }
     }, [executions, handleExecutionStatusChange]);
