@@ -32,13 +32,6 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { Timestamp } from 'firebase/firestore';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { DndContext, closestCenter, type DragEndEvent, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -116,21 +109,22 @@ const statusColorMap: Record<string, string> = {
 
 
 const toDateSafe = (date: any): Date => {
-  if (!date) return new Date();
-  if (date instanceof Date) return date;
-  if (date instanceof Timestamp) return date.toDate();
-  if (typeof date === 'object' && date !== null && 'seconds' in date && 'nanoseconds' in date) {
-    if (typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
-      return new Timestamp(date.seconds, date.nanoseconds).toDate();
+    if (!date) return new Date();
+    if (date instanceof Date) return date;
+    if (date instanceof Timestamp) return date.toDate();
+    // Handle Firestore-like object structure from serialization
+    if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in date) {
+        if (typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
+            return new Timestamp(date.seconds, date.nanoseconds).toDate();
+        }
     }
-  }
-  if (typeof date === 'string' || typeof date === 'number') {
-    const parsed = new Date(date);
-    if (!isNaN(parsed.getTime())) {
-      return parsed;
+    if (typeof date === 'string' || typeof date === 'number') {
+        const parsed = new Date(date);
+        if (!isNaN(parsed.getTime())) {
+            return parsed;
+        }
     }
-  }
-  return new Date(); 
+    return new Date();
 };
 
 function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: ContractedTransportExecution, onEdit: () => void, onDelete: () => void }) {
@@ -362,6 +356,7 @@ export default function ContractedTransportDetailPage() {
               ...doc.data(),
               date: toDateSafe(doc.data().date),
               createdAt: toDateSafe(doc.data().createdAt),
+              statusHistory: (doc.data().statusHistory || []).map((h: any) => ({...h, date: toDateSafe(h.date)})),
           } as ContractedTransportExecution));
 
         setExecutions(executionsData);
@@ -497,7 +492,7 @@ export default function ContractedTransportDetailPage() {
             
             const cargoToLoad = (values.loadedCargo || []).filter(c => c.loadedQuantity > 0);
 
-            const updateData: Partial<ContractedTransportExecution> = {
+            const updateData: Partial<ContractedTransportExecution> & { date: Date } = {
               date: values.date,
               driverId: selectedDriver?.driverId,
               driverName: selectedDriver?.driverName,
@@ -945,7 +940,7 @@ export default function ContractedTransportDetailPage() {
                           <FormLabel>Ачих ачаа ба хэмжээ</FormLabel>
                           <div className="space-y-2 mt-2">
                              {newExecutionForm.getValues('loadedCargo')?.map((field, index) => (
-                               <div key={field.cargoItemId} className="flex items-center gap-2">
+                               <div key={field.cargoItemId || index} className="flex items-center gap-2">
                                  <span className="flex-1 text-sm">{field.cargoName} ({field.cargoUnit})</span>
                                  <FormField
                                    control={newExecutionForm.control}
@@ -1007,7 +1002,7 @@ export default function ContractedTransportDetailPage() {
                                 <FormLabel>Ачсан ачаа ба хэмжээ</FormLabel>
                                 <div className="space-y-2 mt-2">
                                     {editExecutionForm.getValues('loadedCargo')?.map((field, index) => (
-                                    <div key={field.cargoItemId} className="flex items-center gap-2">
+                                    <div key={field.cargoItemId || index} className="flex items-center gap-2">
                                         <span className="flex-1 text-sm">{field.cargoName} ({field.cargoUnit})</span>
                                         <FormField
                                         control={editExecutionForm.control}
