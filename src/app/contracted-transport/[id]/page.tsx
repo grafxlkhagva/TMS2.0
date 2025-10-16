@@ -343,8 +343,10 @@ export default function ContractedTransportDetailPage() {
   }, [fetchContractData]);
 
    React.useEffect(() => {
+    if (isExecutionDialogOpen) {
       newExecutionForm.reset({ date: new Date(), driverId: '', vehicleId: '' });
-  }, [isExecutionDialogOpen]);
+    }
+  }, [isExecutionDialogOpen, newExecutionForm]);
 
   React.useEffect(() => {
     if (stopToEdit) {
@@ -428,10 +430,10 @@ export default function ContractedTransportDetailPage() {
 
             const updateData: Partial<ContractedTransportExecution> = {
               date: values.date,
-              driverId: values.driverId || undefined,
-              driverName: selectedDriver?.driverName || undefined,
-              vehicleId: values.vehicleId || undefined,
-              vehicleLicense: selectedVehicle?.licensePlate || undefined,
+              driverId: values.driverId === 'no-selection' ? undefined : values.driverId || undefined,
+              driverName: values.driverId === 'no-selection' ? undefined : selectedDriver?.driverName || undefined,
+              vehicleId: values.vehicleId === 'no-selection' ? undefined : values.vehicleId || undefined,
+              vehicleLicense: values.vehicleId === 'no-selection' ? undefined : selectedVehicle?.licensePlate || undefined,
             };
 
             await updateDoc(execRef, updateData as DocumentData);
@@ -610,22 +612,20 @@ export default function ContractedTransportDetailPage() {
         }
     }
     
-    const handleExecutionStatusChange = React.useCallback(async (executionId: string, newStatus: string) => {
-        try {
-            const execRef = doc(db, 'contracted_transport_executions', executionId);
-            await updateDoc(execRef, {
-                status: newStatus,
-                statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
-            });
-        } catch (error) {
+    const handleExecutionStatusChange = (executionId: string, newStatus: string) => {
+        const execRef = doc(db, 'contracted_transport_executions', executionId);
+        updateDoc(execRef, {
+            status: newStatus,
+            statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
+        }).catch((error) => {
             console.error("Error updating execution status:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэлийн статус шинэчлэхэд алдаа гарлаа.' });
             // Revert UI change on error
             fetchContractData();
-        }
-    }, [fetchContractData, toast]);
+        });
+    };
     
-    function handleDragEnd(event: DragEndEvent) {
+    function onDragEnd(event: DragEndEvent) {
         const { active, over } = event;
     
         if (!over) return;
@@ -633,28 +633,26 @@ export default function ContractedTransportDetailPage() {
         const activeId = String(active.id);
         const overId = String(over.id);
     
-        // Determine the container of the `over` element.
-        // It could be a droppable container or an item within a container.
-        const overContainerId = over.data.current?.sortable?.containerId || over.id;
-    
-        const activeExecution = executions.find(e => e.id === activeId);
+        const activeContainer = active.data.current?.sortable.containerId;
+        const overContainer = over.data.current?.sortable.containerId || over.id;
         
-        if (!activeExecution) return;
-    
-        // If the status is different, update the status and move the card.
-        if (activeExecution.status !== overContainerId) {
-            setExecutions(prevExecutions => {
-                const newExecutions = prevExecutions.map(ex => {
-                    if (ex.id === activeId) {
-                        return { ...ex, status: overContainerId as ContractedTransportExecutionStatus };
-                    }
-                    return ex;
-                });
-                return newExecutions;
-            });
-    
-            handleExecutionStatusChange(activeId, overContainerId as string);
+        if (!activeContainer || !overContainer || activeContainer === overContainer) {
+            return;
         }
+
+        setExecutions((prev) => {
+            const activeIndex = prev.findIndex((e) => e.id === activeId);
+            if (activeIndex === -1) return prev;
+
+            const updatedExecutions = [...prev];
+            updatedExecutions[activeIndex] = {
+                ...updatedExecutions[activeIndex],
+                status: overContainer as ContractedTransportExecutionStatus,
+            };
+            return updatedExecutions;
+        });
+
+        handleExecutionStatusChange(activeId, overContainer as string);
     }
     
 
@@ -816,7 +814,7 @@ export default function ContractedTransportDetailPage() {
             </div>
         </div>
             
-        <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
             <Card className="mt-6">
                 <CardHeader>
                     <div className="flex justify-between items-center">
@@ -917,8 +915,8 @@ export default function ContractedTransportDetailPage() {
                     <Form {...editExecutionForm}>
                         <form onSubmit={editExecutionForm.handleSubmit(handleUpdateExecution)} className="space-y-4 py-4" id="edit-execution-form">
                             <FormField control={editExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
-                            <FormField control={editExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="">Сонгоогүй</SelectItem>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                            <FormField control={editExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="">Сонгоогүй</SelectItem>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                            <FormField control={editExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                            <FormField control={editExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                         </form>
                     </Form>
                      <DialogFooter>
@@ -990,3 +988,4 @@ export default function ContractedTransportDetailPage() {
 
 
     
+
