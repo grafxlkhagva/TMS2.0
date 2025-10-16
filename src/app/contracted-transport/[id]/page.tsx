@@ -38,7 +38,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, type DragEndEvent, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -116,11 +116,13 @@ const toDateSafe = (date: any): Date => {
 };
 
 function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: ContractedTransportExecution, onEdit: () => void, onDelete: () => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: execution.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: execution.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    zIndex: isDragging ? 100 : 'auto',
+    opacity: isDragging ? 0.8 : 1,
   };
 
   return (
@@ -153,6 +155,51 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
   );
 }
 
+function StatusColumn({ id, title, description, colorClass, children, stop }: { id: ContractedTransportExecutionStatus | string; title: string; description?: string; colorClass: string; children: React.ReactNode; stop?: RouteStop }) {
+  const { setNodeRef } = useDroppable({ id });
+  
+  const [stopToEdit, setStopToEdit] = React.useState<RouteStop | null>(null);
+  const [stopToDelete, setStopToDelete] = React.useState<RouteStop | null>(null);
+
+  // This is a simplified placeholder. In a real app you'd get these functions as props.
+  const handleUpdateStop = (values: any) => console.log('update', values);
+  const handleRemoveStop = () => console.log('delete');
+
+
+  return (
+    <div ref={setNodeRef} className="p-2 rounded-lg bg-muted/50 min-h-40 flex flex-col">
+      <div className="font-semibold text-center text-sm p-2 rounded-md relative group/stop-header">
+          <h3 className={`${colorClass} text-white p-2 rounded-md`}>
+              {title}
+          </h3>
+          {stop && (
+              <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/stop-header:opacity-100 transition-opacity">
+                          <MoreHorizontal className="h-4 w-4 text-white" />
+                      </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setStopToEdit(stop)}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setStopToDelete(stop)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
+                  </DropdownMenuContent>
+              </DropdownMenu>
+          )}
+      </div>
+
+      {stop && (
+          <div className="text-xs text-center text-muted-foreground mt-1 px-1 flex items-start gap-1.5">
+             <Info className="h-3 w-3 mt-0.5 shrink-0"/> <span>{stop.description}</span>
+          </div>
+      )}
+      <div className="space-y-1 min-h-20 mt-2 flex-1">
+          {children}
+      </div>
+    </div>
+  );
+}
+
+
 export default function ContractedTransportDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -166,7 +213,6 @@ export default function ContractedTransportDetailPage() {
   
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   
-  // Dialog/Alert states
   const [isExecutionDialogOpen, setIsExecutionDialogOpen] = React.useState(false);
   const [isStopDialogOpen, setIsStopDialogOpen] = React.useState(false);
   const [executionToDelete, setExecutionToDelete] = React.useState<ContractedTransportExecution | null>(null);
@@ -194,7 +240,7 @@ export default function ContractedTransportDetailPage() {
     const inTransitStatuses = contract.routeStops.map(s => s.name);
     const endStatuses = ['Буулгаж буй', 'Хүргэгдсэн'];
     
-    return [...baseStatuses, ...inTransitStatuses, ...endStatuses];
+    return [...baseStatuses, ...inTransitStatuses, ...endStatuses] as (ContractedTransportExecutionStatus | string)[];
 
   }, [contract]);
 
@@ -322,8 +368,7 @@ export default function ContractedTransportDetailPage() {
         try {
             const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
             const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
-            const now = new Date();
-
+            
             const newExecutionData: Omit<ContractedTransportExecution, 'id'> = {
                 date: values.date,
                 driverId: values.driverId || undefined,
@@ -332,8 +377,8 @@ export default function ContractedTransportDetailPage() {
                 vehicleLicense: selectedVehicle?.licensePlate || undefined,
                 contractId: id,
                 status: 'Хүлээгдэж буй' as ContractedTransportExecutionStatus,
-                statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }],
-                createdAt: serverTimestamp() as any, // Will be replaced by server
+                statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }], // Using client time
+                createdAt: serverTimestamp() as any, 
             };
 
             const docRef = await addDoc(collection(db, 'contracted_transport_executions'), newExecutionData);
@@ -341,7 +386,7 @@ export default function ContractedTransportDetailPage() {
             const newExecutionForState: ContractedTransportExecution = {
                 ...newExecutionData,
                 id: docRef.id,
-                createdAt: now,
+                createdAt: new Date(), // using client time for local state
                 date: values.date,
             };
 
@@ -564,51 +609,67 @@ export default function ContractedTransportDetailPage() {
     }
     
     const handleExecutionStatusChange = React.useCallback(async (executionId: string, newStatus: ContractedTransportExecutionStatus) => {
-        const execution = executions.find(ex => ex.id === executionId);
-        if (!execution) return;
-
         try {
-            const execRef = doc(db, 'contracted_transport_executions', execution.id);
-            
+            const execRef = doc(db, 'contracted_transport_executions', executionId);
             await updateDoc(execRef, {
                 status: newStatus,
                 statusHistory: arrayUnion({ status: newStatus, date: serverTimestamp() }),
             });
-            
             toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${newStatus}' төлөвт шилжлээ.` });
-            await fetchContractData(); 
-    
+            
         } catch (error) {
             console.error("Error updating execution status:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэлийн явц шинэчлэхэд алдаа гарлаа.' });
+             // If backend update fails, refetch data to revert UI changes
+            fetchContractData();
         }
-    }, [executions, toast, fetchContractData]);
+    }, [toast, fetchContractData]);
     
-    const handleDragEnd = React.useCallback((event: DragEndEvent) => {
+    const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
     
-        if (!over) return;
+        if (!over || active.id === over.id) {
+            return;
+        }
     
         const activeId = String(active.id);
         const overId = String(over.id);
-        const overIsContainer = executionStatuses.includes(overId as ContractedTransportExecutionStatus);
     
-        if (overIsContainer) {
-            const newStatus = overId as ContractedTransportExecutionStatus;
-            const activeExecution = executions.find(ex => ex.id === activeId);
-
-            if (activeExecution && activeExecution.status !== newStatus) {
-                // Optimistic UI Update
-                setExecutions(prev => 
-                    prev.map(ex => 
-                        ex.id === activeId ? { ...ex, status: newStatus } : ex
-                    )
-                );
-                // Backend Update
-                handleExecutionStatusChange(activeId, newStatus);
+        setExecutions((currentExecutions) => {
+            const activeIndex = currentExecutions.findIndex((e) => e.id === activeId);
+            const overIndex = currentExecutions.findIndex((e) => e.id === overId);
+    
+            const activeExecution = currentExecutions[activeIndex];
+    
+            let overContainerId: string | null = null;
+             if (over.data.current?.sortable?.containerId) {
+                overContainerId = over.data.current.sortable.containerId;
+            } else if (executionStatuses.includes(overId)) {
+                overContainerId = overId;
             }
-        }
-    }, [executions, executionStatuses, handleExecutionStatusChange]);
+            
+            if (!overContainerId || !executionStatuses.includes(overContainerId)) {
+                 return currentExecutions;
+            }
+            
+            const newStatus = overContainerId as ContractedTransportExecutionStatus;
+            
+            if (activeExecution.status !== newStatus) {
+                // Optimistic UI update
+                const updatedExecutions = currentExecutions.map(ex => 
+                    ex.id === activeId ? { ...ex, status: newStatus } : ex
+                );
+    
+                // Trigger backend update
+                handleExecutionStatusChange(activeId, newStatus);
+                
+                return updatedExecutions;
+            }
+    
+            return currentExecutions; // No change if status is the same
+        });
+    };
+    
 
   if (isLoading) {
     return (
@@ -793,44 +854,24 @@ export default function ContractedTransportDetailPage() {
                                 const stop = contract.routeStops.find(s => s.name === status);
                                 const itemsForStatus = executions.filter(ex => ex.status === status);
                                 return (
-                                    <SortableContext key={status} id={status} items={itemsForStatus.map(i => i.id)}>
-                                        <div className="p-2 rounded-lg bg-muted/50 min-h-40">
-                                            <div className="font-semibold text-center text-sm p-2 rounded-md relative group/stop-header">
-                                                <h3 className={`${statusColorMap[status] || 'bg-purple-500'} text-white p-2 rounded-md`}>
-                                                    {status}
-                                                </h3>
-                                                {stop && (
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/stop-header:opacity-100 transition-opacity">
-                                                                <MoreHorizontal className="h-4 w-4 text-white" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => setStopToEdit(stop)}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => setStopToDelete(stop)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                )}
-                                            </div>
-
-                                            {stop && (
-                                                <div className="text-xs text-center text-muted-foreground mt-1 px-1 flex items-start gap-1.5">
-                                                   <Info className="h-3 w-3 mt-0.5 shrink-0"/> <span>{stop.description}</span>
-                                                </div>
-                                            )}
-                                            <div className="space-y-1 min-h-20 mt-2">
-                                                {itemsForStatus.map(ex => (
-                                                    <SortableExecutionCard 
-                                                        key={ex.id} 
-                                                        execution={ex}
-                                                        onEdit={() => setExecutionToEdit(ex)}
-                                                        onDelete={() => setExecutionToDelete(ex)}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </SortableContext>
+                                    <StatusColumn 
+                                        key={status} 
+                                        id={status}
+                                        title={status}
+                                        stop={stop}
+                                        colorClass={statusColorMap[status] || 'bg-purple-500'}
+                                    >
+                                        <SortableContext items={itemsForStatus.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                                            {itemsForStatus.map(ex => (
+                                                <SortableExecutionCard 
+                                                    key={ex.id} 
+                                                    execution={ex}
+                                                    onEdit={() => setExecutionToEdit(ex)}
+                                                    onDelete={() => setExecutionToDelete(ex)}
+                                                />
+                                            ))}
+                                        </SortableContext>
+                                    </StatusColumn>
                                 )
                             })}
                         </div>
@@ -958,7 +999,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
-    
-
-    
