@@ -110,22 +110,20 @@ const statusColorMap: Record<string, string> = {
 
 
 const toDateSafe = (date: any): Date => {
-    if (!date) return new Date();
-    if (date instanceof Date) return date;
-    if (date instanceof Timestamp) return date.toDate();
-    // Handle Firestore-like object structure from serialization
-    if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in date) {
-        if (typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
-            return new Timestamp(date.seconds, date.nanoseconds).toDate();
-        }
+  if (!date) return new Date(); // Or handle as an error
+  if (date instanceof Date) return date;
+  if (date instanceof Timestamp) return date.toDate();
+  if (typeof date === 'object' && date !== null && typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
+    return new Timestamp(date.seconds, date.nanoseconds).toDate();
+  }
+  if (typeof date === 'string' || typeof date === 'number') {
+    const parsed = new Date(date);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
     }
-    if (typeof date === 'string' || typeof date === 'number') {
-        const parsed = new Date(date);
-        if (!isNaN(parsed.getTime())) {
-            return parsed;
-        }
-    }
-    return new Date();
+  }
+  console.warn("Could not parse date:", date);
+  return new Date(); // Fallback
 };
 
 function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: ContractedTransportExecution, onEdit: () => void, onDelete: () => void }) {
@@ -495,7 +493,7 @@ export default function ContractedTransportDetailPage() {
             
             const cargoToLoad = (values.loadedCargo || []).filter(c => c.loadedQuantity > 0);
 
-            const updateData: Partial<ContractedTransportExecution> & { date: Date } = {
+            const updateData = {
               date: values.date,
               driverId: selectedDriver?.driverId,
               driverName: selectedDriver?.driverName,
@@ -942,7 +940,7 @@ export default function ContractedTransportDetailPage() {
                           <FormLabel>Ачих ачаа ба хэмжээ</FormLabel>
                           <div className="space-y-2 mt-2">
                              {newExecutionForm.getValues('loadedCargo')?.map((field, index) => (
-                               <div key={field.cargoItemId || index} className="flex items-center gap-2">
+                               <div key={field.cargoItemId} className="flex items-center gap-2">
                                  <span className="flex-1 text-sm">{field.cargoName} ({field.cargoUnit})</span>
                                  <FormField
                                    control={newExecutionForm.control}
@@ -1004,7 +1002,7 @@ export default function ContractedTransportDetailPage() {
                                 <FormLabel>Ачсан ачаа ба хэмжээ</FormLabel>
                                 <div className="space-y-2 mt-2">
                                     {editExecutionForm.getValues('loadedCargo')?.map((field, index) => (
-                                    <div key={field.cargoItemId || index} className="flex items-center gap-2">
+                                    <div key={field.cargoItemId} className="flex items-center gap-2">
                                         <span className="flex-1 text-sm">{field.cargoName} ({field.cargoUnit})</span>
                                         <FormField
                                         control={editExecutionForm.control}
@@ -1089,3 +1087,4 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
