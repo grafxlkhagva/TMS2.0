@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -100,7 +101,7 @@ const statusColorMap: Record<string, string> = {
 const toDateSafe = (date: any): Date => {
   if (date instanceof Timestamp) return date.toDate();
   if (date instanceof Date) return date;
-   if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in data) {
+   if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in date) {
     if (typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
       return new Timestamp(date.seconds, date.nanoseconds).toDate();
     }
@@ -321,6 +322,7 @@ export default function ContractedTransportDetailPage() {
         try {
             const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
             const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
+            const now = new Date();
 
             const newExecutionData = {
                 date: values.date,
@@ -330,7 +332,7 @@ export default function ContractedTransportDetailPage() {
                 vehicleLicense: selectedVehicle?.licensePlate || null,
                 contractId: id,
                 status: 'Хүлээгдэж буй' as ContractedTransportExecutionStatus,
-                statusHistory: [{ status: 'Хүлээгдэж буй' as ContractedTransportExecutionStatus, date: serverTimestamp() }],
+                statusHistory: [{ status: 'Хүлээгдэж буй' as ContractedTransportExecutionStatus, date: now }],
                 createdAt: serverTimestamp(),
             };
 
@@ -339,8 +341,8 @@ export default function ContractedTransportDetailPage() {
             const newExecutionForState: ContractedTransportExecution = {
                 ...newExecutionData,
                 id: docRef.id,
-                statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }],
-                createdAt: new Date(),
+                statusHistory: [{ status: 'Хүлээгдэж буй', date: now }],
+                createdAt: now,
             };
             setExecutions(prev => [...prev, newExecutionForState]);
             
