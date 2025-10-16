@@ -32,10 +32,11 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { Timestamp } from 'firebase/firestore';
-import { DndContext, closestCenter, type DragEndEvent, useDroppable } from '@dnd-kit/core';
+import { DndContext, closestCenter, type DragEndEvent, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy, type SortableContextProps } from '@dnd-kit/sortable';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { CSS } from '@dnd-kit/utilities';
 
 
 const newExecutionCargoSchema = z.object({
@@ -140,9 +141,10 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
       ref={setNodeRef} 
       style={style} 
       className="text-xs mb-2 touch-none group/exec"
+      {...attributes}
+      {...listeners}
     >
       <CardContent className="p-2 relative">
-         <div {...attributes} {...listeners} className="absolute inset-0 cursor-grab"></div>
          <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/exec:opacity-100 transition-opacity z-10">
@@ -150,8 +152,8 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onEdit}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
-              <DropdownMenuItem onClick={onDelete} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -1088,4 +1090,6 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
+
 
