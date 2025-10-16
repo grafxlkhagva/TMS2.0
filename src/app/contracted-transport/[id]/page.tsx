@@ -100,7 +100,7 @@ const statusColorMap: Record<string, string> = {
 const toDateSafe = (date: any): Date => {
   if (date instanceof Timestamp) return date.toDate();
   if (date instanceof Date) return date;
-   if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in date) {
+   if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in data) {
     if (typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
       return new Timestamp(date.seconds, date.nanoseconds).toDate();
     }
@@ -126,15 +126,13 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
     <Card 
       ref={setNodeRef} 
       style={style} 
-      {...attributes} 
-      {...listeners}
-      key={execution.id} 
-      className="text-xs mb-2 touch-none cursor-grab group/exec"
+      className="text-xs mb-2 touch-none group/exec"
     >
       <CardContent className="p-2 relative">
+         <div {...attributes} {...listeners} className="absolute inset-0 cursor-grab"></div>
          <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/exec:opacity-100 transition-opacity">
+              <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/exec:opacity-100 transition-opacity z-10">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -144,7 +142,7 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
             </DropdownMenuContent>
           </DropdownMenu>
 
-        <p className="font-semibold pr-6">Огноо: {format(execution.date, 'yyyy-MM-dd')}</p>
+        <p className="font-semibold pr-6">Огноо: {format(toDateSafe(execution.date), 'yyyy-MM-dd')}</p>
         <div className="text-muted-foreground">
           <p>Жолооч: {execution.driverName || 'TBA'}</p>
           <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
@@ -317,38 +315,34 @@ export default function ContractedTransportDetailPage() {
   }, [executionToEdit, editExecutionForm]);
 
 
-   const onNewExecutionSubmit = async (values: NewExecutionFormValues) => {
+   const onNewExecutionSubmit = React.useCallback(async (values: NewExecutionFormValues) => {
         if (!id || !contract) return;
         setIsSubmitting(true);
         try {
             const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
             const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
 
-            const docRef = await addDoc(collection(db, 'contracted_transport_executions'), {
+            const newExecutionData = {
                 date: values.date,
                 driverId: values.driverId || null,
                 driverName: selectedDriver?.driverName || null,
                 vehicleId: values.vehicleId || null,
                 vehicleLicense: selectedVehicle?.licensePlate || null,
                 contractId: id,
-                status: 'Хүлээгдэж буй',
-                statusHistory: [{ status: 'Хүлээгдэж буй', date: serverTimestamp() }],
+                status: 'Хүлээгдэж буй' as ContractedTransportExecutionStatus,
+                statusHistory: [{ status: 'Хүлээгдэж буй' as ContractedTransportExecutionStatus, date: serverTimestamp() }],
                 createdAt: serverTimestamp(),
-            });
+            };
 
-            const newExecution: ContractedTransportExecution = {
+            const docRef = await addDoc(collection(db, 'contracted_transport_executions'), newExecutionData);
+
+            const newExecutionForState: ContractedTransportExecution = {
+                ...newExecutionData,
                 id: docRef.id,
-                date: values.date,
-                driverId: values.driverId || undefined,
-                driverName: selectedDriver?.driverName || undefined,
-                vehicleId: values.vehicleId || undefined,
-                vehicleLicense: selectedVehicle?.licensePlate || undefined,
-                contractId: id,
-                status: 'Хүлээгдэж буй',
                 statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }],
                 createdAt: new Date(),
             };
-            setExecutions(prev => [...prev, newExecution]);
+            setExecutions(prev => [...prev, newExecutionForState]);
             
             toast({ title: 'Амжилттай', description: 'Шинэ гүйцэтгэл нэмэгдлээ.' });
             setIsExecutionDialogOpen(false);
@@ -358,7 +352,7 @@ export default function ContractedTransportDetailPage() {
         } finally {
             setIsSubmitting(false);
         }
-    };
+    }, [id, contract, toast]);
     
     const handleDeleteExecution = React.useCallback(async () => {
         if (!executionToDelete) return;
@@ -570,7 +564,6 @@ export default function ContractedTransportDetailPage() {
         const execution = executions.find(ex => ex.id === executionId);
         if (!execution) return;
 
-        setIsSubmitting(true);
         try {
             const execRef = doc(db, 'contracted_transport_executions', execution.id);
             
@@ -584,7 +577,7 @@ export default function ContractedTransportDetailPage() {
                 statusHistory: updatedStatusHistory,
             });
             
-            setExecutions(prev => prev.map(ex => ex.id === execution.id ? {
+            setExecutions(prev => prev.map(ex => ex.id === executionId ? {
                 ...ex,
                 status: newStatus as ContractedTransportExecutionStatus,
                 statusHistory: [...ex.statusHistory, { status: newStatus as ContractedTransportExecutionStatus, date: new Date() }]
@@ -595,20 +588,18 @@ export default function ContractedTransportDetailPage() {
         } catch (error) {
             console.error("Error updating execution:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэлийн явц шинэчлэхэд алдаа гарлаа.' });
-        } finally {
-            setIsSubmitting(false);
         }
     }, [executions, toast]);
     
-    const handleDragEnd = React.useCallback(async (event: DragEndEvent) => {
+    const handleDragEnd = React.useCallback((event: DragEndEvent) => {
       const { active, over } = event;
 
       if (over && active.id !== over.id) {
           const activeContainer = executions.find(ex => ex.id === active.id)?.status;
-          const overContainerId = over.data.current?.sortable?.containerId || (executions.find(ex => ex.id === over.id)?.status);
+          const overContainerId = over.data.current?.sortable?.containerId;
           
           if (overContainerId && activeContainer !== overContainerId) {
-              await handleExecutionStatusChange(active.id as string, overContainerId as string);
+              handleExecutionStatusChange(active.id as string, overContainerId as string);
           }
       }
     }, [executions, handleExecutionStatusChange]);
