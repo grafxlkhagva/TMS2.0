@@ -614,42 +614,37 @@ export default function ContractedTransportDetailPage() {
             const execRef = doc(db, 'contracted_transport_executions', executionId);
             await updateDoc(execRef, {
                 status: newStatus,
-                statusHistory: arrayUnion({ status: newStatus, date: serverTimestamp() }),
+                statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
             });
-            toast({ title: 'Амжилттай', description: `Гүйцэтгэл '${newStatus}' төлөвт шилжлээ.` });
-            
+            // Don't toast here to avoid UI flicker during drag-and-drop
         } catch (error) {
             console.error("Error updating execution status:", error);
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэлийн явц шинэчлэхэд алдаа гарлаа.' });
-             // If backend update fails, refetch data to revert UI changes
+            // Revert UI change on error
             fetchContractData();
         }
-    }, [toast, fetchContractData]);
+    }, [fetchContractData]);
     
     function handleDragEnd(event: DragEndEvent) {
         const { active, over } = event;
     
         if (over && active.id !== over.id) {
             const activeId = String(active.id);
-            const overId = String(over.id);
-            
-            const activeExecution = executions.find(e => e.id === activeId);
-            if (!activeExecution) return;
 
             let overContainerId: string | null = null;
-            if (executionStatuses.includes(overId as any)) {
-                overContainerId = overId;
+            if (executionStatuses.includes(over.id as any)) {
+                overContainerId = over.id as string;
             } else if (over.data.current?.sortable) {
                 overContainerId = over.data.current.sortable.containerId;
             }
-
-            if (!overContainerId || !executionStatuses.includes(overContainerId as any)) {
+             if (!overContainerId || !executionStatuses.includes(overContainerId as any)) {
                 return;
             }
 
             const newStatus = overContainerId as ContractedTransportExecutionStatus;
+            
+            const activeExecution = executions.find(e => e.id === activeId);
 
-            if (activeExecution.status !== newStatus) {
+            if (activeExecution && activeExecution.status !== newStatus) {
                 setExecutions((prevExecutions) => 
                     prevExecutions.map(ex => 
                         ex.id === activeId ? { ...ex, status: newStatus } : ex
@@ -990,3 +985,6 @@ export default function ContractedTransportDetailPage() {
   );
 }
 
+
+
+    
