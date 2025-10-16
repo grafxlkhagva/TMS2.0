@@ -33,7 +33,7 @@ import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { Timestamp } from 'firebase/firestore';
 import { DndContext, closestCenter, type DragEndEvent, useDroppable } from '@dnd-kit/core';
-import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy, type SortableContextProps } from '@dnd-kit/sortable';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -110,7 +110,7 @@ const statusColorMap: Record<string, string> = {
 
 
 const toDateSafe = (date: any): Date => {
-  if (!date) return new Date(); // Or handle as an error
+  if (!date) return new Date(); 
   if (date instanceof Date) return date;
   if (date instanceof Timestamp) return date.toDate();
   if (typeof date === 'object' && date !== null && typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
@@ -123,7 +123,7 @@ const toDateSafe = (date: any): Date => {
     }
   }
   console.warn("Could not parse date:", date);
-  return new Date(); // Fallback
+  return new Date();
 };
 
 function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: ContractedTransportExecution, onEdit: () => void, onDelete: () => void }) {
@@ -1087,4 +1087,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
