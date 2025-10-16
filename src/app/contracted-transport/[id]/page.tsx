@@ -122,7 +122,6 @@ const toDateSafe = (date: any): Date => {
       return parsed;
     }
   }
-  console.warn("Could not parse date:", date);
   return new Date();
 };
 
@@ -176,16 +175,8 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
   );
 }
 
-function StatusColumn({ id, title, description, colorClass, children, stop, items }: { id: ContractedTransportExecutionStatus | string; title: string; description?: string; colorClass: string; children: React.ReactNode; stop?: RouteStop, items: ContractedTransportExecution[] }) {
+function StatusColumn({ id, title, description, colorClass, children, stop, items, onEditStop, onDeleteStop }: { id: ContractedTransportExecutionStatus | string; title: string; description?: string; colorClass: string; children: React.ReactNode; stop?: RouteStop, items: ContractedTransportExecution[], onEditStop: (stop: RouteStop) => void; onDeleteStop: (stop: RouteStop) => void; }) {
   const { setNodeRef } = useDroppable({ id });
-  
-  const [stopToEdit, setStopToEdit] = React.useState<RouteStop | null>(null);
-  const [stopToDelete, setStopToDelete] = React.useState<RouteStop | null>(null);
-
-  // This is a simplified placeholder. In a real app you'd get these functions as props.
-  const handleUpdateStop = (values: any) => console.log('update', values);
-  const handleRemoveStop = () => console.log('delete');
-
 
   return (
     <div ref={setNodeRef} className="p-2 rounded-lg bg-muted/50 min-h-40 flex flex-col">
@@ -201,8 +192,8 @@ function StatusColumn({ id, title, description, colorClass, children, stop, item
                       </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setStopToEdit(stop)}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setStopToDelete(stop)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onEditStop(stop)}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onDeleteStop(stop)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
                   </DropdownMenuContent>
               </DropdownMenu>
           )}
@@ -906,6 +897,8 @@ export default function ContractedTransportDetailPage() {
                                         stop={stop}
                                         items={itemsForStatus}
                                         colorClass={statusColorMap[status] || 'bg-purple-500'}
+                                        onEditStop={(stopToEdit) => setStopToEdit(stopToEdit)}
+                                        onDeleteStop={(stopToDelete) => setStopToDelete(stopToDelete)}
                                     >
                                         {itemsForStatus.map(ex => (
                                             <SortableExecutionCard 
