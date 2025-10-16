@@ -47,6 +47,8 @@ import { CSS } from '@dnd-kit/utilities';
 
 const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
+  driverId: z.string().optional(),
+  vehicleId: z.string().optional(),
 });
 type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
 
@@ -294,7 +296,7 @@ export default function ContractedTransportDetailPage() {
   }, [fetchContractData]);
 
    React.useEffect(() => {
-      newExecutionForm.reset({ date: new Date() });
+      newExecutionForm.reset({ date: new Date(), driverId: '', vehicleId: '' });
   }, [isExecutionDialogOpen, newExecutionForm]);
 
   React.useEffect(() => {
@@ -318,8 +320,15 @@ export default function ContractedTransportDetailPage() {
         if (!id || !contract) return;
         setIsSubmitting(true);
         try {
+            const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
+            const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
+
             await addDoc(collection(db, 'contracted_transport_executions'), {
-                ...values,
+                date: values.date,
+                driverId: values.driverId || null,
+                driverName: selectedDriver?.driverName || null,
+                vehicleId: values.vehicleId || null,
+                vehicleLicense: selectedVehicle?.licensePlate || null,
                 contractId: id,
                 status: 'Хүлээгдэж буй',
                 statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }],
@@ -833,6 +842,8 @@ export default function ContractedTransportDetailPage() {
                 <Form {...newExecutionForm}>
                     <form onSubmit={newExecutionForm.handleSubmit(onNewExecutionSubmit)} className="space-y-4 py-4" id="new-execution-form">
                          <FormField control={newExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
+                         <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                         <FormField control={newExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                     </form>
                 </Form>
                 <DialogFooter>
@@ -927,7 +938,9 @@ export default function ContractedTransportDetailPage() {
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
-                    <AlertDialogDescription>"{stopToDelete?.name}" зогсоолыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.</AlertDialogDescription>
+                    <AlertDialogDescription>
+                        "{stopToDelete?.name}" зогсоолыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
+                    </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Цуцлах</AlertDialogCancel>
@@ -938,5 +951,6 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
 
 
