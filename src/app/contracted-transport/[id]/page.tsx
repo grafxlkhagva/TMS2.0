@@ -924,7 +924,7 @@ export default function ContractedTransportDetailPage() {
         <Dialog open={isExecutionDialogOpen} onOpenChange={setIsExecutionDialogOpen}>
             <DialogContent className="sm:max-w-lg">
                  <Form {...newExecutionForm}>
-                    <form onSubmit={newExecutionForm.handleSubmit(onNewExecutionSubmit)} className="space-y-4">
+                    <form onSubmit={newExecutionForm.handleSubmit(onNewExecutionSubmit)}>
                         <DialogHeader>
                             <DialogTitle>Шинэ гүйцэтгэл нэмэх</DialogTitle>
                         </DialogHeader>
@@ -1090,6 +1090,7 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
 
 
 
