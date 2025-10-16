@@ -35,6 +35,8 @@ import { Timestamp } from 'firebase/firestore';
 import { DndContext, closestCenter, type DragEndEvent, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 
 const newExecutionCargoSchema = z.object({
@@ -215,7 +217,9 @@ function StatusColumn({ id, title, description, colorClass, children, stop }: { 
           </div>
       )}
       <div className="space-y-1 min-h-20 mt-2 flex-1">
-          {children}
+          <SortableContext items={children ? React.Children.map(children, c => (c as any).props.execution.id) : []} strategy={verticalListSortingStrategy}>
+              {children}
+          </SortableContext>
       </div>
     </div>
   );
@@ -905,16 +909,14 @@ export default function ContractedTransportDetailPage() {
                                         stop={stop}
                                         colorClass={statusColorMap[status] || 'bg-purple-500'}
                                     >
-                                        <SortableContext items={itemsForStatus.map(i => i.id)} strategy={verticalListSortingStrategy}>
-                                            {itemsForStatus.map(ex => (
-                                                <SortableExecutionCard 
-                                                    key={ex.id} 
-                                                    execution={ex}
-                                                    onEdit={() => setExecutionToEdit(ex)}
-                                                    onDelete={() => setExecutionToDelete(ex)}
-                                                />
-                                            ))}
-                                        </SortableContext>
+                                        {itemsForStatus.map(ex => (
+                                            <SortableExecutionCard 
+                                                key={ex.id} 
+                                                execution={ex}
+                                                onEdit={() => setExecutionToEdit(ex)}
+                                                onDelete={() => setExecutionToDelete(ex)}
+                                            />
+                                        ))}
                                     </StatusColumn>
                                 )
                             })}
