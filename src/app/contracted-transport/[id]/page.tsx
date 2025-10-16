@@ -34,7 +34,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { Timestamp } from 'firebase/firestore';
 import { DndContext, closestCenter, type DragEndEvent, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -217,7 +216,7 @@ function StatusColumn({ id, title, description, colorClass, children, stop }: { 
           </div>
       )}
       <div className="space-y-1 min-h-20 mt-2 flex-1">
-          <SortableContext items={children ? React.Children.map(children, c => (c as any).props.execution.id) : []} strategy={verticalListSortingStrategy}>
+          <SortableContext items={React.Children.map(children, c => (c as any).props.execution.id) || []} strategy={verticalListSortingStrategy}>
               {children}
           </SortableContext>
       </div>
@@ -960,15 +959,15 @@ export default function ContractedTransportDetailPage() {
                              ))}
                           </div>
                         </div>
+                        <DialogFooter>
+                            <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                            <Button type="submit" form="new-execution-form" disabled={isSubmitting}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                Хадгалах
+                            </Button>
+                        </DialogFooter>
                     </form>
                 </Form>
-                <DialogFooter>
-                    <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                    <Button type="submit" form="new-execution-form" disabled={isSubmitting}>
-                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                        Хадгалах
-                    </Button>
-                </DialogFooter>
             </DialogContent>
         </Dialog>
         
@@ -1022,12 +1021,12 @@ export default function ContractedTransportDetailPage() {
                                     ))}
                                 </div>
                             </div>
+                             <DialogFooter>
+                                <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                                <Button type="submit" form="edit-execution-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
+                            </DialogFooter>
                         </form>
                     </Form>
-                     <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                        <Button type="submit" form="edit-execution-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
-                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         )}
@@ -1043,12 +1042,12 @@ export default function ContractedTransportDetailPage() {
                      <form onSubmit={routeStopForm.handleSubmit(onRouteStopSubmit)} className="space-y-4 py-4" id="route-stop-form">
                         <FormField control={routeStopForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын нэр</FormLabel><FormControl><Input placeholder="Даваа-1" {...field} /></FormControl><FormMessage /></FormItem> )} />
                         <FormField control={routeStopForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>Тайлбар</FormLabel><FormControl><Input placeholder="Амрах, хооллох" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                         <DialogFooter>
+                            <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                            <Button type="submit" form="route-stop-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Нэмэх</Button>
+                        </DialogFooter>
                     </form>
                 </Form>
-                 <DialogFooter>
-                    <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                    <Button type="submit" form="route-stop-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Нэмэх</Button>
-                </DialogFooter>
             </DialogContent>
         </Dialog>
         
@@ -1061,12 +1060,12 @@ export default function ContractedTransportDetailPage() {
                         <form onSubmit={editStopForm.handleSubmit(handleUpdateStop)} id="edit-stop-form" className="space-y-4 py-4">
                              <FormField control={editStopForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын нэр</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
                              <FormField control={editStopForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>Тайлбар</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                            <DialogFooter>
+                                <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                                <Button type="submit" form="edit-stop-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Хадгалах</Button>
+                            </DialogFooter>
                         </form>
                     </Form>
-                     <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                        <Button type="submit" form="edit-stop-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Хадгалах</Button>
-                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         )}
