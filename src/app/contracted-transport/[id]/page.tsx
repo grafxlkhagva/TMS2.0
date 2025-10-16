@@ -177,13 +177,22 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
   );
 }
 
-function StatusColumn({ id, title, description, colorClass, children, stop, items, onEditStop, onDeleteStop }: { id: ContractedTransportExecutionStatus | string; title: string; description?: string; colorClass: string; children: React.ReactNode; stop?: RouteStop, items: ContractedTransportExecution[], onEditStop: (stop: RouteStop) => void; onDeleteStop: (stop: RouteStop) => void; }) {
+function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEditExecution, onDeleteExecution }: { 
+    id: string; 
+    title: string; 
+    items: ContractedTransportExecution[];
+    stop?: RouteStop;
+    onEditStop: (stop: RouteStop) => void;
+    onDeleteStop: (stop: RouteStop) => void;
+    onEditExecution: (execution: ContractedTransportExecution) => void;
+    onDeleteExecution: (execution: ContractedTransportExecution) => void;
+}) {
   const { setNodeRef } = useDroppable({ id });
 
   return (
     <div ref={setNodeRef} className="p-2 rounded-lg bg-muted/50 min-h-40 flex flex-col">
       <div className="font-semibold text-center text-sm p-2 rounded-md relative group/stop-header">
-          <h3 className={`${colorClass} text-white p-2 rounded-md`}>
+          <h3 className={`${statusColorMap[title] || 'bg-purple-500'} text-white p-2 rounded-md`}>
               {title}
           </h3>
           {stop && (
@@ -207,9 +216,16 @@ function StatusColumn({ id, title, description, colorClass, children, stop, item
           </div>
       )}
       <div className="space-y-1 min-h-20 mt-2 flex-1">
-          <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-              {children}
-          </SortableContext>
+        <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+            {items.map(ex => (
+                <SortableExecutionCard 
+                    key={ex.id} 
+                    execution={ex}
+                    onEdit={() => onEditExecution(ex)}
+                    onDelete={() => onDeleteExecution(ex)}
+                />
+            ))}
+        </SortableContext>
       </div>
     </div>
   );
@@ -896,21 +912,13 @@ export default function ContractedTransportDetailPage() {
                                         key={status} 
                                         id={status}
                                         title={status}
-                                        stop={stop}
                                         items={itemsForStatus}
-                                        colorClass={statusColorMap[status] || 'bg-purple-500'}
+                                        stop={stop}
                                         onEditStop={(stopToEdit) => setStopToEdit(stopToEdit)}
                                         onDeleteStop={(stopToDelete) => setStopToDelete(stopToDelete)}
-                                    >
-                                        {itemsForStatus.map(ex => (
-                                            <SortableExecutionCard 
-                                                key={ex.id} 
-                                                execution={ex}
-                                                onEdit={() => setExecutionToEdit(ex)}
-                                                onDelete={() => setExecutionToDelete(ex)}
-                                            />
-                                        ))}
-                                    </StatusColumn>
+                                        onEditExecution={(exec) => setExecutionToEdit(exec)}
+                                        onDeleteExecution={(exec) => setExecutionToDelete(exec)}
+                                    />
                                 )
                             })}
                         </div>
@@ -1090,7 +1098,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
-
-
-
