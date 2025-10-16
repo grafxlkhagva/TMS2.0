@@ -111,15 +111,17 @@ const statusColorMap: Record<string, string> = {
 
 const toDateSafe = (date: any): Date => {
     if (!date) return new Date(); // Or handle as an error
-    if (date instanceof Date) return date;
-    if (date instanceof Timestamp) return date.toDate();
-    // Handle Firestore-like object structure from serialization
+    if (date instanceof Timestamp) {
+        return date.toDate();
+    }
+    if (date instanceof Date) {
+        return date;
+    }
     if (typeof date === 'object' && date !== null && 'seconds' in date && 'nanoseconds' in date) {
-        if (typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
+         if (typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
             return new Timestamp(date.seconds, date.nanoseconds).toDate();
         }
     }
-    // Handle date strings (like ISO strings)
     if (typeof date === 'string') {
         const parsed = new Date(date);
         if (!isNaN(parsed.getTime())) {
@@ -1107,5 +1109,7 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
+    
 
     
