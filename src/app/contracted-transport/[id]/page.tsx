@@ -5,12 +5,12 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportExecutionStatus } from '@/types';
+import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportExecutionStatus, ContractedTransportStatus } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -72,7 +72,7 @@ const frequencyTranslations: Record<ContractedTransport['frequency'], string> = 
     Custom: 'Бусад'
 };
 
-const statusDetails = {
+const statusDetails: Record<ContractedTransportStatus, { text: string; variant: 'success' | 'secondary' | 'destructive'; icon: React.ElementType }> = {
     Active: { text: 'Идэвхтэй', variant: 'success' as const, icon: CheckCircle },
     Expired: { text: 'Хугацаа дууссан', variant: 'secondary' as const, icon: Clock },
     Cancelled: { text: 'Цуцлагдсан', variant: 'destructive' as const, icon: XCircle }
@@ -92,7 +92,7 @@ function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, lab
   );
 }
 
-const statusColorMap = {
+const statusColorMap: Record<string, string> = {
     'Хүлээгдэж буй': 'bg-gray-500',
     'Ачиж буй': 'bg-blue-500',
     'Буулгаж буй': 'bg-yellow-500',
@@ -244,7 +244,7 @@ export default function ContractedTransportDetailPage() {
             assignedVehicles: data.assignedVehicles || [],
             routeStops: data.routeStops || [],
             cargoItems: data.cargoItems || [],
-        };
+        } as ContractedTransport;
         setContract(fetchedContract);
         
         const [
@@ -789,7 +789,7 @@ export default function ContractedTransportDetailPage() {
                                     <SortableContext key={status} id={status} items={executions.filter(ex => ex.status === status).map(ex => ex.id)} strategy={verticalListSortingStrategy}>
                                         <div id={status} className="p-2 rounded-lg bg-muted/50 min-h-40">
                                             <div className="font-semibold text-center text-sm p-2 rounded-md relative group/stop-header">
-                                                <h3 className={`${statusColorMap[status as keyof typeof statusColorMap] || 'bg-purple-500'} text-white p-2 rounded-md`}>
+                                                <h3 className={`${statusColorMap[status] || 'bg-purple-500'} text-white p-2 rounded-md`}>
                                                     {status}
                                                 </h3>
                                                 {stop && (
@@ -951,6 +951,7 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
 
 
 
