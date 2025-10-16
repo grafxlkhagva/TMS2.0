@@ -1107,3 +1107,5 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
+    
