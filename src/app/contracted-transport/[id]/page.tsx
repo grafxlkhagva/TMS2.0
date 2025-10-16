@@ -944,7 +944,7 @@ export default function ContractedTransportDetailPage() {
                             <FormLabel>Ачих ачаа ба хэмжээ (тонн)</FormLabel>
                             <div className="space-y-2 mt-2">
                                 {newExecutionForm.getValues('loadedCargo')?.map((field, index) => (
-                                <div key={field.cargoItemId} className="flex items-center gap-2">
+                                <div key={index} className="flex items-center gap-2">
                                     <span className="flex-1 text-sm">{field.cargoName}</span>
                                     <FormField
                                     control={newExecutionForm.control}
@@ -1093,4 +1093,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
