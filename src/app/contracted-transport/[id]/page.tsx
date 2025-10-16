@@ -688,6 +688,9 @@ export default function ContractedTransportDetailPage() {
             statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
         }).catch((error) => {
             console.error("Error updating execution status:", error);
+            // Optionally, revert the state change in UI or show a toast
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Явцын төлөв шинэчлэхэд алдаа гарлаа.' });
+            fetchContractData(); // Re-fetch to be safe
         });
     };
     
@@ -695,10 +698,7 @@ export default function ContractedTransportDetailPage() {
         const { active, over } = event;
     
         if (over && active.id !== over.id) {
-             const activeContainer = findContainer(active.id as string);
-             const overContainer = findContainer(over.id as string);
-
-             if (!activeContainer || !overContainer) return;
+            const overContainerId = over.id as string;
              
             setExecutions((prev) => {
                 const activeIndex = prev.findIndex((item) => item.id === active.id);
@@ -707,25 +707,16 @@ export default function ContractedTransportDetailPage() {
                 const updatedExecutions = [...prev];
                 updatedExecutions[activeIndex] = {
                     ...updatedExecutions[activeIndex],
-                    status: overContainer,
+                    status: overContainerId,
                 };
                 
-                // Firestore update
-                handleExecutionStatusChange(active.id as string, overContainer);
+                // Optimistically update UI, then send to Firestore
+                handleExecutionStatusChange(active.id as string, overContainerId);
                 
                 return updatedExecutions;
             });
         }
     };
-    
-    function findContainer(id: string) {
-        if (executionStatuses.includes(id)) {
-            return id;
-        }
-
-        const execution = executions.find((item) => item.id === id);
-        return execution?.status;
-    }
     
 
   if (isLoading) {
@@ -1100,6 +1091,7 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
 
 
 
