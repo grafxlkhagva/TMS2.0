@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -369,7 +370,7 @@ export default function ContractedTransportDetailPage() {
             const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
             const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
             
-            const newExecutionData: Omit<ContractedTransportExecution, 'id'> = {
+            const newExecutionData: Omit<ContractedTransportExecution, 'id' | 'createdAt'> & {createdAt: any} = {
                 date: values.date,
                 driverId: values.driverId || undefined,
                 driverName: selectedDriver?.driverName || undefined,
@@ -377,16 +378,16 @@ export default function ContractedTransportDetailPage() {
                 vehicleLicense: selectedVehicle?.licensePlate || undefined,
                 contractId: id,
                 status: 'Хүлээгдэж буй' as ContractedTransportExecutionStatus,
-                statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }], // Using client time
-                createdAt: serverTimestamp() as any, 
+                statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }], 
+                createdAt: serverTimestamp(), 
             };
 
             const docRef = await addDoc(collection(db, 'contracted_transport_executions'), newExecutionData);
             
             const newExecutionForState: ContractedTransportExecution = {
-                ...newExecutionData,
+                ...(newExecutionData as any),
                 id: docRef.id,
-                createdAt: new Date(), // using client time for local state
+                createdAt: new Date(),
                 date: values.date,
             };
 
@@ -625,50 +626,39 @@ export default function ContractedTransportDetailPage() {
         }
     }, [toast, fetchContractData]);
     
-    const handleDragEnd = (event: DragEndEvent) => {
+    function handleDragEnd(event: DragEndEvent) {
         const { active, over } = event;
     
-        if (!over || active.id === over.id) {
-            return;
-        }
-    
-        const activeId = String(active.id);
-        const overId = String(over.id);
-    
-        setExecutions((currentExecutions) => {
-            const activeIndex = currentExecutions.findIndex((e) => e.id === activeId);
-            const overIndex = currentExecutions.findIndex((e) => e.id === overId);
-    
-            const activeExecution = currentExecutions[activeIndex];
-    
+        if (over && active.id !== over.id) {
+            const activeId = String(active.id);
+            const overId = String(over.id);
+            
+            const activeExecution = executions.find(e => e.id === activeId);
+            if (!activeExecution) return;
+
             let overContainerId: string | null = null;
-             if (over.data.current?.sortable?.containerId) {
-                overContainerId = over.data.current.sortable.containerId;
-            } else if (executionStatuses.includes(overId)) {
+            if (executionStatuses.includes(overId as any)) {
                 overContainerId = overId;
+            } else if (over.data.current?.sortable) {
+                overContainerId = over.data.current.sortable.containerId;
             }
-            
-            if (!overContainerId || !executionStatuses.includes(overContainerId)) {
-                 return currentExecutions;
+
+            if (!overContainerId || !executionStatuses.includes(overContainerId as any)) {
+                return;
             }
-            
+
             const newStatus = overContainerId as ContractedTransportExecutionStatus;
-            
+
             if (activeExecution.status !== newStatus) {
-                // Optimistic UI update
-                const updatedExecutions = currentExecutions.map(ex => 
-                    ex.id === activeId ? { ...ex, status: newStatus } : ex
+                setExecutions((prevExecutions) => 
+                    prevExecutions.map(ex => 
+                        ex.id === activeId ? { ...ex, status: newStatus } : ex
+                    )
                 );
-    
-                // Trigger backend update
                 handleExecutionStatusChange(activeId, newStatus);
-                
-                return updatedExecutions;
             }
-    
-            return currentExecutions; // No change if status is the same
-        });
-    };
+        }
+    }
     
 
   if (isLoading) {
@@ -999,3 +989,4 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
