@@ -38,6 +38,20 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CSS } from '@dnd-kit/utilities';
 
+const newExecutionCargoSchema = z.object({
+  cargoItemId: z.string(),
+  cargoName: z.string(),
+  cargoUnit: z.string(),
+  loadedQuantity: z.coerce.number().min(0, "Ачсан хэмжээ 0-ээс бага байж болохгүй."),
+});
+
+const newExecutionFormSchema = z.object({
+  date: z.date({ required_error: "Огноо сонгоно уу." }),
+  driverId: z.string().min(1, { message: 'Жолооч сонгоно уу.' }),
+  vehicleId: z.string().min(1, { message: 'Тээврийн хэрэгсэл сонгоно уу.' }),
+  loadedCargo: z.array(newExecutionCargoSchema).optional(),
+});
+type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
 
 const editExecutionCargoSchema = z.object({
   cargoItemId: z.string(),
@@ -77,7 +91,6 @@ const toDateSafe = (date: any): Date | null => {
     if (!date) return null;
     if (date instanceof Date) return date;
     if (date instanceof Timestamp) return date.toDate();
-    // Handle Firestore-like object structure from serialization
     if (typeof date === 'object' && date !== null && 'seconds' in date && typeof date.seconds === 'number' && 'nanoseconds' in date && typeof date.nanoseconds === 'number') {
         return new Timestamp(date.seconds, date.nanoseconds).toDate();
     }
@@ -229,6 +242,7 @@ export default function ContractedTransportDetailPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   
   const [isStopDialogOpen, setIsStopDialogOpen] = React.useState(false);
+  const [isNewExecutionDialogOpen, setIsNewExecutionDialogOpen] = React.useState(false);
   const [executionToDelete, setExecutionToDelete] = React.useState<ContractedTransportExecution | null>(null);
   const [stopToDelete, setStopToDelete] = React.useState<RouteStop | null>(null);
   const [executionToEdit, setExecutionToEdit] = React.useState<ContractedTransportExecution | null>(null);
@@ -265,6 +279,15 @@ export default function ContractedTransportDetailPage() {
   
   const editStopForm = useForm<RouteStopFormValues>({
     resolver: zodResolver(routeStopFormSchema),
+  });
+
+  const newExecutionForm = useForm<NewExecutionFormValues>({
+    resolver: zodResolver(newExecutionFormSchema),
+  });
+
+  useFieldArray({
+    control: newExecutionForm.control,
+    name: "loadedCargo"
   });
 
   const editExecutionForm = useForm<EditExecutionFormValues>({
@@ -371,8 +394,26 @@ export default function ContractedTransportDetailPage() {
   }, [stopToEdit, editStopForm]);
 
   React.useEffect(() => {
+    if (contract && isNewExecutionDialogOpen) {
+      const formCargo = contract.cargoItems.map(contractCargo => ({
+        cargoItemId: contractCargo.id,
+        cargoName: contractCargo.name,
+        cargoUnit: contractCargo.unit,
+        loadedQuantity: 0,
+      }));
+      newExecutionForm.reset({
+        date: new Date(),
+        driverId: '',
+        vehicleId: '',
+        loadedCargo: formCargo
+      });
+    }
+  }, [contract, isNewExecutionDialogOpen, newExecutionForm]);
+
+  React.useEffect(() => {
     if (executionToEdit && contract) {
       const existingCargoMap = new Map(executionToEdit.loadedCargo?.map(c => [c.cargoItemId, c.loadedQuantity]));
+      
       const formCargo = contract.cargoItems.map(contractCargo => {
         return {
           cargoItemId: contractCargo.id,
@@ -605,6 +646,48 @@ export default function ContractedTransportDetailPage() {
             setIsSubmitting(false);
         }
     }
+
+    const handleNewExecutionSubmit = async (values: NewExecutionFormValues) => {
+        if (!contract) return;
+        setIsSubmitting(true);
+        try {
+            const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
+            const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
+            
+            const cargoToLoad = (values.loadedCargo || []).filter(c => c.loadedQuantity > 0);
+
+            const dataToSave = {
+                contractId: contract.id,
+                date: values.date,
+                driverId: selectedDriver?.driverId,
+                driverName: selectedDriver?.driverName,
+                vehicleId: selectedVehicle?.vehicleId,
+                vehicleLicense: selectedVehicle?.licensePlate,
+                loadedCargo: cargoToLoad,
+                status: 'Хүлээгдэж буй',
+                statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }],
+                createdAt: serverTimestamp(),
+            };
+
+            const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
+            
+            const newExecution = {
+                id: docRef.id,
+                ...dataToSave,
+                createdAt: new Date(),
+            } as ContractedTransportExecution;
+
+            setExecutions(prev => [...prev, newExecution]);
+            toast({ title: 'Амжилттай', description: 'Шинэ гүйцэтгэл нэмэгдлээ.' });
+            setIsNewExecutionDialogOpen(false);
+
+        } catch (error) {
+            console.error("Error creating new execution:", error);
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Шинэ гүйцэтгэл нэмэхэд алдаа гарлаа.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
     
     const handleExecutionStatusChange = React.useCallback((executionId: string, newStatus: string) => {
         const execRef = doc(db, 'contracted_transport_executions', executionId);
@@ -811,6 +894,9 @@ export default function ContractedTransportDetailPage() {
                             <CardDescription>Гүйцэтгэлийн явцыг чирж зөөх үйлдлээр удирдах хэсэг.</CardDescription>
                         </div>
                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => setIsNewExecutionDialogOpen(true)}>
+                                <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
+                            </Button>
                             <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
                                 <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
                             </Button>
@@ -843,6 +929,50 @@ export default function ContractedTransportDetailPage() {
             </Card>
         </DndContext>
 
+        {/* Add New Execution Dialog */}
+        <Dialog open={isNewExecutionDialogOpen} onOpenChange={setIsNewExecutionDialogOpen}>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Шинэ гүйцэтгэл нэмэх</DialogTitle>
+                </DialogHeader>
+                <Form {...newExecutionForm}>
+                    <form onSubmit={newExecutionForm.handleSubmit(handleNewExecutionSubmit)} id="new-execution-form" className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
+                        <FormField control={newExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
+                        <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                        <FormField control={newExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                        <div>
+                            <FormLabel>Ачих ачаа ба хэмжээ (тонн)</FormLabel>
+                            <div className="space-y-2 mt-2">
+                                {newExecutionForm.getValues('loadedCargo')?.map((field, index) => (
+                                <div key={field.cargoItemId} className="flex items-center gap-2">
+                                    <span className="flex-1 text-sm">{field.cargoName}</span>
+                                    <FormField
+                                    control={newExecutionForm.control}
+                                    name={`loadedCargo.${index}.loadedQuantity`}
+                                    render={({ field }) => (
+                                        <FormItem className="w-32">
+                                        <FormControl>
+                                            <Input type="number" placeholder="0" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                    />
+                                    <span className="text-sm text-muted-foreground">{field.cargoUnit}</span>
+                                </div>
+                                ))}
+                            </div>
+                        </div>
+                    </form>
+                </Form>
+                <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                    <Button type="submit" form="new-execution-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+
         {/* Delete Execution Alert */}
         <AlertDialog open={!!executionToDelete} onOpenChange={() => setExecutionToDelete(null)}>
             <AlertDialogContent>
@@ -867,7 +997,7 @@ export default function ContractedTransportDetailPage() {
                         <DialogTitle>Гүйцэтгэл засах</DialogTitle>
                     </DialogHeader>
                     <Form {...editExecutionForm}>
-                        <form onSubmit={editExecutionForm.handleSubmit(handleUpdateExecution)} id="edit-execution-form" className="space-y-4 py-4">
+                        <form onSubmit={editExecutionForm.handleSubmit(handleUpdateExecution)} id="edit-execution-form" className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
                                 <FormField control={editExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
                                 <FormField control={editExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                                 <FormField control={editExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
@@ -876,12 +1006,12 @@ export default function ContractedTransportDetailPage() {
                                     <div className="space-y-2 mt-2">
                                         {editExecutionForm.getValues('loadedCargo')?.map((field, index) => (
                                         <div key={field.cargoItemId} className="flex items-center gap-2">
-                                            <span className="flex-1 text-sm">{field.cargoName} ({field.cargoUnit})</span>
+                                            <span className="flex-1 text-sm">{field.cargoName}</span>
                                             <FormField
                                             control={editExecutionForm.control}
                                             name={`loadedCargo.${index}.loadedQuantity`}
                                             render={({ field }) => (
-                                                <FormItem className="w-24">
+                                                <FormItem className="w-32">
                                                 <FormControl>
                                                     <Input type="number" placeholder="0" {...field} />
                                                 </FormControl>
@@ -889,6 +1019,7 @@ export default function ContractedTransportDetailPage() {
                                                 </FormItem>
                                             )}
                                             />
+                                             <span className="text-sm text-muted-foreground">{field.cargoUnit}</span>
                                         </div>
                                         ))}
                                     </div>
@@ -962,3 +1093,4 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
