@@ -121,9 +121,9 @@ const toDateSafe = (date: any): Date => {
     }
     // Handle date strings (like ISO strings)
     if (typeof date === 'string') {
-        const parsedDate = new Date(date);
-        if (!isNaN(parsedDate.getTime())) {
-            return parsedDate;
+        const parsed = new Date(date);
+        if (!isNaN(parsed.getTime())) {
+            return parsed;
         }
     }
     return new Date(); // Fallback
@@ -406,6 +406,8 @@ export default function ContractedTransportDetailPage() {
   React.useEffect(() => {
     if (stopToEdit) {
       editStopForm.reset(stopToEdit);
+    } else {
+      editStopForm.reset({ name: '', description: '' });
     }
   }, [stopToEdit, editStopForm]);
 
@@ -655,6 +657,7 @@ export default function ContractedTransportDetailPage() {
 
     const handleRemoveStop = async () => {
         if (!id || !contract || !stopToDelete) return;
+        setIsSubmitting(true);
         try {
             const stopDataToRemove = contract.routeStops.find(s => s.id === stopToDelete.id);
             if (!stopDataToRemove) return;
@@ -668,6 +671,7 @@ export default function ContractedTransportDetailPage() {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Зогсоол хасахад алдаа гарлаа.'});
         } finally {
             setStopToDelete(null);
+            setIsSubmitting(false);
         }
     }
 
