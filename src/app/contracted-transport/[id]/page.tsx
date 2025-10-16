@@ -39,8 +39,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { DndContext, closestCenter, type DragEndEvent, useDroppable } from '@dnd-kit/core';
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 
 const newExecutionCargoSchema = z.object({
@@ -664,21 +665,18 @@ export default function ContractedTransportDetailPage() {
 
         const activeId = String(active.id);
         const overContainerId = String(over.id);
-        const activeContainerId = String(active.data.current?.sortable.containerId);
         
-        if (activeContainerId !== overContainerId) {
-            setExecutions((prev) => {
-                const activeIndex = prev.findIndex((e) => e.id === activeId);
-                if (activeIndex === -1) return prev;
+        const activeItem = executions.find((e) => e.id === activeId);
 
-                const updatedExecutions = [...prev];
-                updatedExecutions[activeIndex] = {
-                    ...updatedExecutions[activeIndex],
-                    status: overContainerId as ContractedTransportExecutionStatus,
-                };
-                return updatedExecutions;
+        if (activeItem && activeItem.status !== overContainerId) {
+             setExecutions((prev) => {
+                return prev.map((e) => {
+                    if (e.id === activeId) {
+                        return { ...e, status: overContainerId as ContractedTransportExecutionStatus };
+                    }
+                    return e;
+                });
             });
-            
             handleExecutionStatusChange(activeId, overContainerId);
         }
     }
@@ -903,8 +901,8 @@ export default function ContractedTransportDetailPage() {
                 <Form {...newExecutionForm}>
                     <form onSubmit={newExecutionForm.handleSubmit(onNewExecutionSubmit)} className="space-y-4 py-4" id="new-execution-form">
                          <FormField control={newExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
-                         <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                         <FormField control={newExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                         <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="">Сонгоогүй</SelectItem>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                         <FormField control={newExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="">Сонгоогүй</SelectItem>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                         <div>
                           <FormLabel>Ачих ачаа ба хэмжээ</FormLabel>
                           <div className="space-y-2 mt-2">
@@ -1038,5 +1036,6 @@ export default function ContractedTransportDetailPage() {
 
 
     
+
 
 
