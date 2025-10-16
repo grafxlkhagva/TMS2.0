@@ -87,6 +87,21 @@ const statusDetails: Record<ContractedTransportStatus, { text: string; variant: 
     Cancelled: { text: 'Цуцлагдсан', variant: 'destructive' as const, icon: XCircle }
 };
 
+const toDateSafe = (date: any): Date | null => {
+    if (!date) return null;
+    if (date instanceof Date) return date;
+    if (date instanceof Timestamp) return date.toDate();
+    // Handle Firestore-like object structure from serialization
+    if (typeof date === 'object' && 'seconds' in date && typeof date.seconds === 'number' && 'nanoseconds' in date && typeof date.nanoseconds === 'number') {
+        return new Timestamp(date.seconds, date.nanoseconds).toDate();
+    }
+    if (typeof date === 'string') {
+        const parsed = new Date(date);
+        if (!isNaN(parsed.getTime())) return parsed;
+    }
+    return null;
+};
+
 
 function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value?: string | React.ReactNode }) {
   if (!value && value !== 0) return null;
@@ -109,24 +124,9 @@ const statusColorMap: Record<string, string> = {
 };
 
 
-const toDateSafe = (date: any): Date => {
-    if (!date) return new Date();
-    if (date instanceof Date) return date;
-    if (date instanceof Timestamp) return date.toDate();
-    if (typeof date === 'object' && 'seconds' in date && 'nanoseconds' in date) {
-        if (typeof date.seconds === 'number' && typeof date.nanoseconds === 'number') {
-            return new Timestamp(date.seconds, date.nanoseconds).toDate();
-        }
-    }
-    if (typeof date === 'string') {
-        const parsed = new Date(date);
-        if (!isNaN(parsed.getTime())) return parsed;
-    }
-    return new Date();
-};
-
 function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: ContractedTransportExecution, onEdit: () => void, onDelete: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: execution.id });
+  const date = toDateSafe(execution.date);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -140,38 +140,36 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
       ref={setNodeRef} 
       style={style} 
       className="text-xs mb-2 touch-none group/exec"
-      {...attributes}
-      {...listeners}
     >
-      <CardContent className="p-2 relative">
-         <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/exec:opacity-100 transition-opacity z-10">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div {...attributes} {...listeners} className="p-2 relative">
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/exec:opacity-100 transition-opacity z-10">
+                    <MoreHorizontal className="h-4 w-4" />
+                </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
 
-        <p className="font-semibold pr-6">Огноо: {format(toDateSafe(execution.date), 'yyyy-MM-dd')}</p>
-        <div className="text-muted-foreground">
-          <p>Жолооч: {execution.driverName || 'TBA'}</p>
-          <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
-        </div>
-         {execution.loadedCargo && execution.loadedCargo.length > 0 && (
-            <div className="mt-1 pt-1 border-t text-muted-foreground">
-                <p className="font-medium text-xs">Ачсан ачаа:</p>
-                <ul className="list-disc list-inside">
-                    {execution.loadedCargo.map((cargo, index) => (
-                        <li key={cargo.cargoItemId || index} className="text-xs">{cargo.cargoName}: {cargo.loadedQuantity} {cargo.cargoUnit}</li>
-                    ))}
-                </ul>
+            <p className="font-semibold pr-6">Огноо: {date ? format(date, 'yyyy-MM-dd') : 'N/A'}</p>
+            <div className="text-muted-foreground">
+            <p>Жолооч: {execution.driverName || 'TBA'}</p>
+            <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
             </div>
-        )}
-      </CardContent>
+            {execution.loadedCargo && execution.loadedCargo.length > 0 && (
+                <div className="mt-1 pt-1 border-t text-muted-foreground">
+                    <p className="font-medium text-xs">Ачсан ачаа:</p>
+                    <ul className="list-disc list-inside">
+                        {execution.loadedCargo.map((cargo, index) => (
+                            <li key={cargo.cargoItemId || index} className="text-xs">{cargo.cargoName}: {cargo.loadedQuantity} {cargo.cargoUnit}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
     </Card>
   );
 }
@@ -268,7 +266,7 @@ export default function ContractedTransportDetailPage() {
     if (!contract) return [];
     
     const baseStatuses = ['Хүлээгдэж буй', 'Ачиж буй'];
-    const inTransitStatuses = contract.routeStops.map(s => s.name);
+    const inTransitStatuses = (contract.routeStops || []).map(s => s.name);
     const endStatuses = ['Буулгаж буй', 'Хүргэгдсэн'];
     
     return [...baseStatuses, ...inTransitStatuses, ...endStatuses] as (ContractedTransportExecutionStatus | string)[];
@@ -303,8 +301,8 @@ export default function ContractedTransportDetailPage() {
     name: "loadedCargo"
   });
 
-  const assignedDriverIds = React.useMemo(() => contract?.assignedDrivers.map(d => d.driverId) || [], [contract]);
-  const assignedVehicleIds = React.useMemo(() => contract?.assignedVehicles.map(v => v.vehicleId) || [], [contract]);
+  const assignedDriverIds = React.useMemo(() => contract?.assignedDrivers?.map(d => d.driverId) || [], [contract]);
+  const assignedVehicleIds = React.useMemo(() => contract?.assignedVehicles?.map(v => v.vehicleId) || [], [contract]);
 
   const fetchContractData = React.useCallback(async () => {
     if (!id) return;
@@ -320,12 +318,15 @@ export default function ContractedTransportDetailPage() {
         }
         
         const data = contractDocSnap.data();
+        const startDate = toDateSafe(data.startDate);
+        const endDate = toDateSafe(data.endDate);
+
         const fetchedContract: ContractedTransport = {
             id: contractDocSnap.id,
             ...data,
-            createdAt: toDateSafe(data.createdAt),
-            startDate: toDateSafe(data.startDate),
-            endDate: toDateSafe(data.endDate),
+            createdAt: toDateSafe(data.createdAt)!,
+            startDate: startDate!,
+            endDate: endDate!,
             assignedDrivers: data.assignedDrivers || [],
             assignedVehicles: data.assignedVehicles || [],
             routeStops: data.routeStops || [],
@@ -360,13 +361,16 @@ export default function ContractedTransportDetailPage() {
             transportManagerName: `${managerSnap.data()?.lastName || ''} ${managerSnap.data()?.firstName || ''}`,
         })
       
-        const executionsData = executionsSnap.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data(),
-              date: toDateSafe(doc.data().date),
-              createdAt: toDateSafe(doc.data().createdAt),
-              statusHistory: (doc.data().statusHistory || []).map((h: any) => ({...h, date: toDateSafe(h.date)})),
-          } as ContractedTransportExecution));
+        const executionsData = executionsSnap.docs.map(doc => {
+              const execData = doc.data();
+              return {
+                  id: doc.id,
+                  ...execData,
+                  date: toDateSafe(execData.date)!,
+                  createdAt: toDateSafe(execData.createdAt)!,
+                  statusHistory: (execData.statusHistory || []).map((h: any) => ({...h, date: toDateSafe(h.date)!})),
+              } as ContractedTransportExecution
+          });
 
         setExecutions(executionsData);
 
@@ -389,7 +393,7 @@ export default function ContractedTransportDetailPage() {
         date: new Date(), 
         driverId: 'no-selection', 
         vehicleId: 'no-selection',
-        loadedCargo: contract.cargoItems.map(c => ({
+        loadedCargo: contract.cargoItems?.map(c => ({
           cargoItemId: c.id,
           cargoName: c.name,
           cargoUnit: c.unit,
@@ -420,7 +424,7 @@ export default function ContractedTransportDetailPage() {
       });
 
       editExecutionForm.reset({
-        date: toDateSafe(executionToEdit.date),
+        date: toDateSafe(executionToEdit.date)!,
         driverId: executionToEdit.driverId || 'no-selection',
         vehicleId: executionToEdit.vehicleId || 'no-selection',
         loadedCargo: formCargo
@@ -690,20 +694,19 @@ export default function ContractedTransportDetailPage() {
         }
     }
     
-    const handleExecutionStatusChange = (executionId: string, newStatus: string) => {
+    const handleExecutionStatusChange = React.useCallback((executionId: string, newStatus: string) => {
         const execRef = doc(db, 'contracted_transport_executions', executionId);
         updateDoc(execRef, {
             status: newStatus,
             statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
         }).catch((error) => {
             console.error("Error updating execution status:", error);
-            // Optionally, revert the state change in UI or show a toast
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Явцын төлөв шинэчлэхэд алдаа гарлаа.' });
             fetchContractData(); // Re-fetch to be safe
         });
-    };
+    }, [fetchContractData, toast]);
     
-    const handleDragEnd = (event: DragEndEvent) => {
+    const handleDragEnd = React.useCallback((event: DragEndEvent) => {
         const { active, over } = event;
     
         if (over && active.id !== over.id) {
@@ -719,13 +722,12 @@ export default function ContractedTransportDetailPage() {
                     status: overContainerId,
                 };
                 
-                // Optimistically update UI, then send to Firestore
                 handleExecutionStatusChange(active.id as string, overContainerId);
                 
                 return updatedExecutions;
             });
         }
-    };
+    }, [handleExecutionStatusChange]);
     
 
   if (isLoading) {
@@ -743,6 +745,8 @@ export default function ContractedTransportDetailPage() {
   if (!contract) return null;
   
   const statusInfo = statusDetails[contract.status] || { text: contract.status, variant: 'secondary' as const, icon: Clock };
+  const contractStartDate = toDateSafe(contract.startDate);
+  const contractEndDate = toDateSafe(contract.endDate);
 
 
   return (
@@ -779,7 +783,7 @@ export default function ContractedTransportDetailPage() {
                         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
                             <DetailItem icon={User} label="Харилцагч" value={contract.customerName} />
                             <DetailItem icon={User} label="Тээврийн менежер" value={relatedData.transportManagerName} />
-                            <DetailItem icon={Calendar} label="Гэрээний хугацаа" value={`${format(contract.startDate, 'yyyy-MM-dd')} - ${format(contract.endDate, 'yyyy-MM-dd')}`} />
+                            <DetailItem icon={Calendar} label="Гэрээний хугацаа" value={contractStartDate && contractEndDate ? `${format(contractStartDate, 'yyyy-MM-dd')} - ${format(contractEndDate, 'yyyy-MM-dd')}` : ''} />
                             <DetailItem icon={Calendar} label="Давтамж" value={contract.frequency === 'Custom' ? `${frequencyTranslations[contract.frequency]} (${contract.customFrequencyDetails})` : frequencyTranslations[contract.frequency]} />
                              <DetailItem icon={Info} label="Статус" value={<Badge variant={statusInfo.variant} className="py-1 px-3"><statusInfo.icon className="mr-1.5 h-3 w-3" />{statusInfo.text}</Badge>} />
                         </div>
@@ -799,7 +803,7 @@ export default function ContractedTransportDetailPage() {
                         <Table>
                             <TableHeader><TableRow><TableHead>Ачаа</TableHead><TableHead>Баглаа</TableHead><TableHead className="text-right">Үнэ (₮)</TableHead></TableRow></TableHeader>
                             <TableBody>
-                            {contract.cargoItems.map((item, index) => (
+                            {(contract.cargoItems || []).map((item, index) => (
                                 <TableRow key={item.id || index}>
                                     <TableCell className="font-medium">{item.name} ({item.unit})</TableCell>
                                     <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
@@ -934,7 +938,7 @@ export default function ContractedTransportDetailPage() {
         {/* Add New Execution Dialog */}
         <Dialog open={isExecutionDialogOpen} onOpenChange={setIsExecutionDialogOpen}>
             <DialogContent className="sm:max-w-lg">
-                 <Form {...newExecutionForm}>
+                <Form {...newExecutionForm}>
                     <form onSubmit={newExecutionForm.handleSubmit(onNewExecutionSubmit)}>
                         <DialogHeader>
                             <DialogTitle>Шинэ гүйцэтгэл нэмэх</DialogTitle>
@@ -1045,7 +1049,7 @@ export default function ContractedTransportDetailPage() {
         <Dialog open={isStopDialogOpen} onOpenChange={setIsStopDialogOpen}>
             <DialogContent>
                 <Form {...routeStopForm}>
-                     <form onSubmit={routeStopForm.handleSubmit(onRouteStopSubmit)}>
+                     <form onSubmit={routeStopForm.handleSubmit(onRouteStopSubmit)} id="stop-form">
                         <DialogHeader>
                             <DialogTitle>Маршрутын зогсоол нэмэх</DialogTitle>
                         </DialogHeader>
@@ -1103,3 +1107,5 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
+    
