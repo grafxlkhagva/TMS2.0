@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -59,10 +58,18 @@ const newExecutionFormSchema = z.object({
 });
 type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
 
+const editExecutionCargoSchema = z.object({
+  cargoItemId: z.string(),
+  cargoName: z.string(),
+  cargoUnit: z.string(),
+  loadedQuantity: z.coerce.number().min(0, "Ачсан хэмжээ 0-ээс бага байж болохгүй."),
+});
+
 const editExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
   driverId: z.string().optional(),
   vehicleId: z.string().optional(),
+  loadedCargo: z.array(editExecutionCargoSchema).optional(),
 });
 type EditExecutionFormValues = z.infer<typeof editExecutionFormSchema>;
 
@@ -286,6 +293,11 @@ export default function ContractedTransportDetailPage() {
     resolver: zodResolver(editExecutionFormSchema),
   });
 
+  const { fields: editCargoFields, control: editCargoControl } = useFieldArray({
+    control: editExecutionForm.control,
+    name: "loadedCargo"
+  });
+
   const assignedDriverIds = React.useMemo(() => contract?.assignedDrivers.map(d => d.driverId) || [], [contract]);
   const assignedVehicleIds = React.useMemo(() => contract?.assignedVehicles.map(v => v.vehicleId) || [], [contract]);
 
@@ -388,14 +400,26 @@ export default function ContractedTransportDetailPage() {
   }, [stopToEdit, editStopForm]);
 
   React.useEffect(() => {
-    if (executionToEdit) {
+    if (executionToEdit && contract) {
+      // Map contract cargo items to form fields
+      const formCargo = contract.cargoItems.map(contractCargo => {
+        const executionCargo = executionToEdit.loadedCargo?.find(ec => ec.cargoItemId === contractCargo.id);
+        return {
+          cargoItemId: contractCargo.id,
+          cargoName: contractCargo.name,
+          cargoUnit: contractCargo.unit,
+          loadedQuantity: executionCargo?.loadedQuantity || 0
+        };
+      });
+
       editExecutionForm.reset({
         date: toDateSafe(executionToEdit.date),
         driverId: executionToEdit.driverId || '',
         vehicleId: executionToEdit.vehicleId || '',
+        loadedCargo: formCargo
       });
     }
-  }, [executionToEdit, editExecutionForm]);
+  }, [executionToEdit, contract, editExecutionForm]);
 
 
    const onNewExecutionSubmit = React.useCallback(async (values: NewExecutionFormValues) => {
@@ -462,6 +486,7 @@ export default function ContractedTransportDetailPage() {
             const execRef = doc(db, 'contracted_transport_executions', executionToEdit.id);
             const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
             const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
+            const cargoToLoad = values.loadedCargo?.filter(c => c.loadedQuantity > 0) || [];
 
             const updateData: Partial<ContractedTransportExecution> = {
               date: values.date,
@@ -469,11 +494,12 @@ export default function ContractedTransportDetailPage() {
               driverName: values.driverId === 'no-selection' ? undefined : selectedDriver?.driverName || undefined,
               vehicleId: values.vehicleId === 'no-selection' ? undefined : values.vehicleId || undefined,
               vehicleLicense: values.vehicleId === 'no-selection' ? undefined : selectedVehicle?.licensePlate || undefined,
+              loadedCargo: cargoToLoad,
             };
 
             await updateDoc(execRef, updateData as DocumentData);
             
-            setExecutions(prev => prev.map(ex => ex.id === executionToEdit.id ? { ...ex, ...updateData, date: values.date } : ex));
+            setExecutions(prev => prev.map(ex => ex.id === executionToEdit.id ? { ...ex, ...updateData, date: values.date, loadedCargo: cargoToLoad } : ex));
             toast({ title: 'Амжилттай', description: 'Гүйцэтгэл шинэчлэгдлээ.' });
             setExecutionToEdit(null);
         } catch (error) {
@@ -956,7 +982,7 @@ export default function ContractedTransportDetailPage() {
         {/* Edit Execution Dialog */}
         {executionToEdit && (
             <Dialog open={!!executionToEdit} onOpenChange={() => setExecutionToEdit(null)}>
-                <DialogContent>
+                <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle>Гүйцэтгэл засах</DialogTitle>
                     </DialogHeader>
@@ -965,6 +991,28 @@ export default function ContractedTransportDetailPage() {
                             <FormField control={editExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
                             <FormField control={editExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                             <FormField control={editExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                            <div>
+                                <FormLabel>Ачсан ачаа ба хэмжээ</FormLabel>
+                                <div className="space-y-2 mt-2">
+                                    {editCargoFields.map((field, index) => (
+                                    <div key={field.id} className="flex items-center gap-2">
+                                        <span className="flex-1 text-sm">{editExecutionForm.getValues(`loadedCargo.${index}.cargoName`)} ({editExecutionForm.getValues(`loadedCargo.${index}.cargoUnit`)})</span>
+                                        <FormField
+                                        control={editExecutionForm.control}
+                                        name={`loadedCargo.${index}.loadedQuantity`}
+                                        render={({ field }) => (
+                                            <FormItem className="w-24">
+                                            <FormControl>
+                                                <Input type="number" placeholder="0" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                        />
+                                    </div>
+                                    ))}
+                                </div>
+                            </div>
                         </form>
                     </Form>
                      <DialogFooter>
@@ -1033,11 +1081,4 @@ export default function ContractedTransportDetailPage() {
   );
 }
 
-
-
     
-
-
-
-
-
