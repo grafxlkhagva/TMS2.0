@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch, type DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportExecutionStatus, ContractedTransportStatus } from '@/types';
+import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportExecutionStatus, ContractedTransportStatus, ContractedTransportExecutionCargo } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +25,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog"
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -41,13 +41,20 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { DndContext, closestCenter, type DragEndEvent, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
+
+const newExecutionCargoSchema = z.object({
+  cargoItemId: z.string(),
+  cargoName: z.string(),
+  cargoUnit: z.string(),
+  loadedQuantity: z.coerce.number().min(0, "Ачсан хэмжээ 0-ээс бага байж болохгүй."),
+});
 
 const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
   driverId: z.string().optional(),
   vehicleId: z.string().optional(),
+  loadedCargo: z.array(newExecutionCargoSchema).optional(),
 });
 type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
 
@@ -151,6 +158,16 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
           <p>Жолооч: {execution.driverName || 'TBA'}</p>
           <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
         </div>
+         {execution.loadedCargo && execution.loadedCargo.length > 0 && (
+            <div className="mt-1 pt-1 border-t text-muted-foreground">
+                <p className="font-medium text-xs">Ачсан ачаа:</p>
+                <ul className="list-disc list-inside">
+                    {execution.loadedCargo.map(cargo => (
+                        <li key={cargo.cargoItemId} className="text-xs">{cargo.cargoName}: {cargo.loadedQuantity} {cargo.cargoUnit}</li>
+                    ))}
+                </ul>
+            </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -247,7 +264,12 @@ export default function ContractedTransportDetailPage() {
 
   const newExecutionForm = useForm<NewExecutionFormValues>({
     resolver: zodResolver(newExecutionFormSchema),
-    defaultValues: { date: new Date() },
+    defaultValues: { date: new Date(), driverId: '', vehicleId: '', loadedCargo: [] },
+  });
+
+  const { fields: cargoFields, append: appendCargo, remove: removeCargo } = useFieldArray({
+    control: newExecutionForm.control,
+    name: "loadedCargo"
   });
   
   const routeStopForm = useForm<RouteStopFormValues>({
@@ -343,10 +365,20 @@ export default function ContractedTransportDetailPage() {
   }, [fetchContractData]);
 
    React.useEffect(() => {
-    if (isExecutionDialogOpen) {
-      newExecutionForm.reset({ date: new Date(), driverId: '', vehicleId: '' });
+    if (isExecutionDialogOpen && contract) {
+      newExecutionForm.reset({ 
+        date: new Date(), 
+        driverId: '', 
+        vehicleId: '',
+        loadedCargo: contract.cargoItems.map(c => ({
+          cargoItemId: c.id,
+          cargoName: c.name,
+          cargoUnit: c.unit,
+          loadedQuantity: 0
+        }))
+      });
     }
-  }, [isExecutionDialogOpen, newExecutionForm]);
+  }, [isExecutionDialogOpen, newExecutionForm, contract]);
 
   React.useEffect(() => {
     if (stopToEdit) {
@@ -371,6 +403,7 @@ export default function ContractedTransportDetailPage() {
         try {
             const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
             const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
+            const cargoToLoad = values.loadedCargo?.filter(c => c.loadedQuantity > 0) || [];
             
             const newExecutionData = {
                 date: values.date,
@@ -381,7 +414,8 @@ export default function ContractedTransportDetailPage() {
                 contractId: id,
                 status: 'Хүлээгдэж буй' as ContractedTransportExecutionStatus,
                 statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }], 
-                createdAt: serverTimestamp(), 
+                createdAt: serverTimestamp(),
+                loadedCargo: cargoToLoad,
             };
 
             const docRef = await addDoc(collection(db, 'contracted_transport_executions'), newExecutionData);
@@ -619,40 +653,34 @@ export default function ContractedTransportDetailPage() {
             statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
         }).catch((error) => {
             console.error("Error updating execution status:", error);
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэлийн статус шинэчлэхэд алдаа гарлаа.' });
-            // Revert UI change on error
             fetchContractData();
         });
     };
     
     function onDragEnd(event: DragEndEvent) {
         const { active, over } = event;
-    
-        if (!over) return;
-    
-        const activeId = String(active.id);
-        const overId = String(over.id);
-    
-        const activeContainer = active.data.current?.sortable.containerId;
-        const overContainer = over.data.current?.sortable.containerId || over.id;
         
-        if (!activeContainer || !overContainer || activeContainer === overContainer) {
-            return;
+        if (!over) return;
+
+        const activeId = String(active.id);
+        const overContainerId = String(over.id);
+        const activeContainerId = String(active.data.current?.sortable.containerId);
+        
+        if (activeContainerId !== overContainerId) {
+            setExecutions((prev) => {
+                const activeIndex = prev.findIndex((e) => e.id === activeId);
+                if (activeIndex === -1) return prev;
+
+                const updatedExecutions = [...prev];
+                updatedExecutions[activeIndex] = {
+                    ...updatedExecutions[activeIndex],
+                    status: overContainerId as ContractedTransportExecutionStatus,
+                };
+                return updatedExecutions;
+            });
+            
+            handleExecutionStatusChange(activeId, overContainerId);
         }
-
-        setExecutions((prev) => {
-            const activeIndex = prev.findIndex((e) => e.id === activeId);
-            if (activeIndex === -1) return prev;
-
-            const updatedExecutions = [...prev];
-            updatedExecutions[activeIndex] = {
-                ...updatedExecutions[activeIndex],
-                status: overContainer as ContractedTransportExecutionStatus,
-            };
-            return updatedExecutions;
-        });
-
-        handleExecutionStatusChange(activeId, overContainer as string);
     }
     
 
@@ -729,7 +757,7 @@ export default function ContractedTransportDetailPage() {
                             <TableBody>
                             {contract.cargoItems.map((item, index) => (
                                 <TableRow key={item.id || index}>
-                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                    <TableCell className="font-medium">{item.name} ({item.unit})</TableCell>
                                     <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
                                     <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
                                 </TableRow>
@@ -868,7 +896,7 @@ export default function ContractedTransportDetailPage() {
 
         {/* Add New Execution Dialog */}
         <Dialog open={isExecutionDialogOpen} onOpenChange={setIsExecutionDialogOpen}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>Шинэ гүйцэтгэл нэмэх</DialogTitle>
                 </DialogHeader>
@@ -877,6 +905,28 @@ export default function ContractedTransportDetailPage() {
                          <FormField control={newExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
                          <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                          <FormField control={newExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                        <div>
+                          <FormLabel>Ачих ачаа ба хэмжээ</FormLabel>
+                          <div className="space-y-2 mt-2">
+                             {cargoFields.map((field, index) => (
+                               <div key={field.id} className="flex items-center gap-2">
+                                 <span className="flex-1 text-sm">{newExecutionForm.getValues(`loadedCargo.${index}.cargoName`)} ({newExecutionForm.getValues(`loadedCargo.${index}.cargoUnit`)})</span>
+                                 <FormField
+                                   control={newExecutionForm.control}
+                                   name={`loadedCargo.${index}.loadedQuantity`}
+                                   render={({ field }) => (
+                                     <FormItem className="w-24">
+                                       <FormControl>
+                                         <Input type="number" placeholder="0" {...field} />
+                                       </FormControl>
+                                       <FormMessage />
+                                     </FormItem>
+                                   )}
+                                 />
+                               </div>
+                             ))}
+                          </div>
+                        </div>
                     </form>
                 </Form>
                 <DialogFooter>
@@ -988,4 +1038,5 @@ export default function ContractedTransportDetailPage() {
 
 
     
+
 
