@@ -401,7 +401,6 @@ export default function ContractedTransportDetailPage() {
 
   React.useEffect(() => {
     if (executionToEdit && contract) {
-      // Map contract cargo items to form fields
       const formCargo = contract.cargoItems.map(contractCargo => {
         const executionCargo = executionToEdit.loadedCargo?.find(ec => ec.cargoItemId === contractCargo.id);
         return {
@@ -414,8 +413,8 @@ export default function ContractedTransportDetailPage() {
 
       editExecutionForm.reset({
         date: toDateSafe(executionToEdit.date),
-        driverId: executionToEdit.driverId || '',
-        vehicleId: executionToEdit.vehicleId || '',
+        driverId: executionToEdit.driverId || 'no-selection',
+        vehicleId: executionToEdit.vehicleId || 'no-selection',
         loadedCargo: formCargo
       });
     }
@@ -432,10 +431,10 @@ export default function ContractedTransportDetailPage() {
             
             const newExecutionData = {
                 date: values.date,
-                driverId: values.driverId || undefined,
-                driverName: selectedDriver?.driverName || undefined,
-                vehicleId: values.vehicleId || undefined,
-                vehicleLicense: selectedVehicle?.licensePlate || undefined,
+                driverId: selectedDriver ? selectedDriver.driverId : undefined,
+                driverName: selectedDriver ? selectedDriver.driverName : undefined,
+                vehicleId: selectedVehicle ? selectedVehicle.vehicleId : undefined,
+                vehicleLicense: selectedVehicle ? selectedVehicle.licensePlate : undefined,
                 contractId: id,
                 status: 'Хүлээгдэж буй' as ContractedTransportExecutionStatus,
                 statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }], 
@@ -490,16 +489,16 @@ export default function ContractedTransportDetailPage() {
 
             const updateData: Partial<ContractedTransportExecution> = {
               date: values.date,
-              driverId: values.driverId === 'no-selection' ? undefined : values.driverId,
-              driverName: values.driverId === 'no-selection' ? undefined : selectedDriver?.driverName,
-              vehicleId: values.vehicleId === 'no-selection' ? undefined : values.vehicleId,
-              vehicleLicense: values.vehicleId === 'no-selection' ? undefined : selectedVehicle?.licensePlate,
+              driverId: selectedDriver ? selectedDriver.driverId : undefined,
+              driverName: selectedDriver ? selectedDriver.driverName : undefined,
+              vehicleId: selectedVehicle ? selectedVehicle.vehicleId : undefined,
+              vehicleLicense: selectedVehicle ? selectedVehicle.licensePlate : undefined,
               loadedCargo: cargoToLoad,
             };
 
             await updateDoc(execRef, updateData as DocumentData);
             
-            setExecutions(prev => prev.map(ex => ex.id === executionToEdit.id ? { ...ex, ...updateData, date: values.date, loadedCargo: cargoToLoad } : ex));
+            setExecutions(prev => prev.map(ex => ex.id === executionToEdit.id ? { ...ex, ...updateData, date: values.date } : ex));
             toast({ title: 'Амжилттай', description: 'Гүйцэтгэл шинэчлэгдлээ.' });
             setExecutionToEdit(null);
         } catch (error) {
@@ -686,31 +685,37 @@ export default function ContractedTransportDetailPage() {
     };
     
     const onDragEnd = (event: DragEndEvent) => {
-        const { active, over } = event;
-        
-        if (!over) return;
-
-        const activeId = String(active.id);
-        const overContainerId = String(over.id);
-        
-        const activeItem = executions.find((e) => e.id === activeId);
-        const overContainerExecutions = executions.filter(e => e.status === overContainerId);
-
-        if (activeItem && activeItem.status !== overContainerId) {
-             setExecutions((prev) => {
-                const activeIndex = prev.findIndex(e => e.id === activeId);
-                if (activeIndex === -1) return prev;
-                
-                const updatedItem = { ...prev[activeIndex], status: overContainerId as ContractedTransportExecutionStatus };
-                const newItems = [...prev];
-                newItems.splice(activeIndex, 1);
-                newItems.splice(overContainerExecutions.length, 0, updatedItem); // Simplified insert
-                
-                return newItems;
-            });
-            handleExecutionStatusChange(activeId, overContainerId);
-        }
-    };
+      const { active, over } = event;
+      if (!over || active.id === over.id) {
+          return;
+      }
+  
+      const activeId = String(active.id);
+      const overId = String(over.id);
+  
+      setExecutions((prevExecutions) => {
+          const oldIndex = prevExecutions.findIndex((e) => e.id === activeId);
+          const newIndex = prevExecutions.findIndex((e) => e.id === overId);
+  
+          if (oldIndex === -1 || newIndex === -1) {
+              return prevExecutions;
+          }
+  
+          let newExecutions = arrayMove(prevExecutions, oldIndex, newIndex);
+          const activeExecution = newExecutions.find(e => e.id === activeId);
+          const overContainerId = prevExecutions[newIndex].status;
+          const activeContainerId = prevExecutions[oldIndex].status;
+  
+          if (activeExecution && activeContainerId !== overContainerId) {
+              newExecutions = newExecutions.map(e => 
+                  e.id === activeId ? { ...e, status: overContainerId as ContractedTransportExecutionStatus } : e
+              );
+              handleExecutionStatusChange(activeId, overContainerId);
+          }
+  
+          return newExecutions;
+      });
+  };
     
 
   if (isLoading) {
@@ -1085,3 +1090,4 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
