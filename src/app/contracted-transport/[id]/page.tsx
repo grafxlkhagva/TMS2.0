@@ -344,7 +344,7 @@ export default function ContractedTransportDetailPage() {
 
    React.useEffect(() => {
       newExecutionForm.reset({ date: new Date(), driverId: '', vehicleId: '' });
-  }, [isExecutionDialogOpen, newExecutionForm]);
+  }, [isExecutionDialogOpen]);
 
   React.useEffect(() => {
     if (stopToEdit) {
@@ -356,8 +356,8 @@ export default function ContractedTransportDetailPage() {
     if (executionToEdit) {
       editExecutionForm.reset({
         date: toDateSafe(executionToEdit.date),
-        driverId: executionToEdit.driverId,
-        vehicleId: executionToEdit.vehicleId,
+        driverId: executionToEdit.driverId || '',
+        vehicleId: executionToEdit.vehicleId || '',
       });
     }
   }, [executionToEdit, editExecutionForm]);
@@ -370,7 +370,7 @@ export default function ContractedTransportDetailPage() {
             const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
             const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
             
-            const newExecutionData: Omit<ContractedTransportExecution, 'id' | 'createdAt'> & {createdAt: any} = {
+            const newExecutionData = {
                 date: values.date,
                 driverId: values.driverId || undefined,
                 driverName: selectedDriver?.driverName || undefined,
@@ -440,6 +440,7 @@ export default function ContractedTransportDetailPage() {
             toast({ title: 'Амжилттай', description: 'Гүйцэтгэл шинэчлэгдлээ.' });
             setExecutionToEdit(null);
         } catch (error) {
+             console.error("Error updating execution:", error);
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэл шинэчлэхэд алдаа гарлаа.' });
         } finally {
              setIsSubmitting(false);
@@ -609,49 +610,50 @@ export default function ContractedTransportDetailPage() {
         }
     }
     
-    const handleExecutionStatusChange = React.useCallback(async (executionId: string, newStatus: ContractedTransportExecutionStatus) => {
+    const handleExecutionStatusChange = React.useCallback(async (executionId: string, newStatus: string) => {
         try {
             const execRef = doc(db, 'contracted_transport_executions', executionId);
             await updateDoc(execRef, {
                 status: newStatus,
                 statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
             });
-            // Don't toast here to avoid UI flicker during drag-and-drop
         } catch (error) {
             console.error("Error updating execution status:", error);
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэлийн статус шинэчлэхэд алдаа гарлаа.' });
             // Revert UI change on error
             fetchContractData();
         }
-    }, [fetchContractData]);
+    }, [fetchContractData, toast]);
     
     function handleDragEnd(event: DragEndEvent) {
         const { active, over } = event;
     
-        if (over && active.id !== over.id) {
-            const activeId = String(active.id);
-
-            let overContainerId: string | null = null;
-            if (executionStatuses.includes(over.id as any)) {
-                overContainerId = over.id as string;
-            } else if (over.data.current?.sortable) {
-                overContainerId = over.data.current.sortable.containerId;
-            }
-             if (!overContainerId || !executionStatuses.includes(overContainerId as any)) {
-                return;
-            }
-
-            const newStatus = overContainerId as ContractedTransportExecutionStatus;
-            
-            const activeExecution = executions.find(e => e.id === activeId);
-
-            if (activeExecution && activeExecution.status !== newStatus) {
-                setExecutions((prevExecutions) => 
-                    prevExecutions.map(ex => 
-                        ex.id === activeId ? { ...ex, status: newStatus } : ex
-                    )
-                );
-                handleExecutionStatusChange(activeId, newStatus);
-            }
+        if (!over) return;
+    
+        const activeId = String(active.id);
+        const overId = String(over.id);
+    
+        // Determine the container of the `over` element.
+        // It could be a droppable container or an item within a container.
+        const overContainerId = over.data.current?.sortable?.containerId || over.id;
+    
+        const activeExecution = executions.find(e => e.id === activeId);
+        
+        if (!activeExecution) return;
+    
+        // If the status is different, update the status and move the card.
+        if (activeExecution.status !== overContainerId) {
+            setExecutions(prevExecutions => {
+                const newExecutions = prevExecutions.map(ex => {
+                    if (ex.id === activeId) {
+                        return { ...ex, status: overContainerId as ContractedTransportExecutionStatus };
+                    }
+                    return ex;
+                });
+                return newExecutions;
+            });
+    
+            handleExecutionStatusChange(activeId, overContainerId as string);
         }
     }
     
@@ -915,8 +917,8 @@ export default function ContractedTransportDetailPage() {
                     <Form {...editExecutionForm}>
                         <form onSubmit={editExecutionForm.handleSubmit(handleUpdateExecution)} className="space-y-4 py-4" id="edit-execution-form">
                             <FormField control={editExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
-                            <FormField control={editExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                            <FormField control={editExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                            <FormField control={editExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="">Сонгоогүй</SelectItem>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                            <FormField control={editExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="">Сонгоогүй</SelectItem>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                         </form>
                     </Form>
                      <DialogFooter>
