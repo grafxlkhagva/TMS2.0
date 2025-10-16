@@ -490,10 +490,10 @@ export default function ContractedTransportDetailPage() {
 
             const updateData: Partial<ContractedTransportExecution> = {
               date: values.date,
-              driverId: values.driverId === 'no-selection' ? undefined : values.driverId || undefined,
-              driverName: values.driverId === 'no-selection' ? undefined : selectedDriver?.driverName || undefined,
-              vehicleId: values.vehicleId === 'no-selection' ? undefined : values.vehicleId || undefined,
-              vehicleLicense: values.vehicleId === 'no-selection' ? undefined : selectedVehicle?.licensePlate || undefined,
+              driverId: values.driverId === 'no-selection' ? undefined : values.driverId,
+              driverName: values.driverId === 'no-selection' ? undefined : selectedDriver?.driverName,
+              vehicleId: values.vehicleId === 'no-selection' ? undefined : values.vehicleId,
+              vehicleLicense: values.vehicleId === 'no-selection' ? undefined : selectedVehicle?.licensePlate,
               loadedCargo: cargoToLoad,
             };
 
@@ -680,11 +680,12 @@ export default function ContractedTransportDetailPage() {
             statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
         }).catch((error) => {
             console.error("Error updating execution status:", error);
-            fetchContractData();
+            // Optionally revert UI change or show toast
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Явцын төлөв шинэчлэхэд алдаа гарлаа. Хуудсыг дахин ачааллана уу.'});
         });
     };
     
-    function onDragEnd(event: DragEndEvent) {
+    const onDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
         
         if (!over) return;
@@ -693,19 +694,23 @@ export default function ContractedTransportDetailPage() {
         const overContainerId = String(over.id);
         
         const activeItem = executions.find((e) => e.id === activeId);
+        const overContainerExecutions = executions.filter(e => e.status === overContainerId);
 
         if (activeItem && activeItem.status !== overContainerId) {
              setExecutions((prev) => {
-                return prev.map((e) => {
-                    if (e.id === activeId) {
-                        return { ...e, status: overContainerId as ContractedTransportExecutionStatus };
-                    }
-                    return e;
-                });
+                const activeIndex = prev.findIndex(e => e.id === activeId);
+                if (activeIndex === -1) return prev;
+                
+                const updatedItem = { ...prev[activeIndex], status: overContainerId as ContractedTransportExecutionStatus };
+                const newItems = [...prev];
+                newItems.splice(activeIndex, 1);
+                newItems.splice(overContainerExecutions.length, 0, updatedItem); // Simplified insert
+                
+                return newItems;
             });
             handleExecutionStatusChange(activeId, overContainerId);
         }
-    }
+    };
     
 
   if (isLoading) {
@@ -1080,5 +1085,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
-    
