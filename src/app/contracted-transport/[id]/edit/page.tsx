@@ -98,6 +98,7 @@ export default function EditContractedTransportPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [contract, setContract] = React.useState<ContractedTransport | null>(null);
 
   const [customers, setCustomers] = React.useState<Customer[]>([]);
   const [transportManagers, setTransportManagers] = React.useState<SystemUser[]>([]);
@@ -147,7 +148,9 @@ export default function EditContractedTransportPage() {
             setPackagingTypes(packagingSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as PackagingType)));
             
             if (contractSnap.exists()) {
-                const contractData = contractSnap.data() as any; // Use any to handle legacy data
+                const contractData = { id: contractSnap.id, ...contractSnap.data() } as ContractedTransport;
+                setContract(contractData);
+
                 form.reset({
                     title: contractData.title,
                     customerId: contractData.customerId,
@@ -184,7 +187,7 @@ export default function EditContractedTransportPage() {
 
 
   async function onSubmit(values: FormValues) {
-    if (!id) return;
+    if (!id || !contract) return;
     setIsSubmitting(true);
     try {
         const contractRef = doc(db, 'contracted_transports', id);
@@ -210,7 +213,7 @@ export default function EditContractedTransportPage() {
             },
             cargoItems: values.cargoItems.map(({id, ...item}) => item), // Remove client-side id before saving
             updatedAt: serverTimestamp(),
-            assignedVehicles: contract.assignedVehicles,
+            assignedVehicles: contract.assignedVehicles || [],
         };
 
         await updateDoc(contractRef, dataToSave);
