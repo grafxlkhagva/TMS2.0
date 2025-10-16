@@ -5,7 +5,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Info, Check, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Info, Check } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
@@ -162,21 +162,11 @@ export default function ContractedTransportDetailPage() {
   const [statusChange, setStatusChange] = React.useState<{ execution: ContractedTransportExecution, newStatus: string } | null>(null);
 
   const executionStatuses = React.useMemo(() => {
-    if (!contract) return ['Хүлээгдэж буй', 'Ачиж буй', 'Буулгаж буй', 'Хүргэгдсэн'];
-    const baseStatuses = [
-        'Хүлээгдэж буй', 
-        'Ачиж буй', 
-    ];
-    const inTransitStatuses = contract.routeStops.map(s => s.name);
-    const endStatuses = [
-        'Буулгаж буй', 
-        'Хүргэгдсэн'
-    ];
+    if (!contract) return [];
     
-    // Add "In Transit" if there are no route stops to ensure it's always an option
-    if (inTransitStatuses.length === 0) {
-        return [...baseStatuses, 'Тээвэрлэж буй', ...endStatuses];
-    }
+    const baseStatuses = ['Хүлээгдэж буй', 'Ачиж буй'];
+    const inTransitStatuses = contract.routeStops.map(s => s.name);
+    const endStatuses = ['Буулгаж буй', 'Хүргэгдсэн'];
     
     return [...baseStatuses, ...inTransitStatuses, ...endStatuses];
 
@@ -491,14 +481,12 @@ export default function ContractedTransportDetailPage() {
         const { active, over } = event;
 
         if (!over) return;
-
-        const activeId = active.id as string;
         
-        const overContainerId = over.data.current?.sortable?.containerId;
         const activeContainerId = active.data.current?.sortable?.containerId;
-
+        const overContainerId = over.data.current?.sortable?.containerId;
+        
         if (overContainerId && activeContainerId && activeContainerId !== overContainerId) {
-            const execution = executions.find(ex => ex.id === activeId);
+            const execution = executions.find(ex => ex.id === active.id);
             const newStatus = overContainerId;
             
             if (execution && executionStatuses.includes(newStatus)) {
@@ -566,34 +554,13 @@ export default function ContractedTransportDetailPage() {
                 </Card>
                 <Card>
                     <CardHeader>
-                         <div className="flex justify-between items-center">
-                            <CardTitle>Маршрут ба Ачаа</CardTitle>
-                             <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
-                                <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
-                            </Button>
-                        </div>
+                        <CardTitle>Маршрут ба Ачаа</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid sm:grid-cols-2 gap-x-6 gap-y-6">
                             <DetailItem icon={MapPin} label="Ачих цэг" value={`${relatedData.startRegionName}, ${relatedData.startWarehouseName}`} />
                             <DetailItem icon={MapPin} label="Буулгах цэг" value={`${relatedData.endRegionName}, ${relatedData.endWarehouseName}`} />
                             <DetailItem icon={MapIcon} label="Нийт зам" value={`${contract.route.totalDistance} км`} />
-                        </div>
-                        <Separator />
-                         <div className="flex justify-between items-center">
-                            <h3 className="font-semibold text-sm">Маршрутын зогсоол</h3>
-                        </div>
-                        <div className="space-y-1">
-                            {contract.routeStops.length > 0 ? (
-                                contract.routeStops.map(stop => (
-                                    <div key={stop.id} className="flex justify-between items-center text-sm p-1 rounded-md hover:bg-muted">
-                                        <div><p className="font-medium">{stop.name}</p><p className="text-xs text-muted-foreground">{stop.description}</p></div>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveStop(stop)}><XCircle className="h-4 w-4 text-destructive"/></Button>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-sm text-muted-foreground text-center py-1">Зогсоол бүртгэгдээгүй.</p>
-                            )}
                         </div>
                         <Separator />
                         <Table>
@@ -687,48 +654,49 @@ export default function ContractedTransportDetailPage() {
         </div>
             
         <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <Card>
+            <Card className="mt-6">
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <div>
-                            <CardTitle>Тээвэрлэлтийн гүйцэтгэл</CardTitle>
-                            <CardDescription>Гэрээний дагуу хийгдэх тээвэрлэлтийн явцыг хянах хэсэг.</CardDescription>
+                            <CardTitle>Тээвэрлэлтийн Явц ба Зогсоолууд</CardTitle>
+                            <CardDescription>Гүйцэтгэлийн явцыг чирж зөөх үйлдлээр удирдах хэсэг.</CardDescription>
                         </div>
-                        <Button onClick={() => setIsExecutionDialogOpen(true)}>
-                            <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
-                        </Button>
+                         <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
+                                <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
+                            </Button>
+                            <Button onClick={() => setIsExecutionDialogOpen(true)}>
+                                <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex items-center justify-between mb-4 text-xs text-muted-foreground">
-                        <span>{executionStatuses[0]}</span>
-                        <span>{executionStatuses[executionStatuses.length - 1]}</span>
-                    </div>
-                    <div className="relative pt-1">
-                        <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-muted">
-                        {executionStatuses.slice(0, -1).map((status, index) => {
-                            const color = statusColorMap[status as keyof typeof statusColorMap] || 'bg-gray-200';
-                            return <div key={status} style={{ width: `${100 / (executionStatuses.length-1)}%` }} className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${color}`}></div>
-                        })}
-                        </div>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(180px, 1fr))`}}>
-                            {executionStatuses.map(status => (
-                                 <SortableContext key={status} id={status} items={executions.filter(ex => ex.status === status).map(ex => ex.id)} strategy={verticalListSortingStrategy}>
-                                    <div id={status} className="p-1 rounded-lg bg-muted/50 min-h-40">
-                                        <h3 className={`font-semibold text-center text-xs p-2 rounded-md ${statusColorMap[status as keyof typeof statusColorMap] || 'bg-gray-200'} text-white`}>
-                                            {status}
-                                        </h3>
-                                        <div className="space-y-1 min-h-20 mt-2">
-                                            {executions.filter(ex => ex.status === status).map(ex => (
-                                               <SortableExecutionCard key={ex.id} execution={ex} />
-                                            ))}
+                    <div className="overflow-x-auto pb-4">
+                        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(200px, 1fr))`}}>
+                            {executionStatuses.map(status => {
+                                const stop = contract.routeStops.find(s => s.name === status);
+                                return (
+                                    <SortableContext key={status} id={status} items={executions.filter(ex => ex.status === status).map(ex => ex.id)} strategy={verticalListSortingStrategy}>
+                                        <div id={status} className="p-2 rounded-lg bg-muted/50 min-h-40">
+                                            <h3 className={`font-semibold text-center text-sm p-2 rounded-md ${statusColorMap[status as keyof typeof statusColorMap] || 'bg-purple-500'} text-white`}>
+                                                {status}
+                                            </h3>
+                                            {stop && (
+                                                <div className="text-xs text-center text-muted-foreground mt-1 px-1 flex items-start gap-1.5">
+                                                   <Info className="h-3 w-3 mt-0.5 shrink-0"/> <span>{stop.description}</span>
+                                                    <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={() => handleRemoveStop(stop)}><XCircle className="h-3 w-3 text-destructive"/></Button>
+                                                </div>
+                                            )}
+                                            <div className="space-y-1 min-h-20 mt-2">
+                                                {executions.filter(ex => ex.status === status).map(ex => (
+                                                <SortableExecutionCard key={ex.id} execution={ex} />
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                </SortableContext>
-                            ))}
+                                    </SortableContext>
+                                )
+                            })}
                         </div>
                     </div>
                 </CardContent>
