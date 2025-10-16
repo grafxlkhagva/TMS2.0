@@ -38,21 +38,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CSS } from '@dnd-kit/utilities';
 
 
-const newExecutionCargoSchema = z.object({
-  cargoItemId: z.string(),
-  cargoName: z.string(),
-  cargoUnit: z.string(),
-  loadedQuantity: z.coerce.number().min(0, "Ачсан хэмжээ 0-ээс бага байж болохгүй."),
-});
-
-const newExecutionFormSchema = z.object({
-  date: z.date({ required_error: "Огноо сонгоно уу." }),
-  driverId: z.string().optional(),
-  vehicleId: z.string().optional(),
-  loadedCargo: z.array(newExecutionCargoSchema).optional(),
-});
-type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
-
 const editExecutionCargoSchema = z.object({
   cargoItemId: z.string(),
   cargoName: z.string(),
@@ -242,7 +227,6 @@ export default function ContractedTransportDetailPage() {
   
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   
-  const [isExecutionDialogOpen, setIsExecutionDialogOpen] = React.useState(false);
   const [isStopDialogOpen, setIsStopDialogOpen] = React.useState(false);
   const [executionToDelete, setExecutionToDelete] = React.useState<ContractedTransportExecution | null>(null);
   const [stopToDelete, setStopToDelete] = React.useState<RouteStop | null>(null);
@@ -272,16 +256,6 @@ export default function ContractedTransportDetailPage() {
     return [...baseStatuses, ...inTransitStatuses, ...endStatuses] as (ContractedTransportExecutionStatus | string)[];
 
   }, [contract]);
-
-  const newExecutionForm = useForm<NewExecutionFormValues>({
-    resolver: zodResolver(newExecutionFormSchema),
-    defaultValues: { date: new Date(), driverId: 'no-selection', vehicleId: 'no-selection', loadedCargo: [] },
-  });
-
-  useFieldArray({
-    control: newExecutionForm.control,
-    name: "loadedCargo"
-  });
   
   const routeStopForm = useForm<RouteStopFormValues>({
     resolver: zodResolver(routeStopFormSchema),
@@ -388,22 +362,6 @@ export default function ContractedTransportDetailPage() {
   }, [fetchContractData]);
 
    React.useEffect(() => {
-    if (isExecutionDialogOpen && contract) {
-      newExecutionForm.reset({ 
-        date: new Date(), 
-        driverId: 'no-selection', 
-        vehicleId: 'no-selection',
-        loadedCargo: contract.cargoItems?.map(c => ({
-          cargoItemId: c.id,
-          cargoName: c.name,
-          cargoUnit: c.unit,
-          loadedQuantity: 0
-        })) || []
-      });
-    }
-  }, [isExecutionDialogOpen, contract, newExecutionForm]);
-
-  React.useEffect(() => {
     if (stopToEdit) {
       editStopForm.reset(stopToEdit);
     } else {
@@ -431,53 +389,6 @@ export default function ContractedTransportDetailPage() {
       });
     }
   }, [executionToEdit, contract, editExecutionForm]);
-
-
-   const onNewExecutionSubmit = React.useCallback(async (values: NewExecutionFormValues) => {
-        if (!id || !contract) return;
-        setIsSubmitting(true);
-        try {
-            const driverId = values.driverId === 'no-selection' ? undefined : values.driverId;
-            const vehicleId = values.vehicleId === 'no-selection' ? undefined : values.vehicleId;
-            
-            const selectedDriver = driverId ? contract.assignedDrivers.find(d => d.driverId === driverId) : undefined;
-            const selectedVehicle = vehicleId ? contract.assignedVehicles.find(v => v.vehicleId === vehicleId) : undefined;
-            
-            const cargoToLoad = (values.loadedCargo || []).filter(c => c.loadedQuantity > 0);
-            
-            const newExecutionData = {
-                date: values.date,
-                driverId: selectedDriver?.driverId,
-                driverName: selectedDriver?.driverName,
-                vehicleId: selectedVehicle?.vehicleId,
-                vehicleLicense: selectedVehicle?.licensePlate,
-                contractId: id,
-                status: 'Хүлээгдэж буй' as ContractedTransportExecutionStatus,
-                statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }], 
-                createdAt: serverTimestamp(),
-                loadedCargo: cargoToLoad,
-            };
-
-            const docRef = await addDoc(collection(db, 'contracted_transport_executions'), newExecutionData);
-            
-            const newExecutionForState: ContractedTransportExecution = {
-                ...(newExecutionData as any),
-                id: docRef.id,
-                createdAt: new Date(),
-                date: values.date,
-            };
-
-            setExecutions(prev => [...prev, newExecutionForState]);
-            
-            toast({ title: 'Амжилттай', description: 'Шинэ гүйцэтгэл нэмэгдлээ.' });
-            setIsExecutionDialogOpen(false);
-        } catch (error) {
-            console.error("Error adding execution:", error);
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэл нэмэхэд алдаа гарлаа.' });
-        } finally {
-            setIsSubmitting(false);
-        }
-    }, [id, contract, toast]);
     
     const handleDeleteExecution = React.useCallback(async () => {
         if (!executionToDelete) return;
@@ -902,9 +813,6 @@ export default function ContractedTransportDetailPage() {
                             <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
                                 <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
                             </Button>
-                            <Button onClick={() => setIsExecutionDialogOpen(true)}>
-                                <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
-                            </Button>
                         </div>
                     </div>
                 </CardHeader>
@@ -933,52 +841,6 @@ export default function ContractedTransportDetailPage() {
                 </CardContent>
             </Card>
         </DndContext>
-
-
-        {/* Add New Execution Dialog */}
-        <Dialog open={isExecutionDialogOpen} onOpenChange={setIsExecutionDialogOpen}>
-            <DialogContent className="sm:max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>Шинэ гүйцэтгэл нэмэх</DialogTitle>
-                </DialogHeader>
-                <Form {...newExecutionForm}>
-                    <form onSubmit={newExecutionForm.handleSubmit(onNewExecutionSubmit)} id="new-execution-form" className="space-y-4 py-4">
-                        <FormField control={newExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
-                        <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                        <FormField control={newExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                        <div>
-                            <FormLabel>Ачих ачаа ба хэмжээ</FormLabel>
-                            <div className="space-y-2 mt-2">
-                                {newExecutionForm.getValues('loadedCargo')?.map((field, index) => (
-                                <div key={index} className="flex items-center gap-2">
-                                    <span className="flex-1 text-sm">{field.cargoName} ({field.cargoUnit})</span>
-                                    <FormField
-                                    control={newExecutionForm.control}
-                                    name={`loadedCargo.${index}.loadedQuantity`}
-                                    render={({ field }) => (
-                                        <FormItem className="w-24">
-                                        <FormControl>
-                                            <Input type="number" placeholder="0" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                    />
-                                </div>
-                                ))}
-                            </div>
-                        </div>
-                    </form>
-                </Form>
-                <DialogFooter>
-                    <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                    <Button type="submit" form="new-execution-form" disabled={isSubmitting}>
-                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                        Хадгалах
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
 
         {/* Delete Execution Alert */}
         <AlertDialog open={!!executionToDelete} onOpenChange={() => setExecutionToDelete(null)}>
