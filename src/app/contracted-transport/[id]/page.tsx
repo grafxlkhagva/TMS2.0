@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -262,7 +263,7 @@ export default function ContractedTransportDetailPage() {
         ]);
         
         setDrivers(driversSnap.docs.map(d => ({id: d.id, ...d.data()} as Driver)));
-        setVehicles(vehiclesSnap.docs.map(v => ({id: d.id, ...v.data()} as Vehicle)));
+        setVehicles(vehiclesSnap.docs.map(v => ({id: v.id, ...v.data()} as Vehicle)));
 
         setRelatedData({
             startRegionName: startRegionSnap.data()?.name || '',
@@ -332,7 +333,7 @@ export default function ContractedTransportDetailPage() {
                 vehicleLicense: selectedVehicle?.licensePlate || undefined,
                 contractId: id,
                 status: 'Хүлээгдэж буй' as ContractedTransportExecutionStatus,
-                statusHistory: [{ status: 'Хүлээгдэж буй', date: now }],
+                statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }],
                 createdAt: serverTimestamp() as any, // Will be replaced by server
             };
 
@@ -963,3 +964,4 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
