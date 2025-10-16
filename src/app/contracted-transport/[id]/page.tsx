@@ -221,7 +221,8 @@ export default function ContractedTransportDetailPage() {
   const fetchContractData = React.useCallback(async () => {
     if (!id) return;
     
-    setIsLoading(true);
+    // Do not set loading to true here to avoid flickering on re-fetches
+    // setIsLoading(true);
 
     try {
         const contractDocRef = doc(db, 'contracted_transports', id);
@@ -292,6 +293,7 @@ export default function ContractedTransportDetailPage() {
   }, [id, router, toast]);
 
   React.useEffect(() => {
+    setIsLoading(true);
     fetchContractData();
   }, [fetchContractData]);
 
@@ -346,7 +348,7 @@ export default function ContractedTransportDetailPage() {
         }
     };
     
-    const handleDeleteExecution = async () => {
+    const handleDeleteExecution = React.useCallback(async () => {
         if (!executionToDelete) return;
         setIsSubmitting(true);
         try {
@@ -359,32 +361,27 @@ export default function ContractedTransportDetailPage() {
             setExecutionToDelete(null);
             setIsSubmitting(false);
         }
-    };
+    }, [executionToDelete, toast]);
 
-    const handleUpdateExecution = async (values: EditExecutionFormValues) => {
-        if (!executionToEdit) return;
+    const handleUpdateExecution = React.useCallback(async (values: EditExecutionFormValues) => {
+        if (!executionToEdit || !contract) return;
         setIsSubmitting(true);
         try {
             const execRef = doc(db, 'contracted_transport_executions', executionToEdit.id);
-            const selectedDriver = contract?.assignedDrivers.find(d => d.driverId === values.driverId);
-            const selectedVehicle = contract?.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
+            const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
+            const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
 
-            await updateDoc(execRef, {
+            const updateData = {
               date: values.date,
               driverId: values.driverId || null,
               driverName: selectedDriver?.driverName || null,
               vehicleId: values.vehicleId || null,
               vehicleLicense: selectedVehicle?.licensePlate || null,
-            });
+            };
+
+            await updateDoc(execRef, updateData);
             
-            setExecutions(prev => prev.map(ex => ex.id === executionToEdit.id ? {
-                ...ex,
-                date: values.date,
-                driverId: values.driverId,
-                driverName: selectedDriver?.driverName,
-                vehicleId: values.vehicleId,
-                vehicleLicense: selectedVehicle?.licensePlate,
-            } : ex));
+            setExecutions(prev => prev.map(ex => ex.id === executionToEdit.id ? { ...ex, ...updateData } : ex));
             toast({ title: 'Амжилттай', description: 'Гүйцэтгэл шинэчлэгдлээ.' });
             setExecutionToEdit(null);
         } catch (error) {
@@ -392,7 +389,7 @@ export default function ContractedTransportDetailPage() {
         } finally {
              setIsSubmitting(false);
         }
-    }
+    }, [executionToEdit, contract, toast]);
     
     const handleAddDriver = async (driverId: string) => {
         if (!id || !driverId) return;
@@ -523,9 +520,11 @@ export default function ContractedTransportDetailPage() {
     const handleRemoveStop = async () => {
         if (!id || !contract || !stopToDelete) return;
         try {
+            const stopDataToRemove = contract.routeStops.find(s => s.id === stopToDelete.id);
+            if (!stopDataToRemove) return;
             const contractRef = doc(db, 'contracted_transports', id);
             await updateDoc(contractRef, {
-                 routeStops: arrayRemove(stopToDelete)
+                 routeStops: arrayRemove(stopDataToRemove)
             });
             setContract(prev => prev ? { ...prev, routeStops: prev.routeStops.filter(s => s.id !== stopToDelete.id) } : null);
             toast({ title: "Амжилттай", description: "Зогсоол хасагдлаа."});
@@ -589,11 +588,11 @@ export default function ContractedTransportDetailPage() {
     async function handleDragEnd(event: DragEndEvent) {
         const { active, over } = event;
 
-        if (!over) return;
+        if (!over || active.id === over.id) return;
         
         const activeContainerId = active.data.current?.sortable?.containerId;
         const overContainerId = over.data.current?.sortable?.containerId;
-        
+
         if (overContainerId && activeContainerId && activeContainerId !== overContainerId) {
             const execution = executions.find(ex => ex.id === active.id);
             const newStatus = overContainerId;
@@ -787,7 +786,7 @@ export default function ContractedTransportDetailPage() {
                                 const stop = contract.routeStops.find(s => s.name === status);
                                 return (
                                     <SortableContext key={status} id={status} items={executions.filter(ex => ex.status === status).map(ex => ex.id)} strategy={verticalListSortingStrategy}>
-                                        <div id={status} className="p-2 rounded-lg bg-muted/50 min-h-40">
+                                        <div className="p-2 rounded-lg bg-muted/50 min-h-40">
                                             <div className="font-semibold text-center text-sm p-2 rounded-md relative group/stop-header">
                                                 <h3 className={`${statusColorMap[status] || 'bg-purple-500'} text-white p-2 rounded-md`}>
                                                     {status}
@@ -951,6 +950,7 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
 
 
 
