@@ -5,7 +5,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Info, CheckCircle, Check } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
@@ -49,6 +49,13 @@ const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
 });
 type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
+
+const editExecutionFormSchema = z.object({
+  date: z.date({ required_error: "Огноо сонгоно уу." }),
+  driverId: z.string().optional(),
+  vehicleId: z.string().optional(),
+});
+type EditExecutionFormValues = z.infer<typeof editExecutionFormSchema>;
 
 const routeStopFormSchema = z.object({
   name: z.string().min(2, "Зогсоолын нэр дор хаяж 2 тэмдэгттэй байх ёстой."),
@@ -103,7 +110,7 @@ const toDateSafe = (date: any): Date => {
   return new Date(); 
 };
 
-function SortableExecutionCard({ execution }: { execution: ContractedTransportExecution }) {
+function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: ContractedTransportExecution, onEdit: () => void, onDelete: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: execution.id });
 
   const style = {
@@ -118,9 +125,21 @@ function SortableExecutionCard({ execution }: { execution: ContractedTransportEx
       {...attributes} 
       {...listeners}
       key={execution.id} 
-      className="text-xs mb-2 touch-none cursor-grab"
+      className="text-xs mb-2 touch-none cursor-grab group/exec"
     >
-      <CardContent className="p-2">
+      <CardContent className="p-2 relative">
+         <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/exec:opacity-100 transition-opacity">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onEdit}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
+              <DropdownMenuItem onClick={onDelete} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
         <p className="font-semibold pr-6">Огноо: {format(execution.date, 'yyyy-MM-dd')}</p>
         <div className="text-muted-foreground">
           <p>Жолооч: {execution.driverName || 'TBA'}</p>
@@ -143,12 +162,17 @@ export default function ContractedTransportDetailPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  
+  // Dialog/Alert states
   const [isExecutionDialogOpen, setIsExecutionDialogOpen] = React.useState(false);
+  const [isStopDialogOpen, setIsStopDialogOpen] = React.useState(false);
   const [executionToDelete, setExecutionToDelete] = React.useState<ContractedTransportExecution | null>(null);
+  const [stopToDelete, setStopToDelete] = React.useState<RouteStop | null>(null);
+  const [executionToEdit, setExecutionToEdit] = React.useState<ContractedTransportExecution | null>(null);
+  const [stopToEdit, setStopToEdit] = React.useState<RouteStop | null>(null);
 
   const [addDriverPopoverOpen, setAddDriverPopoverOpen] = React.useState(false);
   const [addVehiclePopoverOpen, setAddVehiclePopoverOpen] = React.useState(false);
-  const [isStopDialogOpen, setIsStopDialogOpen] = React.useState(false);
   
   const [relatedData, setRelatedData] = React.useState({
       startRegionName: '',
@@ -159,7 +183,6 @@ export default function ContractedTransportDetailPage() {
       transportManagerName: '',
   });
 
-  const [statusChange, setStatusChange] = React.useState<{ execution: ContractedTransportExecution, newStatus: string } | null>(null);
 
   const executionStatuses = React.useMemo(() => {
     if (!contract) return [];
@@ -180,6 +203,14 @@ export default function ContractedTransportDetailPage() {
   const routeStopForm = useForm<RouteStopFormValues>({
     resolver: zodResolver(routeStopFormSchema),
     defaultValues: { name: '', description: '' }
+  });
+  
+  const editStopForm = useForm<RouteStopFormValues>({
+    resolver: zodResolver(routeStopFormSchema),
+  });
+
+  const editExecutionForm = useForm<EditExecutionFormValues>({
+    resolver: zodResolver(editExecutionFormSchema),
   });
 
   const assignedDriverIds = React.useMemo(() => contract?.assignedDrivers.map(d => d.driverId) || [], [contract]);
@@ -266,6 +297,22 @@ export default function ContractedTransportDetailPage() {
       newExecutionForm.reset({ date: new Date() });
   }, [isExecutionDialogOpen, newExecutionForm]);
 
+  React.useEffect(() => {
+    if (stopToEdit) {
+      editStopForm.reset(stopToEdit);
+    }
+  }, [stopToEdit, editStopForm]);
+
+  React.useEffect(() => {
+    if (executionToEdit) {
+      editExecutionForm.reset({
+        date: executionToEdit.date,
+        driverId: executionToEdit.driverId,
+        vehicleId: executionToEdit.vehicleId,
+      });
+    }
+  }, [executionToEdit, editExecutionForm]);
+
 
    const onNewExecutionSubmit = async (values: NewExecutionFormValues) => {
         if (!id || !contract) return;
@@ -304,6 +351,39 @@ export default function ContractedTransportDetailPage() {
             setIsSubmitting(false);
         }
     };
+
+    const handleUpdateExecution = async (values: EditExecutionFormValues) => {
+        if (!executionToEdit) return;
+        setIsSubmitting(true);
+        try {
+            const execRef = doc(db, 'contracted_transport_executions', executionToEdit.id);
+            const selectedDriver = contract?.assignedDrivers.find(d => d.driverId === values.driverId);
+            const selectedVehicle = contract?.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
+
+            await updateDoc(execRef, {
+              date: values.date,
+              driverId: values.driverId || null,
+              driverName: selectedDriver?.driverName || null,
+              vehicleId: values.vehicleId || null,
+              vehicleLicense: selectedVehicle?.licensePlate || null,
+            });
+            
+            setExecutions(prev => prev.map(ex => ex.id === executionToEdit.id ? {
+                ...ex,
+                date: values.date,
+                driverId: values.driverId,
+                driverName: selectedDriver?.driverName,
+                vehicleId: values.vehicleId,
+                vehicleLicense: selectedVehicle?.licensePlate,
+            } : ex));
+            toast({ title: 'Амжилттай', description: 'Гүйцэтгэл шинэчлэгдлээ.' });
+            setExecutionToEdit(null);
+        } catch (error) {
+             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэл шинэчлэхэд алдаа гарлаа.' });
+        } finally {
+             setIsSubmitting(false);
+        }
+    }
     
     const handleAddDriver = async (driverId: string) => {
         if (!id || !driverId) return;
@@ -431,21 +511,42 @@ export default function ContractedTransportDetailPage() {
         }
     }
 
-    const handleRemoveStop = async (stopToRemove: RouteStop) => {
-        if (!id || !contract) return;
+    const handleRemoveStop = async () => {
+        if (!id || !contract || !stopToDelete) return;
         try {
             const contractRef = doc(db, 'contracted_transports', id);
             await updateDoc(contractRef, {
-                 routeStops: arrayRemove(stopToRemove)
+                 routeStops: arrayRemove(stopToDelete)
             });
-            setContract(prev => prev ? { ...prev, routeStops: prev.routeStops.filter(s => s.id !== stopToRemove.id) } : null);
+            setContract(prev => prev ? { ...prev, routeStops: prev.routeStops.filter(s => s.id !== stopToDelete.id) } : null);
             toast({ title: "Амжилттай", description: "Зогсоол хасагдлаа."});
         } catch(error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Зогсоол хасахад алдаа гарлаа.'});
+        } finally {
+            setStopToDelete(null);
+        }
+    }
+
+    const handleUpdateStop = async (values: RouteStopFormValues) => {
+        if (!id || !contract || !stopToEdit) return;
+        setIsSubmitting(true);
+        try {
+            const updatedStops = contract.routeStops.map(stop => stop.id === stopToEdit.id ? { ...stop, ...values } : stop);
+             const contractRef = doc(db, 'contracted_transports', id);
+            await updateDoc(contractRef, {
+                 routeStops: updatedStops
+            });
+            setContract(prev => prev ? { ...prev, routeStops: updatedStops } : null);
+            toast({ title: "Амжилттай", description: "Зогсоол шинэчлэгдлээ."});
+        } catch(error) {
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Зогсоол шинэчлэхэд алдаа гарлаа.'});
+        } finally {
+            setStopToEdit(null);
+            setIsSubmitting(false);
         }
     }
     
-    const handleUpdateExecution = async (execution: ContractedTransportExecution, newStatus: string) => {
+    const handleExecutionStatusChange = async (execution: ContractedTransportExecution, newStatus: string) => {
         setIsSubmitting(true);
         try {
             const execRef = doc(db, 'contracted_transport_executions', execution.id);
@@ -473,7 +574,6 @@ export default function ContractedTransportDetailPage() {
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Гүйцэтгэлийн явц шинэчлэхэд алдаа гарлаа.' });
         } finally {
             setIsSubmitting(false);
-            setStatusChange(null);
         }
     }
     
@@ -490,7 +590,7 @@ export default function ContractedTransportDetailPage() {
             const newStatus = overContainerId;
             
             if (execution && executionStatuses.includes(newStatus)) {
-                await handleUpdateExecution(execution, newStatus);
+                await handleExecutionStatusChange(execution, newStatus);
             }
         }
     }
@@ -679,18 +779,38 @@ export default function ContractedTransportDetailPage() {
                                 return (
                                     <SortableContext key={status} id={status} items={executions.filter(ex => ex.status === status).map(ex => ex.id)} strategy={verticalListSortingStrategy}>
                                         <div id={status} className="p-2 rounded-lg bg-muted/50 min-h-40">
-                                            <h3 className={`font-semibold text-center text-sm p-2 rounded-md ${statusColorMap[status as keyof typeof statusColorMap] || 'bg-purple-500'} text-white`}>
-                                                {status}
-                                            </h3>
+                                            <div className="font-semibold text-center text-sm p-2 rounded-md relative group/stop-header">
+                                                <h3 className={`${statusColorMap[status as keyof typeof statusColorMap] || 'bg-purple-500'} text-white p-2 rounded-md`}>
+                                                    {status}
+                                                </h3>
+                                                {stop && (
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/stop-header:opacity-100 transition-opacity">
+                                                                <MoreHorizontal className="h-4 w-4 text-white" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => setStopToEdit(stop)}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => setStopToDelete(stop)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                )}
+                                            </div>
+
                                             {stop && (
                                                 <div className="text-xs text-center text-muted-foreground mt-1 px-1 flex items-start gap-1.5">
                                                    <Info className="h-3 w-3 mt-0.5 shrink-0"/> <span>{stop.description}</span>
-                                                    <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={() => handleRemoveStop(stop)}><XCircle className="h-3 w-3 text-destructive"/></Button>
                                                 </div>
                                             )}
                                             <div className="space-y-1 min-h-20 mt-2">
                                                 {executions.filter(ex => ex.status === status).map(ex => (
-                                                <SortableExecutionCard key={ex.id} execution={ex} />
+                                                    <SortableExecutionCard 
+                                                        key={ex.id} 
+                                                        execution={ex}
+                                                        onEdit={() => setExecutionToEdit(ex)}
+                                                        onDelete={() => setExecutionToDelete(ex)}
+                                                    />
                                                 ))}
                                             </div>
                                         </div>
@@ -704,6 +824,7 @@ export default function ContractedTransportDetailPage() {
         </DndContext>
 
 
+        {/* Add New Execution Dialog */}
         <Dialog open={isExecutionDialogOpen} onOpenChange={setIsExecutionDialogOpen}>
             <DialogContent>
                 <DialogHeader>
@@ -724,6 +845,7 @@ export default function ContractedTransportDetailPage() {
             </DialogContent>
         </Dialog>
         
+        {/* Delete Execution Alert */}
         <AlertDialog open={!!executionToDelete} onOpenChange={() => setExecutionToDelete(null)}>
             <AlertDialogContent>
                 <AlertDialogHeader>
@@ -739,7 +861,30 @@ export default function ContractedTransportDetailPage() {
             </AlertDialogContent>
         </AlertDialog>
 
+        {/* Edit Execution Dialog */}
+        {executionToEdit && (
+            <Dialog open={!!executionToEdit} onOpenChange={() => setExecutionToEdit(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Гүйцэтгэл засах</DialogTitle>
+                    </DialogHeader>
+                    <Form {...editExecutionForm}>
+                        <form onSubmit={editExecutionForm.handleSubmit(handleUpdateExecution)} className="space-y-4 py-4" id="edit-execution-form">
+                            <FormField control={editExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
+                            <FormField control={editExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                            <FormField control={editExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                        </form>
+                    </Form>
+                     <DialogFooter>
+                        <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                        <Button type="submit" form="edit-execution-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        )}
+
         
+        {/* Add New Stop Dialog */}
         <Dialog open={isStopDialogOpen} onOpenChange={setIsStopDialogOpen}>
             <DialogContent>
                  <DialogHeader>
@@ -757,24 +902,40 @@ export default function ContractedTransportDetailPage() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+        
+        {/* Edit Stop Dialog */}
+        {stopToEdit && (
+            <Dialog open={!!stopToEdit} onOpenChange={() => setStopToEdit(null)}>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Зогсоол засах</DialogTitle></DialogHeader>
+                    <Form {...editStopForm}>
+                        <form onSubmit={editStopForm.handleSubmit(handleUpdateStop)} id="edit-stop-form" className="space-y-4 py-4">
+                             <FormField control={editStopForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын нэр</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                             <FormField control={editStopForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>Тайлбар</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                        </form>
+                    </Form>
+                     <DialogFooter>
+                        <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                        <Button type="submit" form="edit-stop-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Хадгалах</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        )}
 
-        <AlertDialog open={!!statusChange} onOpenChange={() => setStatusChange(null)}>
+        {/* Delete Stop Alert */}
+         <AlertDialog open={!!stopToDelete} onOpenChange={() => setStopToDelete(null)}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                <AlertDialogTitle>Та статусыг өөрчлөхдөө итгэлтэй байна уу?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Та тээврийн явцыг "{statusChange?.execution.status}" төлвөөс 
-                    "{statusChange?.newStatus}" төлөв рүү шилжүүлэх гэж байна.
-                </AlertDialogDescription>
+                    <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
+                    <AlertDialogDescription>"{stopToDelete?.name}" зогсоолыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.</AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setStatusChange(null)}>Цуцлах</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleUpdateExecution(statusChange!.execution, statusChange!.newStatus)} disabled={isSubmitting}>
-                        {isSubmitting ? "Шинэчилж байна..." : "Тийм, шилжүүлэх"}
-                    </AlertDialogAction>
+                    <AlertDialogCancel>Цуцлах</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleRemoveStop} className="bg-destructive hover:bg-destructive/90">Устгах</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
     </div>
   );
 }
+
