@@ -994,8 +994,8 @@ export default function ContractedTransportDetailPage() {
                             <div>
                                 <h4 className="font-semibold mb-2">Ачаа сонгох (Сонголттой)</h4>
                                 <div className="space-y-2">
-                                     {contract.cargoItems.map((item, index) => (
-                                        <div key={`${item.id}-${index}`} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
+                                     {contract.cargoItems.map((item) => (
+                                        <div key={`${item.id}-${itemIndex}`} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
                                             <Checkbox
                                                 id={`select-cargo-${item.id}`}
                                                 checked={selectedCargoItems.has(item.id)}
@@ -1141,7 +1141,7 @@ export default function ContractedTransportDetailPage() {
                             </DialogDescription>
                         </DialogHeader>
                         <div className="py-4 space-y-4 max-h-[50vh] overflow-y-auto">
-                           {Object.values(loadedCargoQuantities).map(item => (
+                           {Object.values(loadedCargoQuantities).map((item, itemIndex) => (
                                 <div key={item.cargoItemId}>
                                     <Label>{item.cargoName} ({item.cargoUnit})</Label>
                                     <Input
@@ -1255,6 +1255,7 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
 
 
 
