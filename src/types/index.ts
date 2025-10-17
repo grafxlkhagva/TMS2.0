@@ -383,7 +383,7 @@ export type ShipmentUpdate = {
 
 export type ContractedTransportStatus = 'Active' | 'Expired' | 'Cancelled';
 export type ContractedTransportFrequency = 'Daily' | 'Weekly' | 'Monthly' | 'Custom';
-export type ContractedTransportExecutionStatus = 'Хүлээгдэж буй' | 'Ачиж буй' | 'Буулгаж буй' | 'Хүргэгдсэн' | string;
+export type ContractedTransportExecutionStatus = 'Pending' | 'Loaded' | 'Unloading' | 'Delivered' | string;
 
 export type RouteStop = {
   id: string;
@@ -410,6 +410,7 @@ export type ContractedTransportExecution = {
     driverName?: string;
     createdAt: Date;
     loadedCargo?: ContractedTransportExecutionCargo[];
+    selectedCargo?: { cargoItemId: string; cargoName: string; cargoUnit: string; }[];
 }
 
 export type ContractedTransportCargoItem = {

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -43,7 +44,6 @@ const newExecutionCargoSchema = z.object({
   cargoName: z.string(),
   cargoUnit: z.string(),
   selected: z.boolean(),
-  quantity: z.coerce.number().min(0, "Ачсан хэмжээ сөрөг байж болохгүй."),
 });
 
 const newExecutionFormSchema = z.object({
@@ -468,7 +468,6 @@ export default function ContractedTransportDetailPage() {
         cargoName: item.name,
         cargoUnit: item.unit,
         selected: false,
-        quantity: 0,
       }));
       newExecutionForm.reset({
         date: new Date(),
@@ -491,12 +490,15 @@ export default function ContractedTransportDetailPage() {
   
    React.useEffect(() => {
     if (executionToLoad && contract) {
-      const defaultCargo = contract.cargoItems.map(item => ({
-        cargoItemId: item.id,
-        cargoName: item.name,
-        cargoUnit: item.unit,
-        loadedQuantity: 0,
-      }));
+      const defaultCargo = (executionToLoad.selectedCargo || contract.cargoItems).map(item => {
+        const contractItem = contract.cargoItems.find(ci => ci.id === (item.cargoItemId || item.id));
+        return {
+            cargoItemId: item.cargoItemId || item.id,
+            cargoName: contractItem?.name || item.cargoName || 'N/A',
+            cargoUnit: contractItem?.unit || item.cargoUnit || 'N/A',
+            loadedQuantity: 0,
+        };
+      });
       replaceLoadedCargoFields(defaultCargo);
     }
   }, [executionToLoad, contract, replaceLoadedCargoFields]);
@@ -721,17 +723,13 @@ export default function ContractedTransportDetailPage() {
         const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
         const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
 
-        const loadedCargo = (values.cargoItems || [])
-            .filter(item => item.selected && item.quantity > 0)
+        const selectedCargo = (values.cargoItems || [])
+            .filter(item => item.selected)
             .map(item => ({
                 cargoItemId: item.cargoItemId,
                 cargoName: item.cargoName,
                 cargoUnit: item.cargoUnit,
-                loadedQuantity: item.quantity,
             }));
-        
-        const hasLoadedCargo = loadedCargo.length > 0;
-        const initialStatus = hasLoadedCargo ? 'Loaded' : 'Pending';
 
         const dataToSave: DocumentData = {
           contractId: contract.id,
@@ -740,14 +738,11 @@ export default function ContractedTransportDetailPage() {
           driverName: selectedDriver?.driverName,
           vehicleId: selectedVehicle?.vehicleId,
           vehicleLicense: selectedVehicle?.licensePlate,
-          status: initialStatus,
-          statusHistory: [{ status: initialStatus, date: new Date() }],
+          status: 'Pending',
+          statusHistory: [{ status: 'Pending', date: new Date() }],
           createdAt: serverTimestamp(),
+          selectedCargo: selectedCargo,
         };
-
-        if (hasLoadedCargo) {
-            dataToSave.loadedCargo = loadedCargo;
-        }
 
         const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
         
@@ -783,7 +778,7 @@ export default function ContractedTransportDetailPage() {
                 setExecutionToLoad(execution);
                 setIsLoadCargoDialogOpen(true);
             } else {
-                const execRef = doc(db, 'contracted_transport_executions', executionId);
+                 const execRef = doc(db, 'contracted_transport_executions', executionId);
                 updateDoc(execRef, {
                     status: newStatus,
                     statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
@@ -935,12 +930,12 @@ export default function ContractedTransportDetailPage() {
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-        <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." colorClass="dark:bg-dashboard-card" />
-        <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." colorClass="dark:bg-dashboard-card" />
-        <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." colorClass="dark:bg-dashboard-card" />
-        <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="dark:text-dashboard-stat-4" colorClass="dark:bg-dashboard-card" />
-        <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="dark:text-dashboard-stat-5" colorClass="dark:bg-dashboard-card" />
-        <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." valueColorClass="dark:text-dashboard-stat-6" colorClass="dark:bg-dashboard-card" />
+        <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." valueColorClass="text-dashboard-stat-1" colorClass="dark:bg-dashboard-card" />
+        <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." valueColorClass="text-dashboard-stat-2" colorClass="dark:bg-dashboard-card" />
+        <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." valueColorClass="text-dashboard-stat-3" colorClass="dark:bg-dashboard-card" />
+        <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-dashboard-stat-4" colorClass="dark:bg-dashboard-card" />
+        <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-dashboard-stat-5" colorClass="dark:bg-dashboard-card" />
+        <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." valueColorClass="text-dashboard-stat-6" colorClass="dark:bg-dashboard-card" />
       </div>
       
         <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -989,7 +984,7 @@ export default function ContractedTransportDetailPage() {
             
         {/* Add New Execution Dialog */}
         <Dialog open={isNewExecutionDialogOpen} onOpenChange={setIsNewExecutionDialogOpen}>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-xl">
                  <Form {...newExecutionForm}>
                     <form onSubmit={newExecutionForm.handleSubmit(handleNewExecutionSubmit)}>
                         <DialogHeader>
@@ -1003,7 +998,7 @@ export default function ContractedTransportDetailPage() {
                             <Separator />
 
                             <div>
-                                <h4 className="font-semibold mb-2">Ачаа сонгох</h4>
+                                <h4 className="font-semibold mb-2">Ачаа сонгох (Сонголттой)</h4>
                                 <div className="space-y-2">
                                      {newExecutionCargoFields.map((field, index) => (
                                         <FormField
@@ -1011,34 +1006,17 @@ export default function ContractedTransportDetailPage() {
                                             control={newExecutionForm.control}
                                             name={`cargoItems.${index}.selected`}
                                             render={({ field: checkboxField }) => (
-                                                <div className="flex items-center gap-4 p-2 border rounded-md">
-                                                    <FormItem className="flex items-center space-x-2">
-                                                         <FormControl>
-                                                            <Checkbox
-                                                                checked={checkboxField.value}
-                                                                onCheckedChange={checkboxField.onChange}
-                                                            />
-                                                        </FormControl>
-                                                    </FormItem>
-                                                    <div className="flex-1 font-medium">{field.cargoName} ({field.cargoUnit})</div>
-                                                    <FormField
-                                                        control={newExecutionForm.control}
-                                                        name={`cargoItems.${index}.quantity`}
-                                                        render={({ field: quantityField }) => (
-                                                            <FormItem className="w-32">
-                                                                <FormControl>
-                                                                    <Input 
-                                                                        type="number"
-                                                                        placeholder="Тоо хэмжээ"
-                                                                        {...quantityField}
-                                                                        disabled={!checkboxField.value}
-                                                                    />
-                                                                </FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )}
-                                                    />
-                                                </div>
+                                                <FormItem className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
+                                                    <FormControl>
+                                                        <Checkbox
+                                                            checked={checkboxField.value}
+                                                            onCheckedChange={checkboxField.onChange}
+                                                        />
+                                                    </FormControl>
+                                                    <FormLabel className="font-normal w-full cursor-pointer">
+                                                        {field.cargoName} ({field.cargoUnit})
+                                                    </FormLabel>
+                                                </FormItem>
                                             )}
                                         />
                                     ))}
@@ -1282,3 +1260,4 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
