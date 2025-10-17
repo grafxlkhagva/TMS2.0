@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -44,6 +43,14 @@ const editExecutionFormSchema = z.object({
   vehicleId: z.string().optional(),
 });
 type EditExecutionFormValues = z.infer<typeof editExecutionFormSchema>;
+
+
+const newExecutionFormSchema = z.object({
+  date: z.date({ required_error: "Огноо сонгоно уу." }),
+  driverId: z.string().optional(),
+  vehicleId: z.string().optional(),
+});
+type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
 
 
 const routeStopFormSchema = z.object({
@@ -253,19 +260,14 @@ export default function ContractedTransportDetailPage() {
     resolver: zodResolver(routeStopFormSchema),
   });
 
-  const newExecutionForm = useForm({
+  const newExecutionForm = useForm<NewExecutionFormValues>({
+    resolver: zodResolver(newExecutionFormSchema),
     defaultValues: {
       date: new Date(),
       driverId: '',
       vehicleId: '',
     },
   });
-
-  const { fields: loadedCargoFields, replace: replaceLoadedCargo } = useFieldArray({
-    control: newExecutionForm.control,
-    name: 'loadedCargo',
-  });
-
 
   const editExecutionForm = useForm<EditExecutionFormValues>({
     resolver: zodResolver(editExecutionFormSchema),
@@ -598,7 +600,7 @@ export default function ContractedTransportDetailPage() {
         }
     }
 
-    const handleNewExecutionSubmit = async (values: any) => {
+    const handleNewExecutionSubmit = async (values: NewExecutionFormValues) => {
       if (!contract) return;
       setIsSubmitting(true);
       try {
@@ -758,10 +760,54 @@ export default function ContractedTransportDetailPage() {
         </div>
       </div>
       
-        <div className="grid md:grid-cols-3 gap-6">
-            <div className="md:col-span-2 space-y-6">
-            </div>
-            <div className="md:col-span-1">
+        <div className="grid md:grid-cols-12 gap-6 items-start">
+            <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <div className="md:col-span-9">
+                    <Card>
+                        <CardHeader>
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <CardTitle>Тээвэрлэлтийн Явц ба Зогсоолууд</CardTitle>
+                                    <CardDescription>Гүйцэтгэлийн явцыг чирж зөөх үйлдлээр удирдах хэсэг.</CardDescription>
+                                </div>
+                                 <div className="flex items-center gap-2">
+                                    <Button variant="outline" size="sm" onClick={() => setIsNewExecutionDialogOpen(true)}>
+                                        <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
+                                        <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-x-auto pb-4">
+                                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(200px, 1fr))`}}>
+                                    {executionStatuses.map(status => {
+                                        const stop = contract.routeStops.find(s => s.name === status);
+                                        const itemsForStatus = executions.filter(ex => ex.status === status);
+                                        return (
+                                            <StatusColumn 
+                                                key={status} 
+                                                id={status}
+                                                title={status}
+                                                items={itemsForStatus}
+                                                stop={stop}
+                                                onEditStop={(stopToEdit) => setStopToEdit(stopToEdit)}
+                                                onDeleteStop={(stopToDelete) => setStopToDelete(stopToDelete)}
+                                                onEditExecution={(exec) => setExecutionToEdit(exec)}
+                                                onDeleteExecution={(exec) => setExecutionToDelete(exec)}
+                                            />
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </DndContext>
+            
+            <div className="md:col-span-3">
                  <Card>
                     <CardHeader>
                         <CardTitle>Оноосон Жолооч ба Т/Х</CardTitle>
@@ -836,66 +882,24 @@ export default function ContractedTransportDetailPage() {
             </div>
         </div>
             
-        <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <Card className="mt-6">
-                <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <CardTitle>Тээвэрлэлтийн Явц ба Зогсоолууд</CardTitle>
-                            <CardDescription>Гүйцэтгэлийн явцыг чирж зөөх үйлдлээр удирдах хэсэг.</CardDescription>
-                        </div>
-                         <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" onClick={() => setIsNewExecutionDialogOpen(true)}>
-                                <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
-                                <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
-                            </Button>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="overflow-x-auto pb-4">
-                        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(200px, 1fr))`}}>
-                            {executionStatuses.map(status => {
-                                const stop = contract.routeStops.find(s => s.name === status);
-                                const itemsForStatus = executions.filter(ex => ex.status === status);
-                                return (
-                                    <StatusColumn 
-                                        key={status} 
-                                        id={status}
-                                        title={status}
-                                        items={itemsForStatus}
-                                        stop={stop}
-                                        onEditStop={(stopToEdit) => setStopToEdit(stopToEdit)}
-                                        onDeleteStop={(stopToDelete) => setStopToDelete(stopToDelete)}
-                                        onEditExecution={(exec) => setExecutionToEdit(exec)}
-                                        onDeleteExecution={(exec) => setExecutionToDelete(exec)}
-                                    />
-                                )
-                            })}
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-        </DndContext>
-
         {/* Add New Execution Dialog */}
         <Dialog open={isNewExecutionDialogOpen} onOpenChange={setIsNewExecutionDialogOpen}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent>
                  <Form {...newExecutionForm}>
-                    <DialogHeader>
-                        <DialogTitle>Шинэ гүйцэтгэл нэмэх</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <FormField control={newExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
-                        <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                        <FormField control={newExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                    </div>
-                    <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                        <Button type="button" onClick={newExecutionForm.handleSubmit(handleNewExecutionSubmit)} disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
-                    </DialogFooter>
+                    <form onSubmit={newExecutionForm.handleSubmit(handleNewExecutionSubmit)}>
+                        <DialogHeader>
+                            <DialogTitle>Шинэ гүйцэтгэл нэмэх</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <FormField control={newExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
+                            <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                            <FormField control={newExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                            <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
+                        </DialogFooter>
+                    </form>
                 </Form>
             </DialogContent>
         </Dialog>
@@ -920,20 +924,22 @@ export default function ContractedTransportDetailPage() {
         {/* Edit Execution Dialog */}
         {executionToEdit && (
             <Dialog open={!!executionToEdit} onOpenChange={() => setExecutionToEdit(null)}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent>
                      <Form {...editExecutionForm}>
-                        <DialogHeader>
-                            <DialogTitle>Гүйцэтгэл засах</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                            <FormField control={editExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
-                            <FormField control={editExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                            <FormField control={editExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                        </div>
-                        <DialogFooter>
-                            <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                            <Button type="button" onClick={editExecutionForm.handleSubmit(handleUpdateExecution)} disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
-                        </DialogFooter>
+                        <form onSubmit={editExecutionForm.handleSubmit(handleUpdateExecution)}>
+                            <DialogHeader>
+                                <DialogTitle>Гүйцэтгэл засах</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                <FormField control={editExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
+                                <FormField control={editExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                                <FormField control={editExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                                <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
+                            </DialogFooter>
+                        </form>
                     </Form>
                 </DialogContent>
             </Dialog>
