@@ -58,7 +58,7 @@ type EditExecutionFormValues = z.infer<typeof editExecutionFormSchema>;
 
 
 const routeStopFormSchema = z.object({
-  name: z.string().min(2, "Зогсоолын нэр дор хаяж 2 тэмдэгттэй байх ёстой."),
+  id: z.string().min(2, "Зогсоолын ID дор хаяж 2 тэмдэгттэй байх ёстой."),
   description: z.string().min(5, "Тайлбар дор хаяж 5 тэмдэгттэй байх ёстой."),
 });
 type RouteStopFormValues = z.infer<typeof routeStopFormSchema>;
@@ -286,9 +286,9 @@ export default function ContractedTransportDetailPage() {
   const executionStatuses = React.useMemo(() => {
     if (!contract) return [];
     
-    const baseStatuses: (string)[] = ['Pending', 'Loaded'];
-    const inTransitStatuses = (contract.routeStops || []).map(s => s.name);
-    const endStatuses: (string)[] = ['Unloading', 'Delivered'];
+    const baseStatuses: string[] = ['Pending', 'Loaded'];
+    const inTransitStatuses = (contract.routeStops || []).map(s => s.id);
+    const endStatuses: string[] = ['Unloading', 'Delivered'];
     
     return [...baseStatuses, ...inTransitStatuses, ...endStatuses];
 
@@ -296,7 +296,7 @@ export default function ContractedTransportDetailPage() {
   
   const routeStopForm = useForm<RouteStopFormValues>({
     resolver: zodResolver(routeStopFormSchema),
-    defaultValues: { name: '', description: '' }
+    defaultValues: { id: '', description: '' }
   });
   
   const editStopForm = useForm<RouteStopFormValues>({
@@ -401,7 +401,7 @@ export default function ContractedTransportDetailPage() {
     if (stopToEdit) {
       editStopForm.reset(stopToEdit);
     } else {
-      editStopForm.reset({ name: '', description: '' });
+      editStopForm.reset({ id: '', description: '' });
     }
   }, [stopToEdit, editStopForm]);
 
@@ -587,7 +587,6 @@ export default function ContractedTransportDetailPage() {
         setIsSubmitting(true);
         try {
             const newStop: RouteStop = {
-                id: uuidv4(),
                 ...values
             };
             const contractRef = doc(db, 'contracted_transports', id);
@@ -894,7 +893,7 @@ export default function ContractedTransportDetailPage() {
                     <div className="overflow-x-auto pb-4">
                         <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(200px, 1fr))`}}>
                             {executionStatuses.map(status => {
-                                const stop = contract.routeStops.find(s => s.name === status);
+                                const stop = contract.routeStops.find(s => s.id === status);
                                 const itemsForStatus = executions.filter(ex => ex.status === status);
                                 return (
                                     <StatusColumn 
@@ -1017,9 +1016,10 @@ export default function ContractedTransportDetailPage() {
                      <form onSubmit={routeStopForm.handleSubmit(onRouteStopSubmit)} id="route-stop-form">
                         <DialogHeader>
                             <DialogTitle>Маршрутын зогсоол нэмэх</DialogTitle>
+                            <DialogDescription>Зогсоолын ID давхцахгүй байх ёстойг анхаарна уу.</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
-                                <FormField control={routeStopForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын нэр</FormLabel><FormControl><Input placeholder="Даваа-1" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                <FormField control={routeStopForm.control} name="id" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын ID / Нэр</FormLabel><FormControl><Input placeholder="Даваа-1" {...field} /></FormControl><FormMessage /></FormItem> )} />
                                 <FormField control={routeStopForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>Тайлбар</FormLabel><FormControl><Input placeholder="Амрах, хооллох" {...field} /></FormControl><FormMessage /></FormItem> )} />
                         </div>
                     </form>
@@ -1039,7 +1039,7 @@ export default function ContractedTransportDetailPage() {
                         <form onSubmit={editStopForm.handleSubmit(handleUpdateStop)} id="edit-stop-form">
                             <DialogHeader><DialogTitle>Зогсоол засах</DialogTitle></DialogHeader>
                             <div className="space-y-4 py-4">
-                                     <FormField control={editStopForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын нэр</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                                     <FormField control={editStopForm.control} name="id" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын ID / Нэр</FormLabel><FormControl><Input {...field} readOnly disabled /></FormControl><FormMessage /></FormItem> )}/>
                                      <FormField control={editStopForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>Тайлбар</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
                             </div>
                         </form>
@@ -1058,7 +1058,7 @@ export default function ContractedTransportDetailPage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        "{stopToDelete?.name}" зогсоолыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
+                        "{stopToDelete?.id}" зогсоолыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

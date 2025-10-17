@@ -50,7 +50,6 @@ const formSchema = z.object({
   title: z.string().min(2, { message: "Гэрээний гарчиг дор хаяж 2 үсэгтэй байх ёстой." }),
   customerId: z.string().min(1, { message: 'Харилцагч байгууллага сонгоно уу.' }),
   transportManagerId: z.string().min(1, { message: 'Тээврийн менежер сонгоно уу.'}),
-  serviceTypeId: z.string().min(1, "Үйлчилгээний төрөл сонгоно уу."),
   startRegionId: z.string().min(1, "Ачих бүс сонгоно уу."),
   startWarehouseId: z.string().min(1, "Ачих агуулах сонгоно уу."),
   endRegionId: z.string().min(1, "Буулгах бүс сонгоно уу."),
@@ -114,7 +113,6 @@ export default function NewContractedTransportPage() {
       title: '',
       customerId: '',
       transportManagerId: '',
-      serviceTypeId: '',
       startRegionId: '',
       startWarehouseId: '',
       endRegionId: '',
@@ -188,7 +186,7 @@ export default function NewContractedTransportPage() {
                 endWarehouseId: values.endWarehouseId,
                 totalDistance: values.totalDistance,
             },
-            cargoItems: values.cargoItems.map(({id, ...item}) => item), // Remove client-side id before saving,
+            cargoItems: values.cargoItems,
             status: 'Active',
             createdAt: serverTimestamp(),
             createdBy: {
@@ -299,11 +297,9 @@ export default function NewContractedTransportPage() {
 
                  <Card>
                     <CardHeader>
-                        <CardTitle>Чиглэл ба Үйлчилгээ</CardTitle>
+                        <CardTitle>Чиглэл</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        <FormField control={form.control} name="serviceTypeId" render={({ field }) => (<FormItem><FormLabel>Үйлчилгээний төрөл</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Төрөл..." /></SelectTrigger></FormControl><SelectContent>{serviceTypes.map((s: any) => ( <SelectItem key={s.id} value={s.id}> {s.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('service_types', 'serviceTypeId')}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
-                        <Separator/>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormField control={form.control} name="startRegionId" render={({ field }) => ( <FormItem><FormLabel>Ачих бүс</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map((r: any) => ( <SelectItem key={r.id} value={r.id}> {r.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('regions', 'startRegionId')}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
                             <FormField control={form.control} name="startWarehouseId" render={({ field }) => ( <FormItem><FormLabel>Ачих агуулах</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map((w: any) => ( <SelectItem key={w.id} value={w.id}> {w.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('warehouses', 'startWarehouseId')}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)}/>
@@ -352,3 +348,4 @@ export default function NewContractedTransportPage() {
     </div>
   );
 }
+

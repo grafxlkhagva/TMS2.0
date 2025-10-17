@@ -383,11 +383,10 @@ export type ShipmentUpdate = {
 
 export type ContractedTransportStatus = 'Active' | 'Expired' | 'Cancelled';
 export type ContractedTransportFrequency = 'Daily' | 'Weekly' | 'Monthly' | 'Custom';
-export type ContractedTransportExecutionStatus = 'Pending' | 'Loaded' | 'Unloading' | 'Delivered' | string;
+export type ContractedTransportExecutionStatus = string;
 
 export type RouteStop = {
   id: string;
-  name: string;
   description: string;
 }
 
