@@ -44,14 +44,12 @@ const newExecutionCargoSchema = z.object({
   cargoItemId: z.string(),
   cargoName: z.string(),
   cargoUnit: z.string(),
-  selected: z.boolean(),
 });
 
 const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
   driverId: z.string().optional(),
   vehicleId: z.string().optional(),
-  cargoItems: z.array(newExecutionCargoSchema).optional(),
 });
 type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
 
@@ -69,18 +67,13 @@ const routeStopFormSchema = z.object({
 });
 type RouteStopFormValues = z.infer<typeof routeStopFormSchema>;
 
-const loadedCargoItemSchema = z.object({
-  cargoItemId: z.string(),
-  cargoName: z.string(),
-  cargoUnit: z.string(),
-  loadedQuantity: z.coerce.number().min(0, "Ачсан хэмжээ сөрөг байж болохгүй."),
-});
 
-const loadCargoFormSchema = z.object({
-    loadedCargo: z.array(loadedCargoItemSchema),
-});
-
-type LoadCargoFormValues = z.infer<typeof loadCargoFormSchema>;
+type LoadedCargoState = Record<string, {
+    loadedQuantity: number;
+    cargoItemId: string;
+    cargoName: string;
+    cargoUnit: string;
+}>;
 
 
 const frequencyTranslations: Record<ContractedTransport['frequency'], string> = {
@@ -316,6 +309,11 @@ export default function ContractedTransportDetailPage() {
   const [addDriverPopoverOpen, setAddDriverPopoverOpen] = React.useState(false);
   const [addVehiclePopoverOpen, setAddVehiclePopoverOpen] = React.useState(false);
   
+  // States for dialogs, independent of react-hook-form
+  const [selectedCargoItems, setSelectedCargoItems] = React.useState<Set<string>>(new Set());
+  const [loadedCargoQuantities, setLoadedCargoQuantities] = React.useState<LoadedCargoState>({});
+
+
   const [relatedData, setRelatedData] = React.useState({
       startRegionName: '',
       endRegionName: '',
@@ -349,24 +347,10 @@ export default function ContractedTransportDetailPage() {
   const newExecutionForm = useForm<NewExecutionFormValues>({
     resolver: zodResolver(newExecutionFormSchema),
   });
-  const { fields: newExecutionCargoFields, replace: replaceNewExecutionCargoFields } = useFieldArray({
-    control: newExecutionForm.control,
-    name: "cargoItems",
-  });
-
 
   const editExecutionForm = useForm<EditExecutionFormValues>({
     resolver: zodResolver(editExecutionFormSchema),
   });
-
-  const loadCargoForm = useForm<LoadCargoFormValues>({
-    resolver: zodResolver(loadCargoFormSchema),
-  });
-  const { fields: loadedCargoFields, replace: replaceLoadedCargoFields } = useFieldArray({
-    control: loadCargoForm.control,
-    name: "loadedCargo"
-  });
-
 
   const assignedDriverIds = React.useMemo(() => contract?.assignedDrivers?.map(d => d.driverId) || [], [contract]);
   const assignedVehicleIds = React.useMemo(() => contract?.assignedVehicles?.map(v => v.vehicleId) || [], [contract]);
@@ -463,21 +447,11 @@ export default function ContractedTransportDetailPage() {
   }, [stopToEdit, editStopForm]);
 
   React.useEffect(() => {
-    if (contract && isNewExecutionDialogOpen) {
-      const defaultCargo = contract.cargoItems.map(item => ({
-        cargoItemId: item.id,
-        cargoName: item.name,
-        cargoUnit: item.unit,
-        selected: false,
-      }));
-      newExecutionForm.reset({
-        date: new Date(),
-        driverId: '',
-        vehicleId: '',
-        cargoItems: defaultCargo,
-      });
+    if (isNewExecutionDialogOpen) {
+      newExecutionForm.reset({ date: new Date(), driverId: '', vehicleId: ''});
+      setSelectedCargoItems(new Set());
     }
-  }, [contract, isNewExecutionDialogOpen, newExecutionForm]);
+  }, [isNewExecutionDialogOpen, newExecutionForm]);
 
   React.useEffect(() => {
     if (executionToEdit && contract) {
@@ -490,24 +464,26 @@ export default function ContractedTransportDetailPage() {
   }, [executionToEdit, contract, editExecutionForm]);
   
    React.useEffect(() => {
-    if (executionToLoad && contract) {
-        // Use selectedCargo if available, otherwise fallback to contract's full cargo list
-        const itemsToLoad = (executionToLoad.selectedCargo && executionToLoad.selectedCargo.length > 0)
-            ? executionToLoad.selectedCargo
-            : contract.cargoItems;
+    if (isLoadCargoDialogOpen && executionToLoad) {
+        const initialQuantities: LoadedCargoState = {};
+        const itemsToDisplay = executionToLoad.selectedCargo?.length ? executionToLoad.selectedCargo : contract?.cargoItems || [];
 
-        const defaultCargo = itemsToLoad.map(item => {
-            const contractItem = contract.cargoItems.find(ci => ci.id === (item.cargoItemId || item.id));
-            return {
-                cargoItemId: item.cargoItemId || item.id,
-                cargoName: contractItem?.name || (item as any).cargoName || 'N/A',
-                cargoUnit: contractItem?.unit || (item as any).cargoUnit || 'N/A',
-                loadedQuantity: 0,
+        itemsToDisplay.forEach(item => {
+            const cargoId = item.cargoItemId || item.id; // handle both selected and contract items
+            const existingLoad = executionToLoad.loadedCargo?.find(lc => lc.cargoItemId === cargoId);
+            initialQuantities[cargoId] = {
+                loadedQuantity: existingLoad?.loadedQuantity || 0,
+                cargoItemId: cargoId,
+                cargoName: item.cargoName || (contract?.cargoItems.find(ci => ci.id === cargoId))?.name || 'N/A',
+                cargoUnit: (item as any).cargoUnit || (contract?.cargoItems.find(ci => ci.id === cargoId))?.unit || 'N/A',
             };
         });
-        replaceLoadedCargoFields(defaultCargo);
+        setLoadedCargoQuantities(initialQuantities);
+    } else {
+        setLoadedCargoQuantities({});
     }
-  }, [executionToLoad, contract, replaceLoadedCargoFields]);
+  }, [isLoadCargoDialogOpen, executionToLoad, contract]);
+
     
     const handleDeleteExecution = React.useCallback(async () => {
         if (!executionToDelete) return;
@@ -729,13 +705,14 @@ export default function ContractedTransportDetailPage() {
         const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
         const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
 
-        const selectedCargo = (values.cargoItems || [])
-            .filter(item => item.selected)
-            .map(item => ({
-                cargoItemId: item.cargoItemId,
-                cargoName: item.cargoName,
-                cargoUnit: item.cargoUnit,
-            }));
+        const selectedCargo = Array.from(selectedCargoItems).map(cargoId => {
+            const item = contract.cargoItems.find(i => i.id === cargoId);
+            return {
+                cargoItemId: item!.id,
+                cargoName: item!.name,
+                cargoUnit: item!.unit,
+            };
+        });
 
         const dataToSave: DocumentData = {
           contractId: contract.id,
@@ -782,14 +759,13 @@ export default function ContractedTransportDetailPage() {
             const execution = executions.find(ex => ex.id === executionId);
             if (!execution || execution.status === newStatus) return;
 
-            // If moving to "Loaded", open the modal
             if (newStatus === 'Loaded') {
                 setExecutionToLoad(execution);
                 setIsLoadCargoDialogOpen(true);
-                return; // Stop further processing until modal is submitted
+                return; 
             }
-
-            // For other status changes, update directly
+            
+            setIsSubmitting(true);
             const execRef = doc(db, 'contracted_transport_executions', executionId);
             try {
                 await updateDoc(execRef, {
@@ -804,25 +780,29 @@ export default function ContractedTransportDetailPage() {
             } catch (error) {
                 console.error("Error updating execution status:", error);
                 toast({ variant: 'destructive', title: 'Алдаа', description: 'Явцын төлөв шинэчлэхэд алдаа гарлаа.' });
+            } finally {
+                setIsSubmitting(false);
             }
         }
     }, [executions, toast]);
     
-    const handleLoadCargoSubmit = async (values: LoadCargoFormValues) => {
+    const handleLoadCargoSubmit = async () => {
         if (!executionToLoad) return;
         setIsSubmitting(true);
     
         try {
-            const cargoToSave = values.loadedCargo
+            const cargoToSave = Object.values(loadedCargoQuantities)
                 .filter(item => item.loadedQuantity > 0);
             
             const execRef = doc(db, 'contracted_transport_executions', executionToLoad.id);
             
-            await updateDoc(execRef, {
-                status: 'Loaded',
+            const dataToUpdate = {
+                status: 'Loaded' as ContractedTransportExecutionStatus,
                 statusHistory: arrayUnion({ status: 'Loaded', date: new Date() }),
                 loadedCargo: cargoToSave,
-            });
+            };
+
+            await updateDoc(execRef, dataToUpdate);
     
             setExecutions((prev) =>
                 prev.map((ex) =>
@@ -1012,31 +992,33 @@ export default function ContractedTransportDetailPage() {
                             <div>
                                 <h4 className="font-semibold mb-2">Ачаа сонгох (Сонголттой)</h4>
                                 <div className="space-y-2">
-                                     {newExecutionCargoFields.map((field, index) => (
-                                        <FormField
-                                            key={field.id}
-                                            control={newExecutionForm.control}
-                                            name={`cargoItems.${index}.selected`}
-                                            render={({ field: checkboxField }) => (
-                                                <FormItem className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
-                                                    <FormControl>
-                                                        <Checkbox
-                                                            checked={checkboxField.value}
-                                                            onCheckedChange={checkboxField.onChange}
-                                                        />
-                                                    </FormControl>
-                                                    <FormLabel className="font-normal w-full cursor-pointer">
-                                                        {field.cargoName} ({field.cargoUnit})
-                                                    </FormLabel>
-                                                </FormItem>
-                                            )}
-                                        />
+                                     {contract.cargoItems.map((item) => (
+                                        <div key={item.id} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
+                                            <Checkbox
+                                                id={`select-cargo-${item.id}`}
+                                                checked={selectedCargoItems.has(item.id)}
+                                                onCheckedChange={(checked) => {
+                                                    setSelectedCargoItems(prev => {
+                                                        const newSet = new Set(prev);
+                                                        if (checked) {
+                                                            newSet.add(item.id);
+                                                        } else {
+                                                            newSet.delete(item.id);
+                                                        }
+                                                        return newSet;
+                                                    });
+                                                }}
+                                            />
+                                            <label htmlFor={`select-cargo-${item.id}`} className="font-normal w-full cursor-pointer">
+                                                {item.name} ({item.unit})
+                                            </label>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
                         </div>
                         <DialogFooter>
-                            <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                            <Button type="button" variant="outline" onClick={() => setIsNewExecutionDialogOpen(false)}>Цуцлах</Button>
                             <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
                         </DialogFooter>
                     </form>
@@ -1149,8 +1131,7 @@ export default function ContractedTransportDetailPage() {
          {/* Load Cargo Dialog */}
         <Dialog open={isLoadCargoDialogOpen} onOpenChange={setIsLoadCargoDialogOpen}>
             <DialogContent>
-                <Form {...loadCargoForm}>
-                    <form onSubmit={loadCargoForm.handleSubmit(handleLoadCargoSubmit)}>
+                    <div>
                         <DialogHeader>
                             <DialogTitle>Ачааны мэдээлэл оруулах</DialogTitle>
                             <DialogDescription>
@@ -1158,34 +1139,34 @@ export default function ContractedTransportDetailPage() {
                             </DialogDescription>
                         </DialogHeader>
                         <div className="py-4 space-y-4 max-h-[50vh] overflow-y-auto">
-                            {loadedCargoFields.map((field, index) => (
-                               <FormField
-                                    key={field.id}
-                                    control={loadCargoForm.control}
-                                    name={`loadedCargo.${index}.loadedQuantity`}
-                                    render={({ field: formField }) => (
-                                        <FormItem>
-                                            <FormLabel>{field.cargoName} ({field.cargoUnit})</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" placeholder="0" {...formField} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                           {Object.values(loadedCargoQuantities).map(item => (
+                                <div key={item.cargoItemId}>
+                                    <Label>{item.cargoName} ({item.cargoUnit})</Label>
+                                    <Input
+                                        type="number"
+                                        placeholder="0"
+                                        value={item.loadedQuantity}
+                                        onChange={(e) => {
+                                            setLoadedCargoQuantities(prev => ({
+                                                ...prev,
+                                                [item.cargoItemId]: {
+                                                    ...prev[item.cargoItemId],
+                                                    loadedQuantity: parseFloat(e.target.value) || 0
+                                                }
+                                            }))
+                                        }}
+                                    />
+                                </div>
                             ))}
                         </div>
                         <DialogFooter>
-                            <DialogClose asChild>
-                                <Button type="button" variant="outline">Цуцлах</Button>
-                            </DialogClose>
-                            <Button type="submit" disabled={isSubmitting}>
+                            <Button type="button" variant="outline" onClick={() => setIsLoadCargoDialogOpen(false)}>Цуцлах</Button>
+                            <Button onClick={handleLoadCargoSubmit} disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                                 Хадгалах
                             </Button>
                         </DialogFooter>
-                    </form>
-                </Form>
+                    </div>
             </DialogContent>
         </Dialog>
 
@@ -1272,6 +1253,7 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
 
 
 
