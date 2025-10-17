@@ -102,7 +102,7 @@ function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, lab
 
 const statusColorMap: Record<string, string> = {
     'Хүлээгдэж буй': 'bg-gray-500',
-    'Ачиж буй': 'bg-blue-500',
+    'Ачсан': 'bg-blue-500',
     'Буулгаж буй': 'bg-yellow-500',
     'Хүргэгдсэн': 'bg-green-500',
 };
@@ -206,15 +206,15 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
   );
 }
 
-function StatCard({ title, value, icon: Icon, description, actionLabel, onActionClick, valueColorClass }: { title: string; value: string | number; icon: React.ElementType; description: string; actionLabel?: string; onActionClick?: () => void; valueColorClass?: string; }) {
+function StatCard({ title, value, icon: Icon, description, actionLabel, onActionClick, colorClass }: { title: string; value: string | number; icon: React.ElementType; description: string; actionLabel?: string; onActionClick?: () => void; colorClass?: string; }) {
   return (
-    <Card className="bg-dashboard-card text-dashboard-foreground">
+    <Card className={cn("bg-dashboard-card text-dashboard-foreground", colorClass)}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{title}</CardTitle>
             <Icon className="h-4 w-4 text-dashboard-muted-foreground" />
         </CardHeader>
         <CardContent>
-            <div className={cn("text-2xl font-bold", valueColorClass)}>{value}</div>
+            <div className={cn("text-2xl font-bold")}>{value}</div>
             <p className="text-xs text-dashboard-muted-foreground">{description}</p>
         </CardContent>
         {actionLabel && onActionClick && (
@@ -265,7 +265,7 @@ export default function ContractedTransportDetailPage() {
   const executionStatuses = React.useMemo(() => {
     if (!contract) return [];
     
-    const baseStatuses = ['Хүлээгдэж буй', 'Ачиж буй'];
+    const baseStatuses = ['Хүлээгдэж буй', 'Ачсан'];
     const inTransitStatuses = (contract.routeStops || []).map(s => s.name);
     const endStatuses = ['Буулгаж буй', 'Хүргэгдсэн'];
     
@@ -795,60 +795,58 @@ export default function ContractedTransportDetailPage() {
             </div>
         </div>
       </div>
-       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." valueColorClass="text-dashboard-stat-1" />
-            <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." valueColorClass="text-dashboard-stat-2" />
-            <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." valueColorClass="text-dashboard-stat-3" />
-            <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-dashboard-stat-4" />
-            <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-dashboard-stat-5" />
-            <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." valueColorClass="text-dashboard-stat-6" />
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 mb-6">
+        <div className="lg:col-span-3"><StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." colorClass="dark-card-1" /></div>
+        <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." colorClass="dark-card-2" />
+        <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." colorClass="dark-card-3" />
+        <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} colorClass="dark-card-4" />
+        <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} colorClass="dark-card-5" />
+        <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." colorClass="dark-card-6" />
       </div>
       
-        <div className="mt-6">
-            <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <Card>
-                    <CardHeader>
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <CardTitle>Тээвэрлэлтийн Явц ба Зогсоолууд</CardTitle>
-                                <CardDescription>Гүйцэтгэлийн явцыг чирж зөөх үйлдлээр удирдах хэсэг.</CardDescription>
-                            </div>
-                             <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm" onClick={() => setIsNewExecutionDialogOpen(true)}>
-                                    <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
-                                    <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
-                                </Button>
-                            </div>
+        <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle>Тээвэрлэлтийн Явц ба Зогсоолууд</CardTitle>
+                            <CardDescription>Гүйцэтгэлийн явцыг чирж зөөх үйлдлээр удирдах хэсэг.</CardDescription>
                         </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="overflow-x-auto pb-4">
-                            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(200px, 1fr))`}}>
-                                {executionStatuses.map(status => {
-                                    const stop = contract.routeStops.find(s => s.name === status);
-                                    const itemsForStatus = executions.filter(ex => ex.status === status);
-                                    return (
-                                        <StatusColumn 
-                                            key={status} 
-                                            id={status}
-                                            title={status}
-                                            items={itemsForStatus}
-                                            stop={stop}
-                                            onEditStop={(stopToEdit) => setStopToEdit(stopToEdit)}
-                                            onDeleteStop={(stopToDelete) => setStopToDelete(stopToDelete)}
-                                            onEditExecution={(exec) => setExecutionToEdit(exec)}
-                                            onDeleteExecution={(exec) => setExecutionToDelete(exec)}
-                                        />
-                                    )
-                                })}
-                            </div>
+                            <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => setIsNewExecutionDialogOpen(true)}>
+                                <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
+                                <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
+                            </Button>
                         </div>
-                    </CardContent>
-                </Card>
-            </DndContext>
-        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="overflow-x-auto pb-4">
+                        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(200px, 1fr))`}}>
+                            {executionStatuses.map(status => {
+                                const stop = contract.routeStops.find(s => s.name === status);
+                                const itemsForStatus = executions.filter(ex => ex.status === status);
+                                return (
+                                    <StatusColumn 
+                                        key={status} 
+                                        id={status}
+                                        title={status}
+                                        items={itemsForStatus}
+                                        stop={stop}
+                                        onEditStop={(stopToEdit) => setStopToEdit(stopToEdit)}
+                                        onDeleteStop={(stopToDelete) => setStopToDelete(stopToDelete)}
+                                        onEditExecution={(exec) => setExecutionToEdit(exec)}
+                                        onDeleteExecution={(exec) => setExecutionToDelete(exec)}
+                                    />
+                                )
+                            })}
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </DndContext>
             
         {/* Add New Execution Dialog */}
         <Dialog open={isNewExecutionDialogOpen} onOpenChange={setIsNewExecutionDialogOpen}>
