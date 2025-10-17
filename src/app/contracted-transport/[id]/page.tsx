@@ -38,6 +38,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 
 const newExecutionCargoSchema = z.object({
@@ -705,7 +706,7 @@ export default function ContractedTransportDetailPage() {
         const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
         const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
 
-        const selectedCargo = Array.from(selectedCargoItems).map(cargoId => {
+        const newSelectedCargo = Array.from(selectedCargoItems).map(cargoId => {
             const item = contract.cargoItems.find(i => i.id === cargoId);
             return {
                 cargoItemId: item!.id,
@@ -714,6 +715,8 @@ export default function ContractedTransportDetailPage() {
             };
         });
 
+        const newStatus = newSelectedCargo.length > 0 ? 'Loaded' : 'Pending';
+
         const dataToSave: DocumentData = {
           contractId: contract.id,
           date: values.date,
@@ -721,21 +724,21 @@ export default function ContractedTransportDetailPage() {
           driverName: selectedDriver?.driverName,
           vehicleId: selectedVehicle?.vehicleId,
           vehicleLicense: selectedVehicle?.licensePlate,
-          status: 'Pending',
-          statusHistory: [{ status: 'Pending', date: new Date() }],
+          status: newStatus,
+          statusHistory: [{ status: newStatus, date: new Date() }],
           createdAt: serverTimestamp(),
-          selectedCargo: selectedCargo,
+          selectedCargo: newSelectedCargo,
           loadedCargo: [],
         };
-
+        
         const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
         
-        const newExecution = {
+        const newExecution: ContractedTransportExecution = {
             id: docRef.id,
             ...dataToSave,
             date: toDateSafe(dataToSave.date)!,
             createdAt: new Date(),
-        } as ContractedTransportExecution;
+        };
 
         setExecutions(prev => [...prev, newExecution]);
         toast({ title: 'Амжилттай', description: 'Шинэ гүйцэтгэл нэмэгдлээ.' });
@@ -796,7 +799,7 @@ export default function ContractedTransportDetailPage() {
             
             const execRef = doc(db, 'contracted_transport_executions', executionToLoad.id);
             
-            const dataToUpdate = {
+            const dataToUpdate: DocumentData = {
                 status: 'Loaded' as ContractedTransportExecutionStatus,
                 statusHistory: arrayUnion({ status: 'Loaded', date: new Date() }),
                 loadedCargo: cargoToSave,
@@ -992,8 +995,8 @@ export default function ContractedTransportDetailPage() {
                             <div>
                                 <h4 className="font-semibold mb-2">Ачаа сонгох (Сонголттой)</h4>
                                 <div className="space-y-2">
-                                     {contract.cargoItems.map((item) => (
-                                        <div key={item.id} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
+                                     {contract.cargoItems.map((item, index) => (
+                                        <div key={`${item.id}-${index}`} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
                                             <Checkbox
                                                 id={`select-cargo-${item.id}`}
                                                 checked={selectedCargoItems.has(item.id)}
@@ -1253,6 +1256,7 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
 
 
 
