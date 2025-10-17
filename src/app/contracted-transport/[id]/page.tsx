@@ -650,7 +650,19 @@ export default function ContractedTransportDetailPage() {
         const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
         const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
 
-        const newSelectedCargo = Array.from(selectedCargoItems);
+        const newSelectedCargo = Array.from(selectedCargoItems)
+          .map(itemId => {
+              const cargo = contract.cargoItems.find(c => c.id === itemId);
+              if (cargo) {
+                  return {
+                      cargoItemId: cargo.id,
+                      cargoName: cargo.name,
+                      cargoUnit: cargo.unit,
+                  };
+              }
+              return null;
+          })
+          .filter(Boolean);
         
         const dataToSave: DocumentData = {
           contractId: contract.id,
@@ -1175,4 +1187,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
