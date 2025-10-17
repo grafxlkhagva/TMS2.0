@@ -491,16 +491,21 @@ export default function ContractedTransportDetailPage() {
   
    React.useEffect(() => {
     if (executionToLoad && contract) {
-      const defaultCargo = (executionToLoad.selectedCargo || contract.cargoItems).map(item => {
-        const contractItem = contract.cargoItems.find(ci => ci.id === (item.cargoItemId || item.id));
-        return {
-            cargoItemId: item.cargoItemId || item.id,
-            cargoName: contractItem?.name || item.cargoName || 'N/A',
-            cargoUnit: contractItem?.unit || item.cargoUnit || 'N/A',
-            loadedQuantity: 0,
-        };
-      });
-      replaceLoadedCargoFields(defaultCargo);
+        // Use selectedCargo if available, otherwise fallback to contract's full cargo list
+        const itemsToLoad = (executionToLoad.selectedCargo && executionToLoad.selectedCargo.length > 0)
+            ? executionToLoad.selectedCargo
+            : contract.cargoItems;
+
+        const defaultCargo = itemsToLoad.map(item => {
+            const contractItem = contract.cargoItems.find(ci => ci.id === (item.cargoItemId || item.id));
+            return {
+                cargoItemId: item.cargoItemId || item.id,
+                cargoName: contractItem?.name || (item as any).cargoName || 'N/A',
+                cargoUnit: contractItem?.unit || (item as any).cargoUnit || 'N/A',
+                loadedQuantity: 0,
+            };
+        });
+        replaceLoadedCargoFields(defaultCargo);
     }
   }, [executionToLoad, contract, replaceLoadedCargoFields]);
     
@@ -743,7 +748,7 @@ export default function ContractedTransportDetailPage() {
           statusHistory: [{ status: 'Pending', date: new Date() }],
           createdAt: serverTimestamp(),
           selectedCargo: selectedCargo,
-          loadedCargo: [], // Initialize as empty array
+          loadedCargo: [],
         };
 
         const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
@@ -751,6 +756,7 @@ export default function ContractedTransportDetailPage() {
         const newExecution = {
             id: docRef.id,
             ...dataToSave,
+            date: toDateSafe(dataToSave.date)!,
             createdAt: new Date(),
         } as ContractedTransportExecution;
 
@@ -776,25 +782,28 @@ export default function ContractedTransportDetailPage() {
             const execution = executions.find(ex => ex.id === executionId);
             if (!execution || execution.status === newStatus) return;
 
+            // If moving to "Loaded", open the modal
             if (newStatus === 'Loaded') {
                 setExecutionToLoad(execution);
                 setIsLoadCargoDialogOpen(true);
-            } else {
-                 const execRef = doc(db, 'contracted_transport_executions', executionId);
-                try {
-                    await updateDoc(execRef, {
-                        status: newStatus,
-                        statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
-                    });
-                    setExecutions((prev) =>
-                        prev.map((ex) =>
-                            ex.id === executionId ? { ...ex, status: newStatus as ContractedTransportExecutionStatus } : ex
-                        )
-                    );
-                } catch (error) {
-                    console.error("Error updating execution status:", error);
-                    toast({ variant: 'destructive', title: 'Алдаа', description: 'Явцын төлөв шинэчлэхэд алдаа гарлаа.' });
-                }
+                return; // Stop further processing until modal is submitted
+            }
+
+            // For other status changes, update directly
+            const execRef = doc(db, 'contracted_transport_executions', executionId);
+            try {
+                await updateDoc(execRef, {
+                    status: newStatus,
+                    statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
+                });
+                setExecutions((prev) =>
+                    prev.map((ex) =>
+                        ex.id === executionId ? { ...ex, status: newStatus as ContractedTransportExecutionStatus } : ex
+                    )
+                );
+            } catch (error) {
+                console.error("Error updating execution status:", error);
+                toast({ variant: 'destructive', title: 'Алдаа', description: 'Явцын төлөв шинэчлэхэд алдаа гарлаа.' });
             }
         }
     }, [executions, toast]);
@@ -805,10 +814,10 @@ export default function ContractedTransportDetailPage() {
     
         try {
             const cargoToSave = values.loadedCargo
-                .filter(item => item.loadedQuantity > 0)
-                .map(({ loadedQuantity, ...rest }) => ({ ...rest, loadedQuantity }));
+                .filter(item => item.loadedQuantity > 0);
             
             const execRef = doc(db, 'contracted_transport_executions', executionToLoad.id);
+            
             await updateDoc(execRef, {
                 status: 'Loaded',
                 statusHistory: arrayUnion({ status: 'Loaded', date: new Date() }),
@@ -1263,5 +1272,6 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
 
 
