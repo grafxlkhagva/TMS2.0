@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -316,11 +317,11 @@ export default function ContractedTransportDetailPage() {
   const executionStatuses = React.useMemo(() => {
     if (!contract) return [];
     
-    const baseStatuses = ['Pending', 'Loaded'];
+    const baseStatuses: ContractedTransportExecutionStatus[] = ['Pending', 'Loaded'];
     const inTransitStatuses = (contract.routeStops || []).map(s => s.name);
-    const endStatuses = ['Unloading', 'Delivered'];
+    const endStatuses: ContractedTransportExecutionStatus[] = ['Unloading', 'Delivered'];
     
-    return [...baseStatuses, ...inTransitStatuses, ...endStatuses] as (ContractedTransportExecutionStatus | string)[];
+    return [...baseStatuses, ...inTransitStatuses, ...endStatuses];
 
   }, [contract]);
   
@@ -563,7 +564,7 @@ export default function ContractedTransportDetailPage() {
         const contractRef = doc(db, 'contracted_transports', id);
         batch.update(contractRef, { assignedDrivers: arrayRemove(driverDataToRemove) });
         
-        const pendingExecs = executions.filter(e => e.status === 'Хүлээгдэж буй' && e.driverId === driverToRemove.driverId);
+        const pendingExecs = executions.filter(e => e.status === 'Pending' && e.driverId === driverToRemove.driverId);
         pendingExecs.forEach(exec => {
             const execRef = doc(db, 'contracted_transport_executions', exec.id);
             batch.update(execRef, { driverId: null, driverName: null });
@@ -615,7 +616,7 @@ export default function ContractedTransportDetailPage() {
         const contractRef = doc(db, 'contracted_transports', id);
         batch.update(contractRef, { assignedVehicles: arrayRemove(vehicleDataToRemove) });
 
-        const pendingExecs = executions.filter(e => e.status === 'Хүлээгдэж буй' && e.vehicleId === vehicleToRemove.vehicleId);
+        const pendingExecs = executions.filter(e => e.status === 'Pending' && e.vehicleId === vehicleToRemove.vehicleId);
         pendingExecs.forEach(exec => {
             const execRef = doc(db, 'contracted_transport_executions', exec.id);
             batch.update(execRef, { vehicleId: null, vehicleLicense: null });
@@ -1218,3 +1219,6 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
+
+    
