@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -36,11 +35,22 @@ import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } 
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CSS } from '@dnd-kit/utilities';
+import { Checkbox } from '@/components/ui/checkbox';
+
+
+const newExecutionCargoSchema = z.object({
+  cargoItemId: z.string(),
+  cargoName: z.string(),
+  cargoUnit: z.string(),
+  selected: z.boolean(),
+  quantity: z.coerce.number().min(0, "Ачсан хэмжээ сөрөг байж болохгүй."),
+});
 
 const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
   driverId: z.string().optional(),
   vehicleId: z.string().optional(),
+  cargoItems: z.array(newExecutionCargoSchema).optional(),
 });
 type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
 
@@ -318,9 +328,9 @@ export default function ContractedTransportDetailPage() {
   const executionStatuses = React.useMemo(() => {
     if (!contract) return [];
     
-    const baseStatuses: ContractedTransportExecutionStatus[] = ['Pending', 'Loaded'];
+    const baseStatuses: (string)[] = ['Pending', 'Loaded'];
     const inTransitStatuses = (contract.routeStops || []).map(s => s.name);
-    const endStatuses: ContractedTransportExecutionStatus[] = ['Unloading', 'Delivered'];
+    const endStatuses: (string)[] = ['Unloading', 'Delivered'];
     
     return [...baseStatuses, ...inTransitStatuses, ...endStatuses];
 
@@ -337,12 +347,12 @@ export default function ContractedTransportDetailPage() {
 
   const newExecutionForm = useForm<NewExecutionFormValues>({
     resolver: zodResolver(newExecutionFormSchema),
-    defaultValues: {
-      date: new Date(),
-      driverId: '',
-      vehicleId: '',
-    },
   });
+  const { fields: newExecutionCargoFields, replace: replaceNewExecutionCargoFields } = useFieldArray({
+    control: newExecutionForm.control,
+    name: "cargoItems",
+  });
+
 
   const editExecutionForm = useForm<EditExecutionFormValues>({
     resolver: zodResolver(editExecutionFormSchema),
@@ -453,10 +463,18 @@ export default function ContractedTransportDetailPage() {
 
   React.useEffect(() => {
     if (contract && isNewExecutionDialogOpen) {
+      const defaultCargo = contract.cargoItems.map(item => ({
+        cargoItemId: item.id,
+        cargoName: item.name,
+        cargoUnit: item.unit,
+        selected: false,
+        quantity: 0,
+      }));
       newExecutionForm.reset({
         date: new Date(),
         driverId: '',
         vehicleId: '',
+        cargoItems: defaultCargo,
       });
     }
   }, [contract, isNewExecutionDialogOpen, newExecutionForm]);
@@ -703,17 +721,33 @@ export default function ContractedTransportDetailPage() {
         const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
         const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
 
-        const dataToSave = {
+        const loadedCargo = (values.cargoItems || [])
+            .filter(item => item.selected && item.quantity > 0)
+            .map(item => ({
+                cargoItemId: item.cargoItemId,
+                cargoName: item.cargoName,
+                cargoUnit: item.cargoUnit,
+                loadedQuantity: item.quantity,
+            }));
+        
+        const hasLoadedCargo = loadedCargo.length > 0;
+        const initialStatus = hasLoadedCargo ? 'Loaded' : 'Pending';
+
+        const dataToSave: DocumentData = {
           contractId: contract.id,
           date: values.date,
           driverId: selectedDriver?.driverId,
           driverName: selectedDriver?.driverName,
           vehicleId: selectedVehicle?.vehicleId,
           vehicleLicense: selectedVehicle?.licensePlate,
-          status: 'Pending',
-          statusHistory: [{ status: 'Pending', date: new Date() }],
+          status: initialStatus,
+          statusHistory: [{ status: initialStatus, date: new Date() }],
           createdAt: serverTimestamp(),
         };
+
+        if (hasLoadedCargo) {
+            dataToSave.loadedCargo = loadedCargo;
+        }
 
         const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
         
@@ -749,7 +783,6 @@ export default function ContractedTransportDetailPage() {
                 setExecutionToLoad(execution);
                 setIsLoadCargoDialogOpen(true);
             } else {
-                // Handle other status changes directly
                 const execRef = doc(db, 'contracted_transport_executions', executionId);
                 updateDoc(execRef, {
                     status: newStatus,
@@ -774,8 +807,9 @@ export default function ContractedTransportDetailPage() {
     
         try {
             const cargoToSave = values.loadedCargo
-                .filter(item => item.loadedQuantity > 0);
-
+                .filter(item => item.loadedQuantity > 0)
+                .map(({ loadedQuantity, ...rest }) => ({ ...rest, loadedQuantity }));
+            
             const execRef = doc(db, 'contracted_transport_executions', executionToLoad.id);
             await updateDoc(execRef, {
                 status: 'Loaded',
@@ -955,16 +989,61 @@ export default function ContractedTransportDetailPage() {
             
         {/* Add New Execution Dialog */}
         <Dialog open={isNewExecutionDialogOpen} onOpenChange={setIsNewExecutionDialogOpen}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-2xl">
                  <Form {...newExecutionForm}>
                     <form onSubmit={newExecutionForm.handleSubmit(handleNewExecutionSubmit)}>
                         <DialogHeader>
                             <DialogTitle>Шинэ гүйцэтгэл нэмэх</DialogTitle>
                         </DialogHeader>
-                        <div className="space-y-4 py-4">
+                        <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-6 -mr-6">
                             <FormField control={newExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
                             <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                             <FormField control={newExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                           
+                            <Separator />
+
+                            <div>
+                                <h4 className="font-semibold mb-2">Ачаа сонгох</h4>
+                                <div className="space-y-2">
+                                     {newExecutionCargoFields.map((field, index) => (
+                                        <FormField
+                                            key={field.id}
+                                            control={newExecutionForm.control}
+                                            name={`cargoItems.${index}.selected`}
+                                            render={({ field: checkboxField }) => (
+                                                <div className="flex items-center gap-4 p-2 border rounded-md">
+                                                    <FormItem className="flex items-center space-x-2">
+                                                         <FormControl>
+                                                            <Checkbox
+                                                                checked={checkboxField.value}
+                                                                onCheckedChange={checkboxField.onChange}
+                                                            />
+                                                        </FormControl>
+                                                    </FormItem>
+                                                    <div className="flex-1 font-medium">{field.cargoName} ({field.cargoUnit})</div>
+                                                    <FormField
+                                                        control={newExecutionForm.control}
+                                                        name={`cargoItems.${index}.quantity`}
+                                                        render={({ field: quantityField }) => (
+                                                            <FormItem className="w-32">
+                                                                <FormControl>
+                                                                    <Input 
+                                                                        type="number"
+                                                                        placeholder="Тоо хэмжээ"
+                                                                        {...quantityField}
+                                                                        disabled={!checkboxField.value}
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </div>
+                                            )}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                         <DialogFooter>
                             <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
@@ -1203,5 +1282,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
-    
