@@ -125,34 +125,38 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
       style={style} 
       className="text-xs mb-2 touch-none group/exec"
     >
-        <div {...attributes} {...listeners} className="p-2 relative">
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover/exec:opacity-100 transition-opacity z-10">
-                    <MoreHorizontal className="h-4 w-4" />
-                </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-
-            <p className="font-semibold pr-6">Огноо: {date ? format(date, 'yyyy-MM-dd') : 'N/A'}</p>
-            <div className="text-muted-foreground">
-            <p>Жолооч: {execution.driverName || 'TBA'}</p>
-            <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
+        <div className="p-2 relative">
+             <div className="absolute top-1 right-1 z-10">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover/exec:opacity-100 transition-opacity">
+                        <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={onEdit}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
+                        <DropdownMenuItem onClick={onDelete} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
-            {execution.loadedCargo && execution.loadedCargo.length > 0 && (
-                <div className="mt-1 pt-1 border-t text-muted-foreground">
-                    <p className="font-medium text-xs">Ачсан ачаа:</p>
-                    <ul className="list-disc list-inside">
-                        {execution.loadedCargo.map((cargo, index) => (
-                            <li key={index} className="text-xs">{cargo.cargoName}: {cargo.loadedQuantity} {cargo.cargoUnit}</li>
-                        ))}
-                    </ul>
+            
+            <div {...attributes} {...listeners} className="cursor-grab pr-6">
+                <p className="font-semibold">Огноо: {date ? format(date, 'yyyy-MM-dd') : 'N/A'}</p>
+                <div className="text-muted-foreground">
+                <p>Жолооч: {execution.driverName || 'TBA'}</p>
+                <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
                 </div>
-            )}
+                {execution.loadedCargo && execution.loadedCargo.length > 0 && (
+                    <div className="mt-1 pt-1 border-t text-muted-foreground">
+                        <p className="font-medium text-xs">Ачсан ачаа:</p>
+                        <ul className="list-disc list-inside">
+                            {execution.loadedCargo.map((cargo, index) => (
+                                <li key={index} className="text-xs">{cargo.cargoName}: {cargo.loadedQuantity} {cargo.cargoUnit}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+            </div>
         </div>
     </Card>
   );
@@ -618,6 +622,7 @@ export default function ContractedTransportDetailPage() {
                 status: 'Хүлээгдэж буй',
                 statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }],
                 createdAt: serverTimestamp(),
+                loadedCargo: [], // No cargo info
             };
 
             const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
@@ -890,17 +895,17 @@ export default function ContractedTransportDetailPage() {
                 <DialogHeader>
                     <DialogTitle>Шинэ гүйцэтгэл нэмэх</DialogTitle>
                 </DialogHeader>
-                <Form {...newExecutionForm}>
-                    <form id="new-execution-form" onSubmit={newExecutionForm.handleSubmit(handleNewExecutionSubmit)} className="space-y-4 py-4">
+                 <Form {...newExecutionForm}>
+                    <form onSubmit={newExecutionForm.handleSubmit(handleNewExecutionSubmit)} className="space-y-4 py-4">
                         <FormField control={newExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
                         <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                         <FormField control={newExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                         <DialogFooter>
+                            <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                            <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
+                        </DialogFooter>
                     </form>
                 </Form>
-                 <DialogFooter>
-                    <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                    <Button type="submit" form="new-execution-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
-                </DialogFooter>
             </DialogContent>
         </Dialog>
 
@@ -929,16 +934,16 @@ export default function ContractedTransportDetailPage() {
                         <DialogTitle>Гүйцэтгэл засах</DialogTitle>
                     </DialogHeader>
                     <Form {...editExecutionForm}>
-                         <form id="edit-execution-form" onSubmit={editExecutionForm.handleSubmit(handleUpdateExecution)} className="space-y-4 py-4">
+                         <form onSubmit={editExecutionForm.handleSubmit(handleUpdateExecution)} className="space-y-4 py-4">
                             <FormField control={editExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
                             <FormField control={editExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                             <FormField control={editExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                            <DialogFooter>
+                                <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                                <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
+                            </DialogFooter>
                         </form>
                     </Form>
-                     <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                        <Button type="submit" form="edit-execution-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
-                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         )}
