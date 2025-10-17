@@ -650,13 +650,12 @@ export default function ContractedTransportDetailPage() {
           const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
           const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
           
-          const newSelectedCargo: string[] = [];
-            selectedCargoItems.forEach(itemId => {
+          const newSelectedCargo = Array.from(selectedCargoItems)
+            .map(itemId => {
                 const cargo = contract.cargoItems.find(c => c.id === itemId);
-                if (cargo && cargo.name) {
-                    newSelectedCargo.push(cargo.name);
-                }
-            });
+                return cargo?.name;
+            })
+            .filter((name): name is string => !!name);
 
           const dataToSave: DocumentData = {
             contractId: contract.id,
@@ -895,7 +894,7 @@ export default function ContractedTransportDetailPage() {
                             {executionStatuses.map(status => {
                                 const stop = contract.routeStops.find(s => s.id === status);
                                 const itemsForStatus = executions.filter(ex => ex.status === status);
-                                const title = statusTranslations[status] || stop?.description || status;
+                                const title = statusTranslations[status] || stop?.id || status;
                                 return (
                                     <StatusColumn 
                                         key={status} 
@@ -1183,8 +1182,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
-    
-
-    
-
