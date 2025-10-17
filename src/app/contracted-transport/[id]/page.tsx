@@ -1,10 +1,11 @@
 
+
 'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle, Megaphone, MegaphoneOff, Eye, Briefcase, TrendingUp, Cuboid, Send, FileSpreadsheet } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle, Megaphone, MegaphoneOff, Eye, Briefcase, TrendingUp, Cuboid, Send, FileSpreadsheet, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch, type DocumentData } from 'firebase/firestore';
@@ -39,6 +40,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { generateChecklistAction, generateUnloadingChecklistAction } from './actions';
 
 const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
@@ -134,9 +136,9 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
     <Card 
     ref={setNodeRef} 
     style={style} 
-    className="text-xs mb-2 touch-none group/exec"
+    className="text-xs mb-2 touch-none group/exec relative"
     >
-        <div className="p-2 relative">
+        <div className="p-2">
             <div className="absolute top-1 right-1 z-10">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -156,7 +158,7 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
                 <div className="text-muted-foreground">
                 <p>Жолооч: {execution.driverName || 'TBA'}</p>
                 <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
-                {execution.totalLoadedWeight && <p className="text-blue-600 font-semibold">Ачсан: {execution.totalLoadedWeight}тн</p>}
+                {execution.totalLoadedWeight ? <p className="text-blue-600 font-semibold">Ачсан: {execution.totalLoadedWeight}тн</p> : null}
                 </div>
             </div>
         </div>
@@ -663,7 +665,7 @@ export default function ContractedTransportDetailPage() {
             driverId: selectedDriver?.driverId ?? null,
             driverName: selectedDriver?.driverName ?? null,
             vehicleId: selectedVehicle?.vehicleId ?? null,
-            vehicleLicense: selectedVehicle?.licensePlate,
+            vehicleLicense: (selectedVehicle?.modelName && selectedVehicle?.licensePlate) ? `${selectedVehicle.modelName} (${selectedVehicle.licensePlate})` : null,
             status: 'Pending',
             statusHistory: [{ status: 'Pending', date: new Date() }],
             createdAt: serverTimestamp(),
