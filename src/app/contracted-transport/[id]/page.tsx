@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import * as React from 'react';
@@ -115,11 +113,18 @@ function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, lab
 }
 
 const statusColorMap: Record<string, string> = {
-    'Хүлээгдэж буй': 'bg-gray-500',
-    'Ачсан': 'bg-blue-500',
-    'Буулгаж буй': 'bg-yellow-500',
-    'Хүргэгдсэн': 'bg-green-500',
+    'Pending': 'bg-gray-500',
+    'Loaded': 'bg-blue-500',
+    'Unloading': 'bg-yellow-500',
+    'Delivered': 'bg-green-500',
 };
+const statusTranslations: Record<string, string> = {
+    Pending: 'Хүлээгдэж буй',
+    Loaded: 'Ачсан',
+    Unloading: 'Буулгаж буй',
+    Delivered: 'Хүргэгдсэн',
+};
+
 
 
 function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: ContractedTransportExecution, onEdit: () => void, onDelete: () => void }) {
@@ -210,7 +215,7 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
   return (
     <div ref={setNodeRef} className="p-2 rounded-lg bg-muted/50 min-h-40 flex flex-col">
       <div className="font-semibold text-center text-sm p-2 rounded-md relative group/stop-header">
-          <h3 className={`${statusColorMap[title] || 'bg-purple-500'} text-white p-2 rounded-md`}>
+          <h3 className={`${statusColorMap[id] || 'bg-purple-500'} text-white p-2 rounded-md`}>
               {title}
           </h3>
           {stop && (
@@ -311,9 +316,9 @@ export default function ContractedTransportDetailPage() {
   const executionStatuses = React.useMemo(() => {
     if (!contract) return [];
     
-    const baseStatuses = ['Хүлээгдэж буй', 'Ачсан'];
+    const baseStatuses = ['Pending', 'Loaded'];
     const inTransitStatuses = (contract.routeStops || []).map(s => s.name);
-    const endStatuses = ['Буулгаж буй', 'Хүргэгдсэн'];
+    const endStatuses = ['Unloading', 'Delivered'];
     
     return [...baseStatuses, ...inTransitStatuses, ...endStatuses] as (ContractedTransportExecutionStatus | string)[];
 
@@ -703,8 +708,8 @@ export default function ContractedTransportDetailPage() {
           driverName: selectedDriver?.driverName,
           vehicleId: selectedVehicle?.vehicleId,
           vehicleLicense: selectedVehicle?.licensePlate,
-          status: 'Хүлээгдэж буй',
-          statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }],
+          status: 'Pending',
+          statusHistory: [{ status: 'Pending', date: new Date() }],
           createdAt: serverTimestamp(),
         };
 
@@ -728,7 +733,7 @@ export default function ContractedTransportDetailPage() {
       }
     }
     
-    const handleExecutionStatusChange = React.useCallback(async (executionId: string, newStatus: string, loadedCargo?: ContractedTransportExecutionCargo[]) => {
+    const handleExecutionStatusChange = React.useCallback(async (executionId: string, newStatus: string) => {
         const execRef = doc(db, 'contracted_transport_executions', executionId);
         
         const dataToUpdate: DocumentData = {
@@ -736,17 +741,13 @@ export default function ContractedTransportDetailPage() {
             statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
         };
 
-        if (loadedCargo) {
-            dataToUpdate.loadedCargo = loadedCargo;
-        }
-
         try {
             await updateDoc(execRef, dataToUpdate);
 
              setExecutions((prev) =>
                 prev.map((ex) =>
                 ex.id === executionId
-                    ? { ...ex, status: newStatus as ContractedTransportExecutionStatus, loadedCargo: loadedCargo || ex.loadedCargo }
+                    ? { ...ex, status: newStatus as ContractedTransportExecutionStatus }
                     : ex
                 )
             );
@@ -767,7 +768,7 @@ export default function ContractedTransportDetailPage() {
             
             if (!execution) return;
 
-            if (overContainerId === 'Ачсан') {
+            if (overContainerId === 'Loaded') {
                 setExecutionToLoad(execution);
                 setIsLoadCargoDialogOpen(true);
             } else {
@@ -792,15 +793,15 @@ export default function ContractedTransportDetailPage() {
 
             const execRef = doc(db, 'contracted_transport_executions', executionToLoad.id);
             await updateDoc(execRef, {
-                status: 'Ачсан',
-                statusHistory: arrayUnion({ status: 'Ачсан', date: new Date() }),
+                status: 'Loaded',
+                statusHistory: arrayUnion({ status: 'Loaded', date: new Date() }),
                 loadedCargo: cargoToSave,
             });
     
             setExecutions((prev) =>
                 prev.map((ex) =>
                     ex.id === executionToLoad.id
-                        ? { ...ex, status: 'Ачсан' as ContractedTransportExecutionStatus, loadedCargo: cargoToSave }
+                        ? { ...ex, status: 'Loaded' as ContractedTransportExecutionStatus, loadedCargo: cargoToSave }
                         : ex
                 )
             );
@@ -821,8 +822,8 @@ export default function ContractedTransportDetailPage() {
             return { total: 0, completed: 0, inProgress: 0, daysLeft: 0, totalDrivers: 0, totalVehicles: 0 };
         }
         const total = executions.length;
-        const completed = executions.filter(e => e.status === 'Хүргэгдсэн').length;
-        const inProgress = executions.filter(e => e.status !== 'Хүлээгдэж буй' && e.status !== 'Хүргэгдсэн').length;
+        const completed = executions.filter(e => e.status === 'Delivered').length;
+        const inProgress = executions.filter(e => e.status !== 'Pending' && e.status !== 'Delivered').length;
         const daysLeft = differenceInDays(toDateSafe(contract.endDate)!, new Date());
         const totalDrivers = contract.assignedDrivers.length;
         const totalVehicles = contract.assignedVehicles.length;
@@ -951,7 +952,7 @@ export default function ContractedTransportDetailPage() {
                                     <StatusColumn 
                                         key={status} 
                                         id={status}
-                                        title={status}
+                                        title={statusTranslations[status] || status}
                                         items={itemsForStatus}
                                         stop={stop}
                                         onEditStop={(stopToEdit) => setStopToEdit(stopToEdit)}
@@ -1217,4 +1218,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
