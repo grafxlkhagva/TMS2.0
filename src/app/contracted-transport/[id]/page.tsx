@@ -24,7 +24,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -728,7 +728,7 @@ export default function ContractedTransportDetailPage() {
           status: 'Pending',
           statusHistory: [{ status: 'Pending', date: new Date() }],
           createdAt: serverTimestamp(),
-          selectedCargo: newSelectedCargo,
+          selectedCargo: newSelectedCargo.length > 0 ? newSelectedCargo : [],
           loadedCargo: [],
         };
         
@@ -1032,7 +1032,7 @@ export default function ContractedTransportDetailPage() {
 
 
         {/* Delete Execution Alert */}
-        <AlertDialog open={!!executionToDelete} onOpenChange={() => setExecutionToDelete(null)}>
+        <AlertDialog open={!!executionToDelete} onOpenChange={(open) => !open && setExecutionToDelete(null)}>
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
@@ -1133,15 +1133,15 @@ export default function ContractedTransportDetailPage() {
         </AlertDialog>
         
          {/* Load Cargo Dialog */}
-        <Dialog open={isLoadCargoDialogOpen} onOpenChange={setIsLoadCargoDialogOpen}>
-            <DialogContent>
+        <AlertDialog open={isLoadCargoDialogOpen} onOpenChange={setIsLoadCargoDialogOpen}>
+            <AlertDialogContent>
                     <div>
-                        <DialogHeader>
-                            <DialogTitle>Ачааны мэдээлэл оруулах</DialogTitle>
-                            <DialogDescription>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Ачааны мэдээлэл оруулах</AlertDialogTitle>
+                            <AlertDialogDescription>
                                "{executionToLoad?.driverName}" жолоочтой гүйцэтгэлд ачсан ачааны хэмжээг оруулна уу.
-                            </DialogDescription>
-                        </DialogHeader>
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
                         <div className="py-4 space-y-4 max-h-[50vh] overflow-y-auto">
                            {Object.values(loadedCargoQuantities).map((item) => (
                                 <div key={item.cargoItemId}>
@@ -1163,16 +1163,16 @@ export default function ContractedTransportDetailPage() {
                                 </div>
                             ))}
                         </div>
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setIsLoadCargoDialogOpen(false)}>Цуцлах</Button>
-                            <Button onClick={handleLoadCargoSubmit} disabled={isSubmitting}>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel onClick={() => setIsLoadCargoDialogOpen(false)}>Цуцлах</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleLoadCargoSubmit} disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                                 Хадгалах
-                            </Button>
-                        </DialogFooter>
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
                     </div>
-            </DialogContent>
-        </Dialog>
+            </AlertDialogContent>
+        </AlertDialog>
 
 
         {/* Assigned Resources Dialog */}
