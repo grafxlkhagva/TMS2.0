@@ -1,10 +1,11 @@
 
+
 'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle, Megaphone, MegaphoneOff, Eye } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle, Megaphone, MegaphoneOff, Eye, Briefcase, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch, type DocumentData } from 'firebase/firestore';
@@ -13,7 +14,7 @@ import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser,
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -44,6 +45,11 @@ const editExecutionFormSchema = z.object({
 });
 type EditExecutionFormValues = z.infer<typeof editExecutionFormSchema>;
 
+const cargoItemSchema = z.object({
+  cargoItemId: z.string(),
+  cargoName: z.string(),
+  quantity: z.coerce.number().min(0, "Ачааны хэмжээ 0-ээс бага байж болохгүй."),
+});
 
 const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
@@ -206,6 +212,20 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
   );
 }
 
+function StatCard({ title, value, icon: Icon, description }: { title: string; value: string | number; icon: React.ElementType; description: string; }) {
+  return (
+    <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{title}</CardTitle>
+            <Icon className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+            <div className="text-2xl font-bold">{value}</div>
+            <p className="text-xs text-muted-foreground">{description}</p>
+        </CardContent>
+    </Card>
+  );
+}
 
 export default function ContractedTransportDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -405,8 +425,9 @@ export default function ContractedTransportDetailPage() {
 
     const handleUpdateExecution = React.useCallback(async (values: EditExecutionFormValues) => {
         if (!executionToEdit || !contract) return;
-        setIsSubmitting(true);
+        
         try {
+            setIsSubmitting(true);
             const execRef = doc(db, 'contracted_transport_executions', executionToEdit.id);
             const driverId = values.driverId === 'no-selection' ? undefined : values.driverId;
             const vehicleId = values.vehicleId === 'no-selection' ? undefined : values.vehicleId;
@@ -674,6 +695,13 @@ export default function ContractedTransportDetailPage() {
         }
     }, [handleExecutionStatusChange]);
     
+    const dashboardStats = React.useMemo(() => {
+        const total = executions.length;
+        const completed = executions.filter(e => e.status === 'Хүргэгдсэн').length;
+        const inProgress = executions.filter(e => e.status !== 'Хүлээгдэж буй' && e.status !== 'Хүргэгдсэн').length;
+        const daysLeft = contract ? differenceInDays(toDateSafe(contract.endDate)!, new Date()) : 0;
+        return { total, completed, inProgress, daysLeft };
+    }, [executions, contract]);
 
   if (isLoading) {
     return (
@@ -759,6 +787,12 @@ export default function ContractedTransportDetailPage() {
             </div>
         </div>
       </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+            <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." />
+            <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." />
+            <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." />
+            <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." />
+        </div>
       
         <div className="grid md:grid-cols-12 gap-6 items-start">
             <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
