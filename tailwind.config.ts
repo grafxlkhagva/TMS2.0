@@ -71,6 +71,12 @@ export default {
           'muted-foreground': 'hsl(240, 5%, 65%)', // Lighter grey
           accent: 'hsl(260, 80%, 65%)', // Vibrant purple
           'accent-foreground': 'hsl(210, 40%, 98%)',
+          'stat-1': 'hsl(210, 100%, 70%)',  // Bright Blue
+          'stat-2': 'hsl(140, 100%, 65%)',  // Bright Green
+          'stat-3': 'hsl(45, 100%, 65%)',   // Bright Yellow
+          'stat-4': 'hsl(300, 100%, 75%)',  // Bright Pink/Purple
+          'stat-5': 'hsl(25, 100%, 70%)',   // Bright Orange
+          'stat-6': 'hsl(0, 100%, 75%)',    // Bright Red/Pink
         }
       },
       borderRadius: {
