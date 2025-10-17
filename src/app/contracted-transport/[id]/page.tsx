@@ -24,7 +24,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogFooter } from "@/components/ui/alert-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -649,12 +649,7 @@ export default function ContractedTransportDetailPage() {
         const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
         const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
 
-        const newSelectedCargo = Array.from(selectedCargoItems)
-            .map(cargoId => {
-                const item = contract.cargoItems.find(i => i.id === cargoId);
-                return item ? { cargoItemId: item.id, cargoName: item.name, cargoUnit: item.unit } : null;
-            })
-            .filter((name): name is { cargoItemId: string; cargoName: string; cargoUnit: string; } => !!name);
+        const newSelectedCargo = Array.from(selectedCargoItems);
         
         const dataToSave: DocumentData = {
           contractId: contract.id,
@@ -667,7 +662,6 @@ export default function ContractedTransportDetailPage() {
           statusHistory: [{ status: 'Pending', date: new Date() }],
           createdAt: serverTimestamp(),
           selectedCargo: newSelectedCargo,
-          loadedCargo: [],
           totalLoadedWeight: 0,
         };
         
