@@ -779,18 +779,40 @@ export default function ContractedTransportDetailPage() {
     const handleLoadCargoSubmit = async (values: LoadCargoFormValues) => {
         if (!executionToLoad) return;
         setIsSubmitting(true);
-
-        const cargoToSave = values.loadedCargo.filter(item => item.loadedQuantity > 0);
-
+    
         try {
-            await handleExecutionStatusChange(executionToLoad.id, 'Ачсан', cargoToSave);
+            const cargoToSave = values.loadedCargo
+                .filter(item => item.loadedQuantity > 0)
+                .map(item => ({
+                    cargoItemId: item.cargoItemId,
+                    cargoName: item.cargoName,
+                    cargoUnit: item.cargoUnit,
+                    loadedQuantity: item.loadedQuantity
+                }));
+
+            const execRef = doc(db, 'contracted_transport_executions', executionToLoad.id);
+            await updateDoc(execRef, {
+                status: 'Ачсан',
+                statusHistory: arrayUnion({ status: 'Ачсан', date: new Date() }),
+                loadedCargo: cargoToSave,
+            });
+    
+            setExecutions((prev) =>
+                prev.map((ex) =>
+                    ex.id === executionToLoad.id
+                        ? { ...ex, status: 'Ачсан' as ContractedTransportExecutionStatus, loadedCargo: cargoToSave }
+                        : ex
+                )
+            );
+    
             toast({ title: 'Амжилттай', description: 'Ачааны мэдээлэл хадгалагдлаа.' });
-            setIsLoadCargoDialogOpen(false);
-            setExecutionToLoad(null);
         } catch (e) {
+            console.error(e);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Ачааны мэдээлэл хадгалахад алдаа гарлаа.' });
         } finally {
             setIsSubmitting(false);
+            setIsLoadCargoDialogOpen(false);
+            setExecutionToLoad(null);
         }
     };
     
@@ -893,12 +915,12 @@ export default function ContractedTransportDetailPage() {
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-        <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." colorClass="dark-card-1" valueColorClass="text-dashboard-stat-1" />
-        <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." colorClass="dark-card-2" valueColorClass="text-dashboard-stat-2" />
-        <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." colorClass="dark-card-3" valueColorClass="text-dashboard-stat-3" />
-        <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} colorClass="dark-card-4" valueColorClass="text-dashboard-stat-4" />
-        <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} colorClass="dark-card-5" valueColorClass="text-dashboard-stat-5" />
-        <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." colorClass="dark-card-6" valueColorClass="text-dashboard-stat-6" />
+        <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." colorClass="dark:bg-dashboard-card" />
+        <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." colorClass="dark:bg-dashboard-card" />
+        <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." colorClass="dark:bg-dashboard-card" />
+        <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="dark:text-dashboard-stat-4" colorClass="dark:bg-dashboard-card" />
+        <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="dark:text-dashboard-stat-5" colorClass="dark:bg-dashboard-card" />
+        <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." valueColorClass="dark:text-dashboard-stat-6" colorClass="dark:bg-dashboard-card" />
       </div>
       
         <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -1195,3 +1217,4 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
