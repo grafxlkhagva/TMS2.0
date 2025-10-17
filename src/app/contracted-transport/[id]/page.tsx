@@ -208,14 +208,14 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
 
 function StatCard({ title, value, icon: Icon, description, actionLabel, onActionClick, colorClass }: { title: string; value: string | number; icon: React.ElementType; description: string; actionLabel?: string; onActionClick?: () => void; colorClass?: string; }) {
   return (
-    <Card className={cn("dark:bg-[var(--card-bg)]", colorClass)}>
+    <Card className={colorClass}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium dark:text-[var(--card-fg)]">{title}</CardTitle>
-            <Icon className="h-4 w-4 text-muted-foreground dark:text-[var(--card-fg)]" />
+            <CardTitle className="text-sm font-medium">{title}</CardTitle>
+            <Icon className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
             <div className="text-2xl font-bold">{value}</div>
-            <p className="text-xs text-muted-foreground dark:text-[var(--card-fg-muted)]">{description}</p>
+            <p className="text-xs text-muted-foreground">{description}</p>
         </CardContent>
         {actionLabel && onActionClick && (
             <CardFooter>
@@ -795,27 +795,13 @@ export default function ContractedTransportDetailPage() {
             </div>
         </div>
       </div>
-      <div 
-        className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" 
-        style={{
-            '--dashboard-1-bg': 'hsl(var(--dashboard-1) / 0.1)',
-            '--dashboard-1-fg': 'hsl(var(--dashboard-1))',
-            '--dashboard-2-bg': 'hsl(var(--dashboard-2) / 0.1)',
-            '--dashboard-2-fg': 'hsl(var(--dashboard-2))',
-            '--dashboard-3-bg': 'hsl(var(--dashboard-3) / 0.1)',
-            '--dashboard-3-fg': 'hsl(var(--dashboard-3))',
-            '--dashboard-4-bg': 'hsl(var(--dashboard-4) / 0.1)',
-            '--dashboard-4-fg': 'hsl(var(--dashboard-4))',
-            '--dashboard-5-bg': 'hsl(var(--dashboard-5) / 0.1)',
-            '--dashboard-5-fg': 'hsl(var(--dashboard-5))',
-        } as React.CSSProperties}
-    >
-        <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." colorClass="dark:bg-[var(--dashboard-1-bg)]" />
-        <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} colorClass="dark:bg-[var(--dashboard-2-bg)]" />
-        <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} colorClass="dark:bg-[var(--dashboard-3-bg)]" />
-        <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." colorClass="dark:bg-[var(--dashboard-4-bg)]" />
-        <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." colorClass="dark:bg-[var(--dashboard-5-bg)]" />
-        <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." />
+       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." colorClass="dark-card-1" />
+        <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} colorClass="dark-card-2" />
+        <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} colorClass="dark-card-3" />
+        <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." colorClass="dark-card-4" />
+        <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." colorClass="dark-card-5" />
+        <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." colorClass="dark-card-6" />
       </div>
       
         <div className="mt-6">

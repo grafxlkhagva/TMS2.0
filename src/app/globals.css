@@ -97,13 +97,14 @@ body {
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 228 50% 33%;
     --sidebar-ring: 212.7 26.8% 83.9%;
-
-    --dashboard-1: 220 80% 60%; /* Bright Blue */
-    --dashboard-2: 300 80% 60%; /* Bright Pink */
-    --dashboard-3: 145 70% 50%; /* Bright Green */
-    --dashboard-4: 45 90% 55%;  /* Bright Yellow */
-    --dashboard-5: 25 95% 60%;  /* Bright Orange */
   }
+
+  .dark .dark-card-1 { background-color: hsl(220 80% 20%); color: hsl(210 40% 98%); .text-muted-foreground { color: hsl(210 40% 98% / 0.7); } }
+  .dark .dark-card-2 { background-color: hsl(300 80% 20%); color: hsl(210 40% 98%); .text-muted-foreground { color: hsl(210 40% 98% / 0.7); } }
+  .dark .dark-card-3 { background-color: hsl(145 70% 20%); color: hsl(210 40% 98%); .text-muted-foreground { color: hsl(210 40% 98% / 0.7); } }
+  .dark .dark-card-4 { background-color: hsl(45 90% 25%);  color: hsl(210 40% 98%); .text-muted-foreground { color: hsl(210 40% 98% / 0.7); } }
+  .dark .dark-card-5 { background-color: hsl(25 95% 25%);  color: hsl(210 40% 98%); .text-muted-foreground { color: hsl(210 40% 98% / 0.7); } }
+  .dark .dark-card-6 { background-color: hsl(0 80% 30%);   color: hsl(210 40% 98%); .text-muted-foreground { color: hsl(210 40% 98% / 0.7); } }
 }
 
 @layer base {
