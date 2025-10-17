@@ -391,13 +391,6 @@ export type RouteStop = {
   description: string;
 }
 
-export type ContractedTransportExecutionCargo = {
-    cargoItemId: string;
-    cargoName: string;
-    cargoUnit: string;
-    loadedQuantity: number;
-};
-
 export type ContractedTransportExecution = {
     id: string;
     contractId: string;
@@ -409,8 +402,8 @@ export type ContractedTransportExecution = {
     driverId?: string;
     driverName?: string;
     createdAt: Date;
-    loadedCargo?: ContractedTransportExecutionCargo[];
-    selectedCargo?: { cargoItemId: string; cargoName: string; cargoUnit: string; }[];
+    selectedCargo: string[];
+    totalLoadedWeight?: number;
 }
 
 export type ContractedTransportCargoItem = {
@@ -464,3 +457,5 @@ export type ContractedTransport = {
     modelName: string;
   }[];
 };
+
+    

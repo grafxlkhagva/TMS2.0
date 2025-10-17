@@ -1,21 +1,22 @@
 
+
 'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle, Megaphone, MegaphoneOff, Eye, Briefcase, TrendingUp, Cuboid } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle, Megaphone, MegaphoneOff, Eye, Briefcase, TrendingUp, Cuboid, Send, FileSpreadsheet } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch, type DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportExecutionStatus, ContractedTransportStatus, ContractedTransportExecutionCargo, ContractedTransportCargoItem } from '@/types';
+import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportExecutionStatus, ContractedTransportStatus, ContractedTransportCargoItem } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { format, differenceInDays } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,7 +25,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader } from "@/components/ui/alert-dialog"
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -130,8 +131,6 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
     opacity: isDragging ? 0.8 : 1,
   };
   
-  const totalLoaded = (execution.loadedCargo || []).join(', ');
-
   return (
     <Card 
     ref={setNodeRef} 
@@ -158,7 +157,7 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
                 <div className="text-muted-foreground">
                 <p>Жолооч: {execution.driverName || 'TBA'}</p>
                 <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
-                {totalLoaded && <p className="text-blue-600 font-semibold">Ачсан: {totalLoaded}</p>}
+                {execution.totalLoadedWeight && <p className="text-blue-600 font-semibold">Ачсан: {execution.totalLoadedWeight}тн</p>}
                 </div>
             </div>
         </div>
@@ -269,9 +268,8 @@ export default function ContractedTransportDetailPage() {
   const [addDriverPopoverOpen, setAddDriverPopoverOpen] = React.useState(false);
   const [addVehiclePopoverOpen, setAddVehiclePopoverOpen] = React.useState(false);
   
-  // States for dialogs, independent of react-hook-form
   const [selectedCargoItems, setSelectedCargoItems] = React.useState<Set<string>>(new Set());
-  const [loadedCargoText, setLoadedCargoText] = React.useState<string>('');
+  const [totalLoadedWeight, setTotalLoadedWeight] = React.useState<number>(0);
 
 
   const [relatedData, setRelatedData] = React.useState({
@@ -425,9 +423,9 @@ export default function ContractedTransportDetailPage() {
   
    React.useEffect(() => {
     if (isLoadCargoDialogOpen && executionToLoad) {
-        setLoadedCargoText((executionToLoad.loadedCargo || []).join(', '));
+        setTotalLoadedWeight(executionToLoad.totalLoadedWeight || 0);
     } else {
-        setLoadedCargoText('');
+        setTotalLoadedWeight(0);
     }
   }, [isLoadCargoDialogOpen, executionToLoad]);
 
@@ -667,7 +665,7 @@ export default function ContractedTransportDetailPage() {
           statusHistory: [{ status: 'Pending', date: new Date() }],
           createdAt: serverTimestamp(),
           selectedCargo: newSelectedCargo,
-          loadedCargo: [],
+          totalLoadedWeight: 0,
         };
         
         const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
@@ -733,14 +731,12 @@ export default function ContractedTransportDetailPage() {
         setIsSubmitting(true);
     
         try {
-            const cargoToSave = loadedCargoText.split(',').map(s => s.trim()).filter(Boolean);
-            
             const execRef = doc(db, 'contracted_transport_executions', executionToLoad.id);
             
             const dataToUpdate: DocumentData = {
                 status: 'Loaded' as ContractedTransportExecutionStatus,
                 statusHistory: arrayUnion({ status: 'Loaded', date: new Date() }),
-                loadedCargo: cargoToSave,
+                totalLoadedWeight: totalLoadedWeight,
             };
 
             await updateDoc(execRef, dataToUpdate);
@@ -748,7 +744,7 @@ export default function ContractedTransportDetailPage() {
             setExecutions((prev) =>
                 prev.map((ex) =>
                     ex.id === executionToLoad.id
-                        ? { ...ex, status: 'Loaded' as ContractedTransportExecutionStatus, loadedCargo: cargoToSave }
+                        ? { ...ex, status: 'Loaded' as ContractedTransportExecutionStatus, totalLoadedWeight: totalLoadedWeight }
                         : ex
                 )
             );
@@ -975,12 +971,12 @@ export default function ContractedTransportDetailPage() {
                     <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
                     <AlertDialogDescription>Энэ гүйцэтгэлийн мэдээллийг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.</AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
+                <DialogFooter>
                     <AlertDialogCancel>Цуцлах</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDeleteExecution} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90">
                         {isSubmitting ? 'Устгаж байна...' : 'Устгах'}
                     </AlertDialogAction>
-                </AlertDialogFooter>
+                </DialogFooter>
             </AlertDialogContent>
         </AlertDialog>
 
@@ -1060,12 +1056,12 @@ export default function ContractedTransportDetailPage() {
                         "{stopToDelete?.name}" зогсоолыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
+                <DialogFooter>
                     <AlertDialogCancel>Цуцлах</AlertDialogCancel>
                     <AlertDialogAction onClick={handleRemoveStop} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90">
                        {isSubmitting ? "Устгаж байна..." : "Устгах"}
                     </AlertDialogAction>
-                </AlertDialogFooter>
+                </DialogFooter>
             </AlertDialogContent>
         </AlertDialog>
         
@@ -1076,23 +1072,24 @@ export default function ContractedTransportDetailPage() {
                         <AlertDialogHeader>
                             <AlertDialogTitle>Ачааны мэдээлэл оруулах</AlertDialogTitle>
                             <AlertDialogDescription>
-                               "{executionToLoad?.driverName}" жолоочтой гүйцэтгэлд ачсан ачааны хэмжээг оруулна уу. (Ж.нь: 25тн цемент, 10тн арматур)
+                               Ачсан нийт жинг тонн-оор оруулна уу.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <div className="py-4">
-                           <Textarea
-                                placeholder="Ачсан ачааны мэдээлэл..."
-                                value={loadedCargoText}
-                                onChange={(e) => setLoadedCargoText(e.target.value)}
+                           <Input
+                                type="number"
+                                placeholder="Нийт жин (тн)"
+                                value={totalLoadedWeight}
+                                onChange={(e) => setTotalLoadedWeight(Number(e.target.value))}
                            />
                         </div>
-                        <AlertDialogFooter>
+                        <DialogFooter>
                             <AlertDialogCancel onClick={() => setIsLoadCargoDialogOpen(false)}>Цуцлах</AlertDialogCancel>
                             <AlertDialogAction onClick={handleLoadCargoSubmit} disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                                 Хадгалах
                             </AlertDialogAction>
-                        </AlertDialogFooter>
+                        </DialogFooter>
                     </div>
             </AlertDialogContent>
         </AlertDialog>
@@ -1180,5 +1177,7 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
+    
 
     
