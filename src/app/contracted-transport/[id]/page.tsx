@@ -18,6 +18,7 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -39,13 +40,6 @@ import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
-
-const newExecutionCargoSchema = z.object({
-  cargoItemId: z.string(),
-  cargoName: z.string(),
-  cargoUnit: z.string(),
-});
-
 const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
   driverId: z.string().optional(),
@@ -66,14 +60,6 @@ const routeStopFormSchema = z.object({
   description: z.string().min(5, "Тайлбар дор хаяж 5 тэмдэгттэй байх ёстой."),
 });
 type RouteStopFormValues = z.infer<typeof routeStopFormSchema>;
-
-
-type LoadedCargoState = Record<string, {
-    loadedQuantity: number;
-    cargoItemId: string;
-    cargoName: string;
-    cargoUnit: string;
-}>;
 
 
 const frequencyTranslations: Record<ContractedTransport['frequency'], string> = {
@@ -144,65 +130,39 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
     opacity: isDragging ? 0.8 : 1,
   };
   
-  const totalLoaded = execution.loadedCargo?.reduce((acc, item) => acc + item.loadedQuantity, 0) || 0;
+  const totalLoaded = (execution.loadedCargo || []).join(', ');
 
   return (
-    <Dialog>
-        <Card 
-        ref={setNodeRef} 
-        style={style} 
-        className="text-xs mb-2 touch-none group/exec"
-        >
-            <div className="p-2 relative">
-                <div className="absolute top-1 right-1 z-10">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover/exec:opacity-100 transition-opacity">
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={onEdit}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
-                            <DropdownMenuItem onClick={onDelete} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
-                             {execution.loadedCargo && execution.loadedCargo.length > 0 && (
-                                <DialogTrigger asChild>
-                                    <DropdownMenuItem><Cuboid className="mr-2 h-4 w-4" /> Ачсан ачаа</DropdownMenuItem>
-                                </DialogTrigger>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-                
-                <div {...attributes} {...listeners} className="cursor-grab pr-6">
-                    <p className="font-semibold">Огноо: {date ? format(date, 'yyyy-MM-dd') : 'N/A'}</p>
-                    <div className="text-muted-foreground">
-                    <p>Жолооч: {execution.driverName || 'TBA'}</p>
-                    <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
-                    {totalLoaded > 0 && <p className="text-blue-600 font-semibold">Ачсан: {totalLoaded}</p>}
-                    </div>
+    <Card 
+    ref={setNodeRef} 
+    style={style} 
+    className="text-xs mb-2 touch-none group/exec"
+    >
+        <div className="p-2 relative">
+            <div className="absolute top-1 right-1 z-10">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover/exec:opacity-100 transition-opacity">
+                        <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={onEdit}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
+                        <DropdownMenuItem onClick={onDelete} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+            
+            <div {...attributes} {...listeners} className="cursor-grab pr-6">
+                <p className="font-semibold">Огноо: {date ? format(date, 'yyyy-MM-dd') : 'N/A'}</p>
+                <div className="text-muted-foreground">
+                <p>Жолооч: {execution.driverName || 'TBA'}</p>
+                <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
+                {totalLoaded && <p className="text-blue-600 font-semibold">Ачсан: {totalLoaded}</p>}
                 </div>
             </div>
-        </Card>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Ачсан ачааны мэдээлэл</DialogTitle>
-                <DialogDescription>
-                    {date ? format(date, 'yyyy-MM-dd') : 'N/A'} - {execution.driverName}
-                </DialogDescription>
-            </DialogHeader>
-            <Table>
-                <TableHeader><TableRow><TableHead>Ачаа</TableHead><TableHead className="text-right">Хэмжээ</TableHead></TableRow></TableHeader>
-                <TableBody>
-                {(execution.loadedCargo || []).map(cargo => (
-                    <TableRow key={cargo.cargoItemId}>
-                        <TableCell>{cargo.cargoName}</TableCell>
-                        <TableCell className="text-right">{cargo.loadedQuantity} {cargo.cargoUnit}</TableCell>
-                    </TableRow>
-                ))}
-                </TableBody>
-            </Table>
-        </DialogContent>
-    </Dialog>
+        </div>
+    </Card>
   );
 }
 
@@ -311,7 +271,7 @@ export default function ContractedTransportDetailPage() {
   
   // States for dialogs, independent of react-hook-form
   const [selectedCargoItems, setSelectedCargoItems] = React.useState<Set<string>>(new Set());
-  const [loadedCargoQuantities, setLoadedCargoQuantities] = React.useState<LoadedCargoState>({});
+  const [loadedCargoText, setLoadedCargoText] = React.useState<string>('');
 
 
   const [relatedData, setRelatedData] = React.useState({
@@ -465,24 +425,11 @@ export default function ContractedTransportDetailPage() {
   
    React.useEffect(() => {
     if (isLoadCargoDialogOpen && executionToLoad) {
-        const initialQuantities: LoadedCargoState = {};
-        const itemsToDisplay = executionToLoad.selectedCargo?.length ? executionToLoad.selectedCargo : contract?.cargoItems || [];
-
-        itemsToDisplay.forEach(item => {
-            const cargoId = item.cargoItemId || (item as any).id;
-            const existingLoad = executionToLoad.loadedCargo?.find(lc => lc.cargoItemId === cargoId);
-            initialQuantities[cargoId] = {
-                loadedQuantity: existingLoad?.loadedQuantity || 0,
-                cargoItemId: cargoId,
-                cargoName: item.cargoName || (contract?.cargoItems.find(ci => ci.id === cargoId))?.name || 'N/A',
-                cargoUnit: (item as any).cargoUnit || (contract?.cargoItems.find(ci => ci.id === cargoId))?.unit || 'N/A',
-            };
-        });
-        setLoadedCargoQuantities(initialQuantities);
+        setLoadedCargoText((executionToLoad.loadedCargo || []).join(', '));
     } else {
-        setLoadedCargoQuantities({});
+        setLoadedCargoText('');
     }
-  }, [isLoadCargoDialogOpen, executionToLoad, contract]);
+  }, [isLoadCargoDialogOpen, executionToLoad]);
 
     
     const handleDeleteExecution = React.useCallback(async () => {
@@ -706,16 +653,8 @@ export default function ContractedTransportDetailPage() {
         const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
 
         const newSelectedCargo = Array.from(selectedCargoItems)
-            .map(cargoId => {
-                const item = contract.cargoItems.find(i => i.id === cargoId);
-                if (!item) return null;
-                return {
-                    cargoItemId: item.id,
-                    cargoName: item.name,
-                    cargoUnit: item.unit,
-                };
-            })
-            .filter((item): item is { cargoItemId: string; cargoName: string; cargoUnit: string; } => item !== null);
+            .map(cargoId => contract.cargoItems.find(i => i.id === cargoId)?.name)
+            .filter((name): name is string => !!name);
         
         const dataToSave: DocumentData = {
           contractId: contract.id,
@@ -737,7 +676,7 @@ export default function ContractedTransportDetailPage() {
             id: docRef.id,
             ...dataToSave,
             date: toDateSafe(dataToSave.date)!,
-            createdAt: new Date(), // Use local date for immediate feedback
+            createdAt: new Date(),
         };
 
         setExecutions(prev => [...prev, newExecution]);
@@ -794,8 +733,7 @@ export default function ContractedTransportDetailPage() {
         setIsSubmitting(true);
     
         try {
-            const cargoToSave = Object.values(loadedCargoQuantities)
-                .filter(item => item.loadedQuantity > 0);
+            const cargoToSave = loadedCargoText.split(',').map(s => s.trim()).filter(Boolean);
             
             const execRef = doc(db, 'contracted_transport_executions', executionToLoad.id);
             
@@ -1131,36 +1069,22 @@ export default function ContractedTransportDetailPage() {
             </AlertDialogContent>
         </AlertDialog>
         
-         {/* Load Cargo Dialog */}
+        {/* Load Cargo Dialog */}
         <AlertDialog open={isLoadCargoDialogOpen} onOpenChange={setIsLoadCargoDialogOpen}>
             <AlertDialogContent>
                     <div>
                         <AlertDialogHeader>
                             <AlertDialogTitle>Ачааны мэдээлэл оруулах</AlertDialogTitle>
                             <AlertDialogDescription>
-                               "{executionToLoad?.driverName}" жолоочтой гүйцэтгэлд ачсан ачааны хэмжээг оруулна уу.
+                               "{executionToLoad?.driverName}" жолоочтой гүйцэтгэлд ачсан ачааны хэмжээг оруулна уу. (Ж.нь: 25тн цемент, 10тн арматур)
                             </AlertDialogDescription>
                         </AlertDialogHeader>
-                        <div className="py-4 space-y-4 max-h-[50vh] overflow-y-auto">
-                           {Object.values(loadedCargoQuantities).map((item) => (
-                                <div key={item.cargoItemId}>
-                                    <Label>{item.cargoName} ({item.cargoUnit})</Label>
-                                    <Input
-                                        type="number"
-                                        placeholder="0"
-                                        value={item.loadedQuantity}
-                                        onChange={(e) => {
-                                            setLoadedCargoQuantities(prev => ({
-                                                ...prev,
-                                                [item.cargoItemId]: {
-                                                    ...prev[item.cargoItemId],
-                                                    loadedQuantity: parseFloat(e.target.value) || 0
-                                                }
-                                            }))
-                                        }}
-                                    />
-                                </div>
-                            ))}
+                        <div className="py-4">
+                           <Textarea
+                                placeholder="Ачсан ачааны мэдээлэл..."
+                                value={loadedCargoText}
+                                onChange={(e) => setLoadedCargoText(e.target.value)}
+                           />
                         </div>
                         <AlertDialogFooter>
                             <AlertDialogCancel onClick={() => setIsLoadCargoDialogOpen(false)}>Цуцлах</AlertDialogCancel>
@@ -1256,3 +1180,5 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
+    
