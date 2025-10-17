@@ -139,16 +139,6 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
                 <p>Жолооч: {execution.driverName || 'TBA'}</p>
                 <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
                 </div>
-                {execution.loadedCargo && execution.loadedCargo.length > 0 && (
-                    <div className="mt-1 pt-1 border-t text-muted-foreground">
-                        <p className="font-medium text-xs">Ачсан ачаа:</p>
-                        <ul className="list-disc list-inside">
-                            {execution.loadedCargo.map((cargo, index) => (
-                                <li key={index} className="text-xs">{cargo.cargoName}: {cargo.loadedQuantity} {cargo.cargoUnit}</li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
             </div>
         </div>
     </Card>
@@ -263,18 +253,18 @@ export default function ContractedTransportDetailPage() {
     resolver: zodResolver(routeStopFormSchema),
   });
 
-  const newExecutionForm = useForm<any>({
+  const newExecutionForm = useForm({
     defaultValues: {
       date: new Date(),
       driverId: '',
       vehicleId: '',
-      loadedCargo: [],
+      loadedCargo: [] as { cargoItemId: string; cargoName: string; cargoUnit: string; loadedQuantity: number }[],
     },
   });
 
-  const { fields: cargoFields, append: appendCargo, remove: removeCargo } = useFieldArray({
+  const { fields: loadedCargoFields, replace: replaceLoadedCargo } = useFieldArray({
     control: newExecutionForm.control,
-    name: "loadedCargo",
+    name: 'loadedCargo',
   });
 
 
@@ -379,14 +369,22 @@ export default function ContractedTransportDetailPage() {
 
   React.useEffect(() => {
     if (contract && isNewExecutionDialogOpen) {
+      const initialLoadedCargo = (contract.cargoItems || []).map(item => ({
+        cargoItemId: item.id,
+        cargoName: item.name,
+        cargoUnit: item.unit,
+        loadedQuantity: 0,
+      }));
+
       newExecutionForm.reset({
         date: new Date(),
         driverId: '',
         vehicleId: '',
-        loadedCargo: [],
+        loadedCargo: initialLoadedCargo,
       });
+      replaceLoadedCargo(initialLoadedCargo);
     }
-  }, [contract, isNewExecutionDialogOpen, newExecutionForm]);
+  }, [contract, isNewExecutionDialogOpen, newExecutionForm, replaceLoadedCargo]);
 
   React.useEffect(() => {
     if (executionToEdit && contract) {
@@ -627,7 +625,6 @@ export default function ContractedTransportDetailPage() {
           status: 'Хүлээгдэж буй',
           statusHistory: [{ status: 'Хүлээгдэж буй', date: new Date() }],
           createdAt: serverTimestamp(),
-          loadedCargo: [],
         };
 
         const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
@@ -721,19 +718,19 @@ export default function ContractedTransportDetailPage() {
                 Гэрээний дугаар: {contract.contractNumber}
                 </p>
             </div>
-             <Button asChild size="sm">
-                <Link href={`/contracted-transport/${id}/edit`}>
-                    <Edit className="mr-2 h-4 w-4" /> Засварлах
-                </Link>
-            </Button>
         </div>
       </div>
       
         <div className="grid md:grid-cols-3 gap-6">
             <div className="md:col-span-2 space-y-6">
                 <Card>
-                    <CardHeader>
+                    <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle>Гэрээний дэлгэрэнгүй</CardTitle>
+                        <Button asChild size="sm" variant="outline">
+                            <Link href={`/contracted-transport/${id}/edit`}>
+                                <Edit className="mr-2 h-4 w-4" /> Засварлах
+                            </Link>
+                        </Button>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6">
@@ -890,7 +887,7 @@ export default function ContractedTransportDetailPage() {
         <Dialog open={isNewExecutionDialogOpen} onOpenChange={setIsNewExecutionDialogOpen}>
             <DialogContent className="sm:max-w-md">
                 <Form {...newExecutionForm}>
-                    <form onSubmit={newExecutionForm.handleSubmit(handleNewExecutionSubmit)}>
+                    <form onSubmit={newExecutionForm.handleSubmit(handleNewExecutionSubmit)} id="new-execution-form">
                         <DialogHeader>
                             <DialogTitle>Шинэ гүйцэтгэл нэмэх</DialogTitle>
                         </DialogHeader>
@@ -899,12 +896,12 @@ export default function ContractedTransportDetailPage() {
                             <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                             <FormField control={newExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                         </div>
-                        <DialogFooter>
-                            <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                            <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
-                        </DialogFooter>
                     </form>
                 </Form>
+                <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                    <Button type="submit" form="new-execution-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
 
@@ -930,7 +927,7 @@ export default function ContractedTransportDetailPage() {
             <Dialog open={!!executionToEdit} onOpenChange={() => setExecutionToEdit(null)}>
                 <DialogContent className="sm:max-w-md">
                      <Form {...editExecutionForm}>
-                        <form onSubmit={editExecutionForm.handleSubmit(handleUpdateExecution)}>
+                        <form onSubmit={editExecutionForm.handleSubmit(handleUpdateExecution)} id="edit-execution-form">
                             <DialogHeader>
                                 <DialogTitle>Гүйцэтгэл засах</DialogTitle>
                             </DialogHeader>
@@ -939,12 +936,12 @@ export default function ContractedTransportDetailPage() {
                                 <FormField control={editExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                                 <FormField control={editExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                             </div>
-                            <DialogFooter>
-                                <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                                <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
-                            </DialogFooter>
                         </form>
                     </Form>
+                     <DialogFooter>
+                        <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                        <Button type="submit" form="edit-execution-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         )}
@@ -1012,3 +1009,4 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
