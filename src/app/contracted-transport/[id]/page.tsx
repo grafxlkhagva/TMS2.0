@@ -936,45 +936,43 @@ export default function ContractedTransportDetailPage() {
         {/* Add New Execution Dialog */}
         <Dialog open={isNewExecutionDialogOpen} onOpenChange={setIsNewExecutionDialogOpen}>
             <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Шинэ гүйцэтгэл нэмэх</DialogTitle>
+                </DialogHeader>
                 <Form {...newExecutionForm}>
-                    <form onSubmit={newExecutionForm.handleSubmit(handleNewExecutionSubmit)}>
-                        <DialogHeader>
-                            <DialogTitle>Шинэ гүйцэтгэл нэмэх</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
-                            <FormField control={newExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
-                            <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                            <FormField control={newExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                            <div>
-                                <FormLabel>Ачих ачаа ба хэмжээ</FormLabel>
-                                <div className="space-y-2 mt-2">
-                                    {newExecutionForm.getValues('loadedCargo')?.map((field, index) => (
-                                    <div key={field.cargoItemId} className="flex items-center gap-2">
-                                        <span className="flex-1 text-sm">{field.cargoName}</span>
-                                        <FormField
-                                        control={newExecutionForm.control}
-                                        name={`loadedCargo.${index}.loadedQuantity`}
-                                        render={({ field }) => (
-                                            <FormItem className="w-32">
-                                            <FormControl>
-                                                <Input type="number" placeholder="0" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                            </FormItem>
-                                        )}
-                                        />
-                                        <span className="text-sm text-muted-foreground">{field.cargoUnit}</span>
-                                    </div>
-                                    ))}
+                    <form onSubmit={newExecutionForm.handleSubmit(handleNewExecutionSubmit)} id="new-execution-form" className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
+                        <FormField control={newExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
+                        <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                        <FormField control={newExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                        <div>
+                            <FormLabel>Ачих ачаа ба хэмжээ</FormLabel>
+                            <div className="space-y-2 mt-2">
+                                {newExecutionForm.getValues('loadedCargo')?.map((field, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                    <span className="flex-1 text-sm">{field.cargoName}</span>
+                                    <FormField
+                                    control={newExecutionForm.control}
+                                    name={`loadedCargo.${index}.loadedQuantity`}
+                                    render={({ field }) => (
+                                        <FormItem className="w-32">
+                                        <FormControl>
+                                            <Input type="number" placeholder="0" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                    />
+                                    <span className="text-sm text-muted-foreground">{field.cargoUnit}</span>
                                 </div>
+                                ))}
                             </div>
                         </div>
-                        <DialogFooter>
-                            <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                            <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
-                        </DialogFooter>
                     </form>
                 </Form>
+                 <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                    <Button type="submit" form="new-execution-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
 
@@ -999,7 +997,7 @@ export default function ContractedTransportDetailPage() {
             <Dialog open={!!executionToEdit} onOpenChange={() => setExecutionToEdit(null)}>
                 <DialogContent className="sm:max-w-lg">
                     <Form {...editExecutionForm}>
-                         <form onSubmit={editExecutionForm.handleSubmit(handleUpdateExecution)}>
+                         <form onSubmit={editExecutionForm.handleSubmit(handleUpdateExecution)} id="edit-execution-form">
                             <DialogHeader>
                                 <DialogTitle>Гүйцэтгэл засах</DialogTitle>
                             </DialogHeader>
@@ -1011,7 +1009,7 @@ export default function ContractedTransportDetailPage() {
                                         <FormLabel>Ачсан ачаа ба хэмжээ</FormLabel>
                                         <div className="space-y-2 mt-2">
                                             {editExecutionForm.getValues('loadedCargo')?.map((field, index) => (
-                                            <div key={field.cargoItemId} className="flex items-center gap-2">
+                                            <div key={index} className="flex items-center gap-2">
                                                 <span className="flex-1 text-sm">{field.cargoName}</span>
                                                 <FormField
                                                 control={editExecutionForm.control}
@@ -1031,12 +1029,12 @@ export default function ContractedTransportDetailPage() {
                                         </div>
                                     </div>
                             </div>
-                            <DialogFooter>
-                                <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                                <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
-                            </DialogFooter>
                         </form>
                     </Form>
+                     <DialogFooter>
+                        <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                        <Button type="submit" form="edit-execution-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         )}
@@ -1046,7 +1044,7 @@ export default function ContractedTransportDetailPage() {
         <Dialog open={isStopDialogOpen} onOpenChange={setIsStopDialogOpen}>
              <DialogContent>
                 <Form {...routeStopForm}>
-                     <form onSubmit={routeStopForm.handleSubmit(onRouteStopSubmit)}>
+                     <form onSubmit={routeStopForm.handleSubmit(onRouteStopSubmit)} id="route-stop-form">
                         <DialogHeader>
                             <DialogTitle>Маршрутын зогсоол нэмэх</DialogTitle>
                         </DialogHeader>
@@ -1054,12 +1052,12 @@ export default function ContractedTransportDetailPage() {
                                 <FormField control={routeStopForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын нэр</FormLabel><FormControl><Input placeholder="Даваа-1" {...field} /></FormControl><FormMessage /></FormItem> )} />
                                 <FormField control={routeStopForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>Тайлбар</FormLabel><FormControl><Input placeholder="Амрах, хооллох" {...field} /></FormControl><FormMessage /></FormItem> )} />
                         </div>
-                        <DialogFooter>
-                            <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                            <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Нэмэх</Button>
-                        </DialogFooter>
                     </form>
                 </Form>
+                <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                    <Button type="submit" form="route-stop-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Нэмэх</Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
         
@@ -1068,18 +1066,18 @@ export default function ContractedTransportDetailPage() {
             <Dialog open={!!stopToEdit} onOpenChange={() => setStopToEdit(null)}>
                 <DialogContent>
                     <Form {...editStopForm}>
-                        <form onSubmit={editStopForm.handleSubmit(handleUpdateStop)}>
+                        <form onSubmit={editStopForm.handleSubmit(handleUpdateStop)} id="edit-stop-form">
                             <DialogHeader><DialogTitle>Зогсоол засах</DialogTitle></DialogHeader>
                             <div className="space-y-4 py-4">
                                      <FormField control={editStopForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын нэр</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
                                      <FormField control={editStopForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>Тайлбар</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
                             </div>
-                            <DialogFooter>
-                                <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                                <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Хадгалах</Button>
-                            </DialogFooter>
                         </form>
                     </Form>
+                     <DialogFooter>
+                        <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
+                        <Button type="submit" form="edit-stop-form" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Хадгалах</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         )}
