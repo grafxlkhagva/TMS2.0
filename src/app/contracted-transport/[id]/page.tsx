@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -24,7 +23,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog"
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -996,8 +995,8 @@ export default function ContractedTransportDetailPage() {
                             <div>
                                 <h4 className="font-semibold mb-2">Ачаа сонгох (Сонголттой)</h4>
                                 <div className="space-y-2">
-                                     {contract.cargoItems.map((item, itemIndex) => (
-                                        <div key={`${item.id}-${itemIndex}`} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
+                                     {contract.cargoItems.map((item) => (
+                                        <div key={`${item.id}-select`} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
                                             <Checkbox
                                                 id={`select-cargo-${item.id}`}
                                                 checked={selectedCargoItems.has(item.id)}
@@ -1257,7 +1256,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
-
-
-    
