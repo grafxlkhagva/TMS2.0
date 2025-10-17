@@ -723,7 +723,7 @@ export default function ContractedTransportDetailPage() {
           driverId: selectedDriver?.driverId ?? null,
           driverName: selectedDriver?.driverName ?? null,
           vehicleId: selectedVehicle?.vehicleId ?? null,
-          vehicleLicense: selectedVehicle?.licensePlate ?? null,
+          vehicleLicense: (selectedVehicle?.modelName && selectedVehicle?.licensePlate) ? `${selectedVehicle.modelName} (${selectedVehicle.licensePlate})` : null,
           status: 'Pending',
           statusHistory: [{ status: 'Pending', date: new Date() }],
           createdAt: serverTimestamp(),
@@ -995,8 +995,8 @@ export default function ContractedTransportDetailPage() {
                             <div>
                                 <h4 className="font-semibold mb-2">Ачаа сонгох (Сонголттой)</h4>
                                 <div className="space-y-2">
-                                     {contract.cargoItems.map((item) => (
-                                        <div key={`${item.id}-select`} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
+                                     {contract.cargoItems.map((item, itemIndex) => (
+                                        <div key={`${item.id}-${itemIndex}`} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
                                             <Checkbox
                                                 id={`select-cargo-${item.id}`}
                                                 checked={selectedCargoItems.has(item.id)}
