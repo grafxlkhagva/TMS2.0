@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -16,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { format, differenceInDays } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,7 +24,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader } from "@/components/ui/alert-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogFooter } from "@/components/ui/alert-dialog"
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -651,8 +650,11 @@ export default function ContractedTransportDetailPage() {
         const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
 
         const newSelectedCargo = Array.from(selectedCargoItems)
-            .map(cargoId => contract.cargoItems.find(i => i.id === cargoId)?.name)
-            .filter((name): name is string => !!name);
+            .map(cargoId => {
+                const item = contract.cargoItems.find(i => i.id === cargoId);
+                return item ? { cargoItemId: item.id, cargoName: item.name, cargoUnit: item.unit } : null;
+            })
+            .filter((name): name is { cargoItemId: string; cargoName: string; cargoUnit: string; } => !!name);
         
         const dataToSave: DocumentData = {
           contractId: contract.id,
@@ -665,6 +667,7 @@ export default function ContractedTransportDetailPage() {
           statusHistory: [{ status: 'Pending', date: new Date() }],
           createdAt: serverTimestamp(),
           selectedCargo: newSelectedCargo,
+          loadedCargo: [],
           totalLoadedWeight: 0,
         };
         
@@ -844,7 +847,7 @@ export default function ContractedTransportDetailPage() {
                                 <TableHeader><TableRow><TableHead>Ачаа</TableHead><TableHead>Баглаа</TableHead><TableHead className="text-right">Үнэ (₮)</TableHead></TableRow></TableHeader>
                                 <TableBody>
                                 {(contract.cargoItems || []).map((item, index) => (
-                                    <TableRow key={item.id || index}>
+                                    <TableRow key={`${item.id}-${index}`}>
                                         <TableCell className="font-medium">{item.name} ({item.unit})</TableCell>
                                         <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
                                         <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
@@ -971,12 +974,12 @@ export default function ContractedTransportDetailPage() {
                     <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
                     <AlertDialogDescription>Энэ гүйцэтгэлийн мэдээллийг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.</AlertDialogDescription>
                 </AlertDialogHeader>
-                <DialogFooter>
+                <AlertDialogFooter>
                     <AlertDialogCancel>Цуцлах</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDeleteExecution} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90">
                         {isSubmitting ? 'Устгаж байна...' : 'Устгах'}
                     </AlertDialogAction>
-                </DialogFooter>
+                </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
 
@@ -1056,12 +1059,12 @@ export default function ContractedTransportDetailPage() {
                         "{stopToDelete?.name}" зогсоолыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <DialogFooter>
+                <AlertDialogFooter>
                     <AlertDialogCancel>Цуцлах</AlertDialogCancel>
                     <AlertDialogAction onClick={handleRemoveStop} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90">
                        {isSubmitting ? "Устгаж байна..." : "Устгах"}
                     </AlertDialogAction>
-                </DialogFooter>
+                </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
         
@@ -1083,13 +1086,13 @@ export default function ContractedTransportDetailPage() {
                                 onChange={(e) => setTotalLoadedWeight(Number(e.target.value))}
                            />
                         </div>
-                        <DialogFooter>
+                        <AlertDialogFooter>
                             <AlertDialogCancel onClick={() => setIsLoadCargoDialogOpen(false)}>Цуцлах</AlertDialogCancel>
                             <AlertDialogAction onClick={handleLoadCargoSubmit} disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                                 Хадгалах
                             </AlertDialogAction>
-                        </DialogFooter>
+                        </AlertDialogFooter>
                     </div>
             </AlertDialogContent>
         </AlertDialog>
@@ -1177,7 +1180,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
-    
-
-    
