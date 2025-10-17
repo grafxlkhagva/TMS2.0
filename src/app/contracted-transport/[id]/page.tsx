@@ -23,7 +23,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -727,7 +727,7 @@ export default function ContractedTransportDetailPage() {
           status: 'Pending',
           statusHistory: [{ status: 'Pending', date: new Date() }],
           createdAt: serverTimestamp(),
-          selectedCargo: newSelectedCargo.length > 0 ? newSelectedCargo : [],
+          selectedCargo: newSelectedCargo,
           loadedCargo: [],
         };
         
