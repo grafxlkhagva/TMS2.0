@@ -696,11 +696,17 @@ export default function ContractedTransportDetailPage() {
     }, [handleExecutionStatusChange]);
     
     const dashboardStats = React.useMemo(() => {
+        if (!contract) {
+            return { total: 0, completed: 0, inProgress: 0, daysLeft: 0, totalDrivers: 0, totalVehicles: 0 };
+        }
         const total = executions.length;
         const completed = executions.filter(e => e.status === 'Хүргэгдсэн').length;
         const inProgress = executions.filter(e => e.status !== 'Хүлээгдэж буй' && e.status !== 'Хүргэгдсэн').length;
-        const daysLeft = contract ? differenceInDays(toDateSafe(contract.endDate)!, new Date()) : 0;
-        return { total, completed, inProgress, daysLeft };
+        const daysLeft = differenceInDays(toDateSafe(contract.endDate)!, new Date());
+        const totalDrivers = contract.assignedDrivers.length;
+        const totalVehicles = contract.assignedVehicles.length;
+
+        return { total, completed, inProgress, daysLeft, totalDrivers, totalVehicles };
     }, [executions, contract]);
 
   if (isLoading) {
@@ -787,14 +793,16 @@ export default function ContractedTransportDetailPage() {
             </div>
         </div>
       </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." />
+            <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." />
+            <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." />
             <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." />
             <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." />
             <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." />
         </div>
       
-        <div className="grid md:grid-cols-12 gap-6 items-start">
+        <div className="grid md:grid-cols-12 gap-6 items-start mt-6">
             <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <div className="md:col-span-9">
                     <Card>
