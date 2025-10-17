@@ -249,15 +249,15 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
   );
 }
 
-function StatCard({ title, value, icon: Icon, description, actionLabel, onActionClick, colorClass }: { title: string; value: string | number; icon: React.ElementType; description: string; actionLabel?: string; onActionClick?: () => void; colorClass?: string; }) {
+function StatCard({ title, value, icon: Icon, description, actionLabel, onActionClick, valueColorClass }: { title: string; value: string | number; icon: React.ElementType; description: string; actionLabel?: string; onActionClick?: () => void; valueColorClass?: string; }) {
   return (
-    <Card className={cn("bg-dashboard-card text-dashboard-foreground", colorClass)}>
+    <Card className="bg-dashboard-card text-dashboard-foreground">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{title}</CardTitle>
             <Icon className="h-4 w-4 text-dashboard-muted-foreground" />
         </CardHeader>
         <CardContent>
-            <div className={cn("text-2xl font-bold")}>{value}</div>
+            <div className={cn("text-2xl font-bold", valueColorClass)}>{value}</div>
             <p className="text-xs text-dashboard-muted-foreground">{description}</p>
         </CardContent>
         {actionLabel && onActionClick && (
@@ -344,7 +344,7 @@ export default function ContractedTransportDetailPage() {
   const loadCargoForm = useForm<LoadCargoFormValues>({
     resolver: zodResolver(loadCargoFormSchema),
   });
-  const { fields: loadedCargoFields } = useFieldArray({
+  const { fields: loadedCargoFields, replace: replaceLoadedCargoFields } = useFieldArray({
     control: loadCargoForm.control,
     name: "loadedCargo"
   });
@@ -472,9 +472,9 @@ export default function ContractedTransportDetailPage() {
         cargoUnit: item.unit,
         loadedQuantity: 0,
       }));
-      loadCargoForm.reset({ loadedCargo: defaultCargo });
+      replaceLoadedCargoFields(defaultCargo);
     }
-  }, [executionToLoad, contract, loadCargoForm]);
+  }, [executionToLoad, contract, replaceLoadedCargoFields]);
     
     const handleDeleteExecution = React.useCallback(async () => {
         if (!executionToDelete) return;
@@ -769,6 +769,7 @@ export default function ContractedTransportDetailPage() {
 
             if (overContainerId === 'Ачсан') {
                 setExecutionToLoad(execution);
+                setIsLoadCargoDialogOpen(true);
             } else {
                 handleExecutionStatusChange(active.id as string, overContainerId);
             }
@@ -888,13 +889,13 @@ export default function ContractedTransportDetailPage() {
             </div>
         </div>
       </div>
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 mb-6">
-        <div className="lg:col-span-3"><StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." colorClass="dark-card-1" /></div>
-        <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." colorClass="dark-card-2" />
-        <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." colorClass="dark-card-3" />
-        <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} colorClass="dark-card-4" />
-        <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} colorClass="dark-card-5" />
-        <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." colorClass="dark-card-6" />
+       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6 mb-6">
+        <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." valueColorClass="text-dashboard-stat-1" />
+        <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." valueColorClass="text-dashboard-stat-2" />
+        <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." valueColorClass="text-dashboard-stat-3" />
+        <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-dashboard-stat-4" />
+        <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-dashboard-stat-5" />
+        <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." valueColorClass="text-dashboard-stat-6" />
       </div>
       
         <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -1193,4 +1194,5 @@ export default function ContractedTransportDetailPage() {
 }
 
     
+
 
