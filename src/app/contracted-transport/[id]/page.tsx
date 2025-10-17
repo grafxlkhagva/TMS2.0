@@ -45,12 +45,6 @@ const editExecutionFormSchema = z.object({
 });
 type EditExecutionFormValues = z.infer<typeof editExecutionFormSchema>;
 
-const cargoItemSchema = z.object({
-  cargoItemId: z.string(),
-  cargoName: z.string(),
-  quantity: z.coerce.number().min(0, "Ачааны хэмжээ 0-ээс бага байж болохгүй."),
-});
-
 const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
   driverId: z.string().optional(),
@@ -212,7 +206,7 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
   );
 }
 
-function StatCard({ title, value, icon: Icon, description }: { title: string; value: string | number; icon: React.ElementType; description: string; }) {
+function StatCard({ title, value, icon: Icon, description, actionLabel, onActionClick }: { title: string; value: string | number; icon: React.ElementType; description: string; actionLabel?: string; onActionClick?: () => void; }) {
   return (
     <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -223,6 +217,13 @@ function StatCard({ title, value, icon: Icon, description }: { title: string; va
             <div className="text-2xl font-bold">{value}</div>
             <p className="text-xs text-muted-foreground">{description}</p>
         </CardContent>
+        {actionLabel && onActionClick && (
+            <CardFooter>
+                 <Button variant="outline" size="sm" className="w-full" onClick={onActionClick}>
+                    {actionLabel}
+                </Button>
+            </CardFooter>
+        )}
     </Card>
   );
 }
@@ -242,6 +243,7 @@ export default function ContractedTransportDetailPage() {
   
   const [isStopDialogOpen, setIsStopDialogOpen] = React.useState(false);
   const [isNewExecutionDialogOpen, setIsNewExecutionDialogOpen] = React.useState(false);
+  const [isResourcesDialogOpen, setIsResourcesDialogOpen] = React.useState(false);
   const [executionToDelete, setExecutionToDelete] = React.useState<ContractedTransportExecution | null>(null);
   const [stopToDelete, setStopToDelete] = React.useState<RouteStop | null>(null);
   const [executionToEdit, setExecutionToEdit] = React.useState<ContractedTransportExecution | null>(null);
@@ -795,133 +797,57 @@ export default function ContractedTransportDetailPage() {
       </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." />
-            <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." />
-            <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." />
+            <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} />
+            <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} />
             <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." />
             <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." />
             <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." />
         </div>
       
-        <div className="grid md:grid-cols-12 gap-6 items-start mt-6">
+        <div className="mt-6">
             <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <div className="md:col-span-9">
-                    <Card>
-                        <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <CardTitle>Тээвэрлэлтийн Явц ба Зогсоолууд</CardTitle>
-                                    <CardDescription>Гүйцэтгэлийн явцыг чирж зөөх үйлдлээр удирдах хэсэг.</CardDescription>
-                                </div>
-                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" onClick={() => setIsNewExecutionDialogOpen(true)}>
-                                        <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
-                                    </Button>
-                                    <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
-                                        <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
-                                    </Button>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="overflow-x-auto pb-4">
-                                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(200px, 1fr))`}}>
-                                    {executionStatuses.map(status => {
-                                        const stop = contract.routeStops.find(s => s.name === status);
-                                        const itemsForStatus = executions.filter(ex => ex.status === status);
-                                        return (
-                                            <StatusColumn 
-                                                key={status} 
-                                                id={status}
-                                                title={status}
-                                                items={itemsForStatus}
-                                                stop={stop}
-                                                onEditStop={(stopToEdit) => setStopToEdit(stopToEdit)}
-                                                onDeleteStop={(stopToDelete) => setStopToDelete(stopToDelete)}
-                                                onEditExecution={(exec) => setExecutionToEdit(exec)}
-                                                onDeleteExecution={(exec) => setExecutionToDelete(exec)}
-                                            />
-                                        )
-                                    })}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </DndContext>
-            
-            <div className="md:col-span-3">
-                 <Card>
+                <Card>
                     <CardHeader>
-                        <CardTitle>Оноосон Жолооч ба Т/Х</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div>
-                             <div className="flex justify-between items-center mb-2">
-                                <h3 className="font-semibold text-sm">Оноосон жолооч нар</h3>
-                                <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm">
-                                            <PlusCircle className="mr-2 h-4 w-4"/> Жолооч нэмэх
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-80 p-0">
-                                        <Command><CommandInput placeholder="Жолооч хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
-                                            {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
-                                                <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={() => handleAddDriver(d.id)} disabled={isSubmitting}>
-                                                    <Check className={cn("mr-2 h-4 w-4", assignedDriverIds.includes(d.id) ? "opacity-100" : "opacity-0")}/>
-                                                    <span>{d.display_name} ({d.phone_number})</span>
-                                                </CommandItem>
-                                            ))}
-                                        </CommandGroup></CommandList></Command>
-                                    </PopoverContent>
-                                </Popover>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <CardTitle>Тээвэрлэлтийн Явц ба Зогсоолууд</CardTitle>
+                                <CardDescription>Гүйцэтгэлийн явцыг чирж зөөх үйлдлээр удирдах хэсэг.</CardDescription>
                             </div>
-                            <div className="space-y-2">
-                                {contract.assignedDrivers.length > 0 ? ( contract.assignedDrivers.map(driver => (
-                                    <div key={driver.driverId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
-                                        <div><p className="font-medium">{driver.driverName}</p><p className="text-xs text-muted-foreground">{driver.driverPhone}</p></div>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveDriver(driver)} disabled={isSubmitting}><XCircle className="h-4 w-4 text-destructive"/></Button>
-                                    </div>
-                                ))) : (<p className="text-sm text-muted-foreground text-center py-1">Жолооч оноогоогүй.</p>)}
+                             <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" onClick={() => setIsNewExecutionDialogOpen(true)}>
+                                    <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
+                                    <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
+                                </Button>
                             </div>
                         </div>
-                        <Separator/>
-                        <div>
-                            <div className="flex justify-between items-center mb-2">
-                                <h3 className="font-semibold text-sm">Оноосон тээврийн хэрэгсэл</h3>
-                                <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm">
-                                            <PlusCircle className="mr-2 h-4 w-4"/> Т/Х нэмэх
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-80 p-0">
-                                        <Command><CommandInput placeholder="Машин хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
-                                            {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
-                                                <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={() => handleAddVehicle(v.id)} disabled={isSubmitting}>
-                                                     <Check className={cn("mr-2 h-4 w-4", assignedVehicleIds.includes(v.id) ? "opacity-100" : "opacity-0")}/>
-                                                    <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
-                                                </CommandItem>
-                                            ))}
-                                        </CommandGroup></CommandList></Command>
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                             <div className="space-y-2">
-                                {contract.assignedVehicles.length > 0 ? ( contract.assignedVehicles.map(vehicle => (
-                                    <div key={vehicle.vehicleId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
-                                        <div>
-                                            <p className="font-medium font-mono">{vehicle.licensePlate}</p>
-                                            <p className="text-xs text-muted-foreground font-mono">{vehicle.modelName} {vehicle.trailerLicensePlate && `/ ${vehicle.trailerLicensePlate}`}</p>
-                                        </div>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveVehicle(vehicle)} disabled={isSubmitting}><XCircle className="h-4 w-4 text-destructive"/></Button>
-                                    </div>
-                                ))) : (<p className="text-sm text-muted-foreground text-center py-1">Т/Х оноогоогүй.</p>)}
+                    </CardHeader>
+                    <CardContent>
+                        <div className="overflow-x-auto pb-4">
+                            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(200px, 1fr))`}}>
+                                {executionStatuses.map(status => {
+                                    const stop = contract.routeStops.find(s => s.name === status);
+                                    const itemsForStatus = executions.filter(ex => ex.status === status);
+                                    return (
+                                        <StatusColumn 
+                                            key={status} 
+                                            id={status}
+                                            title={status}
+                                            items={itemsForStatus}
+                                            stop={stop}
+                                            onEditStop={(stopToEdit) => setStopToEdit(stopToEdit)}
+                                            onDeleteStop={(stopToDelete) => setStopToDelete(stopToDelete)}
+                                            onEditExecution={(exec) => setExecutionToEdit(exec)}
+                                            onDeleteExecution={(exec) => setExecutionToDelete(exec)}
+                                        />
+                                    )
+                                })}
                             </div>
                         </div>
                     </CardContent>
                 </Card>
-            </div>
+            </DndContext>
         </div>
             
         {/* Add New Execution Dialog */}
@@ -1047,6 +973,86 @@ export default function ContractedTransportDetailPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+
+        {/* Assigned Resources Dialog */}
+        <Dialog open={isResourcesDialogOpen} onOpenChange={setIsResourcesDialogOpen}>
+            <DialogContent className="sm:max-w-2xl">
+                 <DialogHeader>
+                    <DialogTitle>Оноосон Жолооч ба Т/Х</DialogTitle>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    <div>
+                         <div className="flex justify-between items-center mb-2">
+                            <h3 className="font-semibold text-sm">Оноосон жолооч нар</h3>
+                            <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                        <PlusCircle className="mr-2 h-4 w-4"/> Жолооч нэмэх
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80 p-0">
+                                    <Command><CommandInput placeholder="Жолооч хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
+                                        {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
+                                            <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={() => handleAddDriver(d.id)} disabled={isSubmitting}>
+                                                <Check className={cn("mr-2 h-4 w-4", assignedDriverIds.includes(d.id) ? "opacity-100" : "opacity-0")}/>
+                                                <span>{d.display_name} ({d.phone_number})</span>
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup></CommandList></Command>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                        <div className="space-y-2">
+                            {contract.assignedDrivers.length > 0 ? ( contract.assignedDrivers.map(driver => (
+                                <div key={driver.driverId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
+                                    <div><p className="font-medium">{driver.driverName}</p><p className="text-xs text-muted-foreground">{driver.driverPhone}</p></div>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveDriver(driver)} disabled={isSubmitting}><XCircle className="h-4 w-4 text-destructive"/></Button>
+                                </div>
+                            ))) : (<p className="text-sm text-muted-foreground text-center py-1">Жолооч оноогоогүй.</p>)}
+                        </div>
+                    </div>
+                    <Separator/>
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="font-semibold text-sm">Оноосон тээврийн хэрэгсэл</h3>
+                            <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                        <PlusCircle className="mr-2 h-4 w-4"/> Т/Х нэмэх
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80 p-0">
+                                    <Command><CommandInput placeholder="Машин хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
+                                        {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
+                                            <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={() => handleAddVehicle(v.id)} disabled={isSubmitting}>
+                                                 <Check className={cn("mr-2 h-4 w-4", assignedVehicleIds.includes(v.id) ? "opacity-100" : "opacity-0")}/>
+                                                <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup></CommandList></Command>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                         <div className="space-y-2">
+                            {contract.assignedVehicles.length > 0 ? ( contract.assignedVehicles.map(vehicle => (
+                                <div key={vehicle.vehicleId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
+                                    <div>
+                                        <p className="font-medium font-mono">{vehicle.licensePlate}</p>
+                                        <p className="text-xs text-muted-foreground font-mono">{vehicle.modelName} {vehicle.trailerLicensePlate && `/ ${vehicle.trailerLicensePlate}`}</p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveVehicle(vehicle)} disabled={isSubmitting}><XCircle className="h-4 w-4 text-destructive"/></Button>
+                                </div>
+                            ))) : (<p className="text-sm text-muted-foreground text-center py-1">Т/Х оноогоогүй.</p>)}
+                        </div>
+                    </div>
+                </div>
+                 <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline">Хаах</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
