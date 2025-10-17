@@ -648,16 +648,12 @@ export default function ContractedTransportDetailPage() {
         try {
           const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
           const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
-  
-           const newSelectedCargo: { cargoItemId: string; cargoName: string; cargoUnit: string }[] = [];
+
+          const newSelectedCargo: string[] = [];
             selectedCargoItems.forEach(itemId => {
                 const cargo = contract.cargoItems.find(c => c.id === itemId);
-                if (cargo && cargo.id && cargo.name && cargo.unit) {
-                    newSelectedCargo.push({
-                        cargoItemId: cargo.id,
-                        cargoName: cargo.name,
-                        cargoUnit: cargo.unit,
-                    });
+                if (cargo && cargo.name) {
+                    newSelectedCargo.push(cargo.name);
                 }
             });
           
@@ -667,7 +663,7 @@ export default function ContractedTransportDetailPage() {
             driverId: selectedDriver?.driverId ?? null,
             driverName: selectedDriver?.driverName ?? null,
             vehicleId: selectedVehicle?.vehicleId ?? null,
-            vehicleLicense: (selectedVehicle?.modelName && selectedVehicle?.licensePlate) ? `${selectedVehicle.modelName} (${selectedVehicle.licensePlate})` : null,
+            vehicleLicense: selectedVehicle?.licensePlate,
             status: 'Pending',
             statusHistory: [{ status: 'Pending', date: new Date() }],
             createdAt: serverTimestamp(),
@@ -1184,5 +1180,7 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
+    
 
     
