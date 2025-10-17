@@ -5,12 +5,12 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle, Megaphone, MegaphoneOff, Eye, Briefcase, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle, Megaphone, MegaphoneOff, Eye, Briefcase, TrendingUp, Cuboid } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch, type DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportExecutionStatus, ContractedTransportStatus, ContractedTransportExecutionCargo } from '@/types';
+import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportExecutionStatus, ContractedTransportStatus, ContractedTransportExecutionCargo, ContractedTransportCargoItem } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +58,20 @@ const routeStopFormSchema = z.object({
   description: z.string().min(5, "Тайлбар дор хаяж 5 тэмдэгттэй байх ёстой."),
 });
 type RouteStopFormValues = z.infer<typeof routeStopFormSchema>;
+
+const loadedCargoItemSchema = z.object({
+  cargoItemId: z.string(),
+  cargoName: z.string(),
+  cargoUnit: z.string(),
+  loadedQuantity: z.coerce.number().min(0, "Ачсан хэмжээ сөрөг байж болохгүй."),
+});
+
+const loadCargoFormSchema = z.object({
+    loadedCargo: z.array(loadedCargoItemSchema),
+});
+
+type LoadCargoFormValues = z.infer<typeof loadCargoFormSchema>;
+
 
 const frequencyTranslations: Record<ContractedTransport['frequency'], string> = {
     Daily: 'Өдөр бүр',
@@ -118,37 +132,66 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
     zIndex: isDragging ? 100 : 'auto',
     opacity: isDragging ? 0.8 : 1,
   };
+  
+  const totalLoaded = execution.loadedCargo?.reduce((acc, item) => acc + item.loadedQuantity, 0) || 0;
 
   return (
-    <Card 
-      ref={setNodeRef} 
-      style={style} 
-      className="text-xs mb-2 touch-none group/exec"
-    >
-        <div className="p-2 relative">
-             <div className="absolute top-1 right-1 z-10">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover/exec:opacity-100 transition-opacity">
-                        <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={onEdit}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
-                        <DropdownMenuItem onClick={onDelete} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
-            
-            <div {...attributes} {...listeners} className="cursor-grab pr-6">
-                <p className="font-semibold">Огноо: {date ? format(date, 'yyyy-MM-dd') : 'N/A'}</p>
-                <div className="text-muted-foreground">
-                <p>Жолооч: {execution.driverName || 'TBA'}</p>
-                <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
+    <Dialog>
+        <Card 
+        ref={setNodeRef} 
+        style={style} 
+        className="text-xs mb-2 touch-none group/exec"
+        >
+            <div className="p-2 relative">
+                <div className="absolute top-1 right-1 z-10">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover/exec:opacity-100 transition-opacity">
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={onEdit}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
+                            <DropdownMenuItem onClick={onDelete} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
+                             {execution.loadedCargo && execution.loadedCargo.length > 0 && (
+                                <DialogTrigger asChild>
+                                    <DropdownMenuItem><Cuboid className="mr-2 h-4 w-4" /> Ачсан ачаа</DropdownMenuItem>
+                                </DialogTrigger>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+                
+                <div {...attributes} {...listeners} className="cursor-grab pr-6">
+                    <p className="font-semibold">Огноо: {date ? format(date, 'yyyy-MM-dd') : 'N/A'}</p>
+                    <div className="text-muted-foreground">
+                    <p>Жолооч: {execution.driverName || 'TBA'}</p>
+                    <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
+                    {totalLoaded > 0 && <p className="text-blue-600 font-semibold">Ачсан: {totalLoaded}</p>}
+                    </div>
                 </div>
             </div>
-        </div>
-    </Card>
+        </Card>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Ачсан ачааны мэдээлэл</DialogTitle>
+                <DialogDescription>
+                    {date ? format(date, 'yyyy-MM-dd') : 'N/A'} - {execution.driverName}
+                </DialogDescription>
+            </DialogHeader>
+            <Table>
+                <TableHeader><TableRow><TableHead>Ачаа</TableHead><TableHead className="text-right">Хэмжээ</TableHead></TableRow></TableHeader>
+                <TableBody>
+                {(execution.loadedCargo || []).map(cargo => (
+                    <TableRow key={cargo.cargoItemId}>
+                        <TableCell>{cargo.cargoName}</TableCell>
+                        <TableCell className="text-right">{cargo.loadedQuantity} {cargo.cargoUnit}</TableCell>
+                    </TableRow>
+                ))}
+                </TableBody>
+            </Table>
+        </DialogContent>
+    </Dialog>
   );
 }
 
@@ -244,6 +287,9 @@ export default function ContractedTransportDetailPage() {
   const [isStopDialogOpen, setIsStopDialogOpen] = React.useState(false);
   const [isNewExecutionDialogOpen, setIsNewExecutionDialogOpen] = React.useState(false);
   const [isResourcesDialogOpen, setIsResourcesDialogOpen] = React.useState(false);
+  const [isLoadCargoDialogOpen, setIsLoadCargoDialogOpen] = React.useState(false);
+  const [executionToLoad, setExecutionToLoad] = React.useState<ContractedTransportExecution | null>(null);
+
   const [executionToDelete, setExecutionToDelete] = React.useState<ContractedTransportExecution | null>(null);
   const [stopToDelete, setStopToDelete] = React.useState<RouteStop | null>(null);
   const [executionToEdit, setExecutionToEdit] = React.useState<ContractedTransportExecution | null>(null);
@@ -293,6 +339,14 @@ export default function ContractedTransportDetailPage() {
 
   const editExecutionForm = useForm<EditExecutionFormValues>({
     resolver: zodResolver(editExecutionFormSchema),
+  });
+
+  const loadCargoForm = useForm<LoadCargoFormValues>({
+    resolver: zodResolver(loadCargoFormSchema),
+  });
+  const { fields: loadedCargoFields } = useFieldArray({
+    control: loadCargoForm.control,
+    name: "loadedCargo"
   });
 
 
@@ -409,6 +463,18 @@ export default function ContractedTransportDetailPage() {
       });
     }
   }, [executionToEdit, contract, editExecutionForm]);
+  
+   React.useEffect(() => {
+    if (executionToLoad && contract) {
+      const defaultCargo = contract.cargoItems.map(item => ({
+        cargoItemId: item.id,
+        cargoName: item.name,
+        cargoUnit: item.unit,
+        loadedQuantity: 0,
+      }));
+      loadCargoForm.reset({ loadedCargo: defaultCargo });
+    }
+  }, [executionToLoad, contract, loadCargoForm]);
     
     const handleDeleteExecution = React.useCallback(async () => {
         if (!executionToDelete) return;
@@ -662,16 +728,34 @@ export default function ContractedTransportDetailPage() {
       }
     }
     
-    const handleExecutionStatusChange = React.useCallback((executionId: string, newStatus: string) => {
+    const handleExecutionStatusChange = React.useCallback(async (executionId: string, newStatus: string, loadedCargo?: ContractedTransportExecutionCargo[]) => {
         const execRef = doc(db, 'contracted_transport_executions', executionId);
-        updateDoc(execRef, {
+        
+        const dataToUpdate: DocumentData = {
             status: newStatus,
             statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
-        }).catch((error) => {
+        };
+
+        if (loadedCargo) {
+            dataToUpdate.loadedCargo = loadedCargo;
+        }
+
+        try {
+            await updateDoc(execRef, dataToUpdate);
+
+             setExecutions((prev) =>
+                prev.map((ex) =>
+                ex.id === executionId
+                    ? { ...ex, status: newStatus as ContractedTransportExecutionStatus, loadedCargo: loadedCargo || ex.loadedCargo }
+                    : ex
+                )
+            );
+
+        } catch (error) {
             console.error("Error updating execution status:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Явцын төлөв шинэчлэхэд алдаа гарлаа.' });
             fetchContractData(); // Re-fetch to be safe
-        });
+        }
     }, [fetchContractData, toast]);
     
     const handleDragEnd = React.useCallback((event: DragEndEvent) => {
@@ -679,23 +763,32 @@ export default function ContractedTransportDetailPage() {
     
         if (over && active.id !== over.id) {
             const overContainerId = over.id as string;
-             
-            setExecutions((prev) => {
-                const activeIndex = prev.findIndex((item) => item.id === active.id);
-                if (activeIndex === -1) return prev;
+            const execution = executions.find(ex => ex.id === active.id);
+            
+            if (!execution) return;
 
-                const updatedExecutions = [...prev];
-                updatedExecutions[activeIndex] = {
-                    ...updatedExecutions[activeIndex],
-                    status: overContainerId,
-                };
-                
+            if (overContainerId === 'Ачсан') {
+                setExecutionToLoad(execution);
+            } else {
                 handleExecutionStatusChange(active.id as string, overContainerId);
-                
-                return updatedExecutions;
-            });
+            }
         }
-    }, [handleExecutionStatusChange]);
+    }, [handleExecutionStatusChange, executions]);
+    
+     const handleLoadCargoSubmit = async (values: LoadCargoFormValues) => {
+        if (!executionToLoad) return;
+        setIsSubmitting(true);
+        try {
+            await handleExecutionStatusChange(executionToLoad.id, 'Ачсан', values.loadedCargo);
+            toast({ title: 'Амжилттай', description: 'Ачааны мэдээлэл хадгалагдлаа.' });
+            setIsLoadCargoDialogOpen(false);
+            setExecutionToLoad(null);
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Ачааны мэдээлэл хадгалахад алдаа гарлаа.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
     
     const dashboardStats = React.useMemo(() => {
         if (!contract) {
@@ -971,6 +1064,50 @@ export default function ContractedTransportDetailPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+        
+         {/* Load Cargo Dialog */}
+        <Dialog open={isLoadCargoDialogOpen} onOpenChange={setIsLoadCargoDialogOpen}>
+            <DialogContent>
+                <Form {...loadCargoForm}>
+                    <form onSubmit={loadCargoForm.handleSubmit(handleLoadCargoSubmit)}>
+                        <DialogHeader>
+                            <DialogTitle>Ачааны мэдээлэл оруулах</DialogTitle>
+                            <DialogDescription>
+                               "{executionToLoad?.driverName}" жолоочтой гүйцэтгэлд ачсан ачааны хэмжээг оруулна уу.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4 space-y-4 max-h-[50vh] overflow-y-auto">
+                            {loadedCargoFields.map((field, index) => (
+                               <FormField
+                                    key={field.id}
+                                    control={loadCargoForm.control}
+                                    name={`loadedCargo.${index}.loadedQuantity`}
+                                    render={({ field: formField }) => (
+                                        <FormItem>
+                                            <FormLabel>{field.cargoName} ({field.cargoUnit})</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" placeholder="0" {...formField} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            ))}
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button type="button" variant="outline">Цуцлах</Button>
+                            </DialogClose>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                Хадгалах
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+
 
         {/* Assigned Resources Dialog */}
         <Dialog open={isResourcesDialogOpen} onOpenChange={setIsResourcesDialogOpen}>
@@ -1056,3 +1193,4 @@ export default function ContractedTransportDetailPage() {
 }
 
     
+
