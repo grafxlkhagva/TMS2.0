@@ -109,7 +109,7 @@ const toDateSafe = (date: any): Date => {
     if (date instanceof Timestamp) return date.toDate();
     if (date instanceof Date) return date;
     // Handle Firestore-like object structure from serialization
-    if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in data) {
+    if (typeof date === 'object' && date !== null && !Array.isArray(date) && 'seconds' in date && 'nanoseconds' in date) {
          // This is a basic check; you might want more robust validation
         return new Timestamp(date.seconds, date.nanoseconds).toDate();
     }
@@ -1188,8 +1188,10 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
                 <OrderItemForm 
                     form={form}
                     fields={fields}
-                    append={append}
                     remove={remove}
+                    isSubmitting={isSubmitting}
+                    onSubmit={onNewItemSubmit}
+                    onAddNewItem={handleAddNewItem}
                     allData={allData}
                     setAllData={{
                         setServiceTypes,
@@ -1199,9 +1201,6 @@ function QuoteForm({ orderItemId }: { orderItemId: string }) {
                         setTrailerTypes,
                         setPackagingTypes,
                     }}
-                    isSubmitting={isSubmitting}
-                    onSubmit={onNewItemSubmit}
-                    onAddNewItem={handleAddNewItem}
                 />
             </CardContent>
         </Card>

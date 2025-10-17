@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -132,9 +133,9 @@ export default function EditWarehousePage() {
     setIsSubmitting(true);
     try {
       const warehouseRef = doc(db, 'warehouses', id);
-      const customerId = values.customerId === 'no-owner' ? undefined : values.customerId;
+      const customerId = values.customerId === 'no-owner' ? null : values.customerId;
       const selectedCustomer = customers.find(c => c.id === customerId);
-      const customerRef = customerId ? doc(db, 'customers', customerId) : undefined;
+      const customerRef = customerId ? doc(db, 'customers', customerId) : null;
       const regionRef = doc(db, 'regions', values.regionId);
       
       await updateDoc(warehouseRef, {

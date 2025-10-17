@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -742,6 +743,7 @@ export default function ContractedTransportDetailPage() {
           statusHistory: [{ status: 'Pending', date: new Date() }],
           createdAt: serverTimestamp(),
           selectedCargo: selectedCargo,
+          loadedCargo: [], // Initialize as empty array
         };
 
         const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
@@ -764,7 +766,7 @@ export default function ContractedTransportDetailPage() {
       }
     }
     
-    const handleDragEnd = React.useCallback((event: DragEndEvent) => {
+    const handleDragEnd = React.useCallback(async (event: DragEndEvent) => {
         const { active, over } = event;
     
         if (over && active.id !== over.id) {
@@ -779,19 +781,20 @@ export default function ContractedTransportDetailPage() {
                 setIsLoadCargoDialogOpen(true);
             } else {
                  const execRef = doc(db, 'contracted_transport_executions', executionId);
-                updateDoc(execRef, {
-                    status: newStatus,
-                    statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
-                }).then(() => {
+                try {
+                    await updateDoc(execRef, {
+                        status: newStatus,
+                        statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
+                    });
                     setExecutions((prev) =>
                         prev.map((ex) =>
                             ex.id === executionId ? { ...ex, status: newStatus as ContractedTransportExecutionStatus } : ex
                         )
                     );
-                }).catch((error) => {
+                } catch (error) {
                     console.error("Error updating execution status:", error);
                     toast({ variant: 'destructive', title: 'Алдаа', description: 'Явцын төлөв шинэчлэхэд алдаа гарлаа.' });
-                });
+                }
             }
         }
     }, [executions, toast]);
@@ -1260,4 +1263,5 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
 
