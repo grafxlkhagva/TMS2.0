@@ -649,7 +649,7 @@ export default function ContractedTransportDetailPage() {
         try {
           const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
           const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
-
+          
           const newSelectedCargo: string[] = [];
             selectedCargoItems.forEach(itemId => {
                 const cargo = contract.cargoItems.find(c => c.id === itemId);
@@ -657,14 +657,14 @@ export default function ContractedTransportDetailPage() {
                     newSelectedCargo.push(cargo.name);
                 }
             });
-          
+
           const dataToSave: DocumentData = {
             contractId: contract.id,
             date: values.date,
             driverId: selectedDriver?.driverId ?? null,
             driverName: selectedDriver?.driverName ?? null,
             vehicleId: selectedVehicle?.vehicleId ?? null,
-            vehicleLicense: (selectedVehicle?.modelName && selectedVehicle?.licensePlate) ? `${selectedVehicle.modelName} (${selectedVehicle.licensePlate})` : null,
+            vehicleLicense: selectedVehicle?.licensePlate ?? null,
             status: 'Pending',
             statusHistory: [{ status: 'Pending', date: new Date() }],
             createdAt: serverTimestamp(),
@@ -895,11 +895,12 @@ export default function ContractedTransportDetailPage() {
                             {executionStatuses.map(status => {
                                 const stop = contract.routeStops.find(s => s.id === status);
                                 const itemsForStatus = executions.filter(ex => ex.status === status);
+                                const title = statusTranslations[status] || stop?.description || status;
                                 return (
                                     <StatusColumn 
                                         key={status} 
                                         id={status}
-                                        title={statusTranslations[status] || status}
+                                        title={title}
                                         items={itemsForStatus}
                                         stop={stop}
                                         onEditStop={(stopToEdit) => setStopToEdit(stopToEdit)}
@@ -1019,7 +1020,7 @@ export default function ContractedTransportDetailPage() {
                             <DialogDescription>Зогсоолын ID давхцахгүй байх ёстойг анхаарна уу.</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
-                                <FormField control={routeStopForm.control} name="id" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын ID / Нэр</FormLabel><FormControl><Input placeholder="Даваа-1" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                                <FormField control={routeStopForm.control} name="id" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын Нэр/ID</FormLabel><FormControl><Input placeholder="Даваа-1" {...field} /></FormControl><FormMessage /></FormItem> )} />
                                 <FormField control={routeStopForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>Тайлбар</FormLabel><FormControl><Input placeholder="Амрах, хооллох" {...field} /></FormControl><FormMessage /></FormItem> )} />
                         </div>
                     </form>
@@ -1039,7 +1040,7 @@ export default function ContractedTransportDetailPage() {
                         <form onSubmit={editStopForm.handleSubmit(handleUpdateStop)} id="edit-stop-form">
                             <DialogHeader><DialogTitle>Зогсоол засах</DialogTitle></DialogHeader>
                             <div className="space-y-4 py-4">
-                                     <FormField control={editStopForm.control} name="id" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын ID / Нэр</FormLabel><FormControl><Input {...field} readOnly disabled /></FormControl><FormMessage /></FormItem> )}/>
+                                     <FormField control={editStopForm.control} name="id" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын Нэр/ID</FormLabel><FormControl><Input {...field} readOnly disabled /></FormControl><FormMessage /></FormItem> )}/>
                                      <FormField control={editStopForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>Тайлбар</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
                             </div>
                         </form>
@@ -1058,7 +1059,7 @@ export default function ContractedTransportDetailPage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        "{stopToDelete?.id}" зогсоолыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
+                        "{stopToDelete?.description}" зогсоолыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -1186,3 +1187,4 @@ export default function ContractedTransportDetailPage() {
     
 
     
+

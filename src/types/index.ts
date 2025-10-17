@@ -115,7 +115,6 @@ export type Warehouse = {
     contactInfo: string;
     contactName?: string;
     contactPosition?: string;
-    note?: string;
     customerId?: string;
     customerName?: string;
     customerRef?: DocumentReference;
