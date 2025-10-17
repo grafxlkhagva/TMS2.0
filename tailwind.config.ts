@@ -65,6 +65,13 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        dashboard: {
+          card: 'hsl(240, 10%, 15%)', // Dark grey-blue
+          foreground: 'hsl(210, 40%, 98%)', // Almost white
+          'muted-foreground': 'hsl(240, 5%, 65%)', // Lighter grey
+          accent: 'hsl(260, 80%, 65%)', // Vibrant purple
+          'accent-foreground': 'hsl(210, 40%, 98%)',
+        }
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -100,3 +107,5 @@ export default {
     require('@tailwindcss/typography'),
 ],
 } satisfies Config;
+
+    

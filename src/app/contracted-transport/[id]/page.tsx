@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -38,19 +37,19 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CSS } from '@dnd-kit/utilities';
 
-const editExecutionFormSchema = z.object({
-  date: z.date({ required_error: "Огноо сонгоно уу." }),
-  driverId: z.string().optional(),
-  vehicleId: z.string().optional(),
-});
-type EditExecutionFormValues = z.infer<typeof editExecutionFormSchema>;
-
 const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
   driverId: z.string().optional(),
   vehicleId: z.string().optional(),
 });
 type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
+
+const editExecutionFormSchema = z.object({
+  date: z.date({ required_error: "Огноо сонгоно уу." }),
+  driverId: z.string().optional(),
+  vehicleId: z.string().optional(),
+});
+type EditExecutionFormValues = z.infer<typeof editExecutionFormSchema>;
 
 
 const routeStopFormSchema = z.object({
@@ -126,7 +125,7 @@ function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: Con
       className="text-xs mb-2 touch-none group/exec"
     >
         <div className="p-2 relative">
-            <div className="absolute top-1 right-1 z-10">
+             <div className="absolute top-1 right-1 z-10">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover/exec:opacity-100 transition-opacity">
@@ -208,18 +207,18 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
 
 function StatCard({ title, value, icon: Icon, description, actionLabel, onActionClick, colorClass }: { title: string; value: string | number; icon: React.ElementType; description: string; actionLabel?: string; onActionClick?: () => void; colorClass?: string; }) {
   return (
-    <Card className={colorClass}>
+    <Card className={cn("bg-dashboard-card text-dashboard-foreground", colorClass)}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{title}</CardTitle>
-            <Icon className="h-4 w-4 text-muted-foreground" />
+            <Icon className="h-4 w-4 text-dashboard-muted-foreground" />
         </CardHeader>
         <CardContent>
             <div className="text-2xl font-bold">{value}</div>
-            <p className="text-xs text-muted-foreground">{description}</p>
+            <p className="text-xs text-dashboard-muted-foreground">{description}</p>
         </CardContent>
         {actionLabel && onActionClick && (
             <CardFooter>
-                 <Button variant="outline" size="sm" className="w-full" onClick={onActionClick}>
+                 <Button variant="outline" size="sm" className="w-full bg-dashboard-accent text-dashboard-accent-foreground hover:bg-dashboard-accent/80" onClick={onActionClick}>
                     {actionLabel}
                 </Button>
             </CardFooter>
@@ -796,12 +795,12 @@ export default function ContractedTransportDetailPage() {
         </div>
       </div>
        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." colorClass="dark-card-1" />
-        <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} colorClass="dark-card-2" />
-        <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} colorClass="dark-card-3" />
-        <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." colorClass="dark-card-4" />
-        <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." colorClass="dark-card-5" />
-        <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." colorClass="dark-card-6" />
+            <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." />
+            <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл."/>
+            <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." />
+            <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} />
+            <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} />
+            <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." />
       </div>
       
         <div className="mt-6">
@@ -1056,3 +1055,5 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
+    
