@@ -470,7 +470,7 @@ export default function ContractedTransportDetailPage() {
         const itemsToDisplay = executionToLoad.selectedCargo?.length ? executionToLoad.selectedCargo : contract?.cargoItems || [];
 
         itemsToDisplay.forEach(item => {
-            const cargoId = item.cargoItemId || (item as any).id; // handle both selected and contract items
+            const cargoId = item.cargoItemId || (item as any).id;
             const existingLoad = executionToLoad.loadedCargo?.find(lc => lc.cargoItemId === cargoId);
             initialQuantities[cargoId] = {
                 loadedQuantity: existingLoad?.loadedQuantity || 0,
@@ -706,15 +706,17 @@ export default function ContractedTransportDetailPage() {
         const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
         const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
 
-        const newSelectedCargo = Array.from(selectedCargoItems).map(cargoId => {
-            const item = contract.cargoItems.find(i => i.id === cargoId);
-            if (!item) return null;
-            return {
-                cargoItemId: item.id,
-                cargoName: item.name,
-                cargoUnit: item.unit,
-            };
-        }).filter(Boolean) as { cargoItemId: string, cargoName: string, cargoUnit: string }[];
+        const newSelectedCargo = Array.from(selectedCargoItems)
+            .map(cargoId => {
+                const item = contract.cargoItems.find(i => i.id === cargoId);
+                if (!item) return null;
+                return {
+                    cargoItemId: item.id,
+                    cargoName: item.name,
+                    cargoUnit: item.unit,
+                };
+            })
+            .filter((item): item is { cargoItemId: string; cargoName: string; cargoUnit: string; } => item !== null);
         
         const dataToSave: DocumentData = {
           contractId: contract.id,
@@ -736,7 +738,7 @@ export default function ContractedTransportDetailPage() {
             id: docRef.id,
             ...dataToSave,
             date: toDateSafe(dataToSave.date)!,
-            createdAt: new Date(),
+            createdAt: new Date(), // Use local date for immediate feedback
         };
 
         setExecutions(prev => [...prev, newExecution]);
@@ -1141,7 +1143,7 @@ export default function ContractedTransportDetailPage() {
                             </DialogDescription>
                         </DialogHeader>
                         <div className="py-4 space-y-4 max-h-[50vh] overflow-y-auto">
-                           {Object.values(loadedCargoQuantities).map((item, itemIndex) => (
+                           {Object.values(loadedCargoQuantities).map((item) => (
                                 <div key={item.cargoItemId}>
                                     <Label>{item.cargoName} ({item.cargoUnit})</Label>
                                     <Input
@@ -1256,3 +1258,6 @@ export default function ContractedTransportDetailPage() {
   );
 }
 
+
+
+    
