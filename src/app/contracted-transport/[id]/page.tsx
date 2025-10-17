@@ -25,14 +25,14 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog"
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { Timestamp } from 'firebase/firestore';
-import { DndContext, closestCenter, type DragEndEvent, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, closestCenter, type DragEndEvent, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -470,7 +470,7 @@ export default function ContractedTransportDetailPage() {
         const itemsToDisplay = executionToLoad.selectedCargo?.length ? executionToLoad.selectedCargo : contract?.cargoItems || [];
 
         itemsToDisplay.forEach(item => {
-            const cargoId = item.cargoItemId || item.id; // handle both selected and contract items
+            const cargoId = item.cargoItemId || (item as any).id; // handle both selected and contract items
             const existingLoad = executionToLoad.loadedCargo?.find(lc => lc.cargoItemId === cargoId);
             initialQuantities[cargoId] = {
                 loadedQuantity: existingLoad?.loadedQuantity || 0,
@@ -699,7 +699,7 @@ export default function ContractedTransportDetailPage() {
         }
     }
 
-    const handleNewExecutionSubmit = async (values: NewExecutionFormValues) => {
+  const handleNewExecutionSubmit = async (values: NewExecutionFormValues) => {
       if (!contract) return;
       setIsSubmitting(true);
       try {
@@ -708,24 +708,23 @@ export default function ContractedTransportDetailPage() {
 
         const newSelectedCargo = Array.from(selectedCargoItems).map(cargoId => {
             const item = contract.cargoItems.find(i => i.id === cargoId);
+            if (!item) return null;
             return {
-                cargoItemId: item!.id,
-                cargoName: item!.name,
-                cargoUnit: item!.unit,
+                cargoItemId: item.id,
+                cargoName: item.name,
+                cargoUnit: item.unit,
             };
-        });
-
-        const newStatus = newSelectedCargo.length > 0 ? 'Loaded' : 'Pending';
-
+        }).filter(Boolean) as { cargoItemId: string, cargoName: string, cargoUnit: string }[];
+        
         const dataToSave: DocumentData = {
           contractId: contract.id,
           date: values.date,
-          driverId: selectedDriver?.driverId,
-          driverName: selectedDriver?.driverName,
-          vehicleId: selectedVehicle?.vehicleId,
-          vehicleLicense: selectedVehicle?.licensePlate,
-          status: newStatus,
-          statusHistory: [{ status: newStatus, date: new Date() }],
+          driverId: selectedDriver?.driverId ?? null,
+          driverName: selectedDriver?.driverName ?? null,
+          vehicleId: selectedVehicle?.vehicleId ?? null,
+          vehicleLicense: selectedVehicle?.licensePlate ?? null,
+          status: 'Pending',
+          statusHistory: [{ status: 'Pending', date: new Date() }],
           createdAt: serverTimestamp(),
           selectedCargo: newSelectedCargo,
           loadedCargo: [],
@@ -1256,6 +1255,7 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
 
 
 
