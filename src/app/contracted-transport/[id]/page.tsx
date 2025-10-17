@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -643,61 +642,59 @@ export default function ContractedTransportDetailPage() {
         }
     }
 
-  const handleNewExecutionSubmit = async (values: NewExecutionFormValues) => {
-      if (!contract) return;
-      setIsSubmitting(true);
-      try {
-        const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
-        const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
-
-        const newSelectedCargo = Array.from(selectedCargoItems)
-          .map(itemId => {
-              const cargo = contract.cargoItems.find(c => c.id === itemId);
-              if (cargo) {
-                  return {
-                      cargoItemId: cargo.id,
-                      cargoName: cargo.name,
-                      cargoUnit: cargo.unit,
-                  };
-              }
-              return null;
-          })
-          .filter(Boolean);
-        
-        const dataToSave: DocumentData = {
-          contractId: contract.id,
-          date: values.date,
-          driverId: selectedDriver?.driverId ?? null,
-          driverName: selectedDriver?.driverName ?? null,
-          vehicleId: selectedVehicle?.vehicleId ?? null,
-          vehicleLicense: (selectedVehicle?.modelName && selectedVehicle?.licensePlate) ? `${selectedVehicle.modelName} (${selectedVehicle.licensePlate})` : null,
-          status: 'Pending',
-          statusHistory: [{ status: 'Pending', date: new Date() }],
-          createdAt: serverTimestamp(),
-          selectedCargo: newSelectedCargo,
-          totalLoadedWeight: 0,
-        };
-        
-        const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
-        
-        const newExecution: ContractedTransportExecution = {
-            id: docRef.id,
-            ...dataToSave,
-            date: toDateSafe(dataToSave.date)!,
-            createdAt: new Date(),
-        };
-
-        setExecutions(prev => [...prev, newExecution]);
-        toast({ title: 'Амжилттай', description: 'Шинэ гүйцэтгэл нэмэгдлээ.' });
-        setIsNewExecutionDialogOpen(false);
-
-      } catch (error) {
-        console.error("Error creating new execution:", error);
-        toast({ variant: 'destructive', title: 'Алдаа', description: 'Шинэ гүйцэтгэл нэмэхэд алдаа гарлаа.' });
-      } finally {
-        setIsSubmitting(false);
+    const handleNewExecutionSubmit = async (values: NewExecutionFormValues) => {
+        if (!contract) return;
+        setIsSubmitting(true);
+        try {
+          const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
+          const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
+  
+           const newSelectedCargo: { cargoItemId: string; cargoName: string; cargoUnit: string }[] = [];
+            selectedCargoItems.forEach(itemId => {
+                const cargo = contract.cargoItems.find(c => c.id === itemId);
+                if (cargo && cargo.id && cargo.name && cargo.unit) {
+                    newSelectedCargo.push({
+                        cargoItemId: cargo.id,
+                        cargoName: cargo.name,
+                        cargoUnit: cargo.unit,
+                    });
+                }
+            });
+          
+          const dataToSave: DocumentData = {
+            contractId: contract.id,
+            date: values.date,
+            driverId: selectedDriver?.driverId ?? null,
+            driverName: selectedDriver?.driverName ?? null,
+            vehicleId: selectedVehicle?.vehicleId ?? null,
+            vehicleLicense: (selectedVehicle?.modelName && selectedVehicle?.licensePlate) ? `${selectedVehicle.modelName} (${selectedVehicle.licensePlate})` : null,
+            status: 'Pending',
+            statusHistory: [{ status: 'Pending', date: new Date() }],
+            createdAt: serverTimestamp(),
+            selectedCargo: newSelectedCargo,
+            totalLoadedWeight: 0,
+          };
+          
+          const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
+          
+          const newExecution: ContractedTransportExecution = {
+              id: docRef.id,
+              ...dataToSave,
+              date: toDateSafe(dataToSave.date)!,
+              createdAt: new Date(),
+          };
+  
+          setExecutions(prev => [...prev, newExecution]);
+          toast({ title: 'Амжилттай', description: 'Шинэ гүйцэтгэл нэмэгдлээ.' });
+          setIsNewExecutionDialogOpen(false);
+  
+        } catch (error) {
+          console.error("Error creating new execution:", error);
+          toast({ variant: 'destructive', title: 'Алдаа', description: 'Шинэ гүйцэтгэл нэмэхэд алдаа гарлаа.' });
+        } finally {
+          setIsSubmitting(false);
+        }
       }
-    }
     
     const handleDragEnd = React.useCallback(async (event: DragEndEvent) => {
         const { active, over } = event;
@@ -1187,3 +1184,5 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
+    
