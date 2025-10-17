@@ -85,6 +85,13 @@ const statusDetails: Record<ContractedTransportStatus, { text: string; variant: 
     Cancelled: { text: 'Цуцлагдсан', variant: 'destructive' as const, icon: XCircle }
 };
 
+const statusTranslations: Record<string, string> = {
+    Pending: 'Хүлээгдэж буй',
+    Loaded: 'Ачсан',
+    Unloading: 'Буулгаж буй',
+    Delivered: 'Хүргэгдсэн',
+};
+
 const toDateSafe = (date: any): Date | null => {
     if (!date) return null;
     if (date instanceof Date) return date;
@@ -118,12 +125,6 @@ const statusColorMap: Record<string, string> = {
     'Loaded': 'bg-blue-500',
     'Unloading': 'bg-yellow-500',
     'Delivered': 'bg-green-500',
-};
-const statusTranslations: Record<string, string> = {
-    Pending: 'Хүлээгдэж буй',
-    Loaded: 'Ачсан',
-    Unloading: 'Буулгаж буй',
-    Delivered: 'Хүргэгдсэн',
 };
 
 
@@ -734,49 +735,38 @@ export default function ContractedTransportDetailPage() {
       }
     }
     
-    const handleExecutionStatusChange = React.useCallback(async (executionId: string, newStatus: string) => {
-        const execRef = doc(db, 'contracted_transport_executions', executionId);
-        
-        const dataToUpdate: DocumentData = {
-            status: newStatus,
-            statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
-        };
-
-        try {
-            await updateDoc(execRef, dataToUpdate);
-
-             setExecutions((prev) =>
-                prev.map((ex) =>
-                ex.id === executionId
-                    ? { ...ex, status: newStatus as ContractedTransportExecutionStatus }
-                    : ex
-                )
-            );
-
-        } catch (error) {
-            console.error("Error updating execution status:", error);
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Явцын төлөв шинэчлэхэд алдаа гарлаа.' });
-            fetchContractData(); // Re-fetch to be safe
-        }
-    }, [fetchContractData, toast]);
-    
     const handleDragEnd = React.useCallback((event: DragEndEvent) => {
         const { active, over } = event;
     
         if (over && active.id !== over.id) {
-            const overContainerId = over.id as string;
-            const execution = executions.find(ex => ex.id === active.id);
+            const executionId = active.id as string;
+            const newStatus = over.id as string;
             
-            if (!execution) return;
+            const execution = executions.find(ex => ex.id === executionId);
+            if (!execution || execution.status === newStatus) return;
 
-            if (overContainerId === 'Loaded') {
+            if (newStatus === 'Loaded') {
                 setExecutionToLoad(execution);
                 setIsLoadCargoDialogOpen(true);
             } else {
-                handleExecutionStatusChange(active.id as string, overContainerId);
+                // Handle other status changes directly
+                const execRef = doc(db, 'contracted_transport_executions', executionId);
+                updateDoc(execRef, {
+                    status: newStatus,
+                    statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
+                }).then(() => {
+                    setExecutions((prev) =>
+                        prev.map((ex) =>
+                            ex.id === executionId ? { ...ex, status: newStatus as ContractedTransportExecutionStatus } : ex
+                        )
+                    );
+                }).catch((error) => {
+                    console.error("Error updating execution status:", error);
+                    toast({ variant: 'destructive', title: 'Алдаа', description: 'Явцын төлөв шинэчлэхэд алдаа гарлаа.' });
+                });
             }
         }
-    }, [handleExecutionStatusChange, executions]);
+    }, [executions, toast]);
     
     const handleLoadCargoSubmit = async (values: LoadCargoFormValues) => {
         if (!executionToLoad) return;
@@ -784,13 +774,7 @@ export default function ContractedTransportDetailPage() {
     
         try {
             const cargoToSave = values.loadedCargo
-                .filter(item => item.loadedQuantity > 0)
-                .map(item => ({
-                    cargoItemId: item.cargoItemId,
-                    cargoName: item.cargoName,
-                    cargoUnit: item.cargoUnit,
-                    loadedQuantity: item.loadedQuantity
-                }));
+                .filter(item => item.loadedQuantity > 0);
 
             const execRef = doc(db, 'contracted_transport_executions', executionToLoad.id);
             await updateDoc(execRef, {
@@ -1219,6 +1203,5 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
 
     
