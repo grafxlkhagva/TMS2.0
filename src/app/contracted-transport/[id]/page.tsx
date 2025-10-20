@@ -277,6 +277,8 @@ export default function ContractedTransportDetailPage() {
   
   const [selectedCargoItems, setSelectedCargoItems] = React.useState<Set<string>>(new Set());
 
+  const [sendingToSheet, setSendingToSheet] = React.useState<string | null>(null);
+
 
   const [relatedData, setRelatedData] = React.useState({
       startRegionName: '',
@@ -659,7 +661,7 @@ export default function ContractedTransportDetailPage() {
           const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
           const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
           
-            const newSelectedCargo: string[] = [];
+          const newSelectedCargo: string[] = [];
             selectedCargoItems.forEach(itemId => {
                 const cargo = contract.cargoItems.find(c => c.id === itemId);
                 if (cargo && cargo.name) {
@@ -826,6 +828,35 @@ export default function ContractedTransportDetailPage() {
 
         return { total, completed, inProgress, daysLeft, totalDrivers, totalVehicles };
     }, [executions, contract]);
+    
+    const handleSendToSheet = async (execution: ContractedTransportExecution) => {
+        if (!contract) return;
+        setSendingToSheet(execution.id);
+        try {
+            const payload = {
+                contract,
+                execution,
+                relatedData
+            };
+    
+            const response = await fetch('/api/contracted-transport/send-to-sheet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+    
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Sheet-рүү илгээхэд алдаа гарлаа.');
+            }
+    
+            toast({ title: 'Амжилттай', description: 'Гүйцэтгэлийн мэдээллийг Google Sheet-рүү илгээлээ.' });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Алдаа', description: (error as Error).message });
+        } finally {
+            setSendingToSheet(null);
+        }
+      };
 
   if (isLoading) {
     return (
@@ -1027,6 +1058,10 @@ export default function ContractedTransportDetailPage() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuItem onClick={() => setExecutionToEdit(exec)}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleSendToSheet(exec)} disabled={sendingToSheet === exec.id}>
+                                                {sendingToSheet === exec.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4" />}
+                                                Sheet-рүү илгээх
+                                            </DropdownMenuItem>
                                             <DropdownMenuItem onClick={() => setExecutionToDelete(exec)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
@@ -1338,5 +1373,3 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
-
-    

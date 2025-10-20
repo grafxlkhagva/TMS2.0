@@ -25,6 +25,10 @@ const nextConfig: NextConfig = {
       }
     ],
   },
+  env: {
+    CONTRACTED_TRANSPORT_SHEET_ID: process.env.CONTRACTED_TRANSPORT_SHEET_ID,
+    CONTRACTED_TRANSPORT_SHEET_NAME: process.env.CONTRACTED_TRANSPORT_SHEET_NAME,
+  }
 };
 
 export default nextConfig;
