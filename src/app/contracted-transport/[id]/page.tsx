@@ -182,7 +182,7 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
     <div ref={setNodeRef} className="p-2 rounded-lg bg-muted/50 min-h-40 flex flex-col">
       <div className="font-semibold text-center text-sm p-2 rounded-md relative group/stop-header">
           <h3 className={`${statusColorMap[id] || 'bg-purple-500'} text-white p-2 rounded-md`}>
-              {title}
+              {stop ? stop.id : title}
           </h3>
           {stop && (
               <DropdownMenu>
@@ -413,6 +413,14 @@ export default function ContractedTransportDetailPage() {
   }, [isNewExecutionDialogOpen, newExecutionForm]);
 
   React.useEffect(() => {
+    if (executionToLoad) {
+        setTotalLoadedWeight(executionToLoad.totalLoadedWeight || 0);
+    } else {
+        setTotalLoadedWeight(0);
+    }
+  }, [executionToLoad]);
+  
+  React.useEffect(() => {
     if (executionToEdit && contract) {
       editExecutionForm.reset({
         date: toDateSafe(executionToEdit.date)!,
@@ -422,14 +430,6 @@ export default function ContractedTransportDetailPage() {
     }
   }, [executionToEdit, contract, editExecutionForm]);
   
-   React.useEffect(() => {
-    if (isLoadCargoDialogOpen && executionToLoad) {
-        setTotalLoadedWeight(executionToLoad.totalLoadedWeight || 0);
-    } else {
-        setTotalLoadedWeight(0);
-    }
-  }, [isLoadCargoDialogOpen, executionToLoad]);
-
     
     const handleDeleteExecution = React.useCallback(async () => {
         if (!executionToDelete) return;
@@ -660,10 +660,10 @@ export default function ContractedTransportDetailPage() {
           const dataToSave: DocumentData = {
             contractId: contract.id,
             date: values.date,
-            driverId: selectedDriver?.driverId ?? null,
-            driverName: selectedDriver?.driverName ?? null,
-            vehicleId: selectedVehicle?.vehicleId ?? null,
-            vehicleLicense: selectedVehicle?.licensePlate ?? null,
+            driverId: selectedDriver?.driverId,
+            driverName: selectedDriver?.driverName,
+            vehicleId: selectedVehicle?.vehicleId,
+            vehicleLicense: selectedVehicle?.licensePlate,
             status: 'Pending',
             statusHistory: [{ status: 'Pending', date: new Date() }],
             createdAt: serverTimestamp(),
@@ -1084,7 +1084,7 @@ export default function ContractedTransportDetailPage() {
                            <Input
                                 type="number"
                                 placeholder="Нийт жин (тн)"
-                                value={totalLoadedWeight}
+                                value={totalLoadedWeight || ''}
                                 onChange={(e) => setTotalLoadedWeight(Number(e.target.value))}
                            />
                         </div>
