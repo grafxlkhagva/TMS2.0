@@ -50,9 +50,12 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const payload = convertDateFields(body);
         const { order, orderItem, quote, allData, customerEmployee, transportManager } = payload;
+        
+        const sheetId = process.env.GOOGLE_SHEET_ID;
+        const sheetName = process.env.GOOGLE_SHEET_NAME;
 
-        if (!process.env.GOOGLE_SHEETS_CLIENT_EMAIL || !process.env.GOOGLE_SHEETS_PRIVATE_KEY || !process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID || !process.env.GOOGLE_SHEET_NAME) {
-            throw new Error("Google Sheets environment variables are not configured.");
+        if (!process.env.GOOGLE_SHEETS_CLIENT_EMAIL || !process.env.GOOGLE_SHEETS_PRIVATE_KEY || !sheetId || !sheetName) {
+            throw new Error("Google Sheets environment variables for quotes are not configured.");
         }
 
         const auth = new google.auth.GoogleAuth({
@@ -134,8 +137,8 @@ export async function POST(req: NextRequest) {
         ];
         
         await sheets.spreadsheets.values.append({
-            spreadsheetId: process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID,
-            range: process.env.GOOGLE_SHEET_NAME,
+            spreadsheetId: sheetId,
+            range: sheetName,
             valueInputOption: 'USER_ENTERED',
             requestBody: {
                 values: [newRow],

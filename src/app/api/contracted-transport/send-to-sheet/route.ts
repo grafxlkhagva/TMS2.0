@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
         const sheetName = process.env.CONTRACTED_TRANSPORT_SHEET_NAME;
 
         if (!process.env.GOOGLE_SHEETS_CLIENT_EMAIL || !process.env.GOOGLE_SHEETS_PRIVATE_KEY || !sheetId || !sheetName) {
-            throw new Error("Google Sheets environment variables are not configured.");
+            throw new Error("Google Sheets environment variables for contracted transport are not configured.");
         }
 
         const auth = new google.auth.GoogleAuth({
