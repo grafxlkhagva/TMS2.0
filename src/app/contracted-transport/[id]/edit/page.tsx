@@ -173,7 +173,9 @@ export default function EditContractedTransportPage() {
                     cargoItems: (contractData.cargoItems || []).map((item: any) => ({
                         ...item, 
                         id: item.id || uuidv4(),
-                        driverPrice: item.driverPrice ?? item.price ?? 0, // Backward compatibility
+                        driverPrice: item.driverPrice ?? item.price ?? 0,
+                        mainContractorPrice: item.mainContractorPrice ?? 0,
+                        ourPrice: item.ourPrice ?? 0,
                     })),
                 });
             } else {
