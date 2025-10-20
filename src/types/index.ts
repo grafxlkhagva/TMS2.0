@@ -402,6 +402,7 @@ export type ContractedTransportExecution = {
     createdAt: Date;
     selectedCargo: string[];
     totalLoadedWeight?: number;
+    totalUnloadedWeight?: number;
 }
 
 export type ContractedTransportCargoItem = {
@@ -459,4 +460,3 @@ export type ContractedTransport = {
     
 
     
-

@@ -25,7 +25,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -80,7 +80,7 @@ const statusDetails: Record<ContractedTransportStatus, { text: string; variant: 
 const statusTranslations: Record<string, string> = {
     Pending: 'Хүлээгдэж буй',
     Loaded: 'Ачсан',
-    Unloading: 'Буулгаж буй',
+    Unloaded: 'Буулгасан',
     Delivered: 'Хүргэгдсэн',
 };
 
@@ -115,7 +115,7 @@ function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, lab
 const statusColorMap: Record<string, string> = {
     'Pending': 'bg-gray-500',
     'Loaded': 'bg-blue-500',
-    'Unloading': 'bg-yellow-500',
+    'Unloaded': 'bg-yellow-500',
     'Delivered': 'bg-green-500',
 };
 
@@ -258,8 +258,14 @@ export default function ContractedTransportDetailPage() {
   const [isStopDialogOpen, setIsStopDialogOpen] = React.useState(false);
   const [isNewExecutionDialogOpen, setIsNewExecutionDialogOpen] = React.useState(false);
   const [isResourcesDialogOpen, setIsResourcesDialogOpen] = React.useState(false);
+  
   const [isLoadCargoDialogOpen, setIsLoadCargoDialogOpen] = React.useState(false);
   const [executionToLoad, setExecutionToLoad] = React.useState<ContractedTransportExecution | null>(null);
+  const [totalLoadedWeight, setTotalLoadedWeight] = React.useState<number>(0);
+  
+  const [isUnloadCargoDialogOpen, setIsUnloadCargoDialogOpen] = React.useState(false);
+  const [executionToUnload, setExecutionToUnload] = React.useState<ContractedTransportExecution | null>(null);
+  const [totalUnloadedWeight, setTotalUnloadedWeight] = React.useState<number>(0);
 
   const [executionToDelete, setExecutionToDelete] = React.useState<ContractedTransportExecution | null>(null);
   const [stopToDelete, setStopToDelete] = React.useState<RouteStop | null>(null);
@@ -270,7 +276,6 @@ export default function ContractedTransportDetailPage() {
   const [addVehiclePopoverOpen, setAddVehiclePopoverOpen] = React.useState(false);
   
   const [selectedCargoItems, setSelectedCargoItems] = React.useState<Set<string>>(new Set());
-  const [totalLoadedWeight, setTotalLoadedWeight] = React.useState<number>(0);
 
 
   const [relatedData, setRelatedData] = React.useState({
@@ -288,7 +293,7 @@ export default function ContractedTransportDetailPage() {
     
     const baseStatuses: string[] = ['Pending', 'Loaded'];
     const inTransitStatuses = (contract.routeStops || []).map(s => s.id);
-    const endStatuses: string[] = ['Unloading', 'Delivered'];
+    const endStatuses: string[] = ['Unloaded', 'Delivered'];
     
     return [...baseStatuses, ...inTransitStatuses, ...endStatuses];
 
@@ -417,6 +422,12 @@ export default function ContractedTransportDetailPage() {
         setTotalLoadedWeight(executionToLoad.totalLoadedWeight || 0);
     }
   }, [executionToLoad]);
+
+  React.useEffect(() => {
+    if (executionToUnload) {
+        setTotalUnloadedWeight(executionToUnload.totalUnloadedWeight || 0);
+    }
+  }, [executionToUnload]);
   
   React.useEffect(() => {
     if (executionToEdit && contract) {
@@ -667,6 +678,7 @@ export default function ContractedTransportDetailPage() {
             createdAt: serverTimestamp(),
             selectedCargo: newSelectedCargo,
             totalLoadedWeight: 0,
+            totalUnloadedWeight: 0,
           };
           
           const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
@@ -704,6 +716,11 @@ export default function ContractedTransportDetailPage() {
                 setExecutionToLoad(execution);
                 setIsLoadCargoDialogOpen(true);
                 return; 
+            }
+             if (newStatus === 'Unloaded') {
+                setExecutionToUnload(execution);
+                setIsUnloadCargoDialogOpen(true);
+                return;
             }
             
             setIsSubmitting(true);
@@ -758,6 +775,40 @@ export default function ContractedTransportDetailPage() {
             setIsSubmitting(false);
             setIsLoadCargoDialogOpen(false);
             setExecutionToLoad(null);
+        }
+    };
+
+    const handleUnloadCargoSubmit = async () => {
+        if (!executionToUnload) return;
+        setIsSubmitting(true);
+    
+        try {
+            const execRef = doc(db, 'contracted_transport_executions', executionToUnload.id);
+            
+            const dataToUpdate: DocumentData = {
+                status: 'Unloaded' as ContractedTransportExecutionStatus,
+                statusHistory: arrayUnion({ status: 'Unloaded', date: new Date() }),
+                totalUnloadedWeight: totalUnloadedWeight,
+            };
+
+            await updateDoc(execRef, dataToUpdate);
+    
+            setExecutions((prev) =>
+                prev.map((ex) =>
+                    ex.id === executionToUnload.id
+                        ? { ...ex, status: 'Unloaded' as ContractedTransportExecutionStatus, totalUnloadedWeight: totalUnloadedWeight }
+                        : ex
+                )
+            );
+    
+            toast({ title: 'Амжилттай', description: 'Буулгасан ачааны мэдээлэл хадгалагдлаа.' });
+        } catch (e) {
+            console.error(e);
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Буулгасан ачааны мэдээлэл хадгалахад алдаа гарлаа.' });
+        } finally {
+            setIsSubmitting(false);
+            setIsUnloadCargoDialogOpen(false);
+            setExecutionToUnload(null);
         }
     };
     
@@ -934,14 +985,18 @@ export default function ContractedTransportDetailPage() {
                             <TableHead>Буулгасан</TableHead>
                             <TableHead>Ачих цэг</TableHead>
                             <TableHead>Буулгах цэг</TableHead>
-                            <TableHead>Жин (тн)</TableHead>
+                            <TableHead>Ачсан жин (тн)</TableHead>
+                            <TableHead>Буулгасан жин (тн)</TableHead>
+                            <TableHead>Зөрүү (тн)</TableHead>
                             <TableHead>Зам (км)</TableHead>
                             <TableHead>Явц</TableHead>
                             <TableHead className="text-right">Үйлдэл</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {executions.length > 0 ? executions.map(exec => (
+                        {executions.length > 0 ? executions.map(exec => {
+                            const difference = (exec.totalLoadedWeight || 0) - (exec.totalUnloadedWeight || 0);
+                            return (
                             <TableRow key={exec.id}>
                                 <TableCell>
                                     <p className="font-medium">{exec.driverName || 'TBA'}</p>
@@ -952,6 +1007,8 @@ export default function ContractedTransportDetailPage() {
                                 <TableCell>{relatedData.startWarehouseName}</TableCell>
                                 <TableCell>{relatedData.endWarehouseName}</TableCell>
                                 <TableCell>{exec.totalLoadedWeight || '-'}</TableCell>
+                                <TableCell>{exec.totalUnloadedWeight || '-'}</TableCell>
+                                <TableCell className={cn(difference !== 0 && 'text-destructive font-bold')}>{difference}</TableCell>
                                 <TableCell>{contract.route.totalDistance}</TableCell>
                                 <TableCell><Badge variant="secondary">{statusTranslations[exec.status] || exec.status}</Badge></TableCell>
                                 <TableCell className="text-right">
@@ -968,9 +1025,9 @@ export default function ContractedTransportDetailPage() {
                                     </DropdownMenu>
                                 </TableCell>
                             </TableRow>
-                        )) : (
+                        )}) : (
                             <TableRow>
-                                <TableCell colSpan={9} className="h-24 text-center">Гүйцэтгэл бүртгэгдээгүй байна.</TableCell>
+                                <TableCell colSpan={11} className="h-24 text-center">Гүйцэтгэл бүртгэгдээгүй байна.</TableCell>
                             </TableRow>
                         )}
                     </TableBody>
@@ -1134,7 +1191,7 @@ export default function ContractedTransportDetailPage() {
         </AlertDialog>
         
         {/* Load Cargo Dialog */}
-        <AlertDialog open={isLoadCargoDialogOpen} onOpenChange={setIsLoadCargoDialogOpen}>
+        <AlertDialog open={isLoadCargoDialogOpen} onOpenChange={(open) => !open && setExecutionToLoad(null)}>
             <AlertDialogContent>
                     <div>
                         <AlertDialogHeader>
@@ -1154,6 +1211,35 @@ export default function ContractedTransportDetailPage() {
                         <AlertDialogFooter>
                             <AlertDialogCancel onClick={() => {setIsLoadCargoDialogOpen(false); setTotalLoadedWeight(0);}}>Цуцлах</AlertDialogCancel>
                             <AlertDialogAction onClick={handleLoadCargoSubmit} disabled={isSubmitting}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                Хадгалах
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </div>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Unload Cargo Dialog */}
+        <AlertDialog open={isUnloadCargoDialogOpen} onOpenChange={(open) => !open && setExecutionToUnload(null)}>
+            <AlertDialogContent>
+                    <div>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Буулгасан ачааны мэдээлэл</AlertDialogTitle>
+                            <AlertDialogDescription>
+                               Буулгасан нийт жинг тонн-оор оруулна уу.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="py-4">
+                           <Input
+                                type="number"
+                                placeholder="Нийт жин (тн)"
+                                value={totalUnloadedWeight || ''}
+                                onChange={(e) => setTotalUnloadedWeight(Number(e.target.value))}
+                           />
+                        </div>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel onClick={() => {setIsUnloadCargoDialogOpen(false); setTotalUnloadedWeight(0);}}>Цуцлах</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleUnloadCargoSubmit} disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                                 Хадгалах
                             </AlertDialogAction>
