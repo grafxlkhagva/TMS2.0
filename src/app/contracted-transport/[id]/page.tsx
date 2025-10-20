@@ -901,13 +901,19 @@ export default function ContractedTransportDetailPage() {
                             <Separator />
                             <h3 className="font-semibold text-base">Ачааны мэдээлэл</h3>
                             <Table>
-                                <TableHeader><TableRow><TableHead>Ачаа</TableHead><TableHead>Баглаа</TableHead><TableHead className="text-right">Үнэ (₮)</TableHead></TableRow></TableHeader>
+                                <TableHeader><TableRow><TableHead>Ачаа</TableHead><TableHead>Баглаа</TableHead><TableHead className="text-right">Үнүүд (Ж/ЕР/Б)</TableHead></TableRow></TableHeader>
                                 <TableBody>
                                 {(contract.cargoItems || []).map((item, index) => (
                                     <TableRow key={`${item.id}-${index}`}>
                                         <TableCell className="font-medium">{item.name} ({item.unit})</TableCell>
                                         <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
-                                        <TableCell className="text-right font-mono">{item.price.toLocaleString()}</TableCell>
+                                        <TableCell className="text-right font-mono text-xs">
+                                          Ж: {item.driverPrice?.toLocaleString() ?? 'N/A'}
+                                          <br/>
+                                          ЕР: {item.mainContractorPrice?.toLocaleString() ?? 'N/A'}
+                                          <br/>
+                                          Б: {item.ourPrice?.toLocaleString() ?? 'N/A'}
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                                 </TableBody>
@@ -1334,4 +1340,3 @@ export default function ContractedTransportDetailPage() {
 }
 
     
-

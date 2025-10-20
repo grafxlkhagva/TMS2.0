@@ -411,7 +411,9 @@ export type ContractedTransportCargoItem = {
     unit: string;
     packagingTypeId: string;
     notes?: string;
-    price: number;
+    driverPrice: number;
+    mainContractorPrice?: number;
+    ourPrice?: number;
 };
 
 

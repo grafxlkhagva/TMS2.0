@@ -42,7 +42,9 @@ const cargoItemSchema = z.object({
   unit: z.string().min(1, "Хэмжих нэгжийг оруулна уу."),
   packagingTypeId: z.string().min(1, "Баглаа боодол сонгоно уу."),
   notes: z.string().optional(),
-  price: z.coerce.number().min(1, "Тээврийн хөлс оруулна уу."),
+  driverPrice: z.coerce.number().min(0, "Үнэ 0-ээс бага байж болохгүй."),
+  mainContractorPrice: z.coerce.number().min(0, "Үнэ 0-ээс бага байж болохгүй.").optional(),
+  ourPrice: z.coerce.number().min(0, "Үнэ 0-ээс бага байж болохгүй.").optional(),
 });
 
 
@@ -121,7 +123,7 @@ export default function NewContractedTransportPage() {
       dateRange: undefined,
       frequency: undefined,
       customFrequencyDetails: '',
-      cargoItems: [{ id: uuidv4(), name: '', unit: 'тн', packagingTypeId: '', notes: '', price: 0 }],
+      cargoItems: [{ id: uuidv4(), name: '', unit: 'тн', packagingTypeId: '', notes: '', driverPrice: 0, mainContractorPrice: 0, ourPrice: 0 }],
     }
   });
 
@@ -321,10 +323,12 @@ export default function NewContractedTransportPage() {
                         {fields.map((field, index) => (
                           <div key={field.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start p-3 border rounded-md">
                                 <FormField control={form.control} name={`cargoItems.${index}.name`} render={({ field }) => (<FormItem className="md:col-span-3"><FormLabel className="text-xs">Нэр</FormLabel><FormControl><Input placeholder="Цемент" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                <FormField control={form.control} name={`cargoItems.${index}.unit`} render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Нэгж</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Нэгж..." /></SelectTrigger></FormControl><SelectContent>{standardUnits.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`cargoItems.${index}.unit`} render={({ field }) => (<FormItem className="md:col-span-1"><FormLabel className="text-xs">Нэгж</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Нэгж..." /></SelectTrigger></FormControl><SelectContent>{standardUnits.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                                 <FormField control={form.control} name={`cargoItems.${index}.packagingTypeId`} render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Баглаа</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Сонгох..." /></SelectTrigger></FormControl><SelectContent>{packagingTypes.map((p) => ( <SelectItem key={p.id} value={p.id}> {p.name} </SelectItem> ))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('packaging_types', `cargoItems.${index}.packagingTypeId`)}><Plus className="h-4 w-4"/></Button></div><FormMessage /></FormItem>)} />
-                                <FormField control={form.control} name={`cargoItems.${index}.price`} render={({ field }) => ( <FormItem className="md:col-span-2"><FormLabel className="text-xs">Тээврийн хөлс (₮)</FormLabel><FormControl><Input type="number" placeholder="1500000" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                                <FormField control={form.control} name={`cargoItems.${index}.notes`} render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Input placeholder="..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`cargoItems.${index}.driverPrice`} render={({ field }) => ( <FormItem className="md:col-span-2"><FormLabel className="text-xs">Жолоочийн үнэ (₮)</FormLabel><FormControl><Input type="number" placeholder="1500000" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                                <FormField control={form.control} name={`cargoItems.${index}.mainContractorPrice`} render={({ field }) => ( <FormItem className="md:col-span-2"><FormLabel className="text-xs">ЕР.гүйцэтгэгч үнэ (₮)</FormLabel><FormControl><Input type="number" placeholder="1600000" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                                <FormField control={form.control} name={`cargoItems.${index}.ourPrice`} render={({ field }) => ( <FormItem className="md:col-span-2"><FormLabel className="text-xs">Бидний үнэ (₮)</FormLabel><FormControl><Input type="number" placeholder="1700000" {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                                <FormField control={form.control} name={`cargoItems.${index}.notes`} render={({ field }) => (<FormItem className="md:col-span-11"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Input placeholder="..." {...field} /></FormControl><FormMessage /></FormItem>)} />
                                 <div className="md:col-span-1 flex justify-end items-center h-full pt-6">
                                   <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => remove(index)}><Trash2 className="h-4 w-4" /></Button>
                                 </div>
@@ -335,7 +339,7 @@ export default function NewContractedTransportPage() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => append({ id: uuidv4(), name: '', unit: 'тн', packagingTypeId: '', notes: '', price: 0 })}
+                            onClick={() => append({ id: uuidv4(), name: '', unit: 'тн', packagingTypeId: '', notes: '', driverPrice: 0, mainContractorPrice: 0, ourPrice: 0 })}
                         >
                             <PlusCircle className="mr-2 h-4 w-4" /> Ачаа нэмэх
                         </Button>
