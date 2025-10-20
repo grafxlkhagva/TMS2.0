@@ -61,7 +61,8 @@ export async function POST(req: NextRequest) {
             scopes: ['https://www.googleapis.com/auth/spreadsheets'],
         });
 
-        const sheets = google.sheets({ version: 'v4', auth });
+        const client = await auth.getClient();
+        const sheets = google.sheets({ version: 'v4', auth: client });
 
         const sentDate = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
         const executionDate = execution.date ? format(new Date(execution.date), 'yyyy-MM-dd') : 'N/A';
