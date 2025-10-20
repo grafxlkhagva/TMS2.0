@@ -58,8 +58,8 @@ type EditExecutionFormValues = z.infer<typeof editExecutionFormSchema>;
 
 
 const routeStopFormSchema = z.object({
-  id: z.string().min(2, "Зогсоолын ID дор хаяж 2 тэмдэгттэй байх ёстой."),
-  description: z.string().min(5, "Тайлбар дор хаяж 5 тэмдэгттэй байх ёстой."),
+  id: z.string().min(1, "Зогсоолын ID оруулна уу.").regex(/^[a-zA-Z0-9_-]+$/, "ID зөвхөн үсэг, тоо, доогуур зураас, зураас агуулж болно."),
+  description: z.string().min(2, "Тайлбар дор хаяж 2 тэмдэгттэй байх ёстой."),
 });
 type RouteStopFormValues = z.infer<typeof routeStopFormSchema>;
 
@@ -182,7 +182,7 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
     <div ref={setNodeRef} className="p-2 rounded-lg bg-muted/50 min-h-40 flex flex-col">
       <div className="font-semibold text-center text-sm p-2 rounded-md relative group/stop-header">
           <h3 className={`${statusColorMap[id] || 'bg-purple-500'} text-white p-2 rounded-md`}>
-              {stop ? stop.id : title}
+              {title}
           </h3>
           {stop && (
               <DropdownMenu>
@@ -659,7 +659,7 @@ export default function ContractedTransportDetailPage() {
           const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
           const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
           
-          const newSelectedCargo: string[] = [];
+            const newSelectedCargo: string[] = [];
             selectedCargoItems.forEach(itemId => {
                 const cargo = contract.cargoItems.find(c => c.id === itemId);
                 if (cargo && cargo.name) {
@@ -951,7 +951,7 @@ export default function ContractedTransportDetailPage() {
                             {executionStatuses.map(status => {
                                 const stop = contract.routeStops.find(s => s.id === status);
                                 const itemsForStatus = executions.filter(ex => ex.status === status);
-                                const title = statusTranslations[status] || stop?.description || status;
+                                const title = statusTranslations[status] || stop?.id || status;
                                 return (
                                     <StatusColumn 
                                         key={status} 
@@ -1009,7 +1009,7 @@ export default function ContractedTransportDetailPage() {
                                 <TableCell>{relatedData.endWarehouseName}</TableCell>
                                 <TableCell>{exec.totalLoadedWeight || '-'}</TableCell>
                                 <TableCell>{exec.totalUnloadedWeight || '-'}</TableCell>
-                                <TableCell className={cn(difference !== 0 && 'text-destructive font-bold')}>{difference}</TableCell>
+                                <TableCell className={cn(difference !== 0 && 'text-destructive font-bold')}>{difference.toFixed(2)}</TableCell>
                                 <TableCell>{contract.route.totalDistance}</TableCell>
                                 <TableCell><Badge variant="secondary">{statusTranslations[exec.status] || exec.status}</Badge></TableCell>
                                 <TableCell className="text-right">
@@ -1161,7 +1161,7 @@ export default function ContractedTransportDetailPage() {
                             <DialogHeader><DialogTitle>Зогсоол засах</DialogTitle></DialogHeader>
                             <div className="space-y-4 py-4">
                                      <FormField control={editStopForm.control} name="id" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын Нэр/ID</FormLabel><FormControl><Input {...field} readOnly disabled /></FormControl><FormMessage /></FormItem> )}/>
-                                     <FormField control={editStopForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>Тайлбар</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )}/>
+                                     <FormField control={editStopForm.control} name="description" render={({ field }) => ( <FormItem><FormLabel>Тайлбар</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                             </div>
                         </form>
                     </Form>
