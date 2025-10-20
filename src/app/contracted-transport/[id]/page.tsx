@@ -222,18 +222,18 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
 
 function StatCard({ title, value, icon: Icon, description, actionLabel, onActionClick, valueColorClass, colorClass }: { title: string; value: string | number; icon: React.ElementType; description: string; actionLabel?: string; onActionClick?: () => void; valueColorClass?: string; colorClass?: string; }) {
   return (
-    <Card className={cn("text-dashboard-foreground", colorClass)}>
+    <Card className={cn("text-white", colorClass)}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{title}</CardTitle>
-            <Icon className="h-4 w-4 text-dashboard-muted-foreground" />
+            <Icon className="h-4 w-4 text-gray-300" />
         </CardHeader>
         <CardContent>
             <div className={cn("text-2xl font-bold", valueColorClass)}>{value}</div>
-            <p className="text-xs text-dashboard-muted-foreground">{description}</p>
+            <p className="text-xs text-gray-400">{description}</p>
         </CardContent>
         {actionLabel && onActionClick && (
             <CardFooter>
-                 <Button variant="outline" size="sm" className="w-full bg-dashboard-accent text-dashboard-accent-foreground hover:bg-dashboard-accent/80" onClick={onActionClick}>
+                 <Button variant="outline" size="sm" className="w-full bg-gray-700 text-white hover:bg-gray-600" onClick={onActionClick}>
                     {actionLabel}
                 </Button>
             </CardFooter>
@@ -919,12 +919,12 @@ export default function ContractedTransportDetailPage() {
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-        <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." valueColorClass="text-dashboard-stat-1" colorClass="dark:bg-dashboard-card" />
-        <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." valueColorClass="text-dashboard-stat-2" colorClass="dark:bg-dashboard-card" />
-        <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." valueColorClass="text-dashboard-stat-3" colorClass="dark:bg-dashboard-card" />
-        <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-dashboard-stat-4" colorClass="dark:bg-dashboard-card" />
-        <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-dashboard-stat-5" colorClass="dark:bg-dashboard-card" />
-        <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." valueColorClass="text-dashboard-stat-6" colorClass="dark:bg-dashboard-card" />
+        <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." valueColorClass="text-dashboard-stat-1" colorClass="bg-gray-900" />
+        <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." valueColorClass="text-dashboard-stat-2" colorClass="bg-gray-900" />
+        <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." valueColorClass="text-dashboard-stat-3" colorClass="bg-gray-900" />
+        <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-dashboard-stat-4" colorClass="bg-gray-900" />
+        <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-dashboard-stat-5" colorClass="bg-gray-900" />
+        <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." valueColorClass="text-dashboard-stat-6" colorClass="bg-gray-900" />
       </div>
       
         <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -1334,3 +1334,4 @@ export default function ContractedTransportDetailPage() {
 }
 
     
+
