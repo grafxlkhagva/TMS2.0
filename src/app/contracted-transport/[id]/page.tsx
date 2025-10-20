@@ -347,7 +347,7 @@ export default function ContractedTransportDetailPage() {
             assignedDrivers: data.assignedDrivers || [],
             assignedVehicles: data.assignedVehicles || [],
             routeStops: data.routeStops || [],
-            cargoItems: data.cargoItems || [],
+            cargoItems: (data.cargoItems || []).map((item: any) => ({ ...item, id: item.id || uuidv4()})),
         } as ContractedTransport;
         setContract(fetchedContract);
         
@@ -945,11 +945,11 @@ export default function ContractedTransportDetailPage() {
                                         <TableCell className="font-medium">{item.name} ({item.unit})</TableCell>
                                         <TableCell>{relatedData.packagingTypes.get(item.packagingTypeId) || item.packagingTypeId}</TableCell>
                                         <TableCell className="text-right font-mono text-xs">
-                                          Ж: {item.driverPrice?.toLocaleString() ?? 'N/A'}
+                                          Ж: {(item.driverPrice ?? 0).toLocaleString()}
                                           <br/>
-                                          ЕР: {item.mainContractorPrice?.toLocaleString() ?? 'N/A'}
+                                          ЕР: {(item.mainContractorPrice ?? 0).toLocaleString()}
                                           <br/>
-                                          Б: {item.ourPrice?.toLocaleString() ?? 'N/A'}
+                                          Б: {(item.ourPrice ?? 0).toLocaleString()}
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -1101,8 +1101,8 @@ export default function ContractedTransportDetailPage() {
                             <div>
                                 <h4 className="font-semibold mb-2">Ачаа сонгох (Сонголттой)</h4>
                                 <div className="space-y-2">
-                                     {contract.cargoItems.map((item) => (
-                                        <div key={item.id} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
+                                     {contract.cargoItems.map((item, index) => (
+                                        <div key={`cargo-item-${item.id || index}`} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
                                             <Checkbox
                                                 id={`select-cargo-${item.id}`}
                                                 checked={selectedCargoItems.has(item.id)}
@@ -1379,3 +1379,5 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
+    
