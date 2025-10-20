@@ -25,7 +25,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -415,8 +415,6 @@ export default function ContractedTransportDetailPage() {
   React.useEffect(() => {
     if (executionToLoad) {
         setTotalLoadedWeight(executionToLoad.totalLoadedWeight || 0);
-    } else {
-        setTotalLoadedWeight(0);
     }
   }, [executionToLoad]);
   
@@ -796,6 +794,13 @@ export default function ContractedTransportDetailPage() {
   const contractEndDate = toDateSafe(contract.endDate);
 
 
+  const getStatusDate = (exec: ContractedTransportExecution, status: ContractedTransportExecutionStatus): string => {
+    const historyItem = exec.statusHistory.find(h => h.status === status);
+    const date = historyItem ? toDateSafe(historyItem.date) : null;
+    return date ? format(date, 'yyyy-MM-dd HH:mm') : '-';
+  };
+
+
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
@@ -914,6 +919,64 @@ export default function ContractedTransportDetailPage() {
                 </CardContent>
             </Card>
         </DndContext>
+        
+        <Card className="mt-6">
+            <CardHeader>
+                <CardTitle>Тээврийн тайлан</CardTitle>
+                <CardDescription>Бүх гүйцэтгэлүүдийн нэгдсэн тайлан.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Жолооч / Машин</TableHead>
+                            <TableHead>Ачсан</TableHead>
+                            <TableHead>Буулгасан</TableHead>
+                            <TableHead>Ачих цэг</TableHead>
+                            <TableHead>Буулгах цэг</TableHead>
+                            <TableHead>Жин (тн)</TableHead>
+                            <TableHead>Зам (км)</TableHead>
+                            <TableHead>Явц</TableHead>
+                            <TableHead className="text-right">Үйлдэл</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {executions.length > 0 ? executions.map(exec => (
+                            <TableRow key={exec.id}>
+                                <TableCell>
+                                    <p className="font-medium">{exec.driverName || 'TBA'}</p>
+                                    <p className="text-xs text-muted-foreground">{exec.vehicleLicense || 'TBA'}</p>
+                                </TableCell>
+                                <TableCell>{getStatusDate(exec, 'Loaded')}</TableCell>
+                                <TableCell>{getStatusDate(exec, 'Delivered')}</TableCell>
+                                <TableCell>{relatedData.startWarehouseName}</TableCell>
+                                <TableCell>{relatedData.endWarehouseName}</TableCell>
+                                <TableCell>{exec.totalLoadedWeight || '-'}</TableCell>
+                                <TableCell>{contract.route.totalDistance}</TableCell>
+                                <TableCell><Badge variant="secondary">{statusTranslations[exec.status] || exec.status}</Badge></TableCell>
+                                <TableCell className="text-right">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => setExecutionToEdit(exec)}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => setExecutionToDelete(exec)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        )) : (
+                            <TableRow>
+                                <TableCell colSpan={9} className="h-24 text-center">Гүйцэтгэл бүртгэгдээгүй байна.</TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
             
         {/* Add New Execution Dialog */}
         <Dialog open={isNewExecutionDialogOpen} onOpenChange={setIsNewExecutionDialogOpen}>
@@ -1089,7 +1152,7 @@ export default function ContractedTransportDetailPage() {
                            />
                         </div>
                         <AlertDialogFooter>
-                            <AlertDialogCancel onClick={() => setIsLoadCargoDialogOpen(false)}>Цуцлах</AlertDialogCancel>
+                            <AlertDialogCancel onClick={() => {setIsLoadCargoDialogOpen(false); setTotalLoadedWeight(0);}}>Цуцлах</AlertDialogCancel>
                             <AlertDialogAction onClick={handleLoadCargoSubmit} disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                                 Хадгалах
@@ -1182,3 +1245,4 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
