@@ -25,7 +25,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -659,12 +659,13 @@ export default function ContractedTransportDetailPage() {
           const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
           const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
           
-          const newSelectedCargo = Array.from(selectedCargoItems)
-            .map(itemId => {
+          const newSelectedCargo: string[] = [];
+            selectedCargoItems.forEach(itemId => {
                 const cargo = contract.cargoItems.find(c => c.id === itemId);
-                return cargo?.name;
-            })
-            .filter((name): name is string => !!name);
+                if (cargo && cargo.name) {
+                    newSelectedCargo.push(cargo.name);
+                }
+            });
 
           const dataToSave: DocumentData = {
             contractId: contract.id,
@@ -950,7 +951,7 @@ export default function ContractedTransportDetailPage() {
                             {executionStatuses.map(status => {
                                 const stop = contract.routeStops.find(s => s.id === status);
                                 const itemsForStatus = executions.filter(ex => ex.status === status);
-                                const title = statusTranslations[status] || stop?.id || status;
+                                const title = statusTranslations[status] || stop?.description || status;
                                 return (
                                     <StatusColumn 
                                         key={status} 
@@ -1332,3 +1333,4 @@ export default function ContractedTransportDetailPage() {
   );
 }
 
+    
