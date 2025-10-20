@@ -672,10 +672,6 @@ export default function ContractedTransportDetailPage() {
           const dataToSave: DocumentData = {
             contractId: contract.id,
             date: values.date,
-            driverId: selectedDriver?.driverId,
-            driverName: selectedDriver?.driverName,
-            vehicleId: selectedVehicle?.vehicleId,
-            vehicleLicense: selectedVehicle?.licensePlate,
             status: 'Pending',
             statusHistory: [{ status: 'Pending', date: new Date() }],
             createdAt: serverTimestamp(),
@@ -683,6 +679,16 @@ export default function ContractedTransportDetailPage() {
             totalLoadedWeight: 0,
             totalUnloadedWeight: 0,
           };
+
+          if (selectedDriver) {
+            dataToSave.driverId = selectedDriver.driverId;
+            dataToSave.driverName = selectedDriver.driverName;
+          }
+
+          if (selectedVehicle) {
+            dataToSave.vehicleId = selectedVehicle.vehicleId;
+            dataToSave.vehicleLicense = selectedVehicle.licensePlate;
+          }
           
           const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
           
