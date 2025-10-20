@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
         });
 
         const client = await auth.getClient();
-        const sheets = google.sheets({ version: 'v4', auth: client });
+        const sheets = google.sheets({ version: 'v4', auth });
         
         const getDetailName = (collection: string, id: string) => {
             if (!allData || !allData[collection] || !id) {
