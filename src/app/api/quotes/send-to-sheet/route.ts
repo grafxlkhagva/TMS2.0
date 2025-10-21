@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
         });
 
         const client = await auth.getClient();
-        const sheets = google.sheets({ version: 'v4', auth });
+        const sheets = google.sheets({ version: 'v4', auth: client });
         
         const getDetailName = (collection: string, id: string) => {
             if (!allData || !allData[collection] || !id) {
@@ -150,6 +150,6 @@ export async function POST(req: NextRequest) {
     } catch (error) {
         console.error('Error sending data to Google Sheets:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        return NextResponse.json({ message: 'Error sending data to Google Sheets', error: errorMessage, details: error }, { status: 500 });
+        return NextResponse.json({ message: 'Error sending data to Google Sheets', error: errorMessage }, { status: 500 });
     }
 }

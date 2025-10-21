@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
         });
 
         const client = await auth.getClient();
-        const sheets = google.sheets({ version: 'v4', auth });
+        const sheets = google.sheets({ version: 'v4', auth: client });
 
         const sentDate = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
         const executionDate = execution.date ? format(new Date(execution.date), 'yyyy-MM-dd') : 'N/A';
@@ -70,6 +70,13 @@ export async function POST(req: NextRequest) {
         const deliveredDate = execution.statusHistory.find((h:any) => h.status === 'Delivered')?.date;
         
         const cargoSummary = execution.selectedCargo.join(', ');
+
+        const statusTranslations: Record<string, string> = {
+            Pending: 'Хүлээгдэж буй',
+            Loaded: 'Ачсан',
+            Unloaded: 'Буулгасан',
+            Delivered: 'Хүргэгдсэн',
+        };
 
         const newRow = [
             contract.contractNumber, // Гэрээний №
@@ -107,11 +114,3 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ message: 'Error sending data to Google Sheets', error: errorMessage }, { status: 500 });
     }
 }
-
-
-const statusTranslations: Record<string, string> = {
-    Pending: 'Хүлээгдэж буй',
-    Loaded: 'Ачсан',
-    Unloaded: 'Буулгасан',
-    Delivered: 'Хүргэгдсэн',
-};
