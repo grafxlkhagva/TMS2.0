@@ -19,6 +19,7 @@ type StatCardProps = {
     icon: React.ElementType;
     description?: string;
     isLoading: boolean;
+    href?: string;
 };
 
 type ManagerStats = {
@@ -36,7 +37,20 @@ type SystemStats = {
     totalWarehouses: number;
 }
 
-function StatCard({ title, value, icon: Icon, description, isLoading }: StatCardProps) {
+function StatCard({ title, value, icon: Icon, description, isLoading, href }: StatCardProps) {
+    const cardContent = (
+      <Card className={cn(href && "hover:border-primary transition-colors")}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{title}</CardTitle>
+                <Icon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{value}</div>
+                {description && <p className="text-xs text-muted-foreground">{description}</p>}
+            </CardContent>
+        </Card>
+    );
+
     if (isLoading) {
         return (
             <Card>
@@ -51,18 +65,12 @@ function StatCard({ title, value, icon: Icon, description, isLoading }: StatCard
             </Card>
         )
     }
-    return (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{value}</div>
-                {description && <p className="text-xs text-muted-foreground">{description}</p>}
-            </CardContent>
-        </Card>
-    );
+
+    if (href) {
+        return <Link href={href}>{cardContent}</Link>;
+    }
+
+    return cardContent;
 }
 
 export default function ManagementDashboardPage() {
@@ -110,7 +118,7 @@ export default function ManagementDashboardPage() {
 
                 // Calculate Manager-specific Stats
                 const managers = managersSnap.docs.map(doc => doc.data() as SystemUser);
-                const allOrders = ordersSnap.docs.map(doc => doc.data() as Order);
+                const allOrders = ordersSnap.docs.map(doc => ({id: doc.id, ...doc.data()} as Order));
                 const allShipments = shipmentsSnap.docs.map(doc => doc.data() as Shipment);
                 const allOrderItems = itemsSnap.docs.map(doc => doc.data() as OrderItem);
 
@@ -162,6 +170,7 @@ export default function ManagementDashboardPage() {
                         value={systemStats.totalVehicles}
                         icon={Car}
                         isLoading={isLoading}
+                        href="/vehicles"
                     />
                     <StatCard
                         title="Нийт жолооч"

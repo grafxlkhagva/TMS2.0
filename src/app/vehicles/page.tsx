@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -107,6 +106,7 @@ export default function VehiclesPage() {
   const [vehicles, setVehicles] = React.useState<Vehicle[]>([]);
   const [drivers, setDrivers] = React.useState<Driver[]>([]);
   const [vehicleTypes, setVehicleTypes] = React.useState<VehicleType[]>([]);
+  const [trailerTypes, setTrailerTypes] = React.useState<TrailerType[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [selectedVehicle, setSelectedVehicle] = React.useState<Vehicle | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -119,10 +119,11 @@ export default function VehiclesPage() {
   const fetchData = React.useCallback(async () => {
       setIsLoading(true);
       try {
-        const [vehiclesSnapshot, driversSnapshot, vehicleTypesSnapshot] = await Promise.all([
+        const [vehiclesSnapshot, driversSnapshot, vehicleTypesSnapshot, trailerTypesSnapshot] = await Promise.all([
           getDocs(query(collection(db, 'vehicles'), orderBy('createdAt', 'desc'))),
           getDocs(query(collection(db, 'Drivers'), orderBy('display_name'))),
           getDocs(query(collection(db, 'vehicle_types'), orderBy('name'))),
+          getDocs(query(collection(db, 'trailer_types'), orderBy('name'))),
         ]);
 
         const vehiclesData = vehiclesSnapshot.docs.map(doc => ({
@@ -139,6 +140,9 @@ export default function VehiclesPage() {
         
         const vehicleTypesData = vehicleTypesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as VehicleType));
         setVehicleTypes(vehicleTypesData);
+
+        const trailerTypesData = trailerTypesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as TrailerType));
+        setTrailerTypes(trailerTypesData);
           
       } catch (error) {
         console.error("Error fetching data: ", error);
@@ -190,6 +194,11 @@ export default function VehiclesPage() {
 
   const filteredVehicles = React.useMemo(() => {
     return vehicles
+      .map(v => {
+        const vehicleTypeName = vehicleTypes.find(vt => vt.id === v.vehicleTypeId)?.name || v.vehicleTypeId;
+        const trailerTypeName = trailerTypes.find(tt => tt.id === v.trailerTypeId)?.name || v.trailerTypeId;
+        return {...v, vehicleTypeName, trailerTypeName };
+      })
       .filter(vehicle => {
         if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
           return false;
@@ -209,7 +218,7 @@ export default function VehiclesPage() {
         }
         return true;
       });
-  }, [vehicles, searchTerm, statusFilter, typeFilter]);
+  }, [vehicles, searchTerm, statusFilter, typeFilter, vehicleTypes, trailerTypes]);
 
   return (
     <div className="container mx-auto py-6">
@@ -279,6 +288,7 @@ export default function VehiclesPage() {
                 <TableHead>Үйлдвэрлэгч</TableHead>
                 <TableHead>Загвар</TableHead>
                 <TableHead>Даац</TableHead>
+                <TableHead>Төрөл / Тэвш</TableHead>
                 <TableHead>Төлөв</TableHead>
                 <TableHead>Оноосон жолооч</TableHead>
                 <TableHead className="text-right">Үйлдэл</TableHead>
@@ -294,6 +304,7 @@ export default function VehiclesPage() {
                         <TableCell><Skeleton className="h-5 w-20"/></TableCell>
                         <TableCell><Skeleton className="h-5 w-20"/></TableCell>
                         <TableCell><Skeleton className="h-5 w-16"/></TableCell>
+                        <TableCell><Skeleton className="h-5 w-32"/></TableCell>
                         <TableCell><Skeleton className="h-6 w-20 rounded-full"/></TableCell>
                         <TableCell><Skeleton className="h-5 w-28"/></TableCell>
                         <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto"/></TableCell>
@@ -313,6 +324,7 @@ export default function VehiclesPage() {
                       <TableCell>{vehicle.makeName}</TableCell>
                       <TableCell className="font-medium">{vehicle.modelName}</TableCell>
                       <TableCell>{vehicle.capacity}</TableCell>
+                      <TableCell>{vehicle.vehicleTypeName} / {vehicle.trailerTypeName}</TableCell>
                       <TableCell>
                         <StatusBadge status={vehicle.status} />
                       </TableCell>
@@ -350,7 +362,7 @@ export default function VehiclesPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center h-24">
+                  <TableCell colSpan={10} className="text-center h-24">
                     Тээврийн хэрэгсэл бүртгэлгүй байна.
                   </TableCell>
                 </TableRow>
