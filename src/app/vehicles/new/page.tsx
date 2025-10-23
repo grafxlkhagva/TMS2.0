@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,6 +25,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { addDoc, collection, serverTimestamp, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase';
+import { useAuth } from '@/hooks/use-auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { VehicleType, TrailerType, VehicleMake, VehicleModel } from '@/types';
@@ -60,6 +60,7 @@ const formSchema = z.object({
 export default function NewVehiclePage() {
   const { toast } = useToast();
   const router = useRouter();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [vehicleTypes, setVehicleTypes] = React.useState<VehicleType[]>([]);
   const [trailerTypes, setTrailerTypes] = React.useState<TrailerType[]>([]);
@@ -128,6 +129,10 @@ export default function NewVehiclePage() {
   
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Нэвтэрч орсоны дараа үргэлжлүүлнэ үү.'});
+        return;
+    }
     setIsSubmitting(true);
     try {
       const selectedMake = makes.find(m => m.id === values.makeId);
@@ -156,6 +161,10 @@ export default function NewVehiclePage() {
         driverName: null,
         imageUrls: [],
         createdAt: serverTimestamp(),
+        createdBy: {
+          uid: user.uid,
+          name: `${user.lastName} ${user.firstName}`,
+        },
       });
 
       if (imageFiles.length > 0) {

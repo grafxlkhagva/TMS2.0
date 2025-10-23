@@ -12,6 +12,7 @@ import { db, storage } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { DriverStatus } from '@/types';
+import { useAuth } from '@/hooks/use-auth';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -42,6 +43,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function NewDriverPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
@@ -65,8 +67,8 @@ export default function NewDriverPage() {
   };
 
   async function onSubmit(values: FormValues) {
-    if (!db || !storage) {
-        toast({ variant: 'destructive', title: 'Алдаа', description: 'Firebase-тэй холбогдож чадсангүй.' });
+    if (!db || !storage || !user) {
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Firebase-тэй холбогдож чадсангүй эсвэл хэрэглэгч нэвтрээгүй байна.' });
         return;
     }
     setIsSubmitting(true);
@@ -76,6 +78,10 @@ export default function NewDriverPage() {
         photo_url: '',
         created_time: serverTimestamp(),
         edited_time: serverTimestamp(),
+        createdBy: {
+          uid: user.uid,
+          name: `${user.lastName} ${user.firstName}`,
+        },
       });
 
       if (avatarFile) {

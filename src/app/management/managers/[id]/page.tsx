@@ -11,7 +11,7 @@ import { useParams, useRouter } from 'next/navigation';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Briefcase, CheckCircle, DollarSign, Truck, ArrowLeft } from 'lucide-react';
+import { Briefcase, Truck, ArrowLeft, Users, Car, Building2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -59,9 +59,11 @@ export default function ManagerDetailPage() {
     const router = useRouter();
     const [manager, setManager] = React.useState<SystemUser | null>(null);
     const [stats, setStats] = React.useState({
-        totalRevenue: 0,
         totalOrders: 0,
         inTransitShipments: 0,
+        addedCustomers: 0,
+        addedDrivers: 0,
+        addedVehicles: 0,
     });
     const [activeShipments, setActiveShipments] = React.useState<Shipment[]>([]);
     const [recentOrders, setRecentOrders] = React.useState<Order[]>([]);
@@ -83,29 +85,32 @@ export default function ManagerDetailPage() {
                 }
                 setManager(managerDoc.data() as SystemUser);
 
-                // Fetch related data
-                const ordersQuery = query(collection(db, "orders"), where("transportManagerId", "==", managerId));
-                const ordersSnapshot = await getDocs(ordersQuery);
-                const managerOrders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+                // Fetch all related data in parallel
+                const [
+                    ordersSnap,
+                    shipmentsSnap,
+                    customersSnap,
+                    driversSnap,
+                    vehiclesSnap,
+                ] = await Promise.all([
+                    getDocs(query(collection(db, "orders"), where("transportManagerId", "==", managerId))),
+                    getDocs(query(collection(db, 'shipments'))),
+                    getDocs(query(collection(db, 'customers'), where('createdBy.uid', '==', managerId))),
+                    getDocs(query(collection(db, 'Drivers'), where('createdBy.uid', '==', managerId))),
+                    getDocs(query(collection(db, 'vehicles'), where('createdBy.uid', '==', managerId))),
+                ]);
+
+                const managerOrders = ordersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
                 const orderIds = managerOrders.map(o => o.id);
-
-                let totalRevenue = 0;
-                let managerShipments: Shipment[] = [];
-
-                if (orderIds.length > 0) {
-                     const itemsQuery = query(collection(db, "order_items"), where('orderId', 'in', orderIds), where('status', 'in', ['Shipped', 'Delivered']));
-                     const itemsSnapshot = await getDocs(itemsQuery);
-                     totalRevenue = itemsSnapshot.docs.reduce((sum, itemDoc) => sum + (itemDoc.data().finalPrice || 0), 0);
-
-                     const shipmentsQuery = query(collection(db, 'shipments'), where('orderId', 'in', orderIds));
-                     const shipmentsSnapshot = await getDocs(shipmentsQuery);
-                     managerShipments = shipmentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Shipment));
-                }
-
+                
+                const managerShipments = shipmentsSnap.docs.map(doc => doc.data() as Shipment).filter(s => orderIds.includes(s.orderId));
+                
                 setStats({
-                    totalRevenue,
                     totalOrders: managerOrders.length,
-                    inTransitShipments: managerShipments.filter(s => s.status === 'In Transit').length
+                    inTransitShipments: managerShipments.filter(s => s.status === 'In Transit').length,
+                    addedCustomers: customersSnap.size,
+                    addedDrivers: driversSnap.size,
+                    addedVehicles: vehiclesSnap.size,
                 });
 
                 setRecentOrders(managerOrders.sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis()).slice(0, 5));
@@ -132,7 +137,9 @@ export default function ManagerDetailPage() {
                         <Skeleton className="h-4 w-48"/>
                     </div>
                 </div>
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                    <Skeleton className="h-28 w-full"/>
+                    <Skeleton className="h-28 w-full"/>
                     <Skeleton className="h-28 w-full"/>
                     <Skeleton className="h-28 w-full"/>
                     <Skeleton className="h-28 w-full"/>
@@ -168,25 +175,12 @@ export default function ManagerDetailPage() {
                 </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-                <StatCard
-                    title="Нийт борлуулалт"
-                    value={`${stats.totalRevenue.toLocaleString()}₮`}
-                    icon={DollarSign}
-                    isLoading={isLoading}
-                />
-                <StatCard
-                    title="Нийт захиалга"
-                    value={stats.totalOrders}
-                    icon={Briefcase}
-                    isLoading={isLoading}
-                />
-                <StatCard
-                    title="Замд яваа тээвэр"
-                    value={stats.inTransitShipments}
-                    icon={Truck}
-                    isLoading={isLoading}
-                />
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                <StatCard title="Нийт захиалга" value={stats.totalOrders} icon={Briefcase} isLoading={isLoading}/>
+                <StatCard title="Замд яваа" value={stats.inTransitShipments} icon={Truck} isLoading={isLoading}/>
+                <StatCard title="Нэмсэн харилцагч" value={stats.addedCustomers} icon={Building2} isLoading={isLoading}/>
+                <StatCard title="Нэмсэн жолооч" value={stats.addedDrivers} icon={Users} isLoading={isLoading}/>
+                <StatCard title="Нэмсэн т/хэрэгсэл" value={stats.addedVehicles} icon={Car} isLoading={isLoading}/>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
