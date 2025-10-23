@@ -2,9 +2,8 @@
 'use client';
 
 import * as React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Briefcase, CheckCircle, DollarSign, Truck, Users } from 'lucide-react';
+import { Briefcase, CheckCircle, DollarSign, Truck, Users, Warehouse, Car, Building } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -18,7 +17,7 @@ type StatCardProps = {
     title: string;
     value: string | number;
     icon: React.ElementType;
-    description: string;
+    description?: string;
     isLoading: boolean;
 };
 
@@ -28,6 +27,13 @@ type ManagerStats = {
     completedOrders: number;
     inTransitShipments: number;
     totalValue: number;
+}
+
+type SystemStats = {
+    totalVehicles: number;
+    totalDrivers: number;
+    totalCustomers: number;
+    totalWarehouses: number;
 }
 
 function StatCard({ title, value, icon: Icon, description, isLoading }: StatCardProps) {
@@ -40,7 +46,7 @@ function StatCard({ title, value, icon: Icon, description, isLoading }: StatCard
                 </CardHeader>
                 <CardContent>
                     <Skeleton className="h-8 w-1/2" />
-                    <Skeleton className="h-4 w-3/4 mt-1" />
+                    {description && <Skeleton className="h-4 w-3/4 mt-1" />}
                 </CardContent>
             </Card>
         )
@@ -53,38 +59,56 @@ function StatCard({ title, value, icon: Icon, description, isLoading }: StatCard
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">{value}</div>
-                <p className="text-xs text-muted-foreground">{description}</p>
+                {description && <p className="text-xs text-muted-foreground">{description}</p>}
             </CardContent>
         </Card>
     );
 }
 
-// Dummy data - replace with real data fetching
-const chartData = [
-  { name: '1 сар', Revenue: 4000, Shipments: 24 },
-  { name: '2 сар', Revenue: 3000, Shipments: 13 },
-  { name: '3 сар', Revenue: 5000, Shipments: 98 },
-  { name: '4 сар', Revenue: 2780, Shipments: 39 },
-  { name: '5 сар', Revenue: 1890, Shipments: 48 },
-  { name: '6 сар', Revenue: 2390, Shipments: 38 },
-];
-
 export default function ManagementDashboardPage() {
     const [isLoading, setIsLoading] = React.useState(true);
     const [managerStats, setManagerStats] = React.useState<ManagerStats[]>([]);
+    const [systemStats, setSystemStats] = React.useState<SystemStats>({
+        totalVehicles: 0,
+        totalDrivers: 0,
+        totalCustomers: 0,
+        totalWarehouses: 0,
+    });
     const { toast } = useToast();
 
     React.useEffect(() => {
         async function fetchData() {
             setIsLoading(true);
             try {
-                const [managersSnap, ordersSnap, shipmentsSnap, itemsSnap] = await Promise.all([
+                const [
+                    managersSnap, 
+                    ordersSnap, 
+                    shipmentsSnap, 
+                    itemsSnap,
+                    vehiclesSnap,
+                    driversSnap,
+                    customersSnap,
+                    warehousesSnap
+                ] = await Promise.all([
                     getDocs(query(collection(db, 'users'), where('role', '==', 'transport_manager'))),
                     getDocs(collection(db, 'orders')),
                     getDocs(collection(db, 'shipments')),
                     getDocs(query(collection(db, 'order_items'), where('status', 'in', ['Shipped', 'Delivered']))),
+                    getDocs(collection(db, 'vehicles')),
+                    getDocs(collection(db, 'Drivers')),
+                    getDocs(collection(db, 'customers')),
+                    getDocs(collection(db, 'warehouses')),
                 ]);
 
+                // Calculate System-wide Stats
+                setSystemStats({
+                    totalVehicles: vehiclesSnap.size,
+                    totalDrivers: driversSnap.size,
+                    totalCustomers: customersSnap.size,
+                    totalWarehouses: warehousesSnap.size,
+                });
+
+                // Calculate Manager-specific Stats
                 const managers = managersSnap.docs.map(doc => doc.data() as SystemUser);
                 const allOrders = ordersSnap.docs.map(doc => doc.data() as Order);
                 const allShipments = shipmentsSnap.docs.map(doc => doc.data() as Shipment);
@@ -129,36 +153,35 @@ export default function ManagementDashboardPage() {
                     Компанийн үйл ажиллагааны нэгдсэн статистик мэдээлэл.
                 </p>
             </div>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatCard
-                    title="Нийт орлого"
-                    value="₮12,450,000"
-                    icon={DollarSign}
-                    description="Энэ сарын нийт орлогын дүн"
-                    isLoading={isLoading}
-                />
-                <StatCard
-                    title="Идэвхтэй тээвэрлэлт"
-                    value="125"
-                    icon={Truck}
-                    description="Одоогоор замд яваа тээврийн тоо"
-                    isLoading={isLoading}
-                />
-                <StatCard
-                    title="Нийт харилцагч"
-                    value="89"
-                    icon={Users}
-                    description="Системд бүртгэлтэй нийт харилцагч"
-                    isLoading={isLoading}
-                />
-                 <StatCard
-                    title="Ашигт ажиллагаа"
-                    value="14.5%"
-                    icon={Briefcase}
-                    description="Дундаж ашгийн хувь"
-                    isLoading={isLoading}
-                />
+            
+            <div className="space-y-2">
+                <h2 className="text-xl font-semibold tracking-tight">Системийн нэгдсэн бүртгэл</h2>
+                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <StatCard
+                        title="Нийт тээврийн хэрэгсэл"
+                        value={systemStats.totalVehicles}
+                        icon={Car}
+                        isLoading={isLoading}
+                    />
+                    <StatCard
+                        title="Нийт жолооч"
+                        value={systemStats.totalDrivers}
+                        icon={Users}
+                        isLoading={isLoading}
+                    />
+                    <StatCard
+                        title="Нийт харилцагч"
+                        value={systemStats.totalCustomers}
+                        icon={Building}
+                        isLoading={isLoading}
+                    />
+                    <StatCard
+                        title="Нийт агуулах"
+                        value={systemStats.totalWarehouses}
+                        icon={Warehouse}
+                        isLoading={isLoading}
+                    />
+                </div>
             </div>
 
             <Card>
@@ -213,38 +236,6 @@ export default function ManagementDashboardPage() {
                 </CardContent>
             </Card>
             
-            <Card>
-                <CardHeader>
-                    <CardTitle>Сар тутмын орлого ба тээвэрлэлт</CardTitle>
-                    <CardDescription>Сүүлийн 6 сарын гүйцэтгэлийн харьцуулалт.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                   {isLoading ? (
-                       <Skeleton className="h-[350px] w-full" />
-                   ) : (
-                     <div className="h-[350px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
-                                <YAxis yAxisId="left" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₮${Number(value)/1000}K`}/>
-                                <YAxis yAxisId="right" orientation="right" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                                <Tooltip
-                                    contentStyle={{
-                                        background: "hsl(var(--background))",
-                                        border: "1px solid hsl(var(--border))",
-                                        borderRadius: "var(--radius)"
-                                    }}
-                                />
-                                <Legend />
-                                <Bar yAxisId="left" dataKey="Revenue" name="Орлого" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                                <Bar yAxisId="right" dataKey="Shipments" name="Тээвэрлэлт" fill="hsl(var(--secondary))" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                   )}
-                </CardContent>
-            </Card>
         </div>
     );
 }
