@@ -658,58 +658,56 @@ export default function ContractedTransportDetailPage() {
         if (!contract) return;
         setIsSubmitting(true);
         try {
-          const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
-          const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
-          
-          const newSelectedCargo: string[] = [];
-            selectedCargoItems.forEach(itemId => {
-                const cargo = contract.cargoItems.find(c => c.id === itemId);
-                if (cargo && cargo.name) {
-                    newSelectedCargo.push(cargo.name);
-                }
-            });
+            const selectedDriver = contract.assignedDrivers.find(d => d.driverId === values.driverId);
+            const selectedVehicle = contract.assignedVehicles.find(v => v.vehicleId === values.vehicleId);
 
-          const dataToSave: DocumentData = {
-            contractId: contract.id,
-            date: values.date,
-            status: 'Pending',
-            statusHistory: [{ status: 'Pending', date: new Date() }],
-            createdAt: serverTimestamp(),
-            selectedCargo: newSelectedCargo,
-            totalLoadedWeight: 0,
-            totalUnloadedWeight: 0,
-          };
+            const newSelectedCargo: string[] = Array.from(selectedCargoItems)
+                .map(itemId => {
+                    const cargo = contract.cargoItems.find(c => c.id === itemId);
+                    return cargo?.name;
+                })
+                .filter((name): name is string => !!name);
 
-          if (selectedDriver) {
-            dataToSave.driverId = selectedDriver.driverId;
-            dataToSave.driverName = selectedDriver.driverName;
-          }
+            const dataToSave: { [key: string]: any } = {
+                contractId: contract.id,
+                date: values.date,
+                status: 'Pending',
+                statusHistory: [{ status: 'Pending', date: new Date() }],
+                createdAt: serverTimestamp(),
+                selectedCargo: newSelectedCargo,
+                totalLoadedWeight: 0,
+                totalUnloadedWeight: 0,
+            };
 
-          if (selectedVehicle) {
-            dataToSave.vehicleId = selectedVehicle.vehicleId;
-            dataToSave.vehicleLicense = selectedVehicle.licensePlate;
-          }
-          
-          const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
-          
-          const newExecution: ContractedTransportExecution = {
-              id: docRef.id,
-              ...dataToSave,
-              date: toDateSafe(dataToSave.date)!,
-              createdAt: new Date(),
-          };
-  
-          setExecutions(prev => [...prev, newExecution]);
-          toast({ title: 'Амжилттай', description: 'Шинэ гүйцэтгэл нэмэгдлээ.' });
-          setIsNewExecutionDialogOpen(false);
-  
+            if (selectedDriver) {
+                dataToSave.driverId = selectedDriver.driverId;
+                dataToSave.driverName = selectedDriver.driverName;
+            }
+            if (selectedVehicle) {
+                dataToSave.vehicleId = selectedVehicle.vehicleId;
+                dataToSave.vehicleLicense = selectedVehicle.licensePlate;
+            }
+
+            const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
+            
+            const newExecution: ContractedTransportExecution = {
+                id: docRef.id,
+                ...dataToSave,
+                date: toDateSafe(dataToSave.date)!,
+                createdAt: new Date(),
+            } as ContractedTransportExecution;
+    
+            setExecutions(prev => [...prev, newExecution]);
+            toast({ title: 'Амжилттай', description: 'Шинэ гүйцэтгэл нэмэгдлээ.' });
+            setIsNewExecutionDialogOpen(false);
+    
         } catch (error) {
-          console.error("Error creating new execution:", error);
-          toast({ variant: 'destructive', title: 'Алдаа', description: 'Шинэ гүйцэтгэл нэмэхэд алдаа гарлаа.' });
+            console.error("Error creating new execution:", error);
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Шинэ гүйцэтгэл нэмэхэд алдаа гарлаа.' });
         } finally {
-          setIsSubmitting(false);
+            setIsSubmitting(false);
         }
-      }
+    }
     
     const handleDragEnd = React.useCallback(async (event: DragEndEvent) => {
         const { active, over } = event;
@@ -1303,7 +1301,7 @@ export default function ContractedTransportDetailPage() {
                  <DialogHeader>
                     <DialogTitle>Оноосон Жолооч ба Т/Х</DialogTitle>
                 </DialogHeader>
-                <div className="py-4 space-y-4">
+                <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto">
                     <div>
                          <div className="flex justify-between items-center mb-2">
                             <h3 className="font-semibold text-sm">Оноосон жолооч нар</h3>
