@@ -1,5 +1,6 @@
 
 
+
 import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Delayed';
@@ -416,6 +417,12 @@ export type ContractedTransportCargoItem = {
     ourPrice?: number;
 };
 
+export type AssignedDriver = {
+    driverId: string;
+    driverName: string;
+    driverPhone: string;
+    assignedVehicleId?: string;
+}
 
 export type ContractedTransport = {
   id: string;
@@ -446,11 +453,7 @@ export type ContractedTransport = {
     uid: string;
     name: string;
   };
-  assignedDrivers: {
-    driverId: string;
-    driverName: string;
-    driverPhone: string;
-  }[];
+  assignedDrivers: AssignedDriver[];
   assignedVehicles: {
     vehicleId: string;
     licensePlate: string;
@@ -460,5 +463,8 @@ export type ContractedTransport = {
 };
 
     
+
+    
+
 
     
