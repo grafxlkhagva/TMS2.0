@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import type { Vehicle, VehicleMake, VehicleType, TrailerType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { ArrowLeft, Car, Check, Wrench, Calendar } from 'lucide-react';
+import { ArrowLeft, Car, Check, Wrench, Calendar, Truck } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
