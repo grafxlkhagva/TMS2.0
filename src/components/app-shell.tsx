@@ -60,7 +60,15 @@ const baseNavItems = [
   { href: '/orders', icon: Briefcase, label: 'Захиалга' },
   { href: '/contracted-transport', icon: FileSignature, label: 'Гэрээт тээвэр' },
   { href: '/shipments', icon: Truck, label: 'Тээвэрлэлт' },
-  { href: '/customers', icon: Building2, label: 'Харилцагчид' },
+  { 
+    href: '/customers', 
+    icon: Building2, 
+    label: 'Харилцагчид',
+    subItems: [
+        { href: '/customers/dashboard', label: 'Хянах самбар' },
+        { href: '/customers', label: 'Жагсаалт' },
+    ]
+  },
   { href: '/warehouses', icon: Warehouse, label: 'Агуулах' },
   { 
     href: '/vehicles', 

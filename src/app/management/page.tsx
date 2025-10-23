@@ -185,6 +185,7 @@ export default function ManagementDashboardPage() {
                         value={systemStats.totalCustomers}
                         icon={Building}
                         isLoading={isLoading}
+                        href="/customers/dashboard"
                     />
                     <StatCard
                         title="Нийт агуулах"
