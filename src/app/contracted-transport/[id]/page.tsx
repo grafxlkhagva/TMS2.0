@@ -45,6 +45,7 @@ import { generateChecklistAction, generateUnloadingChecklistAction } from './act
 const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
   assignmentId: z.string().min(1, 'Жолооч/машины хослолыг сонгоно уу.'),
+  selectedCargo: z.array(z.string()).min(1, { message: "Дор хаяж нэг ачаа сонгоно уу."}),
 });
 type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
 
@@ -276,8 +277,6 @@ export default function ContractedTransportDetailPage() {
   const [addDriverPopoverOpen, setAddDriverPopoverOpen] = React.useState(false);
   const [addVehiclePopoverOpen, setAddVehiclePopoverOpen] = React.useState(false);
   
-  const [selectedCargoItems, setSelectedCargoItems] = React.useState<Set<string>>(new Set());
-
   const [sendingToSheet, setSendingToSheet] = React.useState<string | null>(null);
 
 
@@ -313,6 +312,9 @@ export default function ContractedTransportDetailPage() {
 
   const newExecutionForm = useForm<NewExecutionFormValues>({
     resolver: zodResolver(newExecutionFormSchema),
+    defaultValues: {
+        selectedCargo: [],
+    }
   });
 
   const editExecutionForm = useForm<EditExecutionFormValues>({
@@ -415,8 +417,7 @@ export default function ContractedTransportDetailPage() {
 
   React.useEffect(() => {
     if (isNewExecutionDialogOpen) {
-      newExecutionForm.reset({ date: new Date(), assignmentId: ''});
-      setSelectedCargoItems(new Set());
+      newExecutionForm.reset({ date: new Date(), assignmentId: '', selectedCargo: []});
     }
   }, [isNewExecutionDialogOpen, newExecutionForm]);
 
@@ -662,24 +663,25 @@ export default function ContractedTransportDetailPage() {
             const assignment = contract.assignedDrivers.find(d => d.driverId === values.assignmentId);
             if (!assignment) {
                 toast({ variant: 'destructive', title: 'Алдаа', description: 'Оноолт олдсонгүй.' });
+                setIsSubmitting(false);
                 return;
             }
             const vehicle = contract.assignedVehicles.find(v => v.vehicleId === assignment.assignedVehicleId);
-
-            const newSelectedCargo: string[] = Array.from(selectedCargoItems)
+    
+            const newSelectedCargoNames: string[] = values.selectedCargo
                 .map(itemId => {
                     const cargo = contract.cargoItems.find(c => c.id === itemId);
                     return cargo?.name;
                 })
                 .filter((name): name is string => !!name);
-
+    
             const dataToSave: { [key: string]: any } = {
                 contractId: contract.id,
                 date: values.date,
                 status: 'Pending',
                 statusHistory: [{ status: 'Pending', date: new Date() }],
                 createdAt: serverTimestamp(),
-                selectedCargo: newSelectedCargo,
+                selectedCargo: newSelectedCargoNames,
                 totalLoadedWeight: 0,
                 totalUnloadedWeight: 0,
                 driverId: assignment.driverId,
@@ -687,7 +689,13 @@ export default function ContractedTransportDetailPage() {
                 vehicleId: vehicle?.vehicleId,
                 vehicleLicense: vehicle?.licensePlate,
             };
-
+    
+            // Ensure no undefined fields are being sent to Firestore
+            if (dataToSave.driverId === undefined) delete dataToSave.driverId;
+            if (dataToSave.driverName === undefined) delete dataToSave.driverName;
+            if (dataToSave.vehicleId === undefined) delete dataToSave.vehicleId;
+            if (dataToSave.vehicleLicense === undefined) delete dataToSave.vehicleLicense;
+    
             const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
             
             const newExecution: ContractedTransportExecution = {
@@ -1116,33 +1124,44 @@ export default function ContractedTransportDetailPage() {
                              <FormField control={newExecutionForm.control} name="assignmentId" render={({ field }) => ( <FormItem><FormLabel>Жолооч + Машин</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Оноолт сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.filter(d => d.assignedVehicleId).map(d => { const v = contract.assignedVehicles.find(v => v.vehicleId === d.assignedVehicleId); return ( <SelectItem key={d.driverId} value={d.driverId}>{d.driverName} / {v?.licensePlate}</SelectItem> )})}</SelectContent></Select><FormMessage /></FormItem> )}/>
                             <Separator />
 
-                            <div>
-                                <h4 className="font-semibold mb-2">Ачаа сонгох (Сонголттой)</h4>
-                                <div className="space-y-2">
-                                     {contract.cargoItems.map((item, index) => (
-                                        <div key={`cargo-item-${item.id || index}`} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
-                                            <Checkbox
-                                                id={`select-cargo-${item.id}`}
-                                                checked={selectedCargoItems.has(item.id)}
-                                                onCheckedChange={(checked) => {
-                                                    setSelectedCargoItems(prev => {
-                                                        const newSet = new Set(prev);
-                                                        if (checked) {
-                                                            newSet.add(item.id);
-                                                        } else {
-                                                            newSet.delete(item.id);
-                                                        }
-                                                        return newSet;
-                                                    });
-                                                }}
-                                            />
-                                            <label htmlFor={`select-cargo-${item.id}`} className="font-normal w-full cursor-pointer">
-                                                {item.name} ({item.unit})
-                                            </label>
+                            <FormField
+                                control={newExecutionForm.control}
+                                name="selectedCargo"
+                                render={() => (
+                                    <FormItem>
+                                        <FormLabel>Ачаа сонгох</FormLabel>
+                                        <div className="space-y-2">
+                                            {contract.cargoItems.map((item) => (
+                                                <FormField
+                                                    key={item.id}
+                                                    control={newExecutionForm.control}
+                                                    name="selectedCargo"
+                                                    render={({ field }) => {
+                                                        return (
+                                                            <FormItem key={item.id} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
+                                                                <FormControl>
+                                                                    <Checkbox
+                                                                        checked={field.value?.includes(item.id)}
+                                                                        onCheckedChange={(checked) => {
+                                                                            return checked
+                                                                                ? field.onChange([...field.value, item.id])
+                                                                                : field.onChange(field.value?.filter((value) => value !== item.id))
+                                                                        }}
+                                                                    />
+                                                                </FormControl>
+                                                                <FormLabel className="font-normal w-full cursor-pointer">
+                                                                     {item.name} ({item.unit})
+                                                                </FormLabel>
+                                                            </FormItem>
+                                                        )
+                                                    }}
+                                                />
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
+                                         <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         </div>
                         <DialogFooter>
                             <Button type="button" variant="outline" onClick={() => setIsNewExecutionDialogOpen(false)}>Цуцлах</Button>
