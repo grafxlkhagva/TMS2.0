@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -171,7 +172,7 @@ export default function ManagementDashboardPage() {
                         value={systemStats.totalVehicles}
                         icon={Car}
                         isLoading={isLoading}
-                        href="/vehicles"
+                        href="/vehicles/dashboard"
                     />
                     <StatCard
                         title="Нийт жолооч"
