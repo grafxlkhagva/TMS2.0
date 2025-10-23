@@ -5,7 +5,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle, Megaphone, MegaphoneOff, Eye, Briefcase, TrendingUp, Cuboid, Send, FileSpreadsheet, Sparkles, Link as LinkIcon } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle, Megaphone, MegaphoneOff, Eye, Briefcase, TrendingUp, Cuboid, Send, FileSpreadsheet, Sparkles, Link as LinkIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch, type DocumentData } from 'firebase/firestore';
@@ -121,52 +121,63 @@ const statusColorMap: Record<string, string> = {
 
 
 
-function SortableExecutionCard({ execution, onEdit, onDelete }: { execution: ContractedTransportExecution, onEdit: () => void, onDelete: () => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: execution.id });
-  const date = toDateSafe(execution.date);
+function SortableExecutionCard({ execution, onEdit, onDelete, onMove, canMoveBack, canMoveForward }: { 
+    execution: ContractedTransportExecution, 
+    onEdit: () => void, 
+    onDelete: () => void,
+    onMove: (direction: 'forward' | 'backward') => void,
+    canMoveBack: boolean,
+    canMoveForward: boolean
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: execution.id });
+    const date = toDateSafe(execution.date);
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 100 : 'auto',
-    opacity: isDragging ? 0.8 : 1,
-  };
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition: isDragging ? 'none' : transition,
+        zIndex: isDragging ? 100 : 'auto',
+        opacity: isDragging ? 0.5 : 1,
+    };
   
-  return (
-    <Card 
-    ref={setNodeRef} 
-    style={style} 
-    className="text-xs mb-2 touch-none group/exec relative"
-    >
-        <div className="p-2">
-            <div className="absolute top-1 right-1 z-10">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover/exec:opacity-100 transition-opacity">
-                        <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={onEdit}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
-                        <DropdownMenuItem onClick={onDelete} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
-            
-            <div {...attributes} {...listeners} className="cursor-grab pr-6">
-                <p className="font-semibold">Огноо: {date ? format(date, 'yyyy-MM-dd') : 'N/A'}</p>
-                <div className="text-muted-foreground">
-                <p>Жолооч: {execution.driverName || 'TBA'}</p>
-                <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
-                {execution.totalLoadedWeight ? <p className="text-blue-600 font-semibold">Ачсан: {execution.totalLoadedWeight}тн</p> : null}
+    return (
+        <Card ref={setNodeRef} style={style} className="text-xs mb-2 touch-none group/exec relative">
+            <div className="p-2">
+                <div className="absolute top-1 right-1 z-10">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover/exec:opacity-100 transition-opacity">
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={onEdit}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
+                            <DropdownMenuItem onClick={onDelete} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Устгах</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+                
+                <div {...attributes} {...listeners} className="cursor-grab pr-6">
+                    <p className="font-semibold">Огноо: {date ? format(date, 'yyyy-MM-dd') : 'N/A'}</p>
+                    <div className="text-muted-foreground">
+                    <p>Жолооч: {execution.driverName || 'TBA'}</p>
+                    <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
+                    {execution.totalLoadedWeight ? <p className="text-blue-600 font-semibold">Ачсан: {execution.totalLoadedWeight}тн</p> : null}
+                    </div>
                 </div>
             </div>
-        </div>
-    </Card>
-  );
+            <CardFooter className="p-1 border-t flex justify-between">
+                <Button onClick={() => onMove('backward')} disabled={!canMoveBack} variant="ghost" size="icon" className="h-6 w-6">
+                    <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button onClick={() => onMove('forward')} disabled={!canMoveForward} variant="ghost" size="icon" className="h-6 w-6">
+                    <ChevronRight className="h-4 w-4" />
+                </Button>
+            </CardFooter>
+        </Card>
+    );
 }
 
-function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEditExecution, onDeleteExecution }: { 
+function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEditExecution, onDeleteExecution, onMoveExecution, executionStatuses }: { 
     id: string; 
     title: string; 
     items: ContractedTransportExecution[];
@@ -175,8 +186,11 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
     onDeleteStop: (stop: RouteStop) => void;
     onEditExecution: (execution: ContractedTransportExecution) => void;
     onDeleteExecution: (execution: ContractedTransportExecution) => void;
+    onMoveExecution: (executionId: string, direction: 'forward' | 'backward') => void;
+    executionStatuses: string[];
 }) {
   const { setNodeRef } = useDroppable({ id });
+  const statusIndex = executionStatuses.indexOf(id);
 
   return (
     <div ref={setNodeRef} className="p-2 rounded-lg bg-muted/50 min-h-40 flex flex-col">
@@ -212,6 +226,9 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
                     execution={ex}
                     onEdit={() => onEditExecution(ex)}
                     onDelete={() => onDeleteExecution(ex)}
+                    onMove={(direction) => onMoveExecution(ex.id, direction)}
+                    canMoveBack={statusIndex > 0}
+                    canMoveForward={statusIndex < executionStatuses.length - 1}
                 />
             ))}
         </SortableContext>
@@ -350,7 +367,7 @@ export default function ContractedTransportDetailPage() {
             assignedDrivers: data.assignedDrivers || [],
             assignedVehicles: data.assignedVehicles || [],
             routeStops: data.routeStops || [],
-            cargoItems: (data.cargoItems || []).map((item: any) => ({ ...item, id: item.id || uuidv4()})),
+            cargoItems: (data.cargoItems || []).map((item: any, index: number) => ({ ...item, id: item.id || `cargo-${index}`})),
         } as ContractedTransport;
         setContract(fetchedContract);
         
@@ -690,7 +707,6 @@ export default function ContractedTransportDetailPage() {
                 vehicleLicense: vehicle?.licensePlate,
             };
     
-            // Ensure no undefined fields are being sent to Firestore
             if (dataToSave.driverId === undefined) delete dataToSave.driverId;
             if (dataToSave.driverName === undefined) delete dataToSave.driverName;
             if (dataToSave.vehicleId === undefined) delete dataToSave.vehicleId;
@@ -716,48 +732,74 @@ export default function ContractedTransportDetailPage() {
             setIsSubmitting(false);
         }
     }
+
+    const handleMoveExecution = async (executionId: string, newStatus: string) => {
+        const execution = executions.find(ex => ex.id === executionId);
+        if (!execution || execution.status === newStatus) return;
+
+        if (newStatus === 'Loaded') {
+            setExecutionToLoad(execution);
+            setIsLoadCargoDialogOpen(true);
+            return; 
+        }
+         if (newStatus === 'Unloaded') {
+            setExecutionToUnload(execution);
+            setIsUnloadCargoDialogOpen(true);
+            return;
+        }
+        
+        setIsSubmitting(true);
+        const execRef = doc(db, 'contracted_transport_executions', executionId);
+        try {
+            await updateDoc(execRef, {
+                status: newStatus,
+                statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
+            });
+            setExecutions((prev) =>
+                prev.map((ex) =>
+                    ex.id === executionId ? { ...ex, status: newStatus as ContractedTransportExecutionStatus } : ex
+                )
+            );
+        } catch (error) {
+            console.error("Error updating execution status:", error);
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Явцын төлөв шинэчлэхэд алдаа гарлаа.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
     
     const handleDragEnd = React.useCallback(async (event: DragEndEvent) => {
         const { active, over } = event;
     
         if (over && active.id !== over.id) {
             const executionId = active.id as string;
+            const oldStatus = active.data.current?.sortable.containerId as string;
             const newStatus = over.id as string;
-            
-            const execution = executions.find(ex => ex.id === executionId);
-            if (!execution || execution.status === newStatus) return;
 
-            if (newStatus === 'Loaded') {
-                setExecutionToLoad(execution);
-                setIsLoadCargoDialogOpen(true);
-                return; 
-            }
-             if (newStatus === 'Unloaded') {
-                setExecutionToUnload(execution);
-                setIsUnloadCargoDialogOpen(true);
+            const oldIndex = executionStatuses.indexOf(oldStatus);
+            const newIndex = executionStatuses.indexOf(newStatus);
+            
+            if (Math.abs(oldIndex - newIndex) !== 1) {
+                toast({ variant: 'destructive', title: 'Боломжгүй үйлдэл', description: 'Зөвхөн залгаа байрлах багана руу зөөх боломжтой.' });
                 return;
             }
             
-            setIsSubmitting(true);
-            const execRef = doc(db, 'contracted_transport_executions', executionId);
-            try {
-                await updateDoc(execRef, {
-                    status: newStatus,
-                    statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
-                });
-                setExecutions((prev) =>
-                    prev.map((ex) =>
-                        ex.id === executionId ? { ...ex, status: newStatus as ContractedTransportExecutionStatus } : ex
-                    )
-                );
-            } catch (error) {
-                console.error("Error updating execution status:", error);
-                toast({ variant: 'destructive', title: 'Алдаа', description: 'Явцын төлөв шинэчлэхэд алдаа гарлаа.' });
-            } finally {
-                setIsSubmitting(false);
-            }
+            await handleMoveExecution(executionId, newStatus);
         }
-    }, [executions, toast]);
+    }, [executions, executionStatuses, toast]);
+
+    const handleMoveWithButton = (executionId: string, direction: 'forward' | 'backward') => {
+        const execution = executions.find(ex => ex.id === executionId);
+        if (!execution) return;
+
+        const currentIndex = executionStatuses.indexOf(execution.status);
+        const newIndex = direction === 'forward' ? currentIndex + 1 : currentIndex - 1;
+
+        if (newIndex >= 0 && newIndex < executionStatuses.length) {
+            const newStatus = executionStatuses[newIndex];
+            handleMoveExecution(executionId, newStatus);
+        }
+    };
     
     const handleLoadCargoSubmit = async () => {
         if (!executionToLoad) return;
@@ -1001,7 +1043,7 @@ export default function ContractedTransportDetailPage() {
                     <div className="flex justify-between items-center">
                         <div>
                             <CardTitle>Тээвэрлэлтийн Явц ба Зогсоолууд</CardTitle>
-                            <CardDescription>Гүйцэтгэлийн явцыг чирж зөөх үйлдлээр удирдах хэсэг.</CardDescription>
+                            <CardDescription>Гүйцэтгэлийн явцыг чирж зөөх эсвэл сум ашиглан удирдах хэсэг.</CardDescription>
                         </div>
                             <div className="flex items-center gap-2">
                              <Button variant="outline" size="sm" onClick={() => setIsAssignmentsDialogOpen(true)}>
@@ -1018,7 +1060,7 @@ export default function ContractedTransportDetailPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="overflow-x-auto pb-4">
-                        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(200px, 1fr))`}}>
+                        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(220px, 1fr))`}}>
                             {executionStatuses.map(status => {
                                 const stop = contract.routeStops.find(s => s.id === status);
                                 const itemsForStatus = executions.filter(ex => ex.status === status);
@@ -1034,6 +1076,8 @@ export default function ContractedTransportDetailPage() {
                                         onDeleteStop={(stopToDelete) => setStopToDelete(stopToDelete)}
                                         onEditExecution={(exec) => setExecutionToEdit(exec)}
                                         onDeleteExecution={(exec) => setExecutionToDelete(exec)}
+                                        onMoveExecution={handleMoveWithButton}
+                                        executionStatuses={executionStatuses}
                                     />
                                 )
                             })}
@@ -1127,35 +1171,25 @@ export default function ContractedTransportDetailPage() {
                             <FormField
                                 control={newExecutionForm.control}
                                 name="selectedCargo"
-                                render={() => (
+                                render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Ачаа сонгох</FormLabel>
                                         <div className="space-y-2">
                                             {contract.cargoItems.map((item) => (
-                                                <FormField
-                                                    key={item.id}
-                                                    control={newExecutionForm.control}
-                                                    name="selectedCargo"
-                                                    render={({ field }) => {
-                                                        return (
-                                                            <FormItem key={item.id} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
-                                                                <FormControl>
-                                                                    <Checkbox
-                                                                        checked={field.value?.includes(item.id)}
-                                                                        onCheckedChange={(checked) => {
-                                                                            return checked
-                                                                                ? field.onChange([...field.value, item.id])
-                                                                                : field.onChange(field.value?.filter((value) => value !== item.id))
-                                                                        }}
-                                                                    />
-                                                                </FormControl>
-                                                                <FormLabel className="font-normal w-full cursor-pointer">
-                                                                     {item.name} ({item.unit})
-                                                                </FormLabel>
-                                                            </FormItem>
-                                                        )
-                                                    }}
-                                                />
+                                                <div key={item.id} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
+                                                    <Checkbox
+                                                        id={`select-cargo-${item.id}`}
+                                                        checked={field.value?.includes(item.id)}
+                                                        onCheckedChange={(checked) => {
+                                                            return checked
+                                                                ? field.onChange([...field.value, item.id])
+                                                                : field.onChange(field.value?.filter((value) => value !== item.id))
+                                                        }}
+                                                    />
+                                                    <Label htmlFor={`select-cargo-${item.id}`} className="font-normal w-full cursor-pointer">
+                                                         {item.name} ({item.unit})
+                                                    </Label>
+                                                </div>
                                             ))}
                                         </div>
                                          <FormMessage />
@@ -1509,3 +1543,4 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
 
 
     
+
