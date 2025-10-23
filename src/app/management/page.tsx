@@ -12,6 +12,7 @@ import type { SystemUser, Order, Shipment, OrderItem } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import Link from 'next/link';
 
 type StatCardProps = {
     title: string;
@@ -185,7 +186,7 @@ export default function ManagementDashboardPage() {
                                 {managerStats.length > 0 ? managerStats.map(stat => (
                                     <TableRow key={stat.user.uid}>
                                         <TableCell>
-                                            <div className="flex items-center gap-3">
+                                            <Link href={`/management/managers/${stat.user.uid}`} className="flex items-center gap-3 hover:underline">
                                                 <Avatar>
                                                     <AvatarImage src={stat.user.avatarUrl} />
                                                     <AvatarFallback>{stat.user.lastName?.charAt(0)}{stat.user.firstName?.charAt(0)}</AvatarFallback>
@@ -194,7 +195,7 @@ export default function ManagementDashboardPage() {
                                                     <p className="font-medium">{stat.user.lastName} {stat.user.firstName}</p>
                                                     <p className="text-xs text-muted-foreground">{stat.user.email}</p>
                                                 </div>
-                                            </div>
+                                            </Link>
                                         </TableCell>
                                         <TableCell>{stat.totalOrders}</TableCell>
                                         <TableCell>{stat.completedOrders}</TableCell>
