@@ -45,7 +45,7 @@ export type Driver = {
   authUid?: string; // To link with Firebase Auth user
 };
 
-export type UserRole = 'admin' | 'transport_manager' | 'finance_manager' | 'customer_officer' | 'manager' | 'driver';
+export type UserRole = 'admin' | 'management' | 'transport_manager' | 'finance_manager' | 'customer_officer' | 'manager' | 'driver';
 export type UserStatus = 'pending' | 'active' | 'inactive';
 
 export type SystemUser = {

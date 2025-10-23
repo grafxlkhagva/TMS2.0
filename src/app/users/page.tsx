@@ -36,13 +36,15 @@ import { useAuth } from '@/hooks/use-auth';
 
 const roleNames: Record<UserRole, string> = {
   admin: 'Админ',
+  management: 'Удирдлага',
   manager: 'Менежер',
   transport_manager: 'Тээврийн менежер',
   finance_manager: 'Санхүүгийн менежер',
   customer_officer: 'Харилцагчийн ажилтан',
+  driver: 'Жолооч',
 };
 
-const userRoles: UserRole[] = ['admin', 'manager', 'transport_manager', 'finance_manager', 'customer_officer'];
+const userRoles: UserRole[] = ['admin', 'management', 'manager', 'transport_manager', 'finance_manager', 'customer_officer', 'driver'];
 
 
 function StatusBadge({ status }: { status: UserStatus }) {

@@ -20,6 +20,7 @@ import {
   Car,
   LayoutGrid,
   FileSignature,
+  Shield,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -77,10 +78,10 @@ const transportManagerNavItems = [
   },
 ];
 
-
-const adminNavItems = [
+const managementNavItems = [
+  { href: '/management', icon: Shield, label: 'Удирдлага'},
   ...baseNavItems,
-  { 
+   { 
     href: '/drivers', 
     icon: UserSquare, 
     label: 'Тээвэрчин',
@@ -91,6 +92,11 @@ const adminNavItems = [
   },
   { href: '/users', icon: Users, label: 'Системийн хэрэглэгчид' },
   { href: '/settings', icon: Settings, label: 'Тохиргоо' },
+];
+
+
+const adminNavItems = [
+  ...managementNavItems,
 ];
 
 function Nav() {
@@ -108,6 +114,8 @@ function Nav() {
     if (user?.role) {
         if (user.role === 'admin') {
             setItems(adminNavItems);
+        } else if (user.role === 'management') {
+            setItems(managementNavItems);
         } else if (user.role === 'transport_manager') {
             setItems(transportManagerNavItems);
         } else {
