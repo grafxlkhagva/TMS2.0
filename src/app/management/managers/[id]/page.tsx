@@ -103,7 +103,7 @@ export default function ManagerDetailPage() {
                 const managerOrders = ordersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
                 const orderIds = managerOrders.map(o => o.id);
                 
-                const managerShipments = shipmentsSnap.docs.map(doc => doc.data() as Shipment).filter(s => orderIds.includes(s.orderId));
+                const managerShipments = shipmentsSnap.docs.map(doc => ({id: doc.id, ...doc.data()} as Shipment)).filter(s => orderIds.includes(s.orderId));
                 
                 setStats({
                     totalOrders: managerOrders.length,
