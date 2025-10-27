@@ -993,6 +993,11 @@ export default function ShipmentDetailPage() {
                         <AlertTitle>Тээвэрлэлт амжилттай</AlertTitle>
                         <AlertDescription>Энэ тээвэрлэлт амжилттай дууссан байна.</AlertDescription>
                     </Alert>
+                    <Button asChild variant="outline">
+                        <Link href={`/shipments/${id}/report`}>
+                            <FileText className="mr-2 h-4 w-4"/> Тайлан харах
+                        </Link>
+                    </Button>
                  </div>
             )
 
