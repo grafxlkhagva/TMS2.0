@@ -533,8 +533,8 @@ export default function ShipmentDetailPage() {
     setStatusChange({ newStatus, oldStatus: shipment.status });
  }
 
- const handleGenerateChecklist = async () => {
-    if (!shipment || !cargo.length) return;
+  const handleGenerateChecklist = async () => {
+    if (!shipment || !cargo || cargo.length === 0) return;
     setIsGeneratingChecklist(true);
     setGeneratedChecklist(null);
     setCheckedItems(new Set());
@@ -564,7 +564,7 @@ export default function ShipmentDetailPage() {
   };
 
   const handleGenerateUnloadingChecklist = async () => {
-    if (!shipment || !cargo.length) return;
+    if (!shipment || !cargo || cargo.length === 0) return;
     setIsGeneratingUnloadingChecklist(true);
     setGeneratedUnloadingChecklist(null);
     setCheckedUnloadingItems(new Set());
@@ -1149,3 +1149,5 @@ export default function ShipmentDetailPage() {
     </div>
   );
 }
+
+    
