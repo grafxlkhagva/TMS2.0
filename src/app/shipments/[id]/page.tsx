@@ -193,8 +193,11 @@ export default function ShipmentDetailPage() {
             }
         }
         
-        const [cargoSnapshot, packagingSnapshot, contractSnapshot, safetyBriefingSnapshot, updatesSnapshot] = await Promise.all([
-          getDocs(query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', shipmentData.orderItemId))),
+        const cargoSnapshot = await getDocs(query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', shipmentData.orderItemId)))
+        const cargoData = cargoSnapshot.docs.map(d => d.data() as OrderItemCargo);
+        setCargo(cargoData);
+
+        const [packagingSnapshot, contractSnapshot, safetyBriefingSnapshot, updatesSnapshot] = await Promise.all([
           getDocs(query(collection(db, 'packaging_types'), orderBy('name'))),
           getDocs(query(collection(db, 'contracts'), where('shipmentId', '==', shipmentData.id))),
           getDocs(query(collection(db, 'safety_briefings'), where('shipmentId', '==', shipmentData.id))),
@@ -202,12 +205,9 @@ export default function ShipmentDetailPage() {
         ]);
         
         const updatesData = updatesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data(), createdAt: toDateSafe(doc.data().createdAt)} as ShipmentUpdate));
-        updatesData.sort((a, b) => b.createdAt.getTime() - a.getTime());
+        updatesData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         setShipmentUpdates(updatesData);
         
-        const cargoData = cargoSnapshot.docs.map(d => d.data() as OrderItemCargo);
-        setCargo(cargoData);
-
         const packagingData = packagingSnapshot.docs.map(d => ({id: d.id, ...d.data()} as PackagingType));
         setPackagingTypes(packagingData);
         
