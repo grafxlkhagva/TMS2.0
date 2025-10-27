@@ -310,6 +310,9 @@ export type Shipment = {
     receivedEbarimtAccount: boolean;
     providedAccountToFinance: boolean;
     loadingChecklistCompleted: boolean;
+    loadingPhotoTaken: boolean;
+    cargoDocumentsReceived: boolean;
+    informedCustomerOnLoad: boolean;
     unloadingChecklistCompleted: boolean;
     deliveryDocumentsSigned: boolean;
   };
@@ -471,3 +474,4 @@ export type ContractedTransport = {
 
 
     
+

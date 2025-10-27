@@ -173,6 +173,9 @@ export default function ShipmentDetailPage() {
             loadingChecklistCompleted: false,
             unloadingChecklistCompleted: false,
             deliveryDocumentsSigned: false,
+            loadingPhotoTaken: false,
+            cargoDocumentsReceived: false,
+            informedCustomerOnLoad: false,
           }
         }
         setShipment(shipmentData);
@@ -194,7 +197,7 @@ export default function ShipmentDetailPage() {
         }
         
         const cargoSnapshot = await getDocs(query(collection(db, 'order_item_cargoes'), where('orderItemId', '==', shipmentData.orderItemId)))
-        const cargoData = cargoSnapshot.docs.map(d => d.data() as OrderItemCargo);
+        const cargoData = await Promise.all(cargoSnapshot.docs.map(async d => d.data() as OrderItemCargo));
         setCargo(cargoData);
 
         const [packagingSnapshot, contractSnapshot, safetyBriefingSnapshot, updatesSnapshot] = await Promise.all([
@@ -847,10 +850,18 @@ export default function ShipmentDetailPage() {
             )
 
         case 'Loading':
+            const isLoadChecklistComplete = checklist.loadingPhotoTaken && checklist.cargoDocumentsReceived && checklist.informedCustomerOnLoad;
             return (
                  <div className="space-y-4">
-                     <h3 className="font-semibold">Ачилт хийгдэж байна</h3>
-                     <Button onClick={() => handleStatusChange('In Transit')} disabled={isUpdating}>
+                    <h3 className="font-semibold">Ачилт хийгдэж байна</h3>
+                     <Card>
+                        <CardContent className="pt-6 space-y-3">
+                             <div className="flex items-center space-x-2"><Checkbox id="loadingPhotoTaken" checked={checklist.loadingPhotoTaken} onCheckedChange={(checked) => handleUpdateChecklist('loadingPhotoTaken', !!checked)} disabled={isUpdating}/><label htmlFor="loadingPhotoTaken" className="text-sm font-medium">Ачсан байдал зураг авсан</label></div>
+                             <div className="flex items-center space-x-2"><Checkbox id="cargoDocumentsReceived" checked={checklist.cargoDocumentsReceived} onCheckedChange={(checked) => handleUpdateChecklist('cargoDocumentsReceived', !!checked)} disabled={isUpdating}/><label htmlFor="cargoDocumentsReceived" className="text-sm font-medium">Ачааны дагалдах бичиг баримт авсан</label></div>
+                             <div className="flex items-center space-x-2"><Checkbox id="informedCustomerOnLoad" checked={checklist.informedCustomerOnLoad} onCheckedChange={(checked) => handleUpdateChecklist('informedCustomerOnLoad', !!checked)} disabled={isUpdating}/><label htmlFor="informedCustomerOnLoad" className="text-sm font-medium">Захиалагчид мэдээ өгсөн</label></div>
+                        </CardContent>
+                    </Card>
+                     <Button onClick={() => handleStatusChange('In Transit')} disabled={!isLoadChecklistComplete || isUpdating}>
                         Тээвэр эхлүүлэх
                      </Button>
                  </div>
