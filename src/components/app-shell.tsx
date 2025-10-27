@@ -59,6 +59,7 @@ const baseNavItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/orders', icon: Briefcase, label: 'Захиалга' },
   { href: '/contracted-transport', icon: FileSignature, label: 'Гэрээт тээвэр' },
+  { href: '/direct-shipments', icon: Truck, label: 'Шууд тээвэрлэлт' },
   { href: '/shipments', icon: Truck, label: 'Тээвэрлэлт' },
   { 
     href: '/customers', 
