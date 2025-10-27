@@ -624,7 +624,7 @@ export default function ShipmentDetailPage() {
     if (!shipment || !user) return;
     setIsSubmittingUpdate(true);
     try {
-        await addDoc(collection(db, 'shipment_updates'), {
+        const dataToSave = {
             ...values,
             shipmentId: shipment.id,
             shipmentRef: doc(db, 'shipments', shipment.id),
@@ -633,10 +633,19 @@ export default function ShipmentDetailPage() {
                 uid: user.uid,
                 name: `${user.lastName} ${user.firstName}`,
             },
-        });
+        };
+        const docRef = await addDoc(collection(db, 'shipment_updates'), dataToSave);
+        
+        const newUpdate: ShipmentUpdate = {
+            id: docRef.id,
+            ...dataToSave,
+            createdAt: new Date(), // Use local time for optimistic update
+        } as ShipmentUpdate;
+
+        setShipmentUpdates(prev => [newUpdate, ...prev]);
+
         toast({ title: "Амжилттай", description: "Явцын мэдээ нэмэгдлээ." });
         updateForm.reset();
-        fetchShipmentData();
     } catch (error) {
         console.error("Error adding shipment update:", error);
         toast({ variant: "destructive", title: "Алдаа", description: "Явцын мэдээ нэмэхэд алдаа гарлаа."});
