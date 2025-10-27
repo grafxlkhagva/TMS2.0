@@ -23,7 +23,9 @@ export async function generateChecklistAction(
 ): Promise<{ success: boolean; data?: GenerateLoadingChecklistOutput; error?: string }> {
   const parsedInput = ActionInputSchema.safeParse(input);
   if (!parsedInput.success) {
-    return { success: false, error: 'Invalid input.' };
+    // Extracting a more detailed error message from Zod
+    const errorMessage = parsedInput.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+    return { success: false, error: `Invalid input: ${errorMessage}` };
   }
 
   try {
@@ -31,7 +33,8 @@ export async function generateChecklistAction(
     return { success: true, data: result };
   } catch (error) {
     console.error('Error generating checklist:', error);
-    return { success: false, error: 'Failed to generate checklist. Please try again.' };
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: `Failed to generate checklist. Details: ${errorMessage}` };
   }
 }
 
@@ -40,7 +43,8 @@ export async function generateUnloadingChecklistAction(
 ): Promise<{ success: boolean; data?: GenerateUnloadingChecklistOutput; error?: string }> {
   const parsedInput = ActionInputSchema.safeParse(input);
   if (!parsedInput.success) {
-    return { success: false, error: 'Invalid input.' };
+    const errorMessage = parsedInput.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+    return { success: false, error: `Invalid input: ${errorMessage}` };
   }
 
   try {
@@ -48,6 +52,7 @@ export async function generateUnloadingChecklistAction(
     return { success: true, data: result };
   } catch (error) {
     console.error('Error generating unloading checklist:', error);
-    return { success: false, error: 'Failed to generate unloading checklist. Please try again.' };
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: `Failed to generate unloading checklist. Details: ${errorMessage}` };
   }
 }
