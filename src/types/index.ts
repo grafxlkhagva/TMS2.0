@@ -1,6 +1,5 @@
 
 
-
 import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Delayed';
@@ -306,6 +305,10 @@ export type Shipment = {
   checklist: {
     contractSigned: boolean;
     safetyBriefingCompleted: boolean;
+    sentDriverInfoToCustomer: boolean;
+    sentLoadingInfoToCustomer: boolean;
+    receivedEbarimtAccount: boolean;
+    providedAccountToFinance: boolean;
     loadingChecklistCompleted: boolean;
     unloadingChecklistCompleted: boolean;
     deliveryDocumentsSigned: boolean;

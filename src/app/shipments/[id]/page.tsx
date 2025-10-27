@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -165,6 +166,10 @@ export default function ShipmentDetailPage() {
           shipmentData.checklist = {
             contractSigned: false,
             safetyBriefingCompleted: false,
+            sentDriverInfoToCustomer: false,
+            sentLoadingInfoToCustomer: false,
+            receivedEbarimtAccount: false,
+            providedAccountToFinance: false,
             loadingChecklistCompleted: false,
             unloadingChecklistCompleted: false,
             deliveryDocumentsSigned: false,
@@ -197,7 +202,7 @@ export default function ShipmentDetailPage() {
         ]);
         
         const updatesData = updatesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data(), createdAt: toDateSafe(doc.data().createdAt)} as ShipmentUpdate));
-        updatesData.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        updatesData.sort((a, b) => b.createdAt.getTime() - a.getTime());
         setShipmentUpdates(updatesData);
         
         const cargoData = cargoSnapshot.docs.map(d => d.data() as OrderItemCargo);
@@ -688,106 +693,118 @@ export default function ShipmentDetailPage() {
 
     switch (shipment.status) {
       case 'Preparing':
-        const isPreparingComplete = checklist.contractSigned && checklist.safetyBriefingCompleted;
+        const isPreparingComplete = checklist.contractSigned && checklist.safetyBriefingCompleted && checklist.sentDriverInfoToCustomer && checklist.sentLoadingInfoToCustomer && checklist.receivedEbarimtAccount && checklist.providedAccountToFinance;
         return (
           <div className="space-y-4">
             <h3 className="font-semibold">Бэлтгэл ажлын чеклист</h3>
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base">Гэрээ баталгаажуулалт</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="contractSigned" checked={checklist.contractSigned} disabled={true}/>
-                        <label htmlFor="contractSigned" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                            Гэрээ баталгаажсан ({contract?.status === 'signed' ? 'Тийм' : 'Үгүй'})
-                        </label>
-                    </div>
-                </CardContent>
-                <CardFooter className="flex gap-2">
-                    {contract ? (
-                        <>
-                            <Button variant="outline" size="sm" asChild>
-                                <Link href={`/contracts/${contract.id}`}><ExternalLink className="mr-2 h-3 w-3" /> Гэрээ харах/Илгээх</Link>
-                            </Button>
-                            {contract.status !== 'signed' && (
-                                <Button size="sm" onClick={handleManualContractSign} disabled={isUpdating}>
-                                     {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>} Баталгаажуулах
-                                </Button>
-                            )}
-                        </>
-                    ) : (
-                        <Button size="sm" onClick={handleCreateContract} disabled={isUpdating}>
-                            {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <FileSignature className="mr-2 h-4 w-4"/>} Гэрээ үүсгэх
-                        </Button>
-                    )}
-                </CardFooter>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base">Аюулгүй ажиллагааны заавар</CardTitle>
-                </CardHeader>
-                 <CardContent>
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="safetyBriefingCompleted" checked={checklist.safetyBriefingCompleted} disabled={true}/>
-                        <label htmlFor="safetyBriefingCompleted" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                            Заавартай танилцсан ({safetyBriefing?.status === 'signed' ? 'Тийм' : 'Үгүй'})
-                        </label>
-                    </div>
-                </CardContent>
-                <CardFooter className="flex gap-2">
-                     {safetyBriefing ? (
-                        <>
-                          <Button variant="outline" size="sm" asChild>
-                            <Link href={`/safety-briefings/${safetyBriefing.id}`}><ExternalLink className="mr-2 h-3 w-3" /> Заавар харах/Илгээх</Link>
-                          </Button>
-                          {safetyBriefing.status !== 'signed' && (
-                                <Button size="sm" onClick={handleManualBriefingSign} disabled={isUpdating}>
-                                     {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>} Танилцуулсан
-                                </Button>
-                          )}
-                        </>
-                    ) : (
-                        <Button size="sm" onClick={handleCreateSafetyBriefing} disabled={isUpdating}>
-                            {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ShieldCheck className="mr-2 h-4 w-4"/>} Заавар үүсгэх
-                        </Button>
-                    )}
-                </CardFooter>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base">Жолоочид ажил үүсгэх</CardTitle>
-                </CardHeader>
-                 <CardContent>
-                    {assignedDriver ? (
-                        <div className="flex items-center gap-4 p-2 rounded-md bg-muted">
-                           <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                           <div>
-                                <p className="font-semibold">{assignedDriver.display_name}</p>
-                                <p className="text-sm text-muted-foreground">{assignedDriver.phone_number}</p>
-                           </div>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Гэрээ баталгаажуулалт</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-center space-x-2">
+                            <Checkbox id="contractSigned" checked={checklist.contractSigned} disabled={true}/>
+                            <label htmlFor="contractSigned" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                Гэрээ баталгаажсан ({contract?.status === 'signed' ? 'Тийм' : 'Үгүй'})
+                            </label>
                         </div>
-                    ) : (
-                        <p className="text-sm text-muted-foreground">
-                            Жолоочийг системд бүртгэсний дараа энэ товчийг дарж тээвэрт онооно.
-                        </p>
-                    )}
-                </CardContent>
-                <CardFooter>
-                     {shipment.driverId ? (
-                        <Button size="sm" disabled={true} variant="outline" className="bg-green-100 text-green-800">
-                           <CheckCircle className="mr-2 h-4 w-4"/> Оногдсон
-                        </Button>
-                    ) : (
-                         <Button size="sm" onClick={handleAssignDriverToShipment} disabled={isUpdating}>
-                            {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>} 
-                            Жолоочид ажил үүсгэх
-                        </Button>
-                    )}
-                </CardFooter>
-            </Card>
+                    </CardContent>
+                    <CardFooter className="flex gap-2">
+                        {contract ? (
+                            <>
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href={`/contracts/${contract.id}`}><ExternalLink className="mr-2 h-3 w-3" /> Гэрээ харах/Илгээх</Link>
+                                </Button>
+                                {contract.status !== 'signed' && (
+                                    <Button size="sm" onClick={handleManualContractSign} disabled={isUpdating}>
+                                        {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>} Баталгаажуулах
+                                    </Button>
+                                )}
+                            </>
+                        ) : (
+                            <Button size="sm" onClick={handleCreateContract} disabled={isUpdating}>
+                                {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <FileSignature className="mr-2 h-4 w-4"/>} Гэрээ үүсгэх
+                            </Button>
+                        )}
+                    </CardFooter>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Аюулгүй ажиллагааны заавар</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-center space-x-2">
+                            <Checkbox id="safetyBriefingCompleted" checked={checklist.safetyBriefingCompleted} disabled={true}/>
+                            <label htmlFor="safetyBriefingCompleted" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                Заавартай танилцсан ({safetyBriefing?.status === 'signed' ? 'Тийм' : 'Үгүй'})
+                            </label>
+                        </div>
+                    </CardContent>
+                    <CardFooter className="flex gap-2">
+                        {safetyBriefing ? (
+                            <>
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href={`/safety-briefings/${safetyBriefing.id}`}><ExternalLink className="mr-2 h-3 w-3" /> Заавар харах/Илгээх</Link>
+                            </Button>
+                            {safetyBriefing.status !== 'signed' && (
+                                    <Button size="sm" onClick={handleManualBriefingSign} disabled={isUpdating}>
+                                        {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>} Танилцуулсан
+                                    </Button>
+                            )}
+                            </>
+                        ) : (
+                            <Button size="sm" onClick={handleCreateSafetyBriefing} disabled={isUpdating}>
+                                {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ShieldCheck className="mr-2 h-4 w-4"/>} Заавар үүсгэх
+                            </Button>
+                        )}
+                    </CardFooter>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Жолоочид ажил үүсгэх</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {assignedDriver ? (
+                            <div className="flex items-center gap-4 p-2 rounded-md bg-muted">
+                            <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                            <div>
+                                    <p className="font-semibold">{assignedDriver.display_name}</p>
+                                    <p className="text-sm text-muted-foreground">{assignedDriver.phone_number}</p>
+                            </div>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">
+                                Жолоочийг системд бүртгэсний дараа энэ товчийг дарж тээвэрт онооно.
+                            </p>
+                        )}
+                    </CardContent>
+                    <CardFooter>
+                        {shipment.driverId ? (
+                            <Button size="sm" disabled={true} variant="outline" className="bg-green-100 text-green-800">
+                            <CheckCircle className="mr-2 h-4 w-4"/> Оногдсон
+                            </Button>
+                        ) : (
+                            <Button size="sm" onClick={handleAssignDriverToShipment} disabled={isUpdating}>
+                                {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>} 
+                                Жолоочид ажил үүсгэх
+                            </Button>
+                        )}
+                    </CardFooter>
+                </Card>
+                
+                 <Card>
+                    <CardHeader><CardTitle className="text-base">Бусад үйлдлүүд</CardTitle></CardHeader>
+                    <CardContent className="space-y-3">
+                         <div className="flex items-center space-x-2"><Checkbox id="sentDriverInfoToCustomer" checked={checklist.sentDriverInfoToCustomer} onCheckedChange={(checked) => handleUpdateChecklist('sentDriverInfoToCustomer', !!checked)} disabled={isUpdating}/><label htmlFor="sentDriverInfoToCustomer" className="text-sm font-medium">Захиалагчид тээвэрчний мэдээлэл өгсөн</label></div>
+                         <div className="flex items-center space-x-2"><Checkbox id="sentLoadingInfoToCustomer" checked={checklist.sentLoadingInfoToCustomer} onCheckedChange={(checked) => handleUpdateChecklist('sentLoadingInfoToCustomer', !!checked)} disabled={isUpdating}/><label htmlFor="sentLoadingInfoToCustomer" className="text-sm font-medium">Захиалагчид ачилтын талбайн мэдээлэл өгсөн</label></div>
+                         <div className="flex items-center space-x-2"><Checkbox id="receivedEbarimtAccount" checked={checklist.receivedEbarimtAccount} onCheckedChange={(checked) => handleUpdateChecklist('receivedEbarimtAccount', !!checked)} disabled={isUpdating}/><label htmlFor="receivedEbarimtAccount" className="text-sm font-medium">Жолоочоос Ибаримт баталгаажуулах данс авсан</label></div>
+                         <div className="flex items-center space-x-2"><Checkbox id="providedAccountToFinance" checked={checklist.providedAccountToFinance} onCheckedChange={(checked) => handleUpdateChecklist('providedAccountToFinance', !!checked)} disabled={isUpdating}/><label htmlFor="providedAccountToFinance" className="text-sm font-medium">Санхүүд дансны мэдээлэл өгсөн</label></div>
+                    </CardContent>
+                </Card>
+            </div>
             
             <Button className="mt-4" onClick={() => handleStatusChange('Ready For Loading')} disabled={!isPreparingComplete || isUpdating}>
                 Ачихад бэлэн болгох
