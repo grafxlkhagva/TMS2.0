@@ -39,9 +39,11 @@ export default function WarehouseDetailPage() {
   const [regionName, setRegionName] = React.useState<string>('');
   const [isLoading, setIsLoading] = React.useState(true);
   
+  const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const { isLoaded: isMapLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries,
+    preventLoading: !hasApiKey,
   });
 
   React.useEffect(() => {
@@ -158,8 +160,15 @@ export default function WarehouseDetailPage() {
         </Card>
         
         <div className="h-[400px] w-full rounded-lg overflow-hidden border">
-           {loadError && <div>Газрын зураг ачаалахад алдаа гарлаа.</div>}
-           {!isMapLoaded ? (
+           {!hasApiKey ? (
+             <div className="h-full w-full flex items-center justify-center bg-muted text-muted-foreground p-4 text-center">
+                Google Maps API түлхүүр тохируулагдаагүй байна. Газрын зургийг харуулах боломжгүй.
+             </div>
+           ) : loadError ? (
+             <div className="h-full w-full flex items-center justify-center bg-destructive/10 text-destructive-foreground">
+                Газрын зураг ачаалахад алдаа гарлаа.
+             </div>
+           ) : !isMapLoaded ? (
                 <Skeleton className="h-full w-full" />
            ) : warehouse.geolocation ? (
                 <GoogleMap

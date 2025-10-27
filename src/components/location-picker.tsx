@@ -138,10 +138,20 @@ function LocationPickerInner({ onLocationSelect, initialValue, initialCoordinate
 }
 
 export default function LocationPicker(props: LocationPickerProps) {
+  const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries,
+    preventLoading: !hasApiKey,
   });
+
+  if (!hasApiKey) {
+    return (
+        <div className="h-full w-full flex items-center justify-center bg-muted text-muted-foreground p-4 text-center rounded-md">
+            Google Maps API түлхүүр тохируулагдаагүй байна.
+        </div>
+    );
+  }
 
   if (loadError) return <div>Газрын зураг дуудахад алдаа гарлаа.</div>;
   if (!isLoaded) return <Skeleton className="h-[464px] w-full" />;
