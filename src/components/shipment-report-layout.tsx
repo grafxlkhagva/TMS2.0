@@ -4,6 +4,7 @@
 import * as React from 'react';
 import type { Shipment, OrderItemCargo, PackagingType, ShipmentUpdate } from '@/types';
 import { format } from 'date-fns';
+import { Check, X } from 'lucide-react';
 
 type ShipmentReportLayoutProps = {
   shipment: Shipment | null;
@@ -11,6 +12,18 @@ type ShipmentReportLayoutProps = {
   packagingTypes: PackagingType[];
   shipmentUpdates: ShipmentUpdate[];
 };
+
+const ChecklistItem = ({ label, checked }: { label: string; checked: boolean }) => (
+    <div className="flex items-center justify-between text-xs py-1.5 border-b">
+        <span>{label}</span>
+        {checked ? (
+            <span className="flex items-center text-green-600 font-semibold"><Check className="h-4 w-4 mr-1"/> Тийм</span>
+        ) : (
+            <span className="flex items-center text-red-600 font-semibold"><X className="h-4 w-4 mr-1"/> Үгүй</span>
+        )}
+    </div>
+);
+
 
 const ShipmentReportLayout = React.forwardRef<
   HTMLDivElement,
@@ -21,6 +34,8 @@ const ShipmentReportLayout = React.forwardRef<
   const getPackagingTypeName = (id: string) => {
     return packagingTypes.find(p => p.id === id)?.name || id;
   }
+  
+  const checklist = shipment.checklist;
 
   return (
     <div ref={ref} className="bg-white p-8 font-sans text-gray-800 text-sm">
@@ -108,6 +123,33 @@ const ShipmentReportLayout = React.forwardRef<
                 ))}
             </tbody>
         </table>
+      </section>
+
+       <section className="mb-6 no-break">
+        <h2 className="text-base font-bold mb-2 border-b">Процессын чеклист</h2>
+        <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+            <div>
+                <h3 className="font-semibold text-sm mb-1">Бэлтгэл үе шат</h3>
+                <ChecklistItem label="Гэрээ баталгаажсан" checked={checklist.contractSigned} />
+                <ChecklistItem label="АА-ны заавартай танилцсан" checked={checklist.safetyBriefingCompleted} />
+                <ChecklistItem label="Жолоочийн мэдээллийг захиалагчид өгсөн" checked={checklist.sentDriverInfoToCustomer} />
+                <ChecklistItem label="Ачилтын мэдээллийг захиалагчид өгсөн" checked={checklist.sentLoadingInfoToCustomer} />
+                <ChecklistItem label="Ибаримт-н данс авсан" checked={checklist.receivedEbarimtAccount} />
+                <ChecklistItem label="Санхүүд данс өгсөн" checked={checklist.providedAccountToFinance} />
+            </div>
+             <div>
+                <h3 className="font-semibold text-sm mb-1">Ачилт ба Буулгалтын шат</h3>
+                <ChecklistItem label="Ачилтын AI чеклист хийгдсэн" checked={checklist.loadingChecklistCompleted} />
+                <ChecklistItem label="Ачсан байдлын зураг авсан" checked={checklist.loadingPhotoTaken} />
+                <ChecklistItem label="Ачааны дагалдах бичиг авсан" checked={checklist.cargoDocumentsReceived} />
+                <ChecklistItem label="Захиалагчид ачсан тухай мэдэгдсэн" checked={checklist.informedCustomerOnLoad} />
+                <ChecklistItem label="Буулгалтын AI чеклист хийгдсэн" checked={checklist.unloadingChecklistCompleted} />
+                <ChecklistItem label="Буулгасан байдлын зураг авсан" checked={checklist.unloadingPhotoTaken} />
+                <ChecklistItem label="Буулгасан тухай мэдэгдсэн" checked={checklist.informedCustomerOnUnload} />
+                <ChecklistItem label="Буулгалтын баримт хавсаргасан" checked={checklist.unloadingDocumentsAttached} />
+                 <ChecklistItem label="Хүргэлтийн баримт баталгаажсан" checked={checklist.deliveryDocumentsSigned} />
+            </div>
+        </div>
       </section>
 
       <footer className="mt-12 pt-8 border-t-2 border-dashed no-break">
