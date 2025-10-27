@@ -176,6 +176,9 @@ export default function ShipmentDetailPage() {
             loadingPhotoTaken: false,
             cargoDocumentsReceived: false,
             informedCustomerOnLoad: false,
+            unloadingPhotoTaken: false,
+            informedCustomerOnUnload: false,
+            unloadingDocumentsAttached: false,
           }
         }
         setShipment(shipmentData);
@@ -933,6 +936,8 @@ export default function ShipmentDetailPage() {
 
         case 'Unloading':
             const allUnloadingItemsChecked = generatedUnloadingChecklist && checkedUnloadingItems.size === generatedUnloadingChecklist.length;
+            const isUnloadChecklistComplete = checklist.unloadingPhotoTaken && checklist.unloadingDocumentsAttached && checklist.informedCustomerOnUnload;
+
              return (
                 <div className="space-y-4">
                     <h3 className="font-semibold">Буулгалтын чеклист (AI)</h3>
@@ -959,7 +964,17 @@ export default function ShipmentDetailPage() {
                             ))}
                         </div>
                     )}
-                    <Button onClick={() => handleStatusChange('Delivered')} disabled={!allUnloadingItemsChecked || isUpdating}>
+
+                    <Card>
+                        <CardHeader><CardTitle className="text-base">Буулгалтын нэмэлт үйлдлүүд</CardTitle></CardHeader>
+                        <CardContent className="space-y-3">
+                            <div className="flex items-center space-x-2"><Checkbox id="unloadingPhotoTaken" checked={checklist.unloadingPhotoTaken} onCheckedChange={(checked) => handleUpdateChecklist('unloadingPhotoTaken', !!checked)} disabled={isUpdating}/><label htmlFor="unloadingPhotoTaken" className="text-sm font-medium">Буулгасан байдлын зураг авсан</label></div>
+                            <div className="flex items-center space-x-2"><Checkbox id="unloadingDocumentsAttached" checked={checklist.unloadingDocumentsAttached} onCheckedChange={(checked) => handleUpdateChecklist('unloadingDocumentsAttached', !!checked)} disabled={isUpdating}/><label htmlFor="unloadingDocumentsAttached" className="text-sm font-medium">Ачааны дагалдах бичиг баримт хавсаргасан</label></div>
+                            <div className="flex items-center space-x-2"><Checkbox id="informedCustomerOnUnload" checked={checklist.informedCustomerOnUnload} onCheckedChange={(checked) => handleUpdateChecklist('informedCustomerOnUnload', !!checked)} disabled={isUpdating}/><label htmlFor="informedCustomerOnUnload" className="text-sm font-medium">Захиалагчид мэдээлэл өгсөн</label></div>
+                        </CardContent>
+                    </Card>
+
+                    <Button onClick={() => handleStatusChange('Delivered')} disabled={!allUnloadingItemsChecked || !isUnloadChecklistComplete || isUpdating}>
                         Хүргэлт дууссан
                     </Button>
                 </div>
@@ -1169,5 +1184,3 @@ export default function ShipmentDetailPage() {
     </div>
   );
 }
-
-    

@@ -315,6 +315,9 @@ export type Shipment = {
     informedCustomerOnLoad: boolean;
     unloadingChecklistCompleted: boolean;
     deliveryDocumentsSigned: boolean;
+    unloadingPhotoTaken: boolean;
+    informedCustomerOnUnload: boolean;
+    unloadingDocumentsAttached: boolean;
   };
 };
 
@@ -474,4 +477,3 @@ export type ContractedTransport = {
 
 
     
-
