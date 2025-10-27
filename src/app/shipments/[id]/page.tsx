@@ -333,6 +333,31 @@ export default function ShipmentDetailPage() {
       setIsUpdating(false);
     }
   };
+  
+  const handleManualContractSign = async () => {
+    if (!shipment || !contract) return;
+    setIsUpdating(true);
+    try {
+        const batch = writeBatch(db);
+        const contractRef = doc(db, 'contracts', contract.id);
+        const shipmentRef = doc(db, 'shipments', shipment.id);
+        
+        batch.update(contractRef, { status: 'signed', signedAt: serverTimestamp() });
+        batch.update(shipmentRef, { 'checklist.contractSigned': true });
+
+        await batch.commit();
+
+        setContract(prev => prev ? ({...prev, status: 'signed'}) : null);
+        setShipment(prev => prev ? ({ ...prev, checklist: { ...prev.checklist, contractSigned: true }}) : null);
+
+        toast({ title: 'Амжилттай', description: 'Гэрээг баталгаажууллаа.'});
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Гэрээ баталгаажуулахад алдаа гарлаа.'});
+    } finally {
+        setIsUpdating(false);
+    }
+  }
+
 
   const copyBriefingLinkToClipboard = () => {
     navigator.clipboard.writeText(briefingPublicUrl);
@@ -654,11 +679,18 @@ export default function ShipmentDetailPage() {
                         </label>
                     </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="flex gap-2">
                     {contract ? (
-                        <Button variant="outline" size="sm" asChild>
-                            <Link href={`/contracts/${contract.id}`}><ExternalLink className="mr-2 h-3 w-3" /> Гэрээ харах/Илгээх</Link>
-                        </Button>
+                        <>
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href={`/contracts/${contract.id}`}><ExternalLink className="mr-2 h-3 w-3" /> Гэрээ харах/Илгээх</Link>
+                            </Button>
+                            {contract.status !== 'signed' && (
+                                <Button size="sm" onClick={handleManualContractSign} disabled={isUpdating}>
+                                     {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>} Баталгаажуулах
+                                </Button>
+                            )}
+                        </>
                     ) : (
                         <Button size="sm" onClick={handleCreateContract} disabled={isUpdating}>
                             {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <FileSignature className="mr-2 h-4 w-4"/>} Гэрээ үүсгэх
@@ -1068,3 +1100,5 @@ export default function ShipmentDetailPage() {
     </div>
   );
 }
+
+    
