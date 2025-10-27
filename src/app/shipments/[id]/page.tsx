@@ -358,6 +358,31 @@ export default function ShipmentDetailPage() {
     }
   }
 
+  const handleManualBriefingSign = async () => {
+    if (!shipment || !safetyBriefing) return;
+    setIsUpdating(true);
+    try {
+      const batch = writeBatch(db);
+      const briefingRef = doc(db, 'safety_briefings', safetyBriefing.id);
+      const shipmentRef = doc(db, 'shipments', shipment.id);
+
+      batch.update(briefingRef, { status: 'signed', signedAt: serverTimestamp() });
+      batch.update(shipmentRef, { 'checklist.safetyBriefingCompleted': true });
+
+      await batch.commit();
+      
+      // Optimistically update UI
+      setSafetyBriefing(prev => prev ? ({...prev, status: 'signed', signedAt: new Date()}) : null);
+      setShipment(prev => prev ? ({ ...prev, checklist: { ...prev.checklist, safetyBriefingCompleted: true }}) : null);
+
+      toast({ title: 'Амжилттай', description: 'Аюулгүй ажиллагааны зааврыг баталгаажууллаа.'});
+    } catch (error) {
+       toast({ variant: 'destructive', title: 'Алдаа', description: 'Заавар баталгаажуулахад алдаа гарлаа.'});
+    } finally {
+      setIsUpdating(false);
+    }
+  }
+
 
   const copyBriefingLinkToClipboard = () => {
     navigator.clipboard.writeText(briefingPublicUrl);
@@ -711,11 +736,18 @@ export default function ShipmentDetailPage() {
                         </label>
                     </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="flex gap-2">
                      {safetyBriefing ? (
-                        <Button variant="outline" size="sm" asChild>
-                           <Link href={`/safety-briefings/${safetyBriefing.id}`}><ExternalLink className="mr-2 h-3 w-3" /> Заавар харах/Илгээх</Link>
-                        </Button>
+                        <>
+                          <Button variant="outline" size="sm" asChild>
+                            <Link href={`/safety-briefings/${safetyBriefing.id}`}><ExternalLink className="mr-2 h-3 w-3" /> Заавар харах/Илгээх</Link>
+                          </Button>
+                          {safetyBriefing.status !== 'signed' && (
+                                <Button size="sm" onClick={handleManualBriefingSign} disabled={isUpdating}>
+                                     {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4"/>} Танилцуулсан
+                                </Button>
+                          )}
+                        </>
                     ) : (
                         <Button size="sm" onClick={handleCreateSafetyBriefing} disabled={isUpdating}>
                             {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ShieldCheck className="mr-2 h-4 w-4"/>} Заавар үүсгэх
@@ -1100,5 +1132,3 @@ export default function ShipmentDetailPage() {
     </div>
   );
 }
-
-    
