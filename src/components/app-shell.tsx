@@ -323,7 +323,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {/* Can add breadcrumbs or page title here */}
           </div>
         </header>
-        <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+        <div className="flex-1 overflow-auto p-4 md:p-6">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );
