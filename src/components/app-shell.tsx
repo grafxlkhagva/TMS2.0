@@ -5,6 +5,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import {
   LayoutDashboard,
   Users,
@@ -28,7 +29,6 @@ import { auth } from '@/lib/firebase';
 
 import {
   SidebarProvider,
-  Sidebar,
   SidebarHeader,
   SidebarContent,
   SidebarMenu,
@@ -54,6 +54,32 @@ import {
 } from './ui/dropdown-menu';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { cn } from '@/lib/utils';
+import { Skeleton } from './ui/skeleton';
+
+// Dynamically import Sidebar to prevent SSR hydration issues with useIsMobile hook
+const Sidebar = dynamic(() => import('@/components/ui/sidebar').then(mod => mod.Sidebar), {
+  ssr: false,
+  loading: () => (
+    <div className="group peer hidden md:block text-sidebar-foreground">
+      <div className="duration-200 relative h-svh w-[16rem] bg-transparent transition-[width] ease-linear"></div>
+      <div className="duration-200 fixed inset-y-0 z-10 hidden h-svh w-[16rem] transition-[left,right,width] ease-linear md:flex left-0 border-r">
+        <div className="flex h-full w-full flex-col bg-sidebar">
+          <div className="flex flex-col gap-2 p-2">
+            <Skeleton className="h-8 w-full" />
+          </div>
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto">
+             <div className="flex w-full min-w-0 flex-col gap-1 p-2">
+              {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+            </div>
+          </div>
+           <div className="flex flex-col gap-2 p-2 mt-auto">
+            <Skeleton className="h-12 w-full" />
+          </div>
+        </div>
+      </div>
+    </div>
+  ),
+});
 
 const baseNavItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -143,7 +169,6 @@ function Nav() {
   }, [user?.role]);
 
   if (!mounted) {
-    // Basic render to avoid layout shift
     return <SidebarMenu>{baseNavItems.map(item => <SidebarMenuItem key={item.href}><SidebarMenuButton><item.icon/><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu>;
   }
 
