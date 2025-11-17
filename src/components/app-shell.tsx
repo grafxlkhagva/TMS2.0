@@ -1,11 +1,9 @@
 
-
 'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import {
   LayoutDashboard,
   Users,
@@ -40,6 +38,7 @@ import {
   useSidebar,
   SidebarMenuSub,
   SidebarMenuSubButton,
+  Sidebar,
 } from '@/components/ui/sidebar';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -55,31 +54,6 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { cn } from '@/lib/utils';
 import { Skeleton } from './ui/skeleton';
-
-// Dynamically import Sidebar to prevent SSR hydration issues with useIsMobile hook
-const Sidebar = dynamic(() => import('@/components/ui/sidebar').then(mod => mod.Sidebar), {
-  ssr: false,
-  loading: () => (
-    <div className="group peer hidden md:block text-sidebar-foreground">
-      <div className="duration-200 relative h-svh w-[16rem] bg-transparent transition-[width] ease-linear"></div>
-      <div className="duration-200 fixed inset-y-0 z-10 hidden h-svh w-[16rem] transition-[left,right,width] ease-linear md:flex left-0 border-r">
-        <div className="flex h-full w-full flex-col bg-sidebar">
-          <div className="flex flex-col gap-2 p-2">
-            <Skeleton className="h-8 w-full" />
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto">
-             <div className="flex w-full min-w-0 flex-col gap-1 p-2">
-              {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
-            </div>
-          </div>
-           <div className="flex flex-col gap-2 p-2 mt-auto">
-            <Skeleton className="h-12 w-full" />
-          </div>
-        </div>
-      </div>
-    </div>
-  ),
-});
 
 const baseNavItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -169,7 +143,18 @@ function Nav() {
   }, [user?.role]);
 
   if (!mounted) {
-    return <SidebarMenu>{baseNavItems.map(item => <SidebarMenuItem key={item.href}><SidebarMenuButton><item.icon/><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu>;
+    return (
+        <SidebarMenu>
+            {baseNavItems.map(item => 
+                <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton>
+                        <item.icon/>
+                        <span>{item.label}</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            )}
+        </SidebarMenu>
+    );
   }
 
   return (
@@ -294,13 +279,14 @@ function UserProfile() {
 }
 
 
-export function AppShell({ children }: { children: React.ReactNode }) {
-  return (
-    <SidebarProvider>
-      <Sidebar>
-        <SidebarHeader>
-           <div className="flex w-full items-center justify-between">
-            <div className="flex items-center gap-2">
+function AppShellContent({ children }: { children: React.ReactNode }) {
+    const { state } = useSidebar();
+  
+    return (
+      <>
+        <Sidebar>
+          <SidebarHeader>
+             <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                 <svg
                     width="100%"
@@ -327,31 +313,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     </g>
                 </svg>
                 </Button>
-                <span className="font-headline text-lg font-semibold">Tumen Tech</span>
+                <span className={cn("font-headline text-lg font-semibold", state === "collapsed" && "hidden")}>Tumen Tech</span>
             </div>
-            <SidebarTrigger className="hidden group-data-[state=expanded]:[--sidebar-collapsible=icon]:flex md:flex" />
-          </div>
-        </SidebarHeader>
-        <SidebarContent>
-          <Nav />
-        </SidebarContent>
-        <SidebarFooter>
-          <div className="flex flex-col gap-2">
-            <UserProfile />
-          </div>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset>
-        <main className="flex h-full flex-col">
+          </SidebarHeader>
+          <SidebarContent>
+            <Nav />
+          </SidebarContent>
+          <SidebarFooter>
+            <div className="flex flex-col gap-2">
+              <UserProfile />
+            </div>
+          </SidebarFooter>
+        </Sidebar>
+        <SidebarInset>
             <header className="flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm md:px-6">
             <SidebarTrigger />
             <div className="flex-1">
                 {/* Can add breadcrumbs or page title here */}
             </div>
             </header>
-            <div className="flex-1 overflow-auto p-4 md:p-6">{children}</div>
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
-  );
+            <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+        </SidebarInset>
+      </>
+    );
+  }
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+    return (
+        <SidebarProvider>
+            <AppShellContent>{children}</AppShellContent>
+        </SidebarProvider>
+    );
 }
