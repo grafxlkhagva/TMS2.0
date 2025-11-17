@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -45,7 +44,7 @@ import { generateChecklistAction, generateUnloadingChecklistAction } from './act
 const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
   assignmentId: z.string().min(1, 'Жолооч/машины хослолыг сонгоно уу.'),
-  selectedCargo: z.array(z.string()).min(1, { message: "Дор хаяж нэг ачаа сонгоно уу."}),
+  selectedCargo: z.array(z.string()),
 });
 type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
 
@@ -736,6 +735,16 @@ export default function ContractedTransportDetailPage() {
     const handleMoveExecution = async (executionId: string, newStatus: string) => {
         const execution = executions.find(ex => ex.id === executionId);
         if (!execution || execution.status === newStatus) return;
+        
+        // Skip 'Loaded' stage if there is no cargo
+        if (newStatus === 'Loaded' && (!execution.selectedCargo || execution.selectedCargo.length === 0)) {
+            const loadedIndex = executionStatuses.indexOf('Loaded');
+            const nextStatus = executionStatuses[loadedIndex + 1];
+            if (nextStatus) {
+                await handleMoveExecution(executionId, nextStatus); // Recursively call to move to the next status
+            }
+            return;
+        }
 
         if (newStatus === 'Loaded') {
             setExecutionToLoad(execution);
@@ -1173,7 +1182,10 @@ export default function ContractedTransportDetailPage() {
                                 name="selectedCargo"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Ачаа сонгох</FormLabel>
+                                        <div className="flex justify-between items-center">
+                                            <FormLabel>Ачаа сонгох</FormLabel>
+                                            <span className="text-xs text-muted-foreground">Эсвэл ачаагүй хоосон явалт үүсгэх.</span>
+                                        </div>
                                         <div className="space-y-2">
                                             {contract.cargoItems.map((item) => (
                                                 <div key={item.id} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
@@ -1297,7 +1309,7 @@ export default function ContractedTransportDetailPage() {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        "{stopToDelete?.description}" зогсоолыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
+                        "{stopToDelete?.id}" зогсоолыг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -1543,5 +1555,6 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
 
 
     
+
 
 
