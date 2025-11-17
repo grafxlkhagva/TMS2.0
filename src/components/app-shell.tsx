@@ -317,13 +317,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm md:px-6">
-          <SidebarTrigger />
-          <div className="flex-1">
-            {/* Can add breadcrumbs or page title here */}
-          </div>
-        </header>
-        <div className="flex-1 overflow-auto p-4 md:p-6">{children}</div>
+        <main className="flex h-full flex-col">
+            <header className="flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm md:px-6">
+            <SidebarTrigger />
+            <div className="flex-1">
+                {/* Can add breadcrumbs or page title here */}
+            </div>
+            </header>
+            <div className="flex-1 overflow-auto p-4 md:p-6">{children}</div>
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );
