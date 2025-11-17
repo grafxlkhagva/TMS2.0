@@ -58,7 +58,7 @@ type EditExecutionFormValues = z.infer<typeof editExecutionFormSchema>;
 
 
 const routeStopFormSchema = z.object({
-  id: z.string().min(1, "Зогсоолын ID оруулна уу.").regex(/^[a-zA-Z0-9_-]+$/, "ID зөвхөн үсэг, тоо, доогуур зураас, зураас агуулж болно."),
+  id: z.string().min(1, "Нэр оруулна уу."),
   description: z.string().min(2, "Тайлбар дор хаяж 2 тэмдэгттэй байх ёстой."),
 });
 type RouteStopFormValues = z.infer<typeof routeStopFormSchema>;
@@ -1255,7 +1255,7 @@ export default function ContractedTransportDetailPage() {
                      <form onSubmit={routeStopForm.handleSubmit(onRouteStopSubmit)} id="route-stop-form">
                         <DialogHeader>
                             <DialogTitle>Маршрутын зогсоол нэмэх</DialogTitle>
-                            <DialogDescription>Зогсоолын ID давхцахгүй байх ёстойг анхаарна уу.</DialogDescription>
+                            <DialogDescription>Зогсоолын Нэр/ID талбар нь тухайн гэрээний хувьд давхцахгүй байх ёстойг анхаарна уу.</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                                 <FormField control={routeStopForm.control} name="id" render={({ field }) => ( <FormItem><FormLabel>Зогсоолын Нэр/ID</FormLabel><FormControl><Input placeholder="Даваа-1" {...field} /></FormControl><FormMessage /></FormItem> )} />
@@ -1543,4 +1543,5 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
 
 
     
+
 
