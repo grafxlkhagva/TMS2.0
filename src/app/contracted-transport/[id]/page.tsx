@@ -140,7 +140,7 @@ function SortableExecutionCard({ execution, onEdit, onDelete, onMove, canMoveBac
   
     return (
         <Card ref={setNodeRef} style={style} className="text-xs mb-2 touch-none group/exec relative">
-            <div className="p-2">
+            <div className="p-3">
                 <div className="absolute top-1 right-1 z-10">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -155,12 +155,21 @@ function SortableExecutionCard({ execution, onEdit, onDelete, onMove, canMoveBac
                     </DropdownMenu>
                 </div>
                 
-                <div {...attributes} {...listeners} className="cursor-grab pr-6">
+                <div {...attributes} {...listeners} className="cursor-grab pr-6 space-y-1.5">
                     <p className="font-semibold">Огноо: {date ? format(date, 'yyyy-MM-dd') : 'N/A'}</p>
                     <div className="text-muted-foreground">
                     <p>Жолооч: {execution.driverName || 'TBA'}</p>
                     <p>Машин: {execution.vehicleLicense || 'TBA'}</p>
                     {execution.totalLoadedWeight ? <p className="text-blue-600 font-semibold">Ачсан: {execution.totalLoadedWeight}тн</p> : null}
+                    </div>
+                     <div className="flex flex-wrap gap-1 pt-1">
+                        {(execution.selectedCargo && execution.selectedCargo.length > 0) ? (
+                            execution.selectedCargo.map((cargoName, index) => (
+                                <Badge key={index} variant="secondary" className="text-xs">{cargoName}</Badge>
+                            ))
+                        ) : (
+                            <Badge variant="outline" className="text-xs">Ачаагүй</Badge>
+                        )}
                     </div>
                 </div>
             </div>
@@ -741,7 +750,7 @@ export default function ContractedTransportDetailPage() {
             const loadedIndex = executionStatuses.indexOf('Loaded');
             const nextStatus = executionStatuses[loadedIndex + 1];
             if (nextStatus) {
-                await handleMoveExecution(executionId, nextStatus); // Recursively call to move to the next status
+                handleMoveExecution(executionId, nextStatus); // Recursively call to move to the next status
             }
             return;
         }
@@ -793,7 +802,7 @@ export default function ContractedTransportDetailPage() {
                 return;
             }
             
-            await handleMoveExecution(executionId, newStatus);
+            handleMoveExecution(executionId, newStatus);
         }
     }, [executions, executionStatuses, toast]);
 
@@ -1399,7 +1408,7 @@ export default function ContractedTransportDetailPage() {
                                 <PopoverContent className="w-80 p-0">
                                     <Command><CommandInput placeholder="Жолооч хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
                                         {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
-                                            <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={() => handleAddDriver(d.id)} disabled={isSubmitting}>
+                                            <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={()={() => handleAddDriver(d.id)}} disabled={isSubmitting}>
                                                 <Check className={cn("mr-2 h-4 w-4", assignedDriverIds.includes(d.id) ? "opacity-100" : "opacity-0")}/>
                                                 <span>{d.display_name} ({d.phone_number})</span>
                                             </CommandItem>
@@ -1430,7 +1439,7 @@ export default function ContractedTransportDetailPage() {
                                 <PopoverContent className="w-80 p-0">
                                     <Command><CommandInput placeholder="Машин хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
                                         {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
-                                            <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={() => handleAddVehicle(v.id)} disabled={isSubmitting}>
+                                            <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={()={() => handleAddVehicle(v.id)}} disabled={isSubmitting}>
                                                  <Check className={cn("mr-2 h-4 w-4", assignedVehicleIds.includes(v.id) ? "opacity-100" : "opacity-0")}/>
                                                 <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
                                             </CommandItem>
@@ -1504,7 +1513,7 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
             .map(d => d.assignedVehicleId);
             
         return contract.assignedVehicles.filter(v => !assignedVehicleIds.includes(v.vehicleId));
-    }
+    };
     
     return (
          <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1549,12 +1558,5 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-    )
+    );
 }
-    
-
-
-    
-
-
-
