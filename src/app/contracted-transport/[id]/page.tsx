@@ -40,11 +40,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
   assignmentId: z.string().min(1, 'Жолооч/машины хослолыг сонгоно уу.'),
-  selectedCargo: z.array(z.string()),
+  selectedCargoId: z.string().optional(),
 });
 type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
 
@@ -174,11 +175,8 @@ function SortableExecutionCard({ execution, onEdit, onDelete, onMove, canMoveBac
                     {execution.totalLoadedWeight ? <p className="text-blue-600 font-semibold">Ачсан: {execution.totalLoadedWeight}тн</p> : null}
                     </div>
                      <div className="flex flex-wrap gap-1 pt-1">
-                        {(execution.selectedCargo && execution.selectedCargo.length > 0) ? (
-                            execution.selectedCargo.map((cargoId, index) => {
-                                const cargoName = cargoItems.find(c => c.id === cargoId)?.name || 'Ачаагүй';
-                                return <Badge key={index} variant="secondary" className="text-xs">{cargoName}</Badge>
-                            })
+                        {execution.selectedCargoId ? (
+                             <Badge variant="secondary" className="text-xs">{cargoItems.find(c => c.id === execution.selectedCargoId)?.name || 'Ачаагүй'}</Badge>
                         ) : (
                             <Badge variant="outline" className="text-xs">Ачаагүй</Badge>
                         )}
@@ -409,7 +407,7 @@ export default function ContractedTransportDetailPage() {
 
         const executionsData = executionsSnap.docs.map(doc => {
               const execData = doc.data();
-              const mainCargoId = execData.selectedCargo?.[0];
+              const mainCargoId = execData.selectedCargoId;
               return {
                   id: doc.id,
                   ...execData,
@@ -445,7 +443,7 @@ export default function ContractedTransportDetailPage() {
 
   React.useEffect(() => {
     if (isNewExecutionDialogOpen) {
-      newExecutionForm.reset({ date: new Date(), assignmentId: '', selectedCargo: []});
+      newExecutionForm.reset({ date: new Date(), assignmentId: '', selectedCargoId: undefined});
     }
   }, [isNewExecutionDialogOpen, newExecutionForm]);
 
@@ -599,7 +597,7 @@ export default function ContractedTransportDetailPage() {
                 status: 'Pending',
                 statusHistory: [{ status: 'Pending', date: new Date() }],
                 createdAt: serverTimestamp(),
-                selectedCargo: values.selectedCargo, // Save cargo IDs
+                selectedCargoId: values.selectedCargoId || null,
                 totalLoadedWeight: 0,
                 totalUnloadedWeight: 0,
                 driverId: assignment.driverId,
@@ -616,7 +614,7 @@ export default function ContractedTransportDetailPage() {
             const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
             
             const cargoColorMap = new Map(contract.cargoItems.map(item => [item.id, item.color]));
-            const mainCargoId = values.selectedCargo?.[0];
+            const mainCargoId = values.selectedCargoId;
 
             const newExecution: ContractedTransportExecution = {
                 id: docRef.id,
@@ -643,7 +641,7 @@ export default function ContractedTransportDetailPage() {
         if (!execution || execution.status === newStatus) return;
         
         // Skip 'Loaded' stage if there is no cargo
-        if (newStatus === 'Loaded' && (!execution.selectedCargo || execution.selectedCargo.length === 0)) {
+        if (newStatus === 'Loaded' && !execution.selectedCargoId) {
             const loadedIndex = executionStatuses.indexOf('Loaded');
             const nextStatus = executionStatuses[loadedIndex + 1];
             if (nextStatus) {
@@ -785,15 +783,15 @@ export default function ContractedTransportDetailPage() {
     };
     
     const dashboardStats = React.useMemo(() => {
-    if (!contract) {
-        return { total: 0, completed: 0, inProgress: 0 };
-    }
-    const total = executions.length;
-    const completed = executions.filter(e => e.status === 'Delivered').length;
-    const inProgress = executions.filter(e => e.status !== 'Pending' && e.status !== 'Delivered').length;
+        if (!contract) {
+            return { total: 0, completed: 0, inProgress: 0 };
+        }
+        const total = executions.length;
+        const completed = executions.filter(e => e.status === 'Delivered').length;
+        const inProgress = executions.filter(e => e.status !== 'Pending' && e.status !== 'Delivered').length;
 
-    return { total, completed, inProgress };
-}, [executions, contract]);
+        return { total, completed, inProgress };
+    }, [executions, contract]);
     
     const handleSendToSheet = async (execution: ContractedTransportExecution) => {
         if (!contract) return;
@@ -965,11 +963,11 @@ export default function ContractedTransportDetailPage() {
                     <CardTitle>Оноосон Жолооч ба Т/Х</CardTitle>
                     <CardDescription>Энэ гэрээнд хамаарах жолооч, тээврийн хэрэгслийн жагсаалт ба оноолт.</CardDescription>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setIsAssignmentsDialogOpen(true)}>
+                 <Button variant="outline" size="sm" onClick={() => setIsAssignmentsDialogOpen(true)}>
                     <Settings className="mr-2 h-4 w-4"/> Удирдах
                 </Button>
             </CardHeader>
-            <CardContent>
+             <CardContent>
                 <div className="space-y-4">
                      <h3 className="font-semibold text-sm">Оноогдсон жолооч нар ба тэдгээрийн тээврийн хэрэгсэл</h3>
                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1079,11 +1077,10 @@ export default function ContractedTransportDetailPage() {
                                     <p className="text-xs text-muted-foreground">{exec.vehicleLicense || 'TBA'}</p>
                                 </TableCell>
                                 <TableCell>
-                                    <div className="flex flex-wrap gap-1">
-                                        {(exec.selectedCargo || []).map(cargoId => {
-                                            const cargoName = contract.cargoItems.find(c => c.id === cargoId)?.name;
-                                            return cargoName ? <Badge key={cargoId} variant="secondary">{cargoName}</Badge> : null;
-                                        })}
+                                     <div className="flex flex-wrap gap-1">
+                                        {exec.selectedCargoId && (
+                                            <Badge variant="secondary">{contract.cargoItems.find(c => c.id === exec.selectedCargoId)?.name}</Badge>
+                                        )}
                                     </div>
                                 </TableCell>
                                 <TableCell>{getStatusDate(exec, 'Loaded')}</TableCell>
@@ -1138,31 +1135,29 @@ export default function ContractedTransportDetailPage() {
 
                             <FormField
                                 control={newExecutionForm.control}
-                                name="selectedCargo"
+                                name="selectedCargoId"
                                 render={({ field }) => (
                                     <FormItem>
                                         <div className="flex justify-between items-center">
                                             <FormLabel>Ачаа сонгох</FormLabel>
                                             <span className="text-xs text-muted-foreground">Эсвэл ачаагүй хоосон явалт үүсгэх.</span>
                                         </div>
-                                        <div className="space-y-2">
+                                         <RadioGroup
+                                            onValueChange={field.onChange}
+                                            value={field.value}
+                                            className="space-y-2"
+                                        >
                                             {contract.cargoItems.map((item) => (
-                                                <div key={item.id} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
-                                                    <Checkbox
-                                                        id={`select-cargo-${item.id}`}
-                                                        checked={field.value?.includes(item.id)}
-                                                        onCheckedChange={(checked) => {
-                                                            return checked
-                                                                ? field.onChange([...(field.value || []), item.id])
-                                                                : field.onChange(field.value?.filter((value) => value !== item.id))
-                                                        }}
-                                                    />
-                                                    <Label htmlFor={`select-cargo-${item.id}`} className="font-normal w-full cursor-pointer">
+                                                <FormItem key={item.id} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
+                                                    <FormControl>
+                                                        <RadioGroupItem value={item.id} />
+                                                    </FormControl>
+                                                     <Label htmlFor={`select-cargo-${item.id}`} className="font-normal w-full cursor-pointer">
                                                          {item.name} ({item.unit})
                                                     </Label>
-                                                </div>
+                                                </FormItem>
                                             ))}
-                                        </div>
+                                        </RadioGroup>
                                          <FormMessage />
                                     </FormItem>
                                 )}
@@ -1514,3 +1509,4 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, ve
 
 
     
+

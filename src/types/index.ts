@@ -410,7 +410,7 @@ export type ContractedTransportExecution = {
     driverId?: string;
     driverName?: string;
     createdAt: Date;
-    selectedCargo: string[];
+    selectedCargoId?: string;
     totalLoadedWeight?: number;
     totalUnloadedWeight?: number;
     cargoColor?: string;
