@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -119,13 +120,14 @@ const statusColorMap: Record<string, string> = {
 
 
 
-function SortableExecutionCard({ execution, onEdit, onDelete, onMove, canMoveBack, canMoveForward }: { 
+function SortableExecutionCard({ execution, onEdit, onDelete, onMove, canMoveBack, canMoveForward, cargoItems }: { 
     execution: ContractedTransportExecution, 
     onEdit: () => void, 
     onDelete: () => void,
     onMove: (direction: 'forward' | 'backward') => void,
     canMoveBack: boolean,
-    canMoveForward: boolean
+    canMoveForward: boolean,
+    cargoItems: ContractedTransportCargoItem[],
 }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: execution.id });
     const date = toDateSafe(execution.date);
@@ -164,9 +166,10 @@ function SortableExecutionCard({ execution, onEdit, onDelete, onMove, canMoveBac
                     </div>
                      <div className="flex flex-wrap gap-1 pt-1">
                         {(execution.selectedCargo && execution.selectedCargo.length > 0) ? (
-                            execution.selectedCargo.map((cargoName, index) => (
-                                <Badge key={index} variant="secondary" className="text-xs">{cargoName}</Badge>
-                            ))
+                            execution.selectedCargo.map((cargoId, index) => {
+                                const cargoName = cargoItems.find(c => c.id === cargoId)?.name || 'Ачаагүй';
+                                return <Badge key={index} variant="secondary" className="text-xs">{cargoName}</Badge>
+                            })
                         ) : (
                             <Badge variant="outline" className="text-xs">Ачаагүй</Badge>
                         )}
@@ -185,7 +188,7 @@ function SortableExecutionCard({ execution, onEdit, onDelete, onMove, canMoveBac
     );
 }
 
-function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEditExecution, onDeleteExecution, onMoveExecution, executionStatuses }: { 
+function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEditExecution, onDeleteExecution, onMoveExecution, executionStatuses, cargoItems }: { 
     id: string; 
     title: string; 
     items: ContractedTransportExecution[];
@@ -196,6 +199,7 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
     onDeleteExecution: (execution: ContractedTransportExecution) => void;
     onMoveExecution: (executionId: string, direction: 'forward' | 'backward') => void;
     executionStatuses: string[];
+    cargoItems: ContractedTransportCargoItem[];
 }) {
   const { setNodeRef } = useDroppable({ id });
   const statusIndex = executionStatuses.indexOf(id);
@@ -237,6 +241,7 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
                     onMove={(direction) => onMoveExecution(ex.id, direction)}
                     canMoveBack={statusIndex > 0}
                     canMoveForward={statusIndex < executionStatuses.length - 1}
+                    cargoItems={cargoItems}
                 />
             ))}
         </SortableContext>
@@ -337,10 +342,6 @@ export default function ContractedTransportDetailPage() {
 
   const newExecutionForm = useForm<NewExecutionFormValues>({
     resolver: zodResolver(newExecutionFormSchema),
-    defaultValues: {
-        date: new Date(),
-        selectedCargo: [],
-    }
   });
 
   const editExecutionForm = useForm<EditExecutionFormValues>({
@@ -407,18 +408,18 @@ export default function ContractedTransportDetailPage() {
             transportManagerName: `${managerSnap.data()?.lastName || ''} ${managerSnap.data()?.firstName || ''}`,
         })
       
-        const cargoColorMap = new Map(fetchedContract.cargoItems.map(item => [item.name, item.color]));
+        const cargoColorMap = new Map(fetchedContract.cargoItems.map(item => [item.id, item.color]));
 
         const executionsData = executionsSnap.docs.map(doc => {
               const execData = doc.data();
-              const mainCargoName = execData.selectedCargo?.[0];
+              const mainCargoId = execData.selectedCargo?.[0];
               return {
                   id: doc.id,
                   ...execData,
                   date: toDateSafe(execData.date)!,
                   createdAt: toDateSafe(execData.createdAt)!,
                   statusHistory: (execData.statusHistory || []).map((h: any) => ({...h, date: toDateSafe(h.date)!})),
-                  cargoColor: cargoColorMap.get(mainCargoName) || '#3b82f6',
+                  cargoColor: cargoColorMap.get(mainCargoId) || '#3b82f6',
               } as ContractedTransportExecution
           });
 
@@ -698,20 +699,13 @@ export default function ContractedTransportDetailPage() {
             }
             const vehicle = contract.assignedVehicles.find(v => v.vehicleId === assignment.assignedVehicleId);
     
-            const newSelectedCargoNames: string[] = values.selectedCargo
-                .map(itemId => {
-                    const cargo = contract.cargoItems.find(c => c.id === itemId);
-                    return cargo?.name;
-                })
-                .filter((name): name is string => !!name);
-    
             const dataToSave: { [key: string]: any } = {
                 contractId: contract.id,
                 date: values.date,
                 status: 'Pending',
                 statusHistory: [{ status: 'Pending', date: new Date() }],
                 createdAt: serverTimestamp(),
-                selectedCargo: newSelectedCargoNames,
+                selectedCargo: values.selectedCargo, // Save cargo IDs
                 totalLoadedWeight: 0,
                 totalUnloadedWeight: 0,
                 driverId: assignment.driverId,
@@ -1102,6 +1096,7 @@ export default function ContractedTransportDetailPage() {
                                         onDeleteExecution={(exec) => setExecutionToDelete(exec)}
                                         onMoveExecution={handleMoveWithButton}
                                         executionStatuses={executionStatuses}
+                                        cargoItems={contract.cargoItems}
                                     />
                                 )
                             })}
