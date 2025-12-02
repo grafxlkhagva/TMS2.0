@@ -974,7 +974,6 @@ export default function ContractedTransportDetailPage() {
     return date ? format(date, 'yyyy-MM-dd HH:mm') : '-';
   };
 
-
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
@@ -1561,3 +1560,4 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
     );
 }
 
+    
