@@ -419,7 +419,7 @@ export default function ContractedTransportDetailPage() {
                   date: toDateSafe(execData.date)!,
                   createdAt: toDateSafe(execData.createdAt)!,
                   statusHistory: (execData.statusHistory || []).map((h: any) => ({...h, date: toDateSafe(h.date)!})),
-                  cargoColor: cargoColorMap.get(mainCargoId) || '#3b82f6',
+                  cargoColor: cargoColorMap.get(mainCargoId) || '#9ca3af', // Default to gray if no color
               } as ContractedTransportExecution
           });
 
@@ -721,11 +721,15 @@ export default function ContractedTransportDetailPage() {
     
             const docRef = await addDoc(collection(db, 'contracted_transport_executions'), dataToSave);
             
+            const cargoColorMap = new Map(contract.cargoItems.map(item => [item.id, item.color]));
+            const mainCargoId = values.selectedCargo?.[0];
+
             const newExecution: ContractedTransportExecution = {
                 id: docRef.id,
                 ...dataToSave,
                 date: toDateSafe(dataToSave.date)!,
                 createdAt: new Date(),
+                cargoColor: cargoColorMap.get(mainCargoId) || '#9ca3af'
             } as ContractedTransportExecution;
     
             setExecutions(prev => [...prev, newExecution]);
@@ -1577,3 +1581,4 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
       
 
     
+
