@@ -45,6 +45,7 @@ const cargoItemSchema = z.object({
   driverPrice: z.coerce.number().min(0, "Үнэ 0-ээс бага байж болохгүй."),
   mainContractorPrice: z.coerce.number().min(0, "Үнэ 0-ээс бага байж болохгүй.").optional(),
   ourPrice: z.coerce.number().min(0, "Үнэ 0-ээс бага байж болохгүй.").optional(),
+  color: z.string().optional(),
 });
 
 const formSchema = z.object({
@@ -176,6 +177,7 @@ export default function EditContractedTransportPage() {
                         driverPrice: item.driverPrice ?? item.price ?? 0,
                         mainContractorPrice: item.mainContractorPrice ?? 0,
                         ourPrice: item.ourPrice ?? 0,
+                        color: item.color || '#3b82f6',
                     })),
                 });
             } else {
@@ -376,7 +378,9 @@ export default function EditContractedTransportPage() {
                                 <FormField control={form.control} name={`cargoItems.${index}.driverPrice`} render={({ field }) => ( <FormItem className="md:col-span-2"><FormLabel className="text-xs">Жолоочийн үнэ (₮)</FormLabel><FormControl><Input type="number" placeholder="1500000" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                                 <FormField control={form.control} name={`cargoItems.${index}.mainContractorPrice`} render={({ field }) => ( <FormItem className="md:col-span-2"><FormLabel className="text-xs">ЕР.гүйцэтгэгч үнэ (₮)</FormLabel><FormControl><Input type="number" placeholder="1600000" {...field} /></FormControl><FormMessage /></FormItem> )}/>
                                 <FormField control={form.control} name={`cargoItems.${index}.ourPrice`} render={({ field }) => ( <FormItem className="md:col-span-2"><FormLabel className="text-xs">Бидний үнэ (₮)</FormLabel><FormControl><Input type="number" placeholder="1700000" {...field} /></FormControl><FormMessage /></FormItem> )}/>
-                                <FormField control={form.control} name={`cargoItems.${index}.notes`} render={({ field }) => (<FormItem className="md:col-span-11"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Input placeholder="..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`cargoItems.${index}.color`} render={({ field }) => ( <FormItem className="md:col-span-1"><FormLabel className="text-xs">Өнгө</FormLabel><FormControl><Input type="color" {...field} className="h-10 p-1" /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name={`cargoItems.${index}.notes`} render={({ field }) => (<FormItem className="md:col-span-10"><FormLabel className="text-xs">Тэмдэглэл</FormLabel><FormControl><Input placeholder="..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+
                                 <div className="md:col-span-1 flex justify-end items-center h-full pt-6">
                                   <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => remove(index)}><Trash2 className="h-4 w-4" /></Button>
                                 </div>
@@ -387,7 +391,7 @@ export default function EditContractedTransportPage() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => append({ id: uuidv4(), name: '', unit: 'тн', packagingTypeId: '', notes: '', driverPrice: 0, mainContractorPrice: 0, ourPrice: 0 })}
+                            onClick={() => append({ id: uuidv4(), name: '', unit: 'тн', packagingTypeId: '', notes: '', driverPrice: 0, mainContractorPrice: 0, ourPrice: 0, color: '#3b82f6' })}
                         >
                             <PlusCircle className="mr-2 h-4 w-4" /> Ачаа нэмэх
                         </Button>

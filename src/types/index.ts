@@ -413,6 +413,7 @@ export type ContractedTransportExecution = {
     selectedCargo: string[];
     totalLoadedWeight?: number;
     totalUnloadedWeight?: number;
+    cargoColor?: string;
 }
 
 export type ContractedTransportCargoItem = {
@@ -424,6 +425,7 @@ export type ContractedTransportCargoItem = {
     driverPrice: number;
     mainContractorPrice?: number;
     ourPrice?: number;
+    color?: string;
 };
 
 export type AssignedDriver = {
