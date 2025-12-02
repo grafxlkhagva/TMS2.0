@@ -25,12 +25,6 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  env: {
-    CONTRACTED_TRANSPORT_SHEET_ID: process.env.CONTRACTED_TRANSPORT_SHEET_ID,
-    CONTRACTED_TRANSPORT_SHEET_NAME: process.env.CONTRACTED_TRANSPORT_SHEET_NAME,
-    GOOGLE_SHEET_ID: process.env.GOOGLE_SHEET_ID,
-    GOOGLE_SHEET_NAME: process.env.GOOGLE_SHEET_NAME,
-  }
 };
 
 export default nextConfig;
