@@ -139,7 +139,8 @@ function SortableExecutionCard({ execution, onEdit, onDelete, onMove, canMoveBac
   
     return (
         <Card ref={setNodeRef} style={style} className="text-xs mb-2 touch-none group/exec relative">
-            <div className="p-3">
+             <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-md" style={{ backgroundColor: execution.cargoColor || 'transparent' }}></div>
+            <div className="p-3 pl-4">
                 <div className="absolute top-1 right-1 z-10">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -337,6 +338,7 @@ export default function ContractedTransportDetailPage() {
   const newExecutionForm = useForm<NewExecutionFormValues>({
     resolver: zodResolver(newExecutionFormSchema),
     defaultValues: {
+        date: new Date(),
         selectedCargo: [],
     }
   });
@@ -405,14 +407,18 @@ export default function ContractedTransportDetailPage() {
             transportManagerName: `${managerSnap.data()?.lastName || ''} ${managerSnap.data()?.firstName || ''}`,
         })
       
+        const cargoColorMap = new Map(fetchedContract.cargoItems.map(item => [item.name, item.color]));
+
         const executionsData = executionsSnap.docs.map(doc => {
               const execData = doc.data();
+              const mainCargoName = execData.selectedCargo?.[0];
               return {
                   id: doc.id,
                   ...execData,
                   date: toDateSafe(execData.date)!,
                   createdAt: toDateSafe(execData.createdAt)!,
                   statusHistory: (execData.statusHistory || []).map((h: any) => ({...h, date: toDateSafe(h.date)!})),
+                  cargoColor: cargoColorMap.get(mainCargoName) || '#3b82f6',
               } as ContractedTransportExecution
           });
 
@@ -1079,7 +1085,9 @@ export default function ContractedTransportDetailPage() {
                         <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${executionStatuses.length}, minmax(220px, 1fr))`}}>
                             {executionStatuses.map(status => {
                                 const stop = contract.routeStops.find(s => s.id === status);
-                                const itemsForStatus = executions.filter(ex => ex.status === status);
+                                const itemsForStatus = executions
+                                  .filter(ex => ex.status === status)
+                                  .sort((a, b) => (a.cargoColor || '').localeCompare(b.cargoColor || ''));
                                 const title = statusTranslations[status] || stop?.id || status;
                                 return (
                                     <StatusColumn 
@@ -1557,5 +1565,7 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
         </Dialog>
     );
 }
+
+    
 
     
