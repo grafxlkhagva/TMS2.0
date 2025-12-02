@@ -249,7 +249,7 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
                     onMove={(direction) => onMoveExecution(ex.id, direction)}
                     canMoveBack={statusIndex > 0}
                     canMoveForward={statusIndex < executionStatuses.length - 1}
-                    cargoItems={cargoItems}
+                    cargoItems={contract.cargoItems}
                 />
             ))}
         </SortableContext>
@@ -924,7 +924,7 @@ export default function ContractedTransportDetailPage() {
     const total = executions.length;
     const completed = executions.filter(e => e.status === 'Delivered').length;
     const inProgress = executions.filter(e => e.status !== 'Pending' && e.status !== 'Delivered').length;
-    const daysLeft = differenceInDays(toDateSafe(contract.endDate)!, new Date());
+    
     const totalDrivers = contract.assignedDrivers.length;
     const totalVehicles = contract.assignedVehicles.length;
     const vehiclesReady = contract.assignedVehicles.filter(v => v.status === 'Ready').length;
@@ -932,7 +932,7 @@ export default function ContractedTransportDetailPage() {
     const vehiclesAvailable = contract.assignedVehicles.filter(v => v.status === 'Available').length;
 
 
-    return { total, completed, inProgress, daysLeft, totalDrivers, totalVehicles, vehiclesReady, vehiclesInMaintenance, vehiclesAvailable };
+    return { total, completed, inProgress, totalDrivers, totalVehicles, vehiclesReady, vehiclesInMaintenance, vehiclesAvailable };
 }, [executions, contract]);
     
     const handleSendToSheet = async (execution: ContractedTransportExecution) => {
@@ -1079,7 +1079,7 @@ export default function ContractedTransportDetailPage() {
             </div>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
         <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." valueColorClass="text-primary" />
         <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." valueColorClass="text-green-600" />
         <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буй) гүйцэтгэл." valueColorClass="text-blue-600" />
@@ -1094,7 +1094,6 @@ export default function ContractedTransportDetailPage() {
                 </div>
             </div>
         } icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-purple-600" />
-        <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." valueColorClass="text-red-600" />
       </div>
       
         <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
