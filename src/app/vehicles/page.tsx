@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -36,8 +37,8 @@ import { Input } from '@/components/ui/input';
 
 
 function StatusBadge({ status }: { status: VehicleStatus }) {
-  const variant = status === 'Available' ? 'success' : status === 'Maintenance' ? 'destructive' : 'secondary';
-  const text = status === 'Available' ? 'Сул' : status === 'In Use' ? 'Ашиглаж буй' : 'Засварт';
+  const variant = status === 'Available' ? 'success' : status === 'Maintenance' ? 'destructive' : status === 'Ready' ? 'default' : 'secondary';
+  const text = status === 'Available' ? 'Сул' : status === 'In Use' ? 'Ашиглаж буй' : status === 'Maintenance' ? 'Засварт' : 'Бэлэн';
   return <Badge variant={variant}>{text}</Badge>;
 }
 
@@ -248,6 +249,7 @@ export default function VehiclesPage() {
                 <SelectItem value="Available">Сул</SelectItem>
                 <SelectItem value="In Use">Ашиглаж буй</SelectItem>
                 <SelectItem value="Maintenance">Засварт</SelectItem>
+                <SelectItem value="Ready">Бэлэн</SelectItem>
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>

@@ -4,7 +4,7 @@ import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Delayed';
 
-export type VehicleStatus = 'Available' | 'In Use' | 'Maintenance';
+export type VehicleStatus = 'Available' | 'In Use' | 'Maintenance' | 'Ready';
 
 export type Vehicle = {
   id: string;
@@ -435,6 +435,14 @@ export type AssignedDriver = {
     assignedVehicleId?: string;
 }
 
+export type AssignedVehicle = {
+  vehicleId: string;
+  licensePlate: string;
+  trailerLicensePlate?: string;
+  modelName: string;
+  status?: VehicleStatus;
+}
+
 export type ContractedTransport = {
   id: string;
   contractNumber: string;
@@ -465,12 +473,7 @@ export type ContractedTransport = {
     name: string;
   };
   assignedDrivers: AssignedDriver[];
-  assignedVehicles: {
-    vehicleId: string;
-    licensePlate: string;
-    trailerLicensePlate?: string;
-    modelName: string;
-  }[];
+  assignedVehicles: AssignedVehicle[];
 };
 
     
@@ -479,3 +482,4 @@ export type ContractedTransport = {
 
 
     
+
