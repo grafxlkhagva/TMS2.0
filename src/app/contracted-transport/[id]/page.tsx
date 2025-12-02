@@ -4,7 +4,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle, Megaphone, MegaphoneOff, Eye, Briefcase, TrendingUp, Cuboid, Send, FileSpreadsheet, Sparkles, Link as LinkIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle, Megaphone, MegaphoneOff, Eye, Briefcase, TrendingUp, Cuboid, Send, FileSpreadsheet, Sparkles, LinkIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch, type DocumentData } from 'firebase/firestore';
@@ -196,7 +196,7 @@ function SortableExecutionCard({ execution, onEdit, onDelete, onMove, canMoveBac
     );
 }
 
-function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEditExecution, onDeleteExecution, onMoveExecution, executionStatuses, cargoItems }: { 
+function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEditExecution, onDeleteExecution, onMoveExecution, executionStatuses, contract }: { 
     id: string; 
     title: string; 
     items: ContractedTransportExecution[];
@@ -207,7 +207,7 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
     onDeleteExecution: (execution: ContractedTransportExecution) => void;
     onMoveExecution: (executionId: string, direction: 'forward' | 'backward') => void;
     executionStatuses: string[];
-    cargoItems: ContractedTransportCargoItem[];
+    contract: ContractedTransport;
 }) {
   const { setNodeRef } = useDroppable({ id });
   const statusIndex = executionStatuses.indexOf(id);
@@ -919,7 +919,7 @@ export default function ContractedTransportDetailPage() {
     
     const dashboardStats = React.useMemo(() => {
     if (!contract) {
-        return { total: 0, completed: 0, inProgress: 0, daysLeft: 0, totalDrivers: 0, totalVehicles: 0, vehiclesReady: 0, vehiclesInMaintenance: 0, vehiclesAvailable: 0 };
+        return { total: 0, completed: 0, inProgress: 0, totalDrivers: 0, totalVehicles: 0, vehiclesReady: 0, vehiclesInMaintenance: 0, vehiclesAvailable: 0 };
     }
     const total = executions.length;
     const completed = executions.filter(e => e.status === 'Delivered').length;
@@ -1139,7 +1139,7 @@ export default function ContractedTransportDetailPage() {
                                         onDeleteExecution={(exec) => setExecutionToDelete(exec)}
                                         onMoveExecution={handleMoveWithButton}
                                         executionStatuses={executionStatuses}
-                                        cargoItems={contract.cargoItems}
+                                        contract={contract}
                                     />
                                 )
                             })}
