@@ -1203,7 +1203,7 @@ export default function ContractedTransportDetailPage() {
                                                         checked={field.value?.includes(item.id)}
                                                         onCheckedChange={(checked) => {
                                                             return checked
-                                                                ? field.onChange([...field.value, item.id])
+                                                                ? field.onChange([...(field.value || []), item.id])
                                                                 : field.onChange(field.value?.filter((value) => value !== item.id))
                                                         }}
                                                     />
@@ -1505,8 +1505,8 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
             ? { ...driver, assignedVehicleId: vehicleId === 'none' ? undefined : vehicleId } 
             : driver
         ));
-    }
-
+    };
+    
     const availableVehicles = (driverId?: string) => {
         const assignedVehicleIds = assignments
             .filter(d => d.driverId !== driverId && d.assignedVehicleId)
@@ -1560,3 +1560,4 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
         </Dialog>
     );
 }
+
