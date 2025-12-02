@@ -838,6 +838,23 @@ export default function ContractedTransportDetailPage() {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Оноолт хадгалахад алдаа гарлаа.'});
         }
     }
+    
+    const handleVehicleStatusChange = async (vehicleId: string, status: VehicleStatus) => {
+        if (!contract) return;
+        const updatedVehicles = contract.assignedVehicles.map(v => 
+            v.vehicleId === vehicleId ? { ...v, status } : v
+        );
+        try {
+            const contractRef = doc(db, 'contracted_transports', id);
+            await updateDoc(contractRef, {
+                assignedVehicles: updatedVehicles,
+            });
+            setContract(prev => prev ? { ...prev, assignedVehicles: updatedVehicles } : null);
+            toast({ title: "Амжилттай", description: "Т/Х-ийн статус шинэчлэгдлээ."});
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Т/Х-ийн статус шинэчлэхэд алдаа гарлаа.'});
+        }
+    }
 
 
   if (isLoading) {
@@ -1328,6 +1345,7 @@ export default function ContractedTransportDetailPage() {
             drivers={drivers}
             vehicles={vehicles}
             onSave={handleAssignmentsUpdate}
+            onVehicleStatusChange={handleVehicleStatusChange}
             isSubmitting={isSubmitting}
         />
     </div>
@@ -1335,18 +1353,18 @@ export default function ContractedTransportDetailPage() {
 }
 
 
-function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, vehicles, onSave, isSubmitting: isSaving }: {
+function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, vehicles, onSave, onVehicleStatusChange, isSubmitting: isSaving }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     contract: ContractedTransport | null;
     drivers: Driver[];
     vehicles: Vehicle[];
     onSave: (assignments: AssignedDriver[], vehicles: AssignedVehicle[]) => void;
+    onVehicleStatusChange: (vehicleId: string, status: VehicleStatus) => void;
     isSubmitting: boolean;
 }) {
     const [assignedDrivers, setAssignedDrivers] = React.useState<AssignedDriver[]>([]);
     const [assignedVehicles, setAssignedVehicles] = React.useState<AssignedVehicle[]>([]);
-    const [isSubmitting, setIsSubmitting] = React.useState(false);
 
     React.useEffect(() => {
         if (contract) {
@@ -1442,10 +1460,18 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, ve
                         <h3 className="font-semibold text-sm">Оноосон тээврийн хэрэгсэл</h3>
                         <div className="space-y-2">
                              {assignedVehicles.map(vehicle => (
-                                <div key={vehicle.vehicleId} className="flex justify-between items-center text-sm p-2 border rounded-md">
+                                <div key={vehicle.vehicleId} className="flex justify-between items-start text-sm p-2 border rounded-md">
                                     <div>
                                         <p className="font-medium font-mono">{vehicle.licensePlate}</p>
                                         <p className="text-xs text-muted-foreground">{vehicle.modelName}</p>
+                                        <Select value={vehicle.status || 'Available'} onValueChange={(status) => onVehicleStatusChange(vehicle.vehicleId, status as VehicleStatus)} >
+                                            <SelectTrigger className="h-7 text-xs mt-2 w-32">
+                                                <SelectValue/>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {vehicleStatuses.map(s => <SelectItem key={s} value={s}>{vehicleStatusTranslations[s]}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveVehicle(vehicle.vehicleId)}><X className="h-4 w-4 text-destructive"/></Button>
                                 </div>
