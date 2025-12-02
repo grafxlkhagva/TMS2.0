@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch, type DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportExecutionStatus, ContractedTransportStatus, ContractedTransportCargoItem, AssignedDriver } from '@/types';
+import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportExecutionStatus, ContractedTransportStatus, ContractedTransportCargoItem, AssignedDriver, VehicleStatus, AssignedVehicle } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -82,6 +82,15 @@ const statusTranslations: Record<string, string> = {
     Unloaded: 'Буулгасан',
     Delivered: 'Хүргэгдсэн',
 };
+
+const vehicleStatusTranslations: Record<VehicleStatus, string> = {
+  Available: 'Чөлөөтэй',
+  'In Use': 'Ашиглаж буй',
+  Maintenance: 'Засварт',
+  Ready: 'Бэлэн'
+};
+const vehicleStatuses: VehicleStatus[] = ['Available', 'In Use', 'Maintenance', 'Ready'];
+
 
 const toDateSafe = (date: any): Date | null => {
     if (!date) return null;
@@ -241,7 +250,7 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
                     onMove={(direction) => onMoveExecution(ex.id, direction)}
                     canMoveBack={statusIndex > 0}
                     canMoveForward={statusIndex < executionStatuses.length - 1}
-                    cargoItems={cargoItems}
+                    cargoItems={contract.cargoItems}
                 />
             ))}
         </SortableContext>
@@ -250,7 +259,7 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
   );
 }
 
-function StatCard({ title, value, icon: Icon, description, actionLabel, onActionClick, valueColorClass, colorClass }: { title: string; value: string | number; icon: React.ElementType; description: string; actionLabel?: string; onActionClick?: () => void; valueColorClass?: string; colorClass?: string; }) {
+function StatCard({ title, value, icon: Icon, description, actionLabel, onActionClick, valueColorClass, colorClass }: { title: string; value: string | number | React.ReactNode; icon: React.ElementType; description: string; actionLabel?: string; onActionClick?: () => void; valueColorClass?: string; colorClass?: string; }) {
   return (
     <Card className={cn("text-white", colorClass)}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -584,7 +593,8 @@ export default function ContractedTransportDetailPage() {
             vehicleId: vehicleToAdd.id,
             licensePlate: vehicleToAdd.licensePlate,
             trailerLicensePlate: vehicleToAdd.trailerLicensePlate || '',
-            modelName: `${vehicleToAdd.makeName} ${vehicleToAdd.modelName}`
+            modelName: `${vehicleToAdd.makeName} ${vehicleToAdd.modelName}`,
+            status: vehicleToAdd.status,
         };
         const contractRef = doc(db, 'contracted_transports', id);
         try {
@@ -625,6 +635,24 @@ export default function ContractedTransportDetailPage() {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл хасахад алдаа гарлаа.'});
         }
     }
+    
+    const handleVehicleStatusChange = async (vehicleId: string, status: VehicleStatus) => {
+        if (!id || !contract) return;
+
+        const updatedVehicles = contract.assignedVehicles.map(v => 
+            v.vehicleId === vehicleId ? { ...v, status } : v
+        );
+
+        try {
+            const contractRef = doc(db, 'contracted_transports', id);
+            await updateDoc(contractRef, { assignedVehicles: updatedVehicles });
+            setContract(prev => prev ? { ...prev, assignedVehicles: updatedVehicles } : null);
+            toast({ title: 'Амжилттай', description: 'Т/Х-ийн статус шинэчлэгдлээ.'});
+        } catch (error) {
+             toast({ variant: 'destructive', title: 'Алдаа', description: 'Т/Х-ийн статус шинэчлэхэд алдаа гарлаа.'});
+        }
+    };
+
 
     const onRouteStopSubmit = async (values: RouteStopFormValues) => {
         if (!id || !contract) return;
@@ -891,18 +919,22 @@ export default function ContractedTransportDetailPage() {
     };
     
     const dashboardStats = React.useMemo(() => {
-        if (!contract) {
-            return { total: 0, completed: 0, inProgress: 0, daysLeft: 0, totalDrivers: 0, totalVehicles: 0 };
-        }
-        const total = executions.length;
-        const completed = executions.filter(e => e.status === 'Delivered').length;
-        const inProgress = executions.filter(e => e.status !== 'Pending' && e.status !== 'Delivered').length;
-        const daysLeft = differenceInDays(toDateSafe(contract.endDate)!, new Date());
-        const totalDrivers = contract.assignedDrivers.length;
-        const totalVehicles = contract.assignedVehicles.length;
+    if (!contract) {
+        return { total: 0, completed: 0, inProgress: 0, daysLeft: 0, totalDrivers: 0, totalVehicles: 0, vehiclesReady: 0, vehiclesInMaintenance: 0, vehiclesAvailable: 0 };
+    }
+    const total = executions.length;
+    const completed = executions.filter(e => e.status === 'Delivered').length;
+    const inProgress = executions.filter(e => e.status !== 'Pending' && e.status !== 'Delivered').length;
+    const daysLeft = differenceInDays(toDateSafe(contract.endDate)!, new Date());
+    const totalDrivers = contract.assignedDrivers.length;
+    const totalVehicles = contract.assignedVehicles.length;
+    const vehiclesReady = contract.assignedVehicles.filter(v => v.status === 'Ready').length;
+    const vehiclesInMaintenance = contract.assignedVehicles.filter(v => v.status === 'Maintenance').length;
+    const vehiclesAvailable = contract.assignedVehicles.filter(v => v.status === 'Available').length;
 
-        return { total, completed, inProgress, daysLeft, totalDrivers, totalVehicles };
-    }, [executions, contract]);
+
+    return { total, completed, inProgress, daysLeft, totalDrivers, totalVehicles, vehiclesReady, vehiclesInMaintenance, vehiclesAvailable };
+}, [executions, contract]);
     
     const handleSendToSheet = async (execution: ContractedTransportExecution) => {
         if (!contract) return;
@@ -1048,12 +1080,21 @@ export default function ContractedTransportDetailPage() {
             </div>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-6">
         <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." valueColorClass="text-dashboard-stat-1" colorClass="bg-gray-900" />
         <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." valueColorClass="text-dashboard-stat-2" colorClass="bg-gray-900" />
         <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." valueColorClass="text-dashboard-stat-3" colorClass="bg-gray-900" />
         <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-dashboard-stat-4" colorClass="bg-gray-900" />
-        <StatCard title="Нийт тээврийн хэрэгсэл" value={dashboardStats.totalVehicles} icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-dashboard-stat-5" colorClass="bg-gray-900" />
+        <StatCard title="Нийт тээврийн хэрэгсэл" value={
+            <div className="flex items-center gap-4">
+                <span>{dashboardStats.totalVehicles}</span>
+                <div className="text-xs font-normal flex flex-col">
+                    <span>Бэлэн: {dashboardStats.vehiclesReady}</span>
+                    <span>Засварт: {dashboardStats.vehiclesInMaintenance}</span>
+                    <span>Чөлөөтэй: {dashboardStats.vehiclesAvailable}</span>
+                </div>
+            </div>
+        } icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-dashboard-stat-5" colorClass="bg-gray-900" />
         <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." valueColorClass="text-dashboard-stat-6" colorClass="bg-gray-900" />
       </div>
       
@@ -1469,7 +1510,22 @@ export default function ContractedTransportDetailPage() {
                                         <p className="font-medium font-mono">{vehicle.licensePlate}</p>
                                         <p className="text-xs text-muted-foreground font-mono">{vehicle.modelName} {vehicle.trailerLicensePlate && `/ ${vehicle.trailerLicensePlate}`}</p>
                                     </div>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveVehicle(vehicle)} disabled={isSubmitting}><XCircle className="h-4 w-4 text-destructive"/></Button>
+                                    <div className="flex items-center gap-2">
+                                        <Select 
+                                            value={vehicle.status || 'Available'} 
+                                            onValueChange={(status) => handleVehicleStatusChange(vehicle.vehicleId, status as VehicleStatus)}
+                                        >
+                                            <SelectTrigger className="h-8 w-32 text-xs">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {vehicleStatuses.map(s => (
+                                                    <SelectItem key={s} value={s}>{vehicleStatusTranslations[s]}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveVehicle(vehicle)} disabled={isSubmitting}><XCircle className="h-4 w-4 text-destructive"/></Button>
+                                    </div>
                                 </div>
                             ))) : (<p className="text-sm text-muted-foreground text-center py-1">Т/Х оноогоогүй.</p>)}
                         </div>
@@ -1581,4 +1637,5 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
       
 
     
+
 
