@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -250,7 +249,7 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
                     onMove={(direction) => onMoveExecution(ex.id, direction)}
                     canMoveBack={statusIndex > 0}
                     canMoveForward={statusIndex < executionStatuses.length - 1}
-                    cargoItems={contract.cargoItems}
+                    cargoItems={cargoItems}
                 />
             ))}
         </SortableContext>
@@ -1639,3 +1638,4 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
     
 
 
+    
