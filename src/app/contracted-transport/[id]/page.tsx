@@ -1,10 +1,11 @@
 
+
 'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle, Megaphone, MegaphoneOff, Eye, Briefcase, TrendingUp, Cuboid, Send, FileSpreadsheet, Sparkles, LinkIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle, Megaphone, MegaphoneOff, Eye, Briefcase, TrendingUp, Cuboid, Send, FileSpreadsheet, Sparkles, LinkIcon, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch, type DocumentData } from 'firebase/firestore';
@@ -258,7 +259,7 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
   );
 }
 
-function StatCard({ title, value, icon: Icon, description, valueColorClass }: { title: string; value: string | number | React.ReactNode; icon: React.ElementType; description: string; valueColorClass?: string; }) {
+function StatCard({ title, value, icon: Icon, description }: { title: string; value: string | number | React.ReactNode; icon: React.ElementType; description: string;}) {
   return (
     <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -266,7 +267,7 @@ function StatCard({ title, value, icon: Icon, description, valueColorClass }: { 
             <Icon className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-            <div className={cn("text-2xl font-bold", valueColorClass)}>{value}</div>
+            <div className="text-2xl font-bold text-primary">{value}</div>
             <p className="text-xs text-muted-foreground">{description}</p>
         </CardContent>
     </Card>
@@ -304,8 +305,6 @@ export default function ContractedTransportDetailPage() {
   const [executionToEdit, setExecutionToEdit] = React.useState<ContractedTransportExecution | null>(null);
   const [stopToEdit, setStopToEdit] = React.useState<RouteStop | null>(null);
 
-  const [addDriverPopoverOpen, setAddDriverPopoverOpen] = React.useState(false);
-  const [addVehiclePopoverOpen, setAddVehiclePopoverOpen] = React.useState(false);
   
   const [sendingToSheet, setSendingToSheet] = React.useState<string | null>(null);
 
@@ -348,8 +347,6 @@ export default function ContractedTransportDetailPage() {
     resolver: zodResolver(editExecutionFormSchema),
   });
 
-  const assignedDriverIds = React.useMemo(() => contract?.assignedDrivers?.map(d => d.driverId) || [], [contract]);
-  const assignedVehicleIds = React.useMemo(() => contract?.assignedVehicles?.map(v => v.vehicleId) || [], [contract]);
 
   const fetchContractData = React.useCallback(async () => {
     if (!id) return;
@@ -523,128 +520,6 @@ export default function ContractedTransportDetailPage() {
         }
     }, [executionToEdit, contract, toast]);
     
-    const handleAddDriver = async (driverId: string) => {
-        if (!id || !driverId) return;
-        const driverToAdd = drivers.find(d => d.id === driverId);
-        if (!driverToAdd) return;
-        
-        const newDriverData = {
-            driverId: driverToAdd.id,
-            driverName: driverToAdd.display_name,
-            driverPhone: driverToAdd.phone_number,
-        };
-        const contractRef = doc(db, 'contracted_transports', id);
-
-        try {
-            await updateDoc(contractRef, {
-                assignedDrivers: arrayUnion(newDriverData)
-            });
-            setContract(prev => prev ? { ...prev, assignedDrivers: [...prev.assignedDrivers, newDriverData] } : null);
-            toast({ title: "Амжилттай", description: "Жолооч нэмэгдлээ."});
-            setAddDriverPopoverOpen(false);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч нэмэхэд алдаа гарлаа.'});
-        }
-    };
-    
-    const handleRemoveDriver = async (driverToRemove: AssignedDriver) => {
-        if (!id || !contract) return;
-        
-        const driverDataToRemove = contract.assignedDrivers.find(d => d.driverId === driverToRemove.driverId);
-        if (!driverDataToRemove) return;
-
-        const batch = writeBatch(db);
-        const contractRef = doc(db, 'contracted_transports', id);
-        batch.update(contractRef, { assignedDrivers: arrayRemove(driverDataToRemove) });
-        
-        const pendingExecs = executions.filter(e => e.status === 'Pending' && e.driverId === driverToRemove.driverId);
-        pendingExecs.forEach(exec => {
-            const execRef = doc(db, 'contracted_transport_executions', exec.id);
-            batch.update(execRef, { driverId: undefined, driverName: undefined });
-        })
-
-        try {
-            await batch.commit();
-
-            setContract(prev => prev ? { ...prev, assignedDrivers: prev.assignedDrivers.filter(d => d.driverId !== driverToRemove.driverId) } : null);
-            setExecutions(prev => prev.map(e => pendingExecs.some(pe => pe.id === e.id) ? {...e, driverId: undefined, driverName: undefined} : e));
-            
-            toast({ title: "Амжилттай", description: "Жолоочийг хаслаа."});
-        } catch(error) {
-             toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч хасахад алдаа гарлаа.'});
-        }
-    }
-    
-    const handleAddVehicle = async (vehicleId: string) => {
-        if (!id || !vehicleId) return;
-        const vehicleToAdd = vehicles.find(v => v.id === vehicleId);
-        if (!vehicleToAdd) return;
-
-        const newVehicleData = {
-            vehicleId: vehicleToAdd.id,
-            licensePlate: vehicleToAdd.licensePlate,
-            trailerLicensePlate: vehicleToAdd.trailerLicensePlate || '',
-            modelName: `${vehicleToAdd.makeName} ${vehicleToAdd.modelName}`,
-            status: vehicleToAdd.status,
-        };
-        const contractRef = doc(db, 'contracted_transports', id);
-        try {
-            await updateDoc(contractRef, {
-                assignedVehicles: arrayUnion(newVehicleData)
-            });
-            setContract(prev => prev ? { ...prev, assignedVehicles: [...prev.assignedVehicles, newVehicleData] } : null);
-            toast({ title: "Амжилттай", description: "Тээврийн хэрэгсэл нэмэгдлээ."});
-            setAddVehiclePopoverOpen(false);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл нэмэхэд алдаа гарлаа.'});
-        }
-    };
-
-    const handleRemoveVehicle = async (vehicleToRemove: {vehicleId: string}) => {
-        if (!id || !contract) return;
-        
-        const vehicleDataToRemove = contract.assignedVehicles.find(v => v.vehicleId === vehicleToRemove.vehicleId);
-        if (!vehicleDataToRemove) return;
-
-        const batch = writeBatch(db);
-        const contractRef = doc(db, 'contracted_transports', id);
-        batch.update(contractRef, { assignedVehicles: arrayRemove(vehicleDataToRemove) });
-
-        const pendingExecs = executions.filter(e => e.status === 'Pending' && e.vehicleId === vehicleToRemove.vehicleId);
-        pendingExecs.forEach(exec => {
-            const execRef = doc(db, 'contracted_transport_executions', exec.id);
-            batch.update(execRef, { vehicleId: undefined, vehicleLicense: undefined });
-        })
-        try {
-            await batch.commit();
-
-            setContract(prev => prev ? { ...prev, assignedVehicles: prev.assignedVehicles.filter(v => v.vehicleId !== vehicleToRemove.vehicleId) } : null);
-            setExecutions(prev => prev.map(e => pendingExecs.some(pe => pe.id === e.id) ? {...e, vehicleId: undefined, vehicleLicense: undefined} : e));
-
-            toast({ title: "Амжилттай", description: "Тээврийн хэрэгслийг хаслаа."});
-        } catch(error) {
-             toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээврийн хэрэгсэл хасахад алдаа гарлаа.'});
-        }
-    }
-    
-    const handleVehicleStatusChange = async (vehicleId: string, status: VehicleStatus) => {
-        if (!id || !contract) return;
-
-        const updatedVehicles = contract.assignedVehicles.map(v => 
-            v.vehicleId === vehicleId ? { ...v, status } : v
-        );
-
-        try {
-            const contractRef = doc(db, 'contracted_transports', id);
-            await updateDoc(contractRef, { assignedVehicles: updatedVehicles });
-            setContract(prev => prev ? { ...prev, assignedVehicles: updatedVehicles } : null);
-            toast({ title: 'Амжилттай', description: 'Т/Х-ийн статус шинэчлэгдлээ.'});
-        } catch (error) {
-             toast({ variant: 'destructive', title: 'Алдаа', description: 'Т/Х-ийн статус шинэчлэхэд алдаа гарлаа.'});
-        }
-    };
-
-
     const onRouteStopSubmit = async (values: RouteStopFormValues) => {
         if (!id || !contract) return;
         setIsSubmitting(true);
@@ -911,20 +786,13 @@ export default function ContractedTransportDetailPage() {
     
     const dashboardStats = React.useMemo(() => {
     if (!contract) {
-        return { total: 0, completed: 0, inProgress: 0, totalDrivers: 0, totalVehicles: 0, vehiclesReady: 0, vehiclesInMaintenance: 0, vehiclesAvailable: 0 };
+        return { total: 0, completed: 0, inProgress: 0 };
     }
     const total = executions.length;
     const completed = executions.filter(e => e.status === 'Delivered').length;
     const inProgress = executions.filter(e => e.status !== 'Pending' && e.status !== 'Delivered').length;
-    
-    const totalDrivers = contract.assignedDrivers.length;
-    const totalVehicles = contract.assignedVehicles.length;
-    const vehiclesReady = contract.assignedVehicles.filter(v => v.status === 'Ready').length;
-    const vehiclesInMaintenance = contract.assignedVehicles.filter(v => v.status === 'Maintenance').length;
-    const vehiclesAvailable = contract.assignedVehicles.filter(v => v.status === 'Available').length;
 
-
-    return { total, completed, inProgress, totalDrivers, totalVehicles, vehiclesReady, vehiclesInMaintenance, vehiclesAvailable };
+    return { total, completed, inProgress };
 }, [executions, contract]);
     
     const handleSendToSheet = async (execution: ContractedTransportExecution) => {
@@ -956,21 +824,18 @@ export default function ContractedTransportDetailPage() {
         }
       };
 
-    const handleSaveAssignments = async (newAssignments: AssignedDriver[]) => {
+    const handleAssignmentsUpdate = async (updatedAssignments: AssignedDriver[], updatedVehicles: AssignedVehicle[]) => {
         if (!id) return;
-        setIsSubmitting(true);
         try {
             const contractRef = doc(db, 'contracted_transports', id);
             await updateDoc(contractRef, {
-                assignedDrivers: newAssignments
+                assignedDrivers: updatedAssignments,
+                assignedVehicles: updatedVehicles,
             });
-            setContract(prev => prev ? { ...prev, assignedDrivers: newAssignments } : null);
+            setContract(prev => prev ? { ...prev, assignedDrivers: updatedAssignments, assignedVehicles: updatedVehicles } : null);
             toast({ title: "Амжилттай", description: "Оноолт хадгалагдлаа."});
-            setIsAssignmentsDialogOpen(false);
         } catch (error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Оноолт хадгалахад алдаа гарлаа.'});
-        } finally {
-             setIsSubmitting(false);
         }
     }
 
@@ -1071,103 +936,44 @@ export default function ContractedTransportDetailPage() {
             </div>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." valueColorClass="text-primary" />
-        <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." valueColorClass="text-green-600" />
-        <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буй) гүйцэтгэл." valueColorClass="text-blue-600" />
-        <StatCard title="Нийт тээврийн хэрэгсэл" value={
-            <div className="flex items-center gap-4">
-                <span>{dashboardStats.totalVehicles}</span>
-                <div className="text-xs font-normal flex flex-col">
-                    <span>Бэлэн: {dashboardStats.vehiclesReady}</span>
-                    <span>Засварт: {dashboardStats.vehiclesInMaintenance}</span>
-                    <span>Чөлөөтэй: {dashboardStats.vehiclesAvailable}</span>
-                </div>
-            </div>
-        } icon={Car} description="Энэ гэрээнд оноогдсон т/х." valueColorClass="text-purple-600" />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+        <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." />
+        <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." />
+        <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буй) гүйцэтгэл." />
       </div>
 
        <Card className="mb-6">
-            <CardHeader>
-                <CardTitle>Оноосон Жолооч ба Т/Х</CardTitle>
-            </CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-6">
-                 <div>
-                    <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-semibold text-sm">Оноосон жолооч нар</h3>
-                        <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                    <PlusCircle className="mr-2 h-4 w-4"/> Жолооч нэмэх
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80 p-0">
-                                <Command><CommandInput placeholder="Жолооч хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
-                                    {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
-                                        <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={() => handleAddDriver(d.id)} disabled={isSubmitting}>
-                                            <Check className={cn("mr-2 h-4 w-4", assignedDriverIds.includes(d.id) ? "opacity-100" : "opacity-0")}/>
-                                            <span>{d.display_name} ({d.phone_number})</span>
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup></CommandList></Command>
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                    <div className="space-y-2">
-                        {contract.assignedDrivers.length > 0 ? ( contract.assignedDrivers.map(driver => (
-                            <div key={driver.driverId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
-                                <div><p className="font-medium">{driver.driverName}</p><p className="text-xs text-muted-foreground">{driver.driverPhone}</p></div>
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveDriver(driver)} disabled={isSubmitting}><XCircle className="h-4 w-4 text-destructive"/></Button>
-                            </div>
-                        ))) : (<p className="text-sm text-muted-foreground text-center py-1">Жолооч оноогоогүй.</p>)}
-                    </div>
+            <CardHeader className="flex-row justify-between items-center">
+                <div className="space-y-1.5">
+                    <CardTitle>Оноосон Жолооч ба Т/Х</CardTitle>
+                    <CardDescription>Энэ гэрээнд хамаарах жолооч, тээврийн хэрэгслийн жагсаалт ба оноолт.</CardDescription>
                 </div>
-                <div>
-                    <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-semibold text-sm">Оноосон тээврийн хэрэгсэл</h3>
-                        <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                    <PlusCircle className="mr-2 h-4 w-4"/> Т/Х нэмэх
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80 p-0">
-                                <Command><CommandInput placeholder="Машин хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
-                                    {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
-                                        <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={() => handleAddVehicle(v.id)} disabled={isSubmitting}>
-                                                <Check className={cn("mr-2 h-4 w-4", assignedVehicleIds.includes(v.id) ? "opacity-100" : "opacity-0")}/>
-                                            <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup></CommandList></Command>
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                        <div className="space-y-2">
-                        {contract.assignedVehicles.length > 0 ? ( contract.assignedVehicles.map(vehicle => (
-                            <div key={vehicle.vehicleId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
-                                <div>
-                                    <p className="font-medium font-mono">{vehicle.licensePlate}</p>
-                                    <p className="text-xs text-muted-foreground font-mono">{vehicle.modelName} {vehicle.trailerLicensePlate && `/ ${vehicle.trailerLicensePlate}`}</p>
+                <Button variant="outline" size="sm" onClick={() => setIsAssignmentsDialogOpen(true)}>
+                    <Settings className="mr-2 h-4 w-4"/> Удирдах
+                </Button>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                     <h3 className="font-semibold text-sm">Оноогдсон жолооч нар ба тэдгээрийн тээврийн хэрэгсэл</h3>
+                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {contract.assignedDrivers.length > 0 ? ( contract.assignedDrivers.map(driver => {
+                            const vehicle = contract.assignedVehicles.find(v => v.vehicleId === driver.assignedVehicleId)
+                            return (
+                                <div key={driver.driverId} className="flex flex-col text-sm p-3 rounded-md border">
+                                    <p className="font-medium">{driver.driverName}</p>
+                                    <p className="text-xs text-muted-foreground">{driver.driverPhone}</p>
+                                    <Separator className="my-2"/>
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <Car className="h-4 w-4 text-muted-foreground"/>
+                                        {vehicle ? (
+                                            <p className="font-mono">{vehicle.licensePlate}</p>
+                                        ) : (
+                                            <p className="text-muted-foreground">Т/Х оноогоогүй</p>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <Select 
-                                        value={vehicle.status || 'Available'} 
-                                        onValueChange={(status) => handleVehicleStatusChange(vehicle.vehicleId, status as VehicleStatus)}
-                                    >
-                                        <SelectTrigger className="h-8 w-32 text-xs">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {vehicleStatuses.map(s => (
-                                                <SelectItem key={s} value={s}>{vehicleStatusTranslations[s]}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveVehicle(vehicle)} disabled={isSubmitting}><XCircle className="h-4 w-4 text-destructive"/></Button>
-                                </div>
-                            </div>
-                        ))) : (<p className="text-sm text-muted-foreground text-center py-1">Т/Х оноогоогүй.</p>)}
+                            )
+                        })) : (<p className="text-sm text-muted-foreground text-center py-4 md:col-span-2 lg:col-span-3">Жолооч оноогоогүй байна. "Удирдах" товч дарж жолооч нэмнэ үү.</p>)}
                     </div>
                 </div>
             </CardContent>
@@ -1182,9 +988,6 @@ export default function ContractedTransportDetailPage() {
                             <CardDescription>Гүйцэтгэлийн явцыг чирж зөөх эсвэл сум ашиглан удирдах хэсэг.</CardDescription>
                         </div>
                             <div className="flex items-center gap-2">
-                             <Button variant="outline" size="sm" onClick={() => setIsAssignmentsDialogOpen(true)}>
-                                <LinkIcon className="mr-2 h-4 w-4"/> Оноолт хийх
-                            </Button>
                             <Button variant="outline" size="sm" onClick={() => setIsNewExecutionDialogOpen(true)}>
                                 <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
                             </Button>
@@ -1518,11 +1321,13 @@ export default function ContractedTransportDetailPage() {
             </AlertDialogContent>
         </AlertDialog>
 
-        <AssignmentsDialog 
+        <AssignmentsManagementDialog 
             open={isAssignmentsDialogOpen} 
             onOpenChange={setIsAssignmentsDialogOpen}
             contract={contract}
-            onSave={handleSaveAssignments}
+            drivers={drivers}
+            vehicles={vehicles}
+            onSave={handleAssignmentsUpdate}
             isSubmitting={isSubmitting}
         />
     </div>
@@ -1530,78 +1335,134 @@ export default function ContractedTransportDetailPage() {
 }
 
 
-function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting }: {
+function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, vehicles, onSave, isSubmitting: isSaving }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     contract: ContractedTransport | null;
-    onSave: (assignments: AssignedDriver[]) => void;
+    drivers: Driver[];
+    vehicles: Vehicle[];
+    onSave: (assignments: AssignedDriver[], vehicles: AssignedVehicle[]) => void;
     isSubmitting: boolean;
 }) {
-    const [assignments, setAssignments] = React.useState<AssignedDriver[]>([]);
-    
+    const [assignedDrivers, setAssignedDrivers] = React.useState<AssignedDriver[]>([]);
+    const [assignedVehicles, setAssignedVehicles] = React.useState<AssignedVehicle[]>([]);
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
+
     React.useEffect(() => {
         if (contract) {
-            setAssignments(contract.assignedDrivers);
+            setAssignedDrivers(contract.assignedDrivers);
+            setAssignedVehicles(contract.assignedVehicles);
         }
     }, [contract]);
 
     if (!contract) return null;
     
-    const handleVehicleChange = (driverId: string, vehicleId: string) => {
-        setAssignments(prev => prev.map(driver => 
+    const unassignedDrivers = drivers.filter(d => !assignedDrivers.some(ad => ad.driverId === d.id));
+    const unassignedVehicles = vehicles.filter(v => v.status === 'Available' && !assignedVehicles.some(av => av.vehicleId === v.id));
+
+    const handleAddDriver = (driverId: string) => {
+        const driver = drivers.find(d => d.id === driverId);
+        if (driver) {
+            setAssignedDrivers(prev => [...prev, { driverId: driver.id, driverName: driver.display_name, driverPhone: driver.phone_number }]);
+        }
+    }
+    const handleRemoveDriver = (driverId: string) => {
+        setAssignedDrivers(prev => prev.map(d => d.driverId === driverId ? {...d, assignedVehicleId: undefined} : d).filter(d => d.driverId !== driverId));
+    }
+
+    const handleAddVehicle = (vehicleId: string) => {
+        const vehicle = vehicles.find(v => v.id === vehicleId);
+        if(vehicle) {
+            setAssignedVehicles(prev => [...prev, { vehicleId: vehicle.id, licensePlate: vehicle.licensePlate, modelName: `${vehicle.makeName} ${vehicle.modelName}`, status: vehicle.status }]);
+        }
+    }
+    const handleRemoveVehicle = (vehicleId: string) => {
+        setAssignedVehicles(prev => prev.filter(v => v.vehicleId !== vehicleId));
+        setAssignedDrivers(prev => prev.map(d => d.assignedVehicleId === vehicleId ? {...d, assignedVehicleId: undefined} : d));
+    }
+    
+    const handleVehicleAssignmentChange = (driverId: string, vehicleId: string) => {
+        setAssignedDrivers(prev => prev.map(driver => 
             driver.driverId === driverId 
             ? { ...driver, assignedVehicleId: vehicleId === 'none' ? undefined : vehicleId } 
             : driver
         ));
     };
-    
-    const availableVehicles = (driverId?: string) => {
-        const assignedVehicleIds = assignments
-            .filter(d => d.driverId !== driverId && d.assignedVehicleId)
-            .map(d => d.assignedVehicleId);
-            
-        return contract.assignedVehicles.filter(v => !assignedVehicleIds.includes(v.vehicleId));
-    };
-    
+
     return (
          <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
-                    <DialogTitle>Жолооч, Т/Х-ийн оноолт</DialogTitle>
+                    <DialogTitle>Жолооч, Т/Х-ийн удирдлага</DialogTitle>
                     <DialogDescription>
-                        Энэ гэрээнд хамаарах жолоочдод тээврийн хэрэгслийг онооно уу.
+                        Энэ гэрээнд хамаарах жолооч, тээврийн хэрэгслийг удирдах, хооронд нь оноох хэсэг.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="py-4 space-y-2 max-h-[60vh] overflow-y-auto">
-                    {assignments.map(driver => (
-                        <div key={driver.driverId} className="grid grid-cols-2 gap-4 items-center p-2 border rounded-md">
-                           <div>
-                                <p className="font-medium">{driver.driverName}</p>
-                                <p className="text-xs text-muted-foreground">{driver.driverPhone}</p>
-                           </div>
-                           <Select 
-                             value={driver.assignedVehicleId || 'none'}
-                             onValueChange={(vehicleId) => handleVehicleChange(driver.driverId, vehicleId)}
-                           >
-                               <SelectTrigger>
-                                   <SelectValue placeholder="Т/Х сонгох..."/>
-                               </SelectTrigger>
-                               <SelectContent>
-                                   <SelectItem value="none">Оноогоогүй</SelectItem>
-                                   {availableVehicles(driver.driverId).map(v => (
-                                       <SelectItem key={v.vehicleId} value={v.vehicleId}>
-                                            {v.licensePlate} ({v.modelName})
-                                       </SelectItem>
-                                   ))}
-                               </SelectContent>
-                           </Select>
+                <div className="py-4 grid md:grid-cols-2 gap-6 max-h-[60vh] overflow-y-auto">
+                    <div className="space-y-4">
+                        <h3 className="font-semibold text-sm">Оноосон жолооч нар</h3>
+                        <div className="space-y-2">
+                            {assignedDrivers.map(driver => (
+                                <div key={driver.driverId} className="p-2 border rounded-md">
+                                   <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-medium">{driver.driverName}</p>
+                                            <p className="text-xs text-muted-foreground">{driver.driverPhone}</p>
+                                        </div>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveDriver(driver.driverId)}><X className="h-4 w-4 text-destructive"/></Button>
+                                   </div>
+                                   <Separator className="my-2"/>
+                                   <Select 
+                                     value={driver.assignedVehicleId || 'none'}
+                                     onValueChange={(vehicleId) => handleVehicleAssignmentChange(driver.driverId, vehicleId)}
+                                   >
+                                       <SelectTrigger className="h-8 text-xs">
+                                           <SelectValue placeholder="Т/Х сонгох..."/>
+                                       </SelectTrigger>
+                                       <SelectContent>
+                                           <SelectItem value="none">Оноогоогүй</SelectItem>
+                                           {assignedVehicles.filter(v => !assignedDrivers.some(d => d.assignedVehicleId === v.vehicleId && d.driverId !== driver.driverId)).map(v => (
+                                               <SelectItem key={v.vehicleId} value={v.vehicleId}>
+                                                    {v.licensePlate} ({v.modelName})
+                                               </SelectItem>
+                                           ))}
+                                       </SelectContent>
+                                   </Select>
+                                </div>
+                            ))}
                         </div>
-                    ))}
+                        <Popover>
+                            <PopoverTrigger asChild><Button variant="outline" size="sm" className="w-full"><PlusCircle className="mr-2 h-4 w-4"/> Жолооч нэмэх</Button></PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0"><Command><CommandInput placeholder="Жолооч хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
+                                {unassignedDrivers.map(d => ( <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={() => handleAddDriver(d.id)}> {d.display_name} ({d.phone_number}) </CommandItem>))}
+                            </CommandGroup></CommandList></Command></PopoverContent>
+                        </Popover>
+                    </div>
+                     <div className="space-y-4">
+                        <h3 className="font-semibold text-sm">Оноосон тээврийн хэрэгсэл</h3>
+                        <div className="space-y-2">
+                             {assignedVehicles.map(vehicle => (
+                                <div key={vehicle.vehicleId} className="flex justify-between items-center text-sm p-2 border rounded-md">
+                                    <div>
+                                        <p className="font-medium font-mono">{vehicle.licensePlate}</p>
+                                        <p className="text-xs text-muted-foreground">{vehicle.modelName}</p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveVehicle(vehicle.vehicleId)}><X className="h-4 w-4 text-destructive"/></Button>
+                                </div>
+                            ))}
+                        </div>
+                        <Popover>
+                            <PopoverTrigger asChild><Button variant="outline" size="sm" className="w-full"><PlusCircle className="mr-2 h-4 w-4"/> Т/Х нэмэх</Button></PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0"><Command><CommandInput placeholder="Машин хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
+                                {unassignedVehicles.map(v => ( <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={() => handleAddVehicle(v.id)}> {v.makeName} {v.modelName} ({v.licensePlate}) </CommandItem>))}
+                            </CommandGroup></CommandList></Command></PopoverContent>
+                        </Popover>
+                    </div>
                 </div>
                 <DialogFooter>
                     <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                    <Button onClick={() => onSave(assignments)} disabled={isSubmitting}>
-                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах
+                    <Button onClick={() => onSave(assignedDrivers, assignedVehicles)} disabled={isSaving}>
+                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -1624,3 +1485,6 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
 
     
 
+
+
+    
