@@ -258,7 +258,7 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
   );
 }
 
-function StatCard({ title, value, icon: Icon, description, actionLabel, onActionClick, valueColorClass }: { title: string; value: string | number | React.ReactNode; icon: React.ElementType; description: string; actionLabel?: string; onActionClick?: () => void; valueColorClass?: string; }) {
+function StatCard({ title, value, icon: Icon, description, valueColorClass }: { title: string; value: string | number | React.ReactNode; icon: React.ElementType; description: string; valueColorClass?: string; }) {
   return (
     <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -269,13 +269,6 @@ function StatCard({ title, value, icon: Icon, description, actionLabel, onAction
             <div className={cn("text-2xl font-bold", valueColorClass)}>{value}</div>
             <p className="text-xs text-muted-foreground">{description}</p>
         </CardContent>
-        {actionLabel && onActionClick && (
-            <CardFooter>
-                 <Button variant="outline" size="sm" className="w-full" onClick={onActionClick}>
-                    {actionLabel}
-                </Button>
-            </CardFooter>
-        )}
     </Card>
   );
 }
@@ -295,7 +288,6 @@ export default function ContractedTransportDetailPage() {
   
   const [isStopDialogOpen, setIsStopDialogOpen] = React.useState(false);
   const [isNewExecutionDialogOpen, setIsNewExecutionDialogOpen] = React.useState(false);
-  const [isResourcesDialogOpen, setIsResourcesDialogOpen] = React.useState(false);
   const [isAssignmentsDialogOpen, setIsAssignmentsDialogOpen] = React.useState(false);
 
   
@@ -1079,11 +1071,10 @@ export default function ContractedTransportDetailPage() {
             </div>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." valueColorClass="text-primary" />
         <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." valueColorClass="text-green-600" />
         <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буй) гүйцэтгэл." valueColorClass="text-blue-600" />
-        <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-orange-600" />
         <StatCard title="Нийт тээврийн хэрэгсэл" value={
             <div className="flex items-center gap-4">
                 <span>{dashboardStats.totalVehicles}</span>
@@ -1093,8 +1084,94 @@ export default function ContractedTransportDetailPage() {
                     <span>Чөлөөтэй: {dashboardStats.vehiclesAvailable}</span>
                 </div>
             </div>
-        } icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-purple-600" />
+        } icon={Car} description="Энэ гэрээнд оноогдсон т/х." valueColorClass="text-purple-600" />
       </div>
+
+       <Card className="mb-6">
+            <CardHeader>
+                <CardTitle>Оноосон Жолооч ба Т/Х</CardTitle>
+            </CardHeader>
+            <CardContent className="grid md:grid-cols-2 gap-6">
+                 <div>
+                    <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-semibold text-sm">Оноосон жолооч нар</h3>
+                        <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                    <PlusCircle className="mr-2 h-4 w-4"/> Жолооч нэмэх
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 p-0">
+                                <Command><CommandInput placeholder="Жолооч хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
+                                    {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
+                                        <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={() => handleAddDriver(d.id)} disabled={isSubmitting}>
+                                            <Check className={cn("mr-2 h-4 w-4", assignedDriverIds.includes(d.id) ? "opacity-100" : "opacity-0")}/>
+                                            <span>{d.display_name} ({d.phone_number})</span>
+                                        </CommandItem>
+                                    ))}
+                                </CommandGroup></CommandList></Command>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                    <div className="space-y-2">
+                        {contract.assignedDrivers.length > 0 ? ( contract.assignedDrivers.map(driver => (
+                            <div key={driver.driverId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
+                                <div><p className="font-medium">{driver.driverName}</p><p className="text-xs text-muted-foreground">{driver.driverPhone}</p></div>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveDriver(driver)} disabled={isSubmitting}><XCircle className="h-4 w-4 text-destructive"/></Button>
+                            </div>
+                        ))) : (<p className="text-sm text-muted-foreground text-center py-1">Жолооч оноогоогүй.</p>)}
+                    </div>
+                </div>
+                <div>
+                    <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-semibold text-sm">Оноосон тээврийн хэрэгсэл</h3>
+                        <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                    <PlusCircle className="mr-2 h-4 w-4"/> Т/Х нэмэх
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 p-0">
+                                <Command><CommandInput placeholder="Машин хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
+                                    {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
+                                        <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={() => handleAddVehicle(v.id)} disabled={isSubmitting}>
+                                                <Check className={cn("mr-2 h-4 w-4", assignedVehicleIds.includes(v.id) ? "opacity-100" : "opacity-0")}/>
+                                            <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
+                                        </CommandItem>
+                                    ))}
+                                </CommandGroup></CommandList></Command>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                        <div className="space-y-2">
+                        {contract.assignedVehicles.length > 0 ? ( contract.assignedVehicles.map(vehicle => (
+                            <div key={vehicle.vehicleId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
+                                <div>
+                                    <p className="font-medium font-mono">{vehicle.licensePlate}</p>
+                                    <p className="text-xs text-muted-foreground font-mono">{vehicle.modelName} {vehicle.trailerLicensePlate && `/ ${vehicle.trailerLicensePlate}`}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Select 
+                                        value={vehicle.status || 'Available'} 
+                                        onValueChange={(status) => handleVehicleStatusChange(vehicle.vehicleId, status as VehicleStatus)}
+                                    >
+                                        <SelectTrigger className="h-8 w-32 text-xs">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {vehicleStatuses.map(s => (
+                                                <SelectItem key={s} value={s}>{vehicleStatusTranslations[s]}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveVehicle(vehicle)} disabled={isSubmitting}><XCircle className="h-4 w-4 text-destructive"/></Button>
+                                </div>
+                            </div>
+                        ))) : (<p className="text-sm text-muted-foreground text-center py-1">Т/Х оноогоогүй.</p>)}
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
       
         <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <Card>
@@ -1440,102 +1517,6 @@ export default function ContractedTransportDetailPage() {
                     </div>
             </AlertDialogContent>
         </AlertDialog>
-
-
-        {/* Assigned Resources Dialog */}
-        <Dialog open={isResourcesDialogOpen} onOpenChange={setIsResourcesDialogOpen}>
-            <DialogContent className="sm:max-w-2xl">
-                 <DialogHeader>
-                    <DialogTitle>Оноосон Жолооч ба Т/Х</DialogTitle>
-                </DialogHeader>
-                <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto">
-                    <div>
-                         <div className="flex justify-between items-center mb-2">
-                            <h3 className="font-semibold text-sm">Оноосон жолооч нар</h3>
-                            <Popover open={addDriverPopoverOpen} onOpenChange={setAddDriverPopoverOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" size="sm">
-                                        <PlusCircle className="mr-2 h-4 w-4"/> Жолооч нэмэх
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-80 p-0">
-                                    <Command><CommandInput placeholder="Жолооч хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
-                                        {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
-                                            <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={() => handleAddDriver(d.id)} disabled={isSubmitting}>
-                                                <Check className={cn("mr-2 h-4 w-4", assignedDriverIds.includes(d.id) ? "opacity-100" : "opacity-0")}/>
-                                                <span>{d.display_name} ({d.phone_number})</span>
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup></CommandList></Command>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                        <div className="space-y-2">
-                            {contract.assignedDrivers.length > 0 ? ( contract.assignedDrivers.map(driver => (
-                                <div key={driver.driverId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
-                                    <div><p className="font-medium">{driver.driverName}</p><p className="text-xs text-muted-foreground">{driver.driverPhone}</p></div>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveDriver(driver)} disabled={isSubmitting}><XCircle className="h-4 w-4 text-destructive"/></Button>
-                                </div>
-                            ))) : (<p className="text-sm text-muted-foreground text-center py-1">Жолооч оноогоогүй.</p>)}
-                        </div>
-                    </div>
-                    <Separator/>
-                    <div>
-                        <div className="flex justify-between items-center mb-2">
-                            <h3 className="font-semibold text-sm">Оноосон тээврийн хэрэгсэл</h3>
-                            <Popover open={addVehiclePopoverOpen} onOpenChange={setAddVehiclePopoverOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" size="sm">
-                                        <PlusCircle className="mr-2 h-4 w-4"/> Т/Х нэмэх
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-80 p-0">
-                                    <Command><CommandInput placeholder="Машин хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
-                                        {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
-                                            <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={() => handleAddVehicle(v.id)} disabled={isSubmitting}>
-                                                 <Check className={cn("mr-2 h-4 w-4", assignedVehicleIds.includes(v.id) ? "opacity-100" : "opacity-0")}/>
-                                                <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup></CommandList></Command>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                         <div className="space-y-2">
-                            {contract.assignedVehicles.length > 0 ? ( contract.assignedVehicles.map(vehicle => (
-                                <div key={vehicle.vehicleId} className="flex justify-between items-center text-sm p-1.5 rounded-md hover:bg-muted">
-                                    <div>
-                                        <p className="font-medium font-mono">{vehicle.licensePlate}</p>
-                                        <p className="text-xs text-muted-foreground font-mono">{vehicle.modelName} {vehicle.trailerLicensePlate && `/ ${vehicle.trailerLicensePlate}`}</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Select 
-                                            value={vehicle.status || 'Available'} 
-                                            onValueChange={(status) => handleVehicleStatusChange(vehicle.vehicleId, status as VehicleStatus)}
-                                        >
-                                            <SelectTrigger className="h-8 w-32 text-xs">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {vehicleStatuses.map(s => (
-                                                    <SelectItem key={s} value={s}>{vehicleStatusTranslations[s]}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveVehicle(vehicle)} disabled={isSubmitting}><XCircle className="h-4 w-4 text-destructive"/></Button>
-                                    </div>
-                                </div>
-                            ))) : (<p className="text-sm text-muted-foreground text-center py-1">Т/Х оноогоогүй.</p>)}
-                        </div>
-                    </div>
-                </div>
-                 <DialogFooter>
-                    <DialogClose asChild>
-                        <Button type="button" variant="outline">Хаах</Button>
-                    </DialogClose>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
 
         <AssignmentsDialog 
             open={isAssignmentsDialogOpen} 
