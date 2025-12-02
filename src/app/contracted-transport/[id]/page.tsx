@@ -1524,7 +1524,7 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
                         Энэ гэрээнд хамаарах жолоочдод тээврийн хэрэгслийг онооно уу.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="py-4 space-y-2 max-h-[60vh] overflow-y-auto pr-6 -mr-6">
+                <div className="py-4 space-y-2 max-h-[60vh] overflow-y-auto">
                     {assignments.map(driver => (
                         <div key={driver.driverId} className="grid grid-cols-2 gap-4 items-center p-2 border rounded-md">
                            <div>
