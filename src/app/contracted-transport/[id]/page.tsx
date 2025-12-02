@@ -39,7 +39,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { generateChecklistAction, generateUnloadingChecklistAction } from './actions';
 
 const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
@@ -1069,7 +1068,7 @@ export default function ContractedTransportDetailPage() {
                             <Button variant="outline" size="sm" onClick={() => setIsNewExecutionDialogOpen(true)}>
                                 <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
+                            <Button variant="outline" size="sm" onClick={()={() => setIsStopDialogOpen(true)}>
                                 <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
                             </Button>
                         </div>
@@ -1407,7 +1406,7 @@ export default function ContractedTransportDetailPage() {
                                 <PopoverContent className="w-80 p-0">
                                     <Command><CommandInput placeholder="Жолооч хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
                                         {drivers.filter(d => !assignedDriverIds.includes(d.id)).map(d => (
-                                            <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={()={() => handleAddDriver(d.id)}} disabled={isSubmitting}>
+                                            <CommandItem key={d.id} value={`${d.display_name} ${d.phone_number}`} onSelect={() => handleAddDriver(d.id)} disabled={isSubmitting}>
                                                 <Check className={cn("mr-2 h-4 w-4", assignedDriverIds.includes(d.id) ? "opacity-100" : "opacity-0")}/>
                                                 <span>{d.display_name} ({d.phone_number})</span>
                                             </CommandItem>
@@ -1438,7 +1437,7 @@ export default function ContractedTransportDetailPage() {
                                 <PopoverContent className="w-80 p-0">
                                     <Command><CommandInput placeholder="Машин хайх..."/><CommandList><CommandEmpty>Олдсонгүй.</CommandEmpty><CommandGroup>
                                         {vehicles.filter(v => v.status === 'Available' && !assignedVehicleIds.includes(v.id)).map(v => (
-                                            <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={()={() => handleAddVehicle(v.id)}} disabled={isSubmitting}>
+                                            <CommandItem key={v.id} value={`${v.makeName} ${v.modelName} ${v.licensePlate}`} onSelect={() => handleAddVehicle(v.id)} disabled={isSubmitting}>
                                                  <Check className={cn("mr-2 h-4 w-4", assignedVehicleIds.includes(v.id) ? "opacity-100" : "opacity-0")}/>
                                                 <span>{v.makeName} {v.modelName} ({v.licensePlate})</span>
                                             </CommandItem>
@@ -1559,8 +1558,5 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
         </Dialog>
     );
 }
-
-    
-
 
     
