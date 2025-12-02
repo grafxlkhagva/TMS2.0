@@ -1068,7 +1068,7 @@ export default function ContractedTransportDetailPage() {
                             <Button variant="outline" size="sm" onClick={() => setIsNewExecutionDialogOpen(true)}>
                                 <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
                             </Button>
-                            <Button variant="outline" size="sm" onClick={()={() => setIsStopDialogOpen(true)}>
+                            <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
                                 <PlusCircle className="mr-2 h-4 w-4"/> Зогсоол нэмэх
                             </Button>
                         </div>
@@ -1467,7 +1467,6 @@ export default function ContractedTransportDetailPage() {
             </DialogContent>
         </Dialog>
 
-        {/* Assignments Dialog */}
         <AssignmentsDialog 
             open={isAssignmentsDialogOpen} 
             onOpenChange={setIsAssignmentsDialogOpen}
