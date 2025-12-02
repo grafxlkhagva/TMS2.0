@@ -377,7 +377,7 @@ export default function ContractedTransportDetailPage() {
             assignedDrivers: data.assignedDrivers || [],
             assignedVehicles: data.assignedVehicles || [],
             routeStops: data.routeStops || [],
-            cargoItems: (data.cargoItems || []).map((item: any, index: number) => ({ ...item, id: item.id || `cargo-${index}`})),
+            cargoItems: (data.cargoItems || []).map((item: any) => ({ ...item, id: item.id || uuidv4()})),
         } as ContractedTransport;
         setContract(fetchedContract);
         
@@ -1566,3 +1566,5 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
     
 
       
+
+    
