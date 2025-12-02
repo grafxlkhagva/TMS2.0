@@ -258,20 +258,20 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
   );
 }
 
-function StatCard({ title, value, icon: Icon, description, actionLabel, onActionClick, valueColorClass, colorClass }: { title: string; value: string | number | React.ReactNode; icon: React.ElementType; description: string; actionLabel?: string; onActionClick?: () => void; valueColorClass?: string; colorClass?: string; }) {
+function StatCard({ title, value, icon: Icon, description, actionLabel, onActionClick, valueColorClass }: { title: string; value: string | number | React.ReactNode; icon: React.ElementType; description: string; actionLabel?: string; onActionClick?: () => void; valueColorClass?: string; }) {
   return (
-    <Card className={cn("text-white", colorClass)}>
+    <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{title}</CardTitle>
-            <Icon className="h-4 w-4 text-gray-300" />
+            <Icon className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
             <div className={cn("text-2xl font-bold", valueColorClass)}>{value}</div>
-            <p className="text-xs text-gray-400">{description}</p>
+            <p className="text-xs text-muted-foreground">{description}</p>
         </CardContent>
         {actionLabel && onActionClick && (
             <CardFooter>
-                 <Button variant="outline" size="sm" className="w-full bg-gray-700 text-white hover:bg-gray-600" onClick={onActionClick}>
+                 <Button variant="outline" size="sm" className="w-full" onClick={onActionClick}>
                     {actionLabel}
                 </Button>
             </CardFooter>
@@ -1080,10 +1080,10 @@ export default function ContractedTransportDetailPage() {
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-6">
-        <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." valueColorClass="text-dashboard-stat-1" colorClass="bg-gray-900" />
-        <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." valueColorClass="text-dashboard-stat-2" colorClass="bg-gray-900" />
-        <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буулгаж буй) гүйцэтгэл." valueColorClass="text-dashboard-stat-3" colorClass="bg-gray-900" />
-        <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-dashboard-stat-4" colorClass="bg-gray-900" />
+        <StatCard title="Нийт гүйцэтгэл" value={dashboardStats.total} icon={Briefcase} description="Бүртгэгдсэн нийт гүйцэтгэлийн тоо." valueColorClass="text-primary" />
+        <StatCard title="Амжилттай" value={dashboardStats.completed} icon={CheckCircle} description="Амжилттай хүргэгдсэн гүйцэтгэл." valueColorClass="text-green-600" />
+        <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буй) гүйцэтгэл." valueColorClass="text-blue-600" />
+        <StatCard title="Нийт жолооч" value={dashboardStats.totalDrivers} icon={User} description="Энэ гэрээнд оноогдсон жолооч." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-orange-600" />
         <StatCard title="Нийт тээврийн хэрэгсэл" value={
             <div className="flex items-center gap-4">
                 <span>{dashboardStats.totalVehicles}</span>
@@ -1093,8 +1093,8 @@ export default function ContractedTransportDetailPage() {
                     <span>Чөлөөтэй: {dashboardStats.vehiclesAvailable}</span>
                 </div>
             </div>
-        } icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-dashboard-stat-5" colorClass="bg-gray-900" />
-        <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." valueColorClass="text-dashboard-stat-6" colorClass="bg-gray-900" />
+        } icon={Car} description="Энэ гэрээнд оноогдсон т/х." actionLabel="Дэлгэрэнгүй" onActionClick={() => setIsResourcesDialogOpen(true)} valueColorClass="text-purple-600" />
+        <StatCard title="Хугацаа дуусахад" value={`${dashboardStats.daysLeft > 0 ? dashboardStats.daysLeft : 0} хоног`} icon={Clock} description="Гэрээ дуусахад үлдсэн хугацаа." valueColorClass="text-red-600" />
       </div>
       
         <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -1637,5 +1637,9 @@ function AssignmentsDialog({ open, onOpenChange, contract, onSave, isSubmitting 
 
     
 
+
+    
+
+    
 
     
