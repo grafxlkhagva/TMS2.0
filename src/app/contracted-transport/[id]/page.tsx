@@ -1116,6 +1116,7 @@ export default function ContractedTransportDetailPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Жолооч / Машин</TableHead>
+                            <TableHead>Ачаа</TableHead>
                             <TableHead>Ачсан</TableHead>
                             <TableHead>Буулгасан</TableHead>
                             <TableHead>Ачих цэг</TableHead>
@@ -1136,6 +1137,14 @@ export default function ContractedTransportDetailPage() {
                                 <TableCell>
                                     <p className="font-medium">{exec.driverName || 'TBA'}</p>
                                     <p className="text-xs text-muted-foreground">{exec.vehicleLicense || 'TBA'}</p>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex flex-wrap gap-1">
+                                        {(exec.selectedCargo || []).map(cargoId => {
+                                            const cargoName = contract.cargoItems.find(c => c.id === cargoId)?.name;
+                                            return cargoName ? <Badge key={cargoId} variant="secondary">{cargoName}</Badge> : null;
+                                        })}
+                                    </div>
                                 </TableCell>
                                 <TableCell>{getStatusDate(exec, 'Loaded')}</TableCell>
                                 <TableCell>{getStatusDate(exec, 'Delivered')}</TableCell>
@@ -1166,7 +1175,7 @@ export default function ContractedTransportDetailPage() {
                             </TableRow>
                         )}) : (
                             <TableRow>
-                                <TableCell colSpan={11} className="h-24 text-center">Гүйцэтгэл бүртгэгдээгүй байна.</TableCell>
+                                <TableCell colSpan={12} className="h-24 text-center">Гүйцэтгэл бүртгэгдээгүй байна.</TableCell>
                             </TableRow>
                         )}
                     </TableBody>
