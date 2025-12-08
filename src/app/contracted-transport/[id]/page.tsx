@@ -853,6 +853,27 @@ export default function ContractedTransportDetailPage() {
         }
     }
 
+    const groupedVehicles = React.useMemo(() => {
+        if (!contract) return { Ready: [], Maintenance: [], Available: [] };
+        
+        const grouped: Record<VehicleStatus, (AssignedVehicle & { assignedDriver?: AssignedDriver })[]> = {
+            Ready: [],
+            Maintenance: [],
+            Available: [],
+        };
+    
+        contract.assignedVehicles.forEach(vehicle => {
+            const status = vehicle.status || 'Available';
+            const assignedDriver = contract.assignedDrivers.find(d => d.assignedVehicleId === vehicle.vehicleId);
+            
+            if (grouped[status]) {
+                grouped[status].push({ ...vehicle, assignedDriver });
+            }
+        });
+    
+        return grouped;
+    }, [contract]);
+
 
   if (isLoading) {
     return (
@@ -959,37 +980,42 @@ export default function ContractedTransportDetailPage() {
        <Card className="mb-6">
             <CardHeader className="flex-row justify-between items-center">
                 <div className="space-y-1.5">
-                    <CardTitle>Оноосон Жолооч ба Т/Х</CardTitle>
-                    <CardDescription>Энэ гэрээнд хамаарах жолооч, тээврийн хэрэгслийн жагсаалт ба оноолт.</CardDescription>
+                    <CardTitle>Тээврийн бэлэн байдал</CardTitle>
+                    <CardDescription>Оноосон тээврийн хэрэгслүүдийн статус.</CardDescription>
                 </div>
                  <Button variant="outline" size="sm" onClick={() => setIsAssignmentsDialogOpen(true)}>
                     <Settings className="mr-2 h-4 w-4"/> Удирдах
                 </Button>
             </CardHeader>
              <CardContent>
-                <div className="space-y-4">
-                     <h3 className="font-semibold text-sm">Оноогдсон жолооч нар ба тэдгээрийн тээврийн хэрэгсэл</h3>
-                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {contract.assignedDrivers.length > 0 ? ( contract.assignedDrivers.map(driver => {
-                            const vehicle = contract.assignedVehicles.find(v => v.vehicleId === driver.assignedVehicleId)
-                            return (
-                                <div key={driver.driverId} className="flex flex-col text-sm p-3 rounded-md border">
-                                    <p className="font-medium">{driver.driverName}</p>
-                                    <p className="text-xs text-muted-foreground">{driver.driverPhone}</p>
-                                    <Separator className="my-2"/>
-                                    <div className="flex items-center gap-2 text-xs">
-                                        <Car className="h-4 w-4 text-muted-foreground"/>
-                                        {vehicle ? (
-                                            <p className="font-mono">{vehicle.licensePlate}</p>
-                                        ) : (
-                                            <p className="text-muted-foreground">Т/Х оноогоогүй</p>
-                                        )}
-                                    </div>
-                                </div>
-                            )
-                        })) : (<p className="text-sm text-muted-foreground text-center py-4 md:col-span-2 lg:col-span-3">Жолооч оноогоогүй байна. "Удирдах" товч дарж жолооч нэмнэ үү.</p>)}
-                    </div>
-                </div>
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {(Object.keys(groupedVehicles) as VehicleStatus[]).map(status => (
+                        <div key={status} className="p-3 rounded-lg bg-muted/50">
+                            <h3 className="font-semibold text-sm mb-3">{vehicleStatusTranslations[status]} ({groupedVehicles[status].length})</h3>
+                            <div className="space-y-2">
+                                {groupedVehicles[status].length > 0 ? (
+                                    groupedVehicles[status].map(vehicle => (
+                                        <div key={vehicle.vehicleId} className="flex flex-col text-sm p-2 rounded-md border bg-card">
+                                            <p className="font-medium font-mono">{vehicle.licensePlate}</p>
+                                            <p className="text-xs text-muted-foreground">{vehicle.modelName}</p>
+                                            <Separator className="my-1.5"/>
+                                            <div className="flex items-center gap-2 text-xs">
+                                                <User className="h-3 w-3 text-muted-foreground"/>
+                                                {vehicle.assignedDriver ? (
+                                                    <p>{vehicle.assignedDriver.driverName}</p>
+                                                ) : (
+                                                    <p className="text-muted-foreground italic">Жолоочгүй</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-xs text-muted-foreground text-center py-4">Тээврийн хэрэгсэл алга.</p>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                 </div>
             </CardContent>
         </Card>
       
@@ -1370,7 +1396,7 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, ve
     if (!contract) return null;
     
     const unassignedDrivers = drivers.filter(d => !assignedDrivers.some(ad => ad.driverId === d.id));
-    const unassignedVehicles = vehicles.filter(v => v.status === 'Available' && !assignedVehicles.some(av => av.vehicleId === v.id));
+    const unassignedVehicles = vehicles.filter(v => !assignedVehicles.some(av => av.vehicleId === v.id));
 
     const handleAddDriver = (driverId: string) => {
         const driver = drivers.find(d => d.id === driverId);
