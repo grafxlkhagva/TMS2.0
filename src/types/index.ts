@@ -4,7 +4,7 @@ import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Delayed';
 
-export type VehicleStatus = 'Available' | 'In Use' | 'Maintenance' | 'Ready';
+export type VehicleStatus = 'Available' | 'Maintenance' | 'Ready';
 
 export type Vehicle = {
   id: string;
@@ -484,5 +484,7 @@ export type ContractedTransport = {
     
 
 
+
+    
 
     

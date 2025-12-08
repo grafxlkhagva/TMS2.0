@@ -86,11 +86,10 @@ const statusTranslations: Record<string, string> = {
 
 const vehicleStatusTranslations: Record<VehicleStatus, string> = {
   Available: 'Чөлөөтэй',
-  'In Use': 'Ашиглаж буй',
   Maintenance: 'Засварт',
   Ready: 'Бэлэн'
 };
-const vehicleStatuses: VehicleStatus[] = ['Available', 'In Use', 'Maintenance', 'Ready'];
+const vehicleStatuses: VehicleStatus[] = ['Available', 'Maintenance', 'Ready'];
 
 
 const toDateSafe = (date: any): Date | null => {
@@ -1510,3 +1509,6 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, ve
 
     
 
+
+
+    
