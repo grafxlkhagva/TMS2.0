@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -1199,7 +1200,7 @@ export default function ContractedTransportDetailPage() {
                                             {contract.cargoItems.map((item) => (
                                                 <FormItem key={item.id} className="flex flex-row items-center space-x-3 space-y-0 p-2 border rounded-md">
                                                     <FormControl>
-                                                        <RadioGroupItem value={item.id} />
+                                                        <RadioGroupItem value={item.id} id={`select-cargo-${item.id}`} />
                                                     </FormControl>
                                                      <Label htmlFor={`select-cargo-${item.id}`} className="font-normal w-full cursor-pointer">
                                                          {item.name} ({item.unit})
@@ -1541,27 +1542,3 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, ve
 }
 
     
-
-    
-
-      
-
-    
-
-
-    
-
-    
-
-    
-
-
-
-    
-
-
-
-    
-
-
-
