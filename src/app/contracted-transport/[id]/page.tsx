@@ -89,7 +89,7 @@ const vehicleStatusTranslations: Record<VehicleStatus, string> = {
   Maintenance: 'Засварт',
   Ready: 'Бэлэн'
 };
-const vehicleStatuses: VehicleStatus[] = ['Available', 'Maintenance', 'Ready'];
+const vehicleStatuses: VehicleStatus[] = ['Ready', 'Available', 'Maintenance'];
 
 
 const toDateSafe = (date: any): Date | null => {
@@ -989,7 +989,7 @@ export default function ContractedTransportDetailPage() {
             </CardHeader>
              <CardContent>
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {(Object.keys(groupedVehicles) as VehicleStatus[]).map(status => (
+                    {vehicleStatuses.map(status => (
                         <div key={status} className="p-3 rounded-lg bg-muted/50">
                             <h3 className="font-semibold text-sm mb-3">{vehicleStatusTranslations[status]} ({groupedVehicles[status].length})</h3>
                             <div className="space-y-2">
@@ -1538,3 +1538,4 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, ve
 
 
     
+
