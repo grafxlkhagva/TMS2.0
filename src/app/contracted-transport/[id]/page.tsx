@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -9,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch, type DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportExecutionStatus, ContractedTransportStatus, ContractedTransportCargoItem, AssignedDriver, VehicleStatus, AssignedVehicle } from '@/types';
+import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportExecutionStatus, ContractedTransportStatus, ContractedTransportCargoItem, AssignedDriver, AssignedVehicle, VehicleStatus } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -871,11 +872,7 @@ export default function ContractedTransportDetailPage() {
         });
 
         const statusOrder: VehicleStatus[] = ['Ready', 'Available', 'Maintenance'];
-        const orderedGrouped: Record<VehicleStatus, (AssignedVehicle & { assignedDriver?: AssignedDriver })[]> = {
-            Ready: [],
-            Available: [],
-            Maintenance: [],
-        };
+        const orderedGrouped: any = {};
         statusOrder.forEach(status => {
             if (grouped[status]) {
                 orderedGrouped[status] = grouped[status];
@@ -890,31 +887,30 @@ export default function ContractedTransportDetailPage() {
         setIsNewExecutionDialogOpen(true);
     };
 
-
-  if (isLoading) {
-    return (
-        <div className="container mx-auto py-6">
-            <div className="mb-6"><Skeleton className="h-8 w-24 mb-4" /><Skeleton className="h-8 w-1/3" /></div>
-            <div className="space-y-6">
-                <Card><CardHeader><Skeleton className="h-6 w-1/2"/></CardHeader><CardContent><Skeleton className="h-40 w-full"/></CardContent></Card>
-                <Card><CardHeader><Skeleton className="h-6 w-1/2"/></CardHeader><CardContent><Skeleton className="h-40 w-full"/></CardContent></Card>
+    if (isLoading) {
+        return (
+            <div className="container mx-auto py-6">
+                <div className="mb-6"><Skeleton className="h-8 w-24 mb-4" /><Skeleton className="h-8 w-1/3" /></div>
+                <div className="space-y-6">
+                    <Card><CardHeader><Skeleton className="h-6 w-1/2"/></CardHeader><CardContent><Skeleton className="h-40 w-full"/></CardContent></Card>
+                    <Card><CardHeader><Skeleton className="h-6 w-1/2"/></CardHeader><CardContent><Skeleton className="h-40 w-full"/></CardContent></Card>
+                </div>
             </div>
-        </div>
-    )
-  }
+        )
+    }
 
-  if (!contract) return null;
-  
-  const statusInfo = statusDetails[contract.status] || { text: contract.status, variant: 'secondary' as const, icon: Clock };
-  const contractStartDate = toDateSafe(contract.startDate);
-  const contractEndDate = toDateSafe(contract.endDate);
+    if (!contract) return null;
+    
+    const statusInfo = statusDetails[contract.status] || { text: contract.status, variant: 'secondary' as const, icon: Clock };
+    const contractStartDate = toDateSafe(contract.startDate);
+    const contractEndDate = toDateSafe(contract.endDate);
 
 
-  const getStatusDate = (exec: ContractedTransportExecution, status: ContractedTransportExecutionStatus): string => {
-    const historyItem = exec.statusHistory.find(h => h.status === status);
-    const date = historyItem ? toDateSafe(historyItem.date) : null;
-    return date ? format(date, 'yyyy-MM-dd HH:mm') : '-';
-  };
+    const getStatusDate = (exec: ContractedTransportExecution, status: ContractedTransportExecutionStatus): string => {
+        const historyItem = exec.statusHistory.find(h => h.status === status);
+        const date = historyItem ? toDateSafe(historyItem.date) : null;
+        return date ? format(date, 'yyyy-MM-dd HH:mm') : '-';
+    };
 
   return (
     <div className="container mx-auto py-6">
@@ -1010,7 +1006,7 @@ export default function ContractedTransportDetailPage() {
                             <h3 className="font-semibold text-sm mb-3">{vehicleStatusTranslations[status]} ({groupedVehicles[status].length})</h3>
                             <div className="space-y-2">
                                 {groupedVehicles[status].length > 0 ? (
-                                    groupedVehicles[status].map(vehicle => (
+                                    groupedVehicles[status].map((vehicle: any) => (
                                         <Card key={vehicle.vehicleId} className="bg-card">
                                             <CardContent className="p-3 text-sm">
                                                 <p className="font-medium font-mono">{vehicle.licensePlate}</p>
@@ -1540,5 +1536,3 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, ve
         </Dialog>
     );
 }
-
-    
