@@ -884,8 +884,8 @@ export default function ContractedTransportDetailPage() {
         return orderedGrouped;
     }, [contract]);
     
-    const openNewExecutionDialog = (assignmentId: string) => {
-        newExecutionForm.reset({ date: new Date(), assignmentId: assignmentId, selectedCargoId: undefined});
+    const openNewExecutionDialog = (assignmentId?: string) => {
+        newExecutionForm.reset({ date: new Date(), assignmentId: assignmentId || '', selectedCargoId: undefined});
         setIsNewExecutionDialogOpen(true);
     };
 
@@ -1052,7 +1052,7 @@ export default function ContractedTransportDetailPage() {
                             <CardDescription>Гүйцэтгэлийн явцыг чирж зөөх эсвэл сум ашиглан удирдах хэсэг.</CardDescription>
                         </div>
                             <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" onClick={() => setIsNewExecutionDialogOpen(true)}>
+                            <Button variant="outline" size="sm" onClick={() => openNewExecutionDialog()}>
                                 <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
                             </Button>
                             <Button variant="outline" size="sm" onClick={() => setIsStopDialogOpen(true)}>
@@ -1562,5 +1562,6 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, ve
 
 
     
+
 
 
