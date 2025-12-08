@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import * as React from 'react';
@@ -870,9 +868,26 @@ export default function ContractedTransportDetailPage() {
                 grouped[status].push({ ...vehicle, assignedDriver });
             }
         });
+
+        const statusOrder: VehicleStatus[] = ['Ready', 'Available', 'Maintenance'];
+        const orderedGrouped: Record<VehicleStatus, (AssignedVehicle & { assignedDriver?: AssignedDriver })[]> = {
+            Ready: [],
+            Available: [],
+            Maintenance: [],
+        };
+        statusOrder.forEach(status => {
+            if (grouped[status]) {
+                orderedGrouped[status] = grouped[status];
+            }
+        });
     
-        return grouped;
+        return orderedGrouped;
     }, [contract]);
+    
+    const openNewExecutionDialog = (assignmentId: string) => {
+        newExecutionForm.reset({ date: new Date(), assignmentId: assignmentId, selectedCargoId: undefined});
+        setIsNewExecutionDialogOpen(true);
+    };
 
 
   if (isLoading) {
@@ -989,25 +1004,34 @@ export default function ContractedTransportDetailPage() {
             </CardHeader>
              <CardContent>
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {vehicleStatuses.map(status => (
+                    {(Object.keys(groupedVehicles) as VehicleStatus[]).map(status => (
                         <div key={status} className="p-3 rounded-lg bg-muted/50">
                             <h3 className="font-semibold text-sm mb-3">{vehicleStatusTranslations[status]} ({groupedVehicles[status].length})</h3>
                             <div className="space-y-2">
                                 {groupedVehicles[status].length > 0 ? (
                                     groupedVehicles[status].map(vehicle => (
-                                        <div key={vehicle.vehicleId} className="flex flex-col text-sm p-2 rounded-md border bg-card">
-                                            <p className="font-medium font-mono">{vehicle.licensePlate}</p>
-                                            <p className="text-xs text-muted-foreground">{vehicle.modelName}</p>
-                                            <Separator className="my-1.5"/>
-                                            <div className="flex items-center gap-2 text-xs">
-                                                <User className="h-3 w-3 text-muted-foreground"/>
-                                                {vehicle.assignedDriver ? (
-                                                    <p>{vehicle.assignedDriver.driverName}</p>
-                                                ) : (
-                                                    <p className="text-muted-foreground italic">Жолоочгүй</p>
-                                                )}
-                                            </div>
-                                        </div>
+                                        <Card key={vehicle.vehicleId} className="bg-card">
+                                            <CardContent className="p-3 text-sm">
+                                                <p className="font-medium font-mono">{vehicle.licensePlate}</p>
+                                                <p className="text-xs text-muted-foreground">{vehicle.modelName}</p>
+                                                <Separator className="my-1.5"/>
+                                                <div className="flex items-center gap-2 text-xs">
+                                                    <User className="h-3 w-3 text-muted-foreground"/>
+                                                    {vehicle.assignedDriver ? (
+                                                        <p>{vehicle.assignedDriver.driverName}</p>
+                                                    ) : (
+                                                        <p className="text-muted-foreground italic">Жолоочгүй</p>
+                                                    )}
+                                                </div>
+                                            </CardContent>
+                                            {status === 'Ready' && vehicle.assignedDriver && (
+                                                <CardFooter className="p-2 border-t">
+                                                    <Button size="xs" className="w-full" onClick={() => openNewExecutionDialog(vehicle.assignedDriver!.driverId)}>
+                                                        <PlusCircle className="mr-2 h-3 w-3"/> Гүйцэтгэл нэмэх
+                                                    </Button>
+                                                </CardFooter>
+                                            )}
+                                        </Card>
                                     ))
                                 ) : (
                                     <p className="text-xs text-muted-foreground text-center py-4">Тээврийн хэрэгсэл алга.</p>
@@ -1538,4 +1562,5 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, ve
 
 
     
+
 
