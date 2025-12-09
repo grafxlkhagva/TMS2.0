@@ -339,8 +339,17 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+    const [defaultOpen, setDefaultOpen] = React.useState(true);
+
+    React.useEffect(() => {
+        const checkScreenSize = () => {
+            setDefaultOpen(window.innerWidth >= 1536);
+        };
+        checkScreenSize();
+    }, []);
+
     return (
-        <SidebarProvider>
+        <SidebarProvider defaultOpen={defaultOpen}>
             <AppShellContent>{children}</AppShellContent>
         </SidebarProvider>
     );
