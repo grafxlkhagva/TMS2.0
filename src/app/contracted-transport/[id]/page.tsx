@@ -1002,7 +1002,7 @@ export default function ContractedTransportDetailPage() {
              <CardContent>
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
                     {(Object.keys(groupedVehicles) as VehicleStatus[]).map(status => (
-                        <div key={status} className="p-3 rounded-lg bg-muted/50 flex flex-col">
+                        <div key={status} className="p-3 rounded-lg bg-muted/50 flex flex-col min-h-0">
                             <h3 className="font-semibold text-sm mb-3 flex-shrink-0">{vehicleStatusTranslations[status]} ({groupedVehicles[status].length})</h3>
                             <div className="space-y-2 overflow-y-auto flex-grow pr-2 -mr-2">
                                 {groupedVehicles[status].length > 0 ? (
@@ -1023,7 +1023,7 @@ export default function ContractedTransportDetailPage() {
                                             </CardContent>
                                             {status === 'Ready' && vehicle.assignedDriver && (
                                                 <CardFooter className="p-2 border-t">
-                                                    <Button size="xs" className="w-full" onClick={() => openNewExecutionDialog(vehicle.assignedDriver!.driverId)}>
+                                                    <Button size="xs" className="w-full" onClick={() => openNewExecutionDialog(vehicle.assignedDriver.driverId)}>
                                                         <PlusCircle className="mr-2 h-3 w-3"/> Гүйцэтгэл нэмэх
                                                     </Button>
                                                 </CardFooter>
@@ -1538,3 +1538,4 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, ve
         </Dialog>
     );
 }
+
