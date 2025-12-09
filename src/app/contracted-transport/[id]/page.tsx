@@ -209,7 +209,7 @@ function StatusColumn({ id, title, items, stop, onEditStop, onDeleteStop, onEdit
   const statusIndex = executionStatuses.indexOf(id);
 
   return (
-    <div ref={setNodeRef} className="p-2 rounded-lg bg-muted/50 min-h-40 flex flex-col">
+    <div ref={setNodeRef} className="p-2 rounded-lg bg-muted/50 flex flex-col">
       <div className="font-semibold text-center text-sm p-2 rounded-md relative group/stop-header">
           <h3 className={`${statusColorMap[id] || 'bg-purple-500'} text-white p-2 rounded-md`}>
               {title}
@@ -338,7 +338,7 @@ export default function ContractedTransportDetailPage() {
     resolver: zodResolver(newExecutionFormSchema),
     defaultValues: {
       date: new Date(),
-      driverId: '',
+      driverId: undefined, 
       selectedCargoId: undefined,
     }
   });
@@ -445,7 +445,7 @@ export default function ContractedTransportDetailPage() {
 
   React.useEffect(() => {
     if (isNewExecutionDialogOpen) {
-      newExecutionForm.reset({ date: new Date(), driverId: '', selectedCargoId: undefined});
+      newExecutionForm.reset({ date: new Date(), driverId: undefined, selectedCargoId: undefined});
     }
   }, [isNewExecutionDialogOpen, newExecutionForm]);
 
@@ -886,7 +886,7 @@ export default function ContractedTransportDetailPage() {
     }, [contract]);
     
     const openNewExecutionDialog = (driverId?: string) => {
-        newExecutionForm.reset({ date: new Date(), driverId: driverId || '', selectedCargoId: undefined});
+        newExecutionForm.reset({ date: new Date(), driverId: driverId || undefined, selectedCargoId: undefined});
         setIsNewExecutionDialogOpen(true);
     };
 
@@ -1541,4 +1541,5 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, ve
         </Dialog>
     );
 }
+
 
