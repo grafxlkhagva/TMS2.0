@@ -148,7 +148,6 @@ function Nav() {
             {baseNavItems.map(item => 
                 <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton>
-                        <item.icon/>
                         <span>{item.label}</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -170,7 +169,6 @@ function Nav() {
                     tooltip={state === 'collapsed' ? { children: item.label, side: 'right' } : undefined}
                 >
                     <div className="flex items-center gap-2">
-                        <item.icon />
                         <span>{item.label}</span>
                     </div>
                     <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform duration-200", state === 'collapsed' && "hidden", "group-data-[state=open]:rotate-180")} />
@@ -196,7 +194,6 @@ function Nav() {
                 isActive={pathname === item.href}
                 tooltip={state === 'collapsed' ? { children: item.label, side: 'right' } : undefined}
               >
-                <item.icon />
                 <span>{item.label}</span>
               </SidebarMenuButton>
             </Link>
@@ -345,7 +342,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         const checkScreenSize = () => {
             setDefaultOpen(window.innerWidth >= 1536);
         };
+        
+        // Check on mount
         checkScreenSize();
+        
+        // Optional: Check on resize if you want it to be more dynamic
+        // window.addEventListener('resize', checkScreenSize);
+        // return () => window.removeEventListener('resize', checkScreenSize);
     }, []);
 
     return (
