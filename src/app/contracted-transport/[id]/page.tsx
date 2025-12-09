@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -302,6 +303,7 @@ export default function ContractedTransportDetailPage() {
 
   
   const [sendingToSheet, setSendingToSheet] = React.useState<string | null>(null);
+  const [defaultDriverIdForDialog, setDefaultDriverIdForDialog] = React.useState<string | undefined>(undefined);
 
 
   const [relatedData, setRelatedData] = React.useState({
@@ -338,7 +340,7 @@ export default function ContractedTransportDetailPage() {
     resolver: zodResolver(newExecutionFormSchema),
     defaultValues: {
       date: new Date(),
-      driverId: undefined, 
+      driverId: defaultDriverIdForDialog, 
       selectedCargoId: undefined,
     }
   });
@@ -442,12 +444,6 @@ export default function ContractedTransportDetailPage() {
       editStopForm.reset({ id: '', description: '' });
     }
   }, [stopToEdit, editStopForm]);
-
-  React.useEffect(() => {
-    if (isNewExecutionDialogOpen) {
-      newExecutionForm.reset({ date: new Date(), driverId: undefined, selectedCargoId: undefined});
-    }
-  }, [isNewExecutionDialogOpen, newExecutionForm]);
 
   React.useEffect(() => {
     if (executionToLoad) {
@@ -886,7 +882,7 @@ export default function ContractedTransportDetailPage() {
     }, [contract]);
     
     const openNewExecutionDialog = (driverId?: string) => {
-        newExecutionForm.reset({ date: new Date(), driverId: driverId || undefined, selectedCargoId: undefined});
+        setDefaultDriverIdForDialog(driverId);
         setIsNewExecutionDialogOpen(true);
     };
 
@@ -1173,7 +1169,7 @@ export default function ContractedTransportDetailPage() {
             
         {/* Add New Execution Dialog */}
         <Dialog open={isNewExecutionDialogOpen} onOpenChange={setIsNewExecutionDialogOpen}>
-            <DialogContent className="sm:max-w-xl">
+            <DialogContent className="sm:max-w-xl" key={defaultDriverIdForDialog}>
                  <Form {...newExecutionForm}>
                     <form onSubmit={newExecutionForm.handleSubmit(handleNewExecutionSubmit)}>
                         <DialogHeader>
@@ -1181,7 +1177,7 @@ export default function ContractedTransportDetailPage() {
                         </DialogHeader>
                         <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-6 -mr-6">
                             <FormField control={newExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
-                             <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Жолооч + Машин</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Оноолт сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.filter(d => d.assignedVehicleId).map(d => { const v = contract.assignedVehicles.find(v => v.vehicleId === d.assignedVehicleId); return ( <SelectItem key={d.driverId} value={d.driverId}>{d.driverName} / {v?.licensePlate}</SelectItem> )})}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                             <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Жолооч + Машин</FormLabel><Select onValueChange={field.onChange} defaultValue={defaultDriverIdForDialog}><FormControl><SelectTrigger><SelectValue placeholder="Оноолт сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.filter(d => d.assignedVehicleId).map(d => { const v = contract.assignedVehicles.find(v => v.vehicleId === d.assignedVehicleId); return ( <SelectItem key={d.driverId} value={d.driverId}>{d.driverName} / {v?.licensePlate}</SelectItem> )})}</SelectContent></Select><FormMessage /></FormItem> )}/>
                             <Separator />
 
                             <FormField
@@ -1542,4 +1538,4 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, ve
     );
 }
 
-
+    
