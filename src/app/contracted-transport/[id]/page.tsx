@@ -1000,11 +1000,11 @@ export default function ContractedTransportDetailPage() {
                 </Button>
             </CardHeader>
              <CardContent>
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
                     {(Object.keys(groupedVehicles) as VehicleStatus[]).map(status => (
-                        <div key={status} className="p-3 rounded-lg bg-muted/50">
-                            <h3 className="font-semibold text-sm mb-3">{vehicleStatusTranslations[status]} ({groupedVehicles[status].length})</h3>
-                            <div className="space-y-2">
+                        <div key={status} className="p-3 rounded-lg bg-muted/50 flex flex-col">
+                            <h3 className="font-semibold text-sm mb-3 flex-shrink-0">{vehicleStatusTranslations[status]} ({groupedVehicles[status].length})</h3>
+                            <div className="space-y-2 overflow-y-auto flex-grow pr-2 -mr-2">
                                 {groupedVehicles[status].length > 0 ? (
                                     groupedVehicles[status].map((vehicle: any) => (
                                         <Card key={vehicle.vehicleId} className="bg-card">
@@ -1031,7 +1031,9 @@ export default function ContractedTransportDetailPage() {
                                         </Card>
                                     ))
                                 ) : (
-                                    <p className="text-xs text-muted-foreground text-center py-4">Тээврийн хэрэгсэл алга.</p>
+                                    <div className="flex items-center justify-center h-full">
+                                        <p className="text-xs text-muted-foreground text-center py-4">Тээврийн хэрэгсэл алга.</p>
+                                    </div>
                                 )}
                             </div>
                         </div>
