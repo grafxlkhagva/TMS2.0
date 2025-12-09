@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import * as React from 'react';
@@ -44,7 +42,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const newExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
-  assignmentId: z.string().min(1, 'Жолооч/машины хослолыг сонгоно уу.'),
+  driverId: z.string().min(1, 'Жолооч/машины хослолыг сонгоно уу.'),
   selectedCargoId: z.string().optional(),
 });
 type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
@@ -338,6 +336,11 @@ export default function ContractedTransportDetailPage() {
 
   const newExecutionForm = useForm<NewExecutionFormValues>({
     resolver: zodResolver(newExecutionFormSchema),
+    defaultValues: {
+      date: new Date(),
+      driverId: '',
+      selectedCargoId: undefined,
+    }
   });
 
   const editExecutionForm = useForm<EditExecutionFormValues>({
@@ -442,7 +445,7 @@ export default function ContractedTransportDetailPage() {
 
   React.useEffect(() => {
     if (isNewExecutionDialogOpen) {
-      newExecutionForm.reset({ date: new Date(), assignmentId: '', selectedCargoId: undefined});
+      newExecutionForm.reset({ date: new Date(), driverId: '', selectedCargoId: undefined});
     }
   }, [isNewExecutionDialogOpen, newExecutionForm]);
 
@@ -582,7 +585,7 @@ export default function ContractedTransportDetailPage() {
         if (!contract) return;
         setIsSubmitting(true);
         try {
-            const assignment = contract.assignedDrivers.find(d => d.driverId === values.assignmentId);
+            const assignment = contract.assignedDrivers.find(d => d.driverId === values.driverId);
             if (!assignment) {
                 toast({ variant: 'destructive', title: 'Алдаа', description: 'Оноолт олдсонгүй.' });
                 setIsSubmitting(false);
@@ -882,8 +885,8 @@ export default function ContractedTransportDetailPage() {
         return orderedGrouped;
     }, [contract]);
     
-    const openNewExecutionDialog = (assignmentId?: string) => {
-        newExecutionForm.reset({ date: new Date(), assignmentId: assignmentId || '', selectedCargoId: undefined});
+    const openNewExecutionDialog = (driverId?: string) => {
+        newExecutionForm.reset({ date: new Date(), driverId: driverId || '', selectedCargoId: undefined});
         setIsNewExecutionDialogOpen(true);
     };
 
@@ -1178,7 +1181,7 @@ export default function ContractedTransportDetailPage() {
                         </DialogHeader>
                         <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-6 -mr-6">
                             <FormField control={newExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
-                             <FormField control={newExecutionForm.control} name="assignmentId" render={({ field }) => ( <FormItem><FormLabel>Жолооч + Машин</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Оноолт сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.filter(d => d.assignedVehicleId).map(d => { const v = contract.assignedVehicles.find(v => v.vehicleId === d.assignedVehicleId); return ( <SelectItem key={d.driverId} value={d.driverId}>{d.driverName} / {v?.licensePlate}</SelectItem> )})}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                             <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Жолооч + Машин</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Оноолт сонгох..." /></SelectTrigger></FormControl><SelectContent>{contract.assignedDrivers.filter(d => d.assignedVehicleId).map(d => { const v = contract.assignedVehicles.find(v => v.vehicleId === d.assignedVehicleId); return ( <SelectItem key={d.driverId} value={d.driverId}>{d.driverName} / {v?.licensePlate}</SelectItem> )})}</SelectContent></Select><FormMessage /></FormItem> )}/>
                             <Separator />
 
                             <FormField
