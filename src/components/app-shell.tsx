@@ -148,6 +148,7 @@ function Nav() {
             {baseNavItems.map(item => 
                 <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton>
+                        <item.icon className="mr-2 h-4 w-4 shrink-0" />
                         <span>{item.label}</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -169,6 +170,7 @@ function Nav() {
                     tooltip={state === 'collapsed' ? { children: item.label, side: 'right' } : undefined}
                 >
                     <div className="flex items-center gap-2">
+                        <item.icon className="mr-2 h-4 w-4 shrink-0" />
                         <span>{item.label}</span>
                     </div>
                     <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform duration-200", state === 'collapsed' && "hidden", "group-data-[state=open]:rotate-180")} />
@@ -194,6 +196,7 @@ function Nav() {
                 isActive={pathname === item.href}
                 tooltip={state === 'collapsed' ? { children: item.label, side: 'right' } : undefined}
               >
+                <item.icon className="mr-2 h-4 w-4 shrink-0" />
                 <span>{item.label}</span>
               </SidebarMenuButton>
             </Link>
