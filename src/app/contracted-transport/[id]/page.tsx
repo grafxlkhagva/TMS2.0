@@ -148,7 +148,7 @@ function SortableExecutionCard({ execution, onEdit, onDelete, onMove, canMoveBac
     };
   
     return (
-        <Card ref={setNodeRef} style={style} className="text-xs mb-2 touch-none group/exec relative">
+        <Card ref={setNodeRef} style={style} className="mb-2 touch-none group/exec relative">
              <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-md" style={{ backgroundColor: execution.cargoColor || 'transparent' }}></div>
             <div className="p-3 pl-4">
                 <div className="absolute top-1 right-1 z-10">
@@ -1004,44 +1004,53 @@ export default function ContractedTransportDetailPage() {
                 </Button>
             </CardHeader>
              <CardContent>
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
-                    {(Object.keys(groupedVehicles) as VehicleStatus[]).map(status => (
-                        <div key={status} className="p-3 rounded-lg bg-muted/50 flex flex-col min-h-0">
-                            <h3 className="font-semibold text-sm mb-3 flex-shrink-0">{vehicleStatusTranslations[status]} ({groupedVehicles[status].length})</h3>
-                            <div className="space-y-3 overflow-y-auto flex-grow pr-2 -mr-2">
-                                {groupedVehicles[status].length > 0 ? (
-                                    groupedVehicles[status].map((vehicle: any) => (
-                                        <Card key={vehicle.vehicleId} className="bg-card">
-                                            <CardContent className="p-3 text-sm">
-                                                <p className="font-medium font-mono">{vehicle.licensePlate}</p>
-                                                <p className="text-xs text-muted-foreground">{vehicle.modelName}</p>
-                                                <Separator className="my-1.5"/>
-                                                <div className="flex items-center gap-2 text-xs">
-                                                    <User className="h-3 w-3 text-muted-foreground"/>
-                                                    {vehicle.assignedDriver ? (
-                                                        <p>{vehicle.assignedDriver.driverName}</p>
-                                                    ) : (
-                                                        <p className="text-muted-foreground italic">Жолоочгүй</p>
-                                                    )}
-                                                </div>
-                                            </CardContent>
-                                            {status === 'Ready' && vehicle.assignedDriver && (
-                                                <CardFooter className="p-2 border-t">
-                                                    <Button size="xs" className="w-full" onClick={() => openNewExecutionDialog(vehicle.assignedDriver.driverId)}>
-                                                        <PlusCircle className="mr-2 h-3 w-3"/> Гүйцэтгэл нэмэх
-                                                    </Button>
-                                                </CardFooter>
-                                            )}
-                                        </Card>
-                                    ))
-                                ) : (
-                                    <div className="flex items-center justify-center h-full">
-                                        <p className="text-xs text-muted-foreground text-center py-4">Тээврийн хэрэгсэл алга.</p>
-                                    </div>
-                                )}
+                 <div className="overflow-x-auto">
+                    <div className="grid grid-flow-col auto-cols-fr md:auto-cols-auto md:grid-cols-3 gap-6 min-w-max md:min-w-full">
+                        {(Object.keys(groupedVehicles) as VehicleStatus[]).map(status => (
+                            <div key={status} className="w-full md:w-auto">
+                                <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                                     <span className={cn('h-2 w-2 rounded-full', {
+                                        'bg-green-500': status === 'Ready',
+                                        'bg-blue-500': status === 'Available',
+                                        'bg-red-500': status === 'Maintenance',
+                                     })}></span>
+                                    {vehicleStatusTranslations[status]} ({groupedVehicles[status].length})
+                                </h3>
+                                <div className="space-y-3">
+                                    {groupedVehicles[status].length > 0 ? (
+                                        groupedVehicles[status].map((vehicle: any) => (
+                                            <Card key={vehicle.vehicleId} className="bg-background">
+                                                <CardContent className="p-3 text-sm">
+                                                    <p className="font-semibold text-base font-mono">{vehicle.licensePlate}</p>
+                                                    <p className="text-xs text-muted-foreground">{vehicle.modelName}</p>
+                                                    <Separator className="my-2"/>
+                                                    <div className="flex items-center gap-2 text-sm">
+                                                        <User className="h-4 w-4 text-muted-foreground"/>
+                                                        {vehicle.assignedDriver ? (
+                                                            <p className="font-medium">{vehicle.assignedDriver.driverName}</p>
+                                                        ) : (
+                                                            <p className="text-muted-foreground italic">Жолоочгүй</p>
+                                                        )}
+                                                    </div>
+                                                </CardContent>
+                                                {status === 'Ready' && vehicle.assignedDriver && (
+                                                    <CardFooter className="p-2 border-t">
+                                                        <Button variant="success" size="sm" className="w-full" onClick={() => openNewExecutionDialog(vehicle.assignedDriver.driverId)}>
+                                                            <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
+                                                        </Button>
+                                                    </CardFooter>
+                                                )}
+                                            </Card>
+                                        ))
+                                    ) : (
+                                        <div className="flex items-center justify-center h-24 rounded-lg bg-muted/50">
+                                            <p className="text-xs text-muted-foreground text-center py-4">Тээврийн хэрэгсэл алга.</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                  </div>
             </CardContent>
         </Card>
@@ -1542,5 +1551,7 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, ve
         </Dialog>
     );
 }
+
+    
 
     
