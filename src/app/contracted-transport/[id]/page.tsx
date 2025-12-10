@@ -1007,14 +1007,14 @@ export default function ContractedTransportDetailPage() {
              <CardContent className="overflow-x-auto">
                 <div className="grid grid-flow-col auto-cols-fr gap-6 min-w-[700px] md:min-w-full">
                     {(Object.keys(groupedVehicles) as VehicleStatus[]).map(status => (
-                        <div key={status}>
+                        <div key={status} className="flex flex-col h-[400px]">
                             <h3 className="font-semibold text-sm mb-3 flex items-center gap-2 px-2">
                                 <span className={cn('h-2.5 w-2.5 rounded-full', {
                                     'bg-green-500': status === 'Ready', 'bg-blue-500': status === 'Available', 'bg-red-500': status === 'Maintenance',
                                 })}></span>
                                 {vehicleStatusTranslations[status]} ({groupedVehicles[status].length})
                             </h3>
-                            <div className="space-y-3">
+                            <div className="space-y-3 flex-1 overflow-y-auto pr-2 -mr-2">
                                 {groupedVehicles[status].length > 0 ? (
                                     groupedVehicles[status].map((vehicle: any) => (
                                         <Card key={vehicle.vehicleId} className="bg-background/70">
@@ -1575,3 +1575,4 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, ve
     
 
     
+
