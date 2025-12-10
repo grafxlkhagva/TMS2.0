@@ -10,7 +10,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['var(--font-inter)', 'sans-serif'],
+        body: ['var(--font-manrope)', 'sans-serif'],
         headline: ['var(--font-manrope)', 'sans-serif'],
         code: ['monospace'],
       },
@@ -113,5 +113,3 @@ export default {
     require('@tailwindcss/typography'),
 ],
 } satisfies Config;
-
-    
