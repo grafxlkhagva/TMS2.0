@@ -27,8 +27,8 @@ export default function RootLayout({
       <body className={`${inter.variable} ${manrope.variable} font-body antialiased`}>
         <AuthProvider>
           <ProtectedLayout>{children}</ProtectedLayout>
+          <Toaster />
         </AuthProvider>
-        <Toaster />
       </body>
     </html>
   );
