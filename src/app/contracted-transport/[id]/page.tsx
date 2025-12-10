@@ -1008,7 +1008,7 @@ export default function ContractedTransportDetailPage() {
                     {(Object.keys(groupedVehicles) as VehicleStatus[]).map(status => (
                         <div key={status} className="p-3 rounded-lg bg-muted/50 flex flex-col min-h-0">
                             <h3 className="font-semibold text-sm mb-3 flex-shrink-0">{vehicleStatusTranslations[status]} ({groupedVehicles[status].length})</h3>
-                            <div className="space-y-2 overflow-y-auto flex-grow pr-2 -mr-2">
+                            <div className="space-y-3 overflow-y-auto flex-grow pr-2 -mr-2">
                                 {groupedVehicles[status].length > 0 ? (
                                     groupedVehicles[status].map((vehicle: any) => (
                                         <Card key={vehicle.vehicleId} className="bg-card">
