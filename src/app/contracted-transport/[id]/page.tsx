@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -34,7 +35,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Timestamp } from 'firebase/firestore';
 import { DndContext, closestCenter, type DragEndEvent, useDroppable } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -1003,55 +1004,74 @@ export default function ContractedTransportDetailPage() {
                     <Settings className="mr-2 h-4 w-4"/> Удирдах
                 </Button>
             </CardHeader>
-             <CardContent>
-                 <div className="overflow-x-auto">
-                    <div className="grid grid-flow-col auto-cols-fr md:auto-cols-auto md:grid-cols-3 gap-6 min-w-max md:min-w-full">
-                        {(Object.keys(groupedVehicles) as VehicleStatus[]).map(status => (
-                            <div key={status} className="w-full md:w-auto">
-                                <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                                     <span className={cn('h-2 w-2 rounded-full', {
-                                        'bg-green-500': status === 'Ready',
-                                        'bg-blue-500': status === 'Available',
-                                        'bg-red-500': status === 'Maintenance',
-                                     })}></span>
-                                    {vehicleStatusTranslations[status]} ({groupedVehicles[status].length})
-                                </h3>
-                                <div className="space-y-3">
-                                    {groupedVehicles[status].length > 0 ? (
-                                        groupedVehicles[status].map((vehicle: any) => (
-                                            <Card key={vehicle.vehicleId} className="bg-background">
-                                                <CardContent className="p-3 text-sm">
-                                                    <p className="font-semibold text-base font-mono">{vehicle.licensePlate}</p>
-                                                    <p className="text-xs text-muted-foreground">{vehicle.modelName}</p>
-                                                    <Separator className="my-2"/>
-                                                    <div className="flex items-center gap-2 text-sm">
-                                                        <User className="h-4 w-4 text-muted-foreground"/>
-                                                        {vehicle.assignedDriver ? (
-                                                            <p className="font-medium">{vehicle.assignedDriver.driverName}</p>
-                                                        ) : (
-                                                            <p className="text-muted-foreground italic">Жолоочгүй</p>
-                                                        )}
+             <CardContent className="overflow-x-auto">
+                <div className="grid grid-flow-col auto-cols-fr gap-6 min-w-[700px] md:min-w-full">
+                    {(Object.keys(groupedVehicles) as VehicleStatus[]).map(status => (
+                        <div key={status}>
+                            <h3 className="font-semibold text-sm mb-3 flex items-center gap-2 px-2">
+                                <span className={cn('h-2.5 w-2.5 rounded-full', {
+                                    'bg-green-500': status === 'Ready', 'bg-blue-500': status === 'Available', 'bg-red-500': status === 'Maintenance',
+                                })}></span>
+                                {vehicleStatusTranslations[status]} ({groupedVehicles[status].length})
+                            </h3>
+                            <div className="space-y-3">
+                                {groupedVehicles[status].length > 0 ? (
+                                    groupedVehicles[status].map((vehicle: any) => (
+                                        <Card key={vehicle.vehicleId} className="bg-background/70">
+                                            <CardContent className="p-3">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <p className="font-bold text-lg font-mono">{vehicle.licensePlate}</p>
+                                                        <p className="text-xs text-muted-foreground">{vehicle.modelName}</p>
                                                     </div>
-                                                </CardContent>
-                                                {status === 'Ready' && vehicle.assignedDriver && (
-                                                    <CardFooter className="p-2 border-t">
-                                                        <Button variant="success" size="sm" className="w-full" onClick={() => openNewExecutionDialog(vehicle.assignedDriver.driverId)}>
-                                                            <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
-                                                        </Button>
-                                                    </CardFooter>
-                                                )}
-                                            </Card>
-                                        ))
-                                    ) : (
-                                        <div className="flex items-center justify-center h-24 rounded-lg bg-muted/50">
-                                            <p className="text-xs text-muted-foreground text-center py-4">Тээврийн хэрэгсэл алга.</p>
-                                        </div>
-                                    )}
-                                </div>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                                                                <MoreHorizontal className="h-4 w-4"/>
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuRadioGroup
+                                                                value={vehicle.status || 'Available'}
+                                                                onValueChange={(newStatus) => handleVehicleStatusChange(vehicle.vehicleId, newStatus as VehicleStatus)}
+                                                            >
+                                                                {vehicleStatuses.map(s => (
+                                                                    <DropdownMenuRadioItem key={s} value={s}>
+                                                                        {vehicleStatusTranslations[s]}
+                                                                    </DropdownMenuRadioItem>
+                                                                ))}
+                                                            </DropdownMenuRadioGroup>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
+                                                <Separator className="my-2"/>
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <User className="h-4 w-4 text-muted-foreground"/>
+                                                    {vehicle.assignedDriver ? (
+                                                        <p className="font-medium">{vehicle.assignedDriver.driverName}</p>
+                                                    ) : (
+                                                        <p className="text-muted-foreground italic">Жолоочгүй</p>
+                                                    )}
+                                                </div>
+                                            </CardContent>
+                                            {status === 'Ready' && vehicle.assignedDriver && (
+                                                <CardFooter className="p-2 border-t">
+                                                    <Button variant="success" size="sm" className="w-full" onClick={() => openNewExecutionDialog(vehicle.assignedDriver.driverId)}>
+                                                        <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
+                                                    </Button>
+                                                </CardFooter>
+                                            )}
+                                        </Card>
+                                    ))
+                                ) : (
+                                    <div className="flex items-center justify-center h-24 rounded-lg bg-muted/50">
+                                        <p className="text-xs text-muted-foreground text-center py-4">Тээврийн хэрэгсэл алга.</p>
+                                    </div>
+                                )}
                             </div>
-                        ))}
-                    </div>
-                 </div>
+                        </div>
+                    ))}
+                </div>
             </CardContent>
         </Card>
       
