@@ -340,19 +340,21 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
     const [defaultOpen, setDefaultOpen] = React.useState(true);
+    const [isClient, setIsClient] = React.useState(false);
 
     React.useEffect(() => {
+        setIsClient(true);
         const checkScreenSize = () => {
             setDefaultOpen(window.innerWidth >= 1536);
         };
-        
-        // Check on mount
         checkScreenSize();
-        
-        // Optional: Check on resize if you want it to be more dynamic
-        // window.addEventListener('resize', checkScreenSize);
-        // return () => window.removeEventListener('resize', checkScreenSize);
     }, []);
+
+    // Render a placeholder or null on the server, and the actual component on the client
+    if (!isClient) {
+        // You can return a skeleton loader here if you want to avoid layout shifts
+        return null;
+    }
 
     return (
         <SidebarProvider defaultOpen={defaultOpen}>
