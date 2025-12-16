@@ -414,6 +414,7 @@ export type ContractedTransportExecution = {
     totalLoadedWeight?: number;
     totalUnloadedWeight?: number;
     cargoColor?: string;
+    imageUrls?: string[];
 }
 
 export type ContractedTransportCargoItem = {
@@ -488,4 +489,5 @@ export type ContractedTransport = {
     
 
     
+
 

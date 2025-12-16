@@ -5,11 +5,14 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle, Megaphone, MegaphoneOff, Eye, Briefcase, TrendingUp, Cuboid, Send, FileSpreadsheet, Sparkles, LinkIcon, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, User, Truck, MapPin, Package, XCircle, Clock, PlusCircle, Trash2, Loader2, UserPlus, Car, Map as MapIcon, ChevronsUpDown, X, Route, MoreHorizontal, Check, Info, CheckCircle, Megaphone, MegaphoneOff, Eye, Briefcase, TrendingUp, Cuboid, Send, FileSpreadsheet, Sparkles, LinkIcon, ChevronLeft, ChevronRight, Settings, Image as ImageIcon, Upload, Camera } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch, type DocumentData } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import NextImage from 'next/image';
+
 import type { ContractedTransport, Region, Warehouse, PackagingType, SystemUser, Driver, ContractedTransportExecution, RouteStop, Vehicle, ContractedTransportExecutionStatus, ContractedTransportStatus, ContractedTransportCargoItem, AssignedDriver, AssignedVehicle, VehicleStatus } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -85,9 +88,9 @@ const statusTranslations: Record<string, string> = {
 };
 
 const vehicleStatusTranslations: Record<VehicleStatus, string> = {
+  Ready: 'Бэлэн',
   Available: 'Чөлөөтэй',
-  Maintenance: 'Засварт',
-  Ready: 'Бэлэн'
+  Maintenance: 'Засварт'
 };
 const vehicleStatuses: VehicleStatus[] = ['Ready', 'Available', 'Maintenance'];
 
@@ -305,6 +308,11 @@ export default function ContractedTransportDetailPage() {
   
   const [sendingToSheet, setSendingToSheet] = React.useState<string | null>(null);
   const [defaultDriverIdForDialog, setDefaultDriverIdForDialog] = React.useState<string | undefined>(undefined);
+
+  const [isImageUploadOpen, setIsImageUploadOpen] = React.useState(false);
+  const [executionForImage, setExecutionForImage] = React.useState<ContractedTransportExecution | null>(null);
+  const [isImageViewerOpen, setIsImageViewerOpen] = React.useState(false);
+  const [imageToView, setImageToView] = React.useState<string | null>(null);
 
 
   const [relatedData, setRelatedData] = React.useState({
@@ -608,6 +616,7 @@ export default function ContractedTransportDetailPage() {
                 driverName: assignment.driverName,
                 vehicleId: vehicle?.vehicleId,
                 vehicleLicense: vehicle?.licensePlate,
+                imageUrls: [],
             };
     
             if (dataToSave.driverId === undefined) delete dataToSave.driverId;
@@ -891,6 +900,32 @@ export default function ContractedTransportDetailPage() {
         newExecutionForm.reset({ driverId: driverId, date: new Date(), selectedCargoId: undefined });
         setIsNewExecutionDialogOpen(true);
     };
+    
+    const handleImageUpload = async (files: FileList | null) => {
+        if (!files || files.length === 0 || !executionForImage) return;
+        setIsSubmitting(true);
+        try {
+            const imageUrls = [...(executionForImage.imageUrls || [])];
+            for (const file of Array.from(files)) {
+                const storageRef = ref(storage, `contracted_executions/${executionForImage.id}/${Date.now()}_${file.name}`);
+                const snapshot = await uploadBytes(storageRef, file);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                imageUrls.push(downloadURL);
+            }
+            
+            const execRef = doc(db, 'contracted_transport_executions', executionForImage.id);
+            await updateDoc(execRef, { imageUrls });
+
+            setExecutions(prev => prev.map(ex => ex.id === executionForImage.id ? { ...ex, imageUrls } : ex));
+            toast({ title: 'Амжилттай', description: 'Зураг хуулагдлаа.' });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Зураг хуулахад алдаа гарлаа.' });
+        } finally {
+            setIsSubmitting(false);
+            setIsImageUploadOpen(false);
+        }
+    }
+
 
     if (isLoading) {
         return (
@@ -1145,6 +1180,7 @@ export default function ContractedTransportDetailPage() {
                             <TableHead>Зөрүү (тн)</TableHead>
                             <TableHead>Зам (км)</TableHead>
                             <TableHead>Явц</TableHead>
+                            <TableHead>Зураг</TableHead>
                             <TableHead className="text-right">Үйлдэл</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -1173,6 +1209,15 @@ export default function ContractedTransportDetailPage() {
                                 <TableCell className={cn(difference !== 0 && 'text-destructive font-bold')}>{difference.toFixed(2)}</TableCell>
                                 <TableCell>{contract.route.totalDistance}</TableCell>
                                 <TableCell><Badge variant="secondary">{statusTranslations[exec.status] || exec.status}</Badge></TableCell>
+                                <TableCell>
+                                     <div className="flex gap-1">
+                                        {exec.imageUrls?.map(url => (
+                                            <div key={url} className="relative h-10 w-10 cursor-pointer" onClick={() => { setImageToView(url); setIsImageViewerOpen(true); }}>
+                                                <NextImage src={url} alt="Тайлангийн зураг" layout="fill" objectFit="cover" className="rounded-md"/>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </TableCell>
                                 <TableCell className="text-right">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
@@ -1182,6 +1227,7 @@ export default function ContractedTransportDetailPage() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuItem onClick={() => setExecutionToEdit(exec)}><Edit className="mr-2 h-4 w-4" /> Засах</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => { setExecutionForImage(exec); setIsImageUploadOpen(true); }}><ImageIcon className="mr-2 h-4 w-4" /> Зураг оруулах</DropdownMenuItem>
                                             <DropdownMenuItem onClick={() => handleSendToSheet(exec)} disabled={sendingToSheet === exec.id}>
                                                 {sendingToSheet === exec.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4" />}
                                                 Sheet-рүү илгээх
@@ -1193,7 +1239,7 @@ export default function ContractedTransportDetailPage() {
                             </TableRow>
                         )}) : (
                             <TableRow>
-                                <TableCell colSpan={12} className="h-24 text-center">Гүйцэтгэл бүртгэгдээгүй байна.</TableCell>
+                                <TableCell colSpan={13} className="h-24 text-center">Гүйцэтгэл бүртгэгдээгүй байна.</TableCell>
                             </TableRow>
                         )}
                     </TableBody>
@@ -1414,6 +1460,44 @@ export default function ContractedTransportDetailPage() {
             </AlertDialogContent>
         </AlertDialog>
 
+        {/* Image Upload Dialog */}
+        <Dialog open={isImageUploadOpen} onOpenChange={setIsImageUploadOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Тайлангийн зураг оруулах</DialogTitle>
+                    <DialogDescription>
+                        Гүйцэтгэлтэй холбоотой зурган мэдээллийг энд хуулна уу.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <div className="flex items-center justify-center w-full">
+                        <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-muted hover:bg-muted/80">
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <Upload className="w-8 h-8 mb-4 text-muted-foreground" />
+                                <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Энд дарж</span> зургаа сонгоно уу</p>
+                                <p className="text-xs text-muted-foreground">PNG, JPG, GIF (MAX. 5MB)</p>
+                            </div>
+                            <Input id="dropzone-file" type="file" className="hidden" multiple onChange={(e) => handleImageUpload(e.target.files)} />
+                        </label>
+                    </div> 
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsImageUploadOpen(false)}>Болих</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        {/* Image Viewer Dialog */}
+        <Dialog open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen}>
+            <DialogContent className="max-w-4xl">
+                 {imageToView && (
+                    <div className="relative aspect-video">
+                        <NextImage src={imageToView} alt="Тайлангийн зураг" layout="fill" objectFit="contain" />
+                    </div>
+                 )}
+            </DialogContent>
+        </Dialog>
+
         <AssignmentsManagementDialog 
             open={isAssignmentsDialogOpen} 
             onOpenChange={setIsAssignmentsDialogOpen}
@@ -1575,4 +1659,5 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, ve
     
 
     
+
 
