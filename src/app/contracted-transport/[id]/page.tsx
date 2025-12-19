@@ -394,7 +394,7 @@ export default function ContractedTransportDetailPage() {
             getDoc(doc(db, 'regions', fetchedContract.route.startRegionId)),
             getDoc(doc(db, 'regions', fetchedContract.route.endRegionId)),
             getDoc(doc(db, 'warehouses', fetchedContract.route.startWarehouseId)),
-            getDoc(doc(db, 'warehouses', fetchedContract.route.endWarehouseId)),
+            getDoc(db, 'warehouses', fetchedContract.route.endWarehouseId)),
             getDocs(query(collection(db, 'packaging_types'))),
             getDoc(doc(db, 'users', fetchedContract.transportManagerId)),
             getDocs(query(collection(db, "Drivers"), where('isAvailableForContracted', '==', true))),
@@ -1071,86 +1071,82 @@ export default function ContractedTransportDetailPage() {
       </div>
 
       <Card className="mb-6">
-            <CardHeader className="flex-row justify-between items-center">
-                <div className="space-y-1.5">
-                    <CardTitle>Тээврийн бэлэн байдал</CardTitle>
-                    <CardDescription>Оноосон тээврийн хэрэгслүүдийн статус.</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => setIsAssignmentsDialogOpen(true)}>
-                    <Settings className="mr-2 h-4 w-4"/> Удирдах
-                </Button>
-            </CardHeader>
-            <CardContent className="overflow-x-auto pb-2">
-                <div className="grid grid-flow-col auto-cols-[280px] gap-4 min-w-max">
-                    {(Object.keys(groupedVehicles) as VehicleStatus[]).map(status => (
-                        <div key={status} className="flex flex-col h-[400px]">
-                            <h3 className="font-semibold text-sm mb-3 flex items-center gap-2 px-2">
-                                <span className={cn('h-2.5 w-2.5 rounded-full', {
-                                    'bg-green-500': status === 'Ready', 'bg-blue-500': status === 'Available', 'bg-red-500': status === 'Maintenance',
-                                })}></span>
-                                {vehicleStatusTranslations[status]} ({groupedVehicles[status].length})
-                            </h3>
-                            <div className="space-y-3 flex-1 overflow-y-auto pr-2 -mr-2">
-                                {groupedVehicles[status].length > 0 ? (
-                                    groupedVehicles[status].map((vehicle: any) => (
-                                        <Card key={vehicle.vehicleId} className="bg-background/70">
-                                            <CardHeader className="p-3">
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <CardTitle className="text-xl font-mono">{vehicle.licensePlate}</CardTitle>
-                                                        <CardDescription className="text-xs pt-1">{vehicle.modelName}</CardDescription>
-                                                    </div>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-7 w-7">
-                                                                <MoreHorizontal className="h-4 w-4"/>
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuRadioGroup
-                                                                value={vehicle.status || 'Available'}
-                                                                onValueChange={(newStatus) => onVehicleStatusChange(vehicle.vehicleId, newStatus as VehicleStatus)}
-                                                            >
-                                                                {vehicleStatuses.map(s => (
-                                                                    <DropdownMenuRadioItem key={s} value={s}>
-                                                                        {vehicleStatusTranslations[s]}
-                                                                    </DropdownMenuRadioItem>
-                                                                ))}
-                                                            </DropdownMenuRadioGroup>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </div>
-                                            </CardHeader>
-                                            <CardContent className="p-3 pt-0">
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <User className="h-4 w-4 text-muted-foreground"/>
-                                                    {vehicle.assignedDriver ? (
-                                                        <p className="font-medium">{vehicle.assignedDriver.driverName}</p>
-                                                    ) : (
-                                                        <p className="text-muted-foreground italic">Жолоочгүй</p>
-                                                    )}
-                                                </div>
-                                            </CardContent>
-                                            {status === 'Ready' && vehicle.assignedDriver && (
-                                                <CardFooter className="p-2 border-t mt-2">
-                                                    <Button variant="success" size="sm" className="w-full" onClick={() => openNewExecutionDialog(vehicle.assignedDriver.driverId)}>
-                                                        <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
+        <CardHeader className="flex-row justify-between items-center">
+            <div className="space-y-1.5">
+                <CardTitle>Тээврийн бэлэн байдал</CardTitle>
+                <CardDescription>Оноосон тээврийн хэрэгслүүдийн статус.</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setIsAssignmentsDialogOpen(true)}>
+                <Settings className="mr-2 h-4 w-4"/> Удирдах
+            </Button>
+        </CardHeader>
+        <CardContent className="overflow-x-auto pb-2">
+            <div className="grid grid-flow-col auto-cols-[280px] gap-4 min-w-max">
+                {(Object.keys(groupedVehicles) as VehicleStatus[]).map(status => (
+                    <div key={status} className="flex flex-col h-[400px]">
+                        <h3 className="font-semibold text-sm mb-3 flex items-center gap-2 px-2">
+                            <span className={cn('h-2.5 w-2.5 rounded-full', {
+                                'bg-green-500': status === 'Ready', 'bg-blue-500': status === 'Available', 'bg-red-500': status === 'Maintenance',
+                            })}></span>
+                            {vehicleStatusTranslations[status]} ({groupedVehicles[status].length})
+                        </h3>
+                        <div className="space-y-3 flex-1 overflow-y-auto pr-2 -mr-2">
+                            {groupedVehicles[status].length > 0 ? (
+                                groupedVehicles[status].map((vehicle: any) => (
+                                    <Card key={vehicle.vehicleId} className="bg-background/70">
+                                        <CardHeader className="p-3 pb-2 flex-row justify-between items-start">
+                                            <CardTitle className="text-base font-semibold">{vehicle.licensePlate}</CardTitle>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 -mt-1">
+                                                        <MoreHorizontal className="h-4 w-4"/>
                                                     </Button>
-                                                </CardFooter>
-                                            )}
-                                        </Card>
-                                    ))
-                                ) : (
-                                    <div className="flex items-center justify-center h-24 rounded-lg">
-                                        <p className="text-xs text-muted-foreground text-center py-4">Тээврийн хэрэгсэл алга.</p>
-                                    </div>
-                                )}
-                            </div>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuRadioGroup
+                                                        value={vehicle.status || 'Available'}
+                                                        onValueChange={(newStatus) => onVehicleStatusChange(vehicle.vehicleId, newStatus as VehicleStatus)}
+                                                    >
+                                                        {vehicleStatuses.map(s => (
+                                                            <DropdownMenuRadioItem key={s} value={s}>
+                                                                {vehicleStatusTranslations[s]}
+                                                            </DropdownMenuRadioItem>
+                                                        ))}
+                                                    </DropdownMenuRadioGroup>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </CardHeader>
+                                        <CardContent className="p-3 pt-0">
+                                            <p className="text-xs text-muted-foreground mb-2">{vehicle.modelName}</p>
+                                            <div className="flex items-center gap-2 text-sm">
+                                                <User className="h-4 w-4 text-muted-foreground"/>
+                                                {vehicle.assignedDriver ? (
+                                                    <p className="font-medium">{vehicle.assignedDriver.driverName}</p>
+                                                ) : (
+                                                    <p className="text-muted-foreground italic">Жолоочгүй</p>
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                        {status === 'Ready' && vehicle.assignedDriver && (
+                                            <CardFooter className="p-2 border-t">
+                                                <Button variant="success" size="sm" className="w-full" onClick={() => openNewExecutionDialog(vehicle.assignedDriver.driverId)}>
+                                                    <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
+                                                </Button>
+                                            </CardFooter>
+                                        )}
+                                    </Card>
+                                ))
+                            ) : (
+                                <div className="flex items-center justify-center h-24 rounded-lg">
+                                    <p className="text-xs text-muted-foreground text-center py-4">Тээврийн хэрэгсэл алга.</p>
+                                </div>
+                            )}
                         </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
+                    </div>
+                ))}
+            </div>
+        </CardContent>
+    </Card>
       
         <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <Card>
@@ -1406,7 +1402,7 @@ export default function ContractedTransportDetailPage() {
         
         {/* Edit Stop Dialog */}
         {stopToEdit && (
-            <Dialog open={!!stopToEdit} onOpenChange={()={() => setStopToEdit(null)}>
+            <Dialog open={!!stopToEdit} onOpenChange={() => setStopToEdit(null)}>
                 <DialogContent>
                     <Form {...editStopForm}>
                         <form onSubmit={editStopForm.handleSubmit(handleUpdateStop)} id="edit-stop-form">
@@ -1594,7 +1590,6 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, on
 
     const handleSaveChanges = () => {
         onSave(assignedDrivers);
-        onOpenChange(false);
     }
     
     return (
@@ -1652,6 +1647,8 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, on
         </Dialog>
     );
 }
+
+    
 
     
 
