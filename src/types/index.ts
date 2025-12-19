@@ -4,7 +4,7 @@ import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
 export type ShipmentStatus = 'Pending' | 'In Transit' | 'Delivered' | 'Delayed';
 
-export type VehicleStatus = 'Available' | 'Maintenance' | 'Ready';
+export type VehicleStatus = 'Available' | 'Maintenance' | 'Ready' | 'In Use';
 
 export type Vehicle = {
   id: string;
@@ -43,6 +43,7 @@ export type Driver = {
   created_time: Date | string | Timestamp;
   photo_url?: string;
   authUid?: string; // To link with Firebase Auth user
+  isAvailableForContracted?: boolean;
 };
 
 export type UserRole = 'admin' | 'management' | 'transport_manager' | 'finance_manager' | 'customer_officer' | 'manager' | 'driver';
@@ -491,3 +492,6 @@ export type ContractedTransport = {
     
 
 
+
+
+    

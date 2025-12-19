@@ -30,6 +30,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Timestamp } from 'firebase/firestore';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const driverStatuses: DriverStatus[] = ['Active', 'Inactive', 'On Leave'];
 
@@ -37,6 +38,7 @@ const formSchema = z.object({
   display_name: z.string().min(2, { message: 'Нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
   phone_number: z.string().min(8, { message: 'Утасны дугаар буруу байна.' }),
   status: z.custom<DriverStatus>(val => driverStatuses.includes(val as DriverStatus)),
+  isAvailableForContracted: z.boolean().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -60,6 +62,7 @@ export default function EditDriverPage() {
       display_name: '',
       phone_number: '',
       status: 'Active',
+      isAvailableForContracted: false,
     }
   });
 
@@ -90,6 +93,7 @@ export default function EditDriverPage() {
                   display_name: data.display_name,
                   phone_number: data.phone_number,
                   status: data.status || 'Active',
+                  isAvailableForContracted: data.isAvailableForContracted || false,
                 });
                 setAvatarPreview(data.photo_url || null);
                 await fetchVehicleData(id);
@@ -327,6 +331,27 @@ export default function EditDriverPage() {
                             )}
                             />
                         </div>
+                        
+                        <FormField
+                            control={form.control}
+                            name="isAvailableForContracted"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                                    <FormControl>
+                                        <Checkbox
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                        />
+                                    </FormControl>
+                                    <div className="space-y-1 leading-none">
+                                        <FormLabel>
+                                            Гэрээт тээвэрт явах боломжтой
+                                        </FormLabel>
+                                    </div>
+                                </FormItem>
+                            )}
+                        />
+
 
                     <div className="flex justify-end gap-2 pt-4">
                         <Button type="button" variant="outline" asChild>
@@ -401,3 +426,5 @@ export default function EditDriverPage() {
     </div>
   );
 }
+
+    

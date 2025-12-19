@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -22,8 +21,10 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel"
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
-function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value?: string | number }) {
+function DetailItem({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value?: string | number | React.ReactNode }) {
   if (!value) return null;
   return (
     <div className="flex items-start gap-3">
@@ -193,3 +194,5 @@ export default function VehicleDetailPage() {
     </div>
   );
 }
+
+    
