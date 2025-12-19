@@ -843,32 +843,16 @@ export default function ContractedTransportDetailPage() {
         }
       };
 
-    const handleAssignmentsUpdate = async (updatedAssignments: AssignedDriver[]) => {
+    const handleAssignmentsUpdate = async (updatedDrivers: AssignedDriver[], updatedVehicles: AssignedVehicle[]) => {
         if (!id || !contract) return;
         try {
-            const originalVehicleIds = new Set(contract.assignedDrivers.map(d => d.assignedVehicleId));
-            const updatedVehicleIds = new Set(updatedAssignments.map(d => d.assignedVehicleId));
-    
-            const vehicleStatusUpdates = contract.assignedVehicles.map(v => {
-                const wasAssigned = originalVehicleIds.has(v.vehicleId);
-                const isAssigned = updatedVehicleIds.has(v.vehicleId);
-    
-                if (isAssigned && !wasAssigned) {
-                    return { ...v, status: 'Ready' as VehicleStatus };
-                }
-                if (!isAssigned && wasAssigned) {
-                    return { ...v, status: 'Available' as VehicleStatus };
-                }
-                return v;
-            });
-    
             const contractRef = doc(db, 'contracted_transports', id);
             await updateDoc(contractRef, {
-                assignedDrivers: updatedAssignments,
-                assignedVehicles: vehicleStatusUpdates,
+                assignedDrivers: updatedDrivers,
+                assignedVehicles: updatedVehicles,
             });
             
-            setContract(prev => prev ? { ...prev, assignedDrivers: updatedAssignments, assignedVehicles: vehicleStatusUpdates } : null);
+            setContract(prev => prev ? { ...prev, assignedDrivers: updatedDrivers, assignedVehicles: updatedVehicles } : null);
             toast({ title: "Амжилттай", description: "Оноолт хадгалагдлаа."});
         } catch (error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Оноолт хадгалахад алдаа гарлаа.'});
@@ -1111,22 +1095,22 @@ export default function ContractedTransportDetailPage() {
                                                     ) : (
                                                         <p className="text-muted-foreground italic">Жолоочгүй</p>
                                                     )}
-                                                </div>
-                                            </CardContent>
-                                            {status === 'Ready' && vehicle.assignedDriver && (
-                                                <CardFooter className="p-2 border-t">
-                                                    <Button variant="success" size="sm" className="w-full" onClick={() => openNewExecutionDialog(vehicle.assignedDriver.driverId)}>
-                                                        <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
-                                                    </Button>
-                                                </CardFooter>
-                                            )}
-                                        </Card>
-                                    ))
-                                ) : (
-                                    <div className="flex items-center justify-center h-24 rounded-lg">
-                                        <p className="text-xs text-muted-foreground text-center py-4">Тээврийн хэрэгсэл алга.</p>
-                                    </div>
-                                )}
+                                                </CardContent>
+                                                {status === 'Ready' && vehicle.assignedDriver && (
+                                                    <CardFooter className="p-2 border-t">
+                                                        <Button variant="success" size="sm" className="w-full" onClick={() => openNewExecutionDialog(vehicle.assignedDriver.driverId)}>
+                                                            <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
+                                                        </Button>
+                                                    </CardFooter>
+                                                )}
+                                            </Card>
+                                        ))
+                                    ) : (
+                                        <div className="flex items-center justify-center h-24 rounded-lg">
+                                            <p className="text-xs text-muted-foreground text-center py-4">Тээврийн хэрэгсэл алга.</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     ))}
@@ -1540,7 +1524,7 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, on
     onOpenChange: (open: boolean) => void;
     contract: ContractedTransport | null;
     drivers: (Driver & { vehicle?: Vehicle })[];
-    onSave: (assignments: AssignedDriver[]) => void;
+    onSave: (drivers: AssignedDriver[], vehicles: AssignedVehicle[]) => void;
     isSubmitting: boolean;
 }) {
     const [assignedDrivers, setAssignedDrivers] = React.useState<AssignedDriver[]>([]);
@@ -1574,6 +1558,23 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, on
     const handleRemoveDriver = (driverId: string) => {
         setAssignedDrivers(prev => prev.filter(d => d.driverId !== driverId));
     }
+
+    const handleSaveChanges = () => {
+        const updatedVehicles = assignedDrivers.map(driver => {
+            const vehicle = drivers.find(d => d.id === driver.driverId)?.vehicle;
+            if (!vehicle) return null;
+            return {
+                vehicleId: vehicle.id,
+                licensePlate: vehicle.licensePlate,
+                trailerLicensePlate: vehicle.trailerLicensePlate,
+                modelName: `${vehicle.makeName} ${vehicle.modelName}`,
+                status: 'Ready' as VehicleStatus
+            }
+        }).filter((v): v is AssignedVehicle => v !== null);
+
+        onSave(assignedDrivers, updatedVehicles);
+        onOpenChange(false);
+    }
     
     return (
          <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1589,7 +1590,7 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, on
                         <h3 className="font-semibold text-sm">Оноосон жолооч нар</h3>
                         <div className="space-y-2">
                             {assignedDrivers.map(driver => {
-                                const vehicle = contract.assignedVehicles.find(v => v.vehicleId === driver.assignedVehicleId)
+                                const vehicle = drivers.find(d => d.id === driver.driverId)?.vehicle
                                 return (
                                 <div key={driver.driverId} className="p-3 border rounded-md flex justify-between items-start">
                                    <div>
@@ -1622,10 +1623,7 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, on
                 </div>
                 <DialogFooter>
                     <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                    <Button onClick={async () => {
-                        await onSave(assignedDrivers);
-                        onOpenChange(false);
-                      }} disabled={isSaving}>
+                    <Button onClick={handleSaveChanges} disabled={isSaving}>
                          {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах
                     </Button>
                 </DialogFooter>
@@ -1635,4 +1633,3 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, on
 }
 
     
-
