@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -843,13 +844,31 @@ export default function ContractedTransportDetailPage() {
       };
 
     const handleAssignmentsUpdate = async (updatedAssignments: AssignedDriver[]) => {
-        if (!id) return;
+        if (!id || !contract) return;
         try {
+            const originalVehicleIds = new Set(contract.assignedDrivers.map(d => d.assignedVehicleId));
+            const updatedVehicleIds = new Set(updatedAssignments.map(d => d.assignedVehicleId));
+    
+            const vehicleStatusUpdates = contract.assignedVehicles.map(v => {
+                const wasAssigned = originalVehicleIds.has(v.vehicleId);
+                const isAssigned = updatedVehicleIds.has(v.vehicleId);
+    
+                if (isAssigned && !wasAssigned) {
+                    return { ...v, status: 'Ready' as VehicleStatus };
+                }
+                if (!isAssigned && wasAssigned) {
+                    return { ...v, status: 'Available' as VehicleStatus };
+                }
+                return v;
+            });
+    
             const contractRef = doc(db, 'contracted_transports', id);
             await updateDoc(contractRef, {
-                assignedDrivers: updatedAssignments
+                assignedDrivers: updatedAssignments,
+                assignedVehicles: vehicleStatusUpdates,
             });
-            setContract(prev => prev ? { ...prev, assignedDrivers: updatedAssignments } : null);
+            
+            setContract(prev => prev ? { ...prev, assignedDrivers: updatedAssignments, assignedVehicles: vehicleStatusUpdates } : null);
             toast({ title: "Амжилттай", description: "Оноолт хадгалагдлаа."});
         } catch (error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Оноолт хадгалахад алдаа гарлаа.'});
@@ -1616,3 +1635,4 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, on
 }
 
     
+
