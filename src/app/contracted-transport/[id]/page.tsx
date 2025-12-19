@@ -54,7 +54,6 @@ type NewExecutionFormValues = z.infer<typeof newExecutionFormSchema>;
 const editExecutionFormSchema = z.object({
   date: z.date({ required_error: "Огноо сонгоно уу." }),
   driverId: z.string().optional(),
-  vehicleId: z.string().optional(),
 });
 type EditExecutionFormValues = z.infer<typeof editExecutionFormSchema>;
 
@@ -477,8 +476,7 @@ export default function ContractedTransportDetailPage() {
     if (executionToEdit && contract) {
       editExecutionForm.reset({
         date: toDateSafe(executionToEdit.date)!,
-        driverId: executionToEdit.driverId || 'no-selection',
-        vehicleId: executionToEdit.vehicleId || 'no-selection',
+        driverId: executionToEdit.driverId,
       });
     }
   }, [executionToEdit, contract, editExecutionForm]);
@@ -510,16 +508,15 @@ export default function ContractedTransportDetailPage() {
         try {
             setIsSubmitting(true);
             const execRef = doc(db, 'contracted_transport_executions', executionToEdit.id);
-            const driverId = values.driverId === 'no-selection' ? undefined : values.driverId;
-            const vehicleId = values.vehicleId === 'no-selection' ? undefined : values.vehicleId;
+            const driverId = values.driverId;
 
-            const selectedDriver = driverId ? contract.assignedDrivers.find(d => d.driverId === driverId) : undefined;
-            const selectedVehicle = vehicleId ? contract.assignedVehicles.find(v => v.vehicleId === vehicleId) : undefined;
+            const selectedAssignment = driverId ? contract.assignedDrivers.find(d => d.driverId === driverId) : undefined;
+            const selectedVehicle = selectedAssignment ? contract.assignedVehicles.find(v => v.vehicleId === selectedAssignment.assignedVehicleId) : undefined;
 
             const updateData: DocumentData = {
               date: values.date,
-              driverId: selectedDriver?.driverId,
-              driverName: selectedDriver?.driverName,
+              driverId: selectedAssignment?.driverId,
+              driverName: selectedAssignment?.driverName,
               vehicleId: selectedVehicle?.vehicleId,
               vehicleLicense: selectedVehicle?.licensePlate,
             };
@@ -842,27 +839,51 @@ export default function ContractedTransportDetailPage() {
         }
       };
 
-    const handleAssignmentsUpdate = async (updatedDrivers: AssignedDriver[], updatedVehicles: AssignedVehicle[]) => {
+    const handleAssignmentsUpdate = async (updatedDrivers: AssignedDriver[]) => {
         if (!id || !contract) return;
+        
+        const batch = writeBatch(db);
+        const contractRef = doc(db, 'contracted_transports', id);
+
+        const newDriverIds = new Set(updatedDrivers.map(d => d.driverId));
+        const oldDriverIds = new Set(contract.assignedDrivers.map(d => d.driverId));
+
+        // Get vehicles to be made available
+        const vehiclesToMakeAvailable = contract.assignedVehicles.filter(v => !updatedDrivers.some(d => d.assignedVehicleId === v.vehicleId));
+        
+        // Get new vehicles to be set to ready
+        const newAssignedVehicles: AssignedVehicle[] = updatedDrivers.map(driver => {
+             const vehicle = drivers.find(d => d.id === driver.driverId)?.vehicle;
+            if (!vehicle) return null;
+             return {
+                vehicleId: vehicle.id,
+                licensePlate: vehicle.licensePlate,
+                trailerLicensePlate: vehicle.trailerLicensePlate,
+                modelName: `${vehicle.makeName} ${vehicle.modelName}`,
+                status: 'Ready' as VehicleStatus,
+             };
+        }).filter((v): v is AssignedVehicle => v !== null);
+
+        batch.update(contractRef, {
+            assignedDrivers: updatedDrivers,
+            assignedVehicles: newAssignedVehicles,
+        });
+
+        // Update status for vehicles that are no longer assigned to this contract
+        vehiclesToMakeAvailable.forEach(vehicle => {
+            const vehicleRef = doc(db, 'vehicles', vehicle.vehicleId);
+            batch.update(vehicleRef, { status: 'Available' });
+        });
+        
+        // Update status for newly assigned vehicles
+        newAssignedVehicles.forEach(vehicle => {
+            const vehicleRef = doc(db, 'vehicles', vehicle.vehicleId);
+            batch.update(vehicleRef, { status: 'Ready' });
+        });
+        
         try {
-            const contractRef = doc(db, 'contracted_transports', id);
-            
-            // Set status to "Ready" for newly assigned vehicles, and "Available" for unassigned ones
-            const currentVehicleIds = new Set(contract.assignedVehicles.map(v => v.vehicleId));
-            const updatedVehicleIds = new Set(updatedVehicles.map(v => v.vehicleId));
-            
-            const vehiclesWithUpdatedStatus = updatedVehicles.map(v => ({...v, status: 'Ready' as VehicleStatus}));
-
-            const vehiclesToMakeAvailable = contract.assignedVehicles.filter(v => !updatedVehicleIds.has(v.vehicleId));
-
-            const finalVehicleList = [...vehiclesWithUpdatedStatus, ...vehiclesToMakeAvailable.map(v => ({...v, status: 'Available' as VehicleStatus}))];
-
-            await updateDoc(contractRef, {
-                assignedDrivers: updatedDrivers,
-                assignedVehicles: vehiclesWithUpdatedStatus,
-            });
-            
-            setContract(prev => prev ? { ...prev, assignedDrivers: updatedDrivers, assignedVehicles: vehiclesWithUpdatedStatus } : null);
+            await batch.commit();
+            setContract(prev => prev ? { ...prev, assignedDrivers: updatedDrivers, assignedVehicles: newAssignedVehicles } : null);
             toast({ title: "Амжилттай", description: "Оноолт хадгалагдлаа."});
             setIsAssignmentsDialogOpen(false);
         } catch (error) {
@@ -1075,7 +1096,10 @@ export default function ContractedTransportDetailPage() {
                                         <Card key={vehicle.vehicleId} className="bg-background/70">
                                             <CardHeader className="p-3">
                                                 <div className="flex justify-between items-start">
-                                                    <CardTitle className="text-xl font-mono">{vehicle.licensePlate}</CardTitle>
+                                                    <div>
+                                                        <CardTitle className="text-xl font-mono">{vehicle.licensePlate}</CardTitle>
+                                                        <CardDescription className="text-xs pt-1">{vehicle.modelName}</CardDescription>
+                                                    </div>
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
                                                             <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -1096,7 +1120,6 @@ export default function ContractedTransportDetailPage() {
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </div>
-                                                <CardDescription className="text-xs pt-1">{vehicle.modelName}</CardDescription>
                                             </CardHeader>
                                             <CardContent className="p-3 pt-0">
                                                 <div className="flex items-center gap-2 text-sm">
@@ -1347,7 +1370,6 @@ export default function ContractedTransportDetailPage() {
                             <div className="space-y-4 py-4">
                                 <FormField control={editExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
                                 <FormField control={editExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Оноосон жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedDrivers.map(d => <SelectItem key={d.driverId} value={d.driverId}>{d.driverName}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                                <FormField control={editExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Оноосон тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{contract.assignedVehicles.map(v => <SelectItem key={v.vehicleId} value={v.vehicleId}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                             </div>
                             <DialogFooter>
                                 <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
@@ -1384,7 +1406,7 @@ export default function ContractedTransportDetailPage() {
         
         {/* Edit Stop Dialog */}
         {stopToEdit && (
-            <Dialog open={!!stopToEdit} onOpenChange={() => setStopToEdit(null)}>
+            <Dialog open={!!stopToEdit} onOpenChange={()={() => setStopToEdit(null)}>
                 <DialogContent>
                     <Form {...editStopForm}>
                         <form onSubmit={editStopForm.handleSubmit(handleUpdateStop)} id="edit-stop-form">
@@ -1422,7 +1444,7 @@ export default function ContractedTransportDetailPage() {
         </AlertDialog>
         
         {/* Load Cargo Dialog */}
-        <AlertDialog open={isLoadCargoDialogOpen} onOpenChange={(open) => !open && setExecutionToLoad(null)}>
+        <AlertDialog open={isLoadCargoDialogOpen} onOpenChange={() => !open && setExecutionToLoad(null)}>
             <AlertDialogContent>
                     <div>
                         <AlertDialogHeader>
@@ -1451,7 +1473,7 @@ export default function ContractedTransportDetailPage() {
         </AlertDialog>
 
         {/* Unload Cargo Dialog */}
-        <AlertDialog open={isUnloadCargoDialogOpen} onOpenChange={(open) => !open && setExecutionToUnload(null)}>
+        <AlertDialog open={isUnloadCargoDialogOpen} onOpenChange={() => !open && setExecutionToUnload(null)}>
             <AlertDialogContent>
                     <div>
                         <AlertDialogHeader>
@@ -1535,7 +1557,7 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, on
     onOpenChange: (open: boolean) => void;
     contract: ContractedTransport | null;
     drivers: (Driver & { vehicle?: Vehicle })[];
-    onSave: (drivers: AssignedDriver[], vehicles: AssignedVehicle[]) => void;
+    onSave: (drivers: AssignedDriver[]) => void;
     isSubmitting: boolean;
 }) {
     const [assignedDrivers, setAssignedDrivers] = React.useState<AssignedDriver[]>([]);
@@ -1571,22 +1593,8 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, on
     }
 
     const handleSaveChanges = () => {
-        const updatedVehicles = assignedDrivers.map(driver => {
-            const vehicle = drivers.find(d => d.id === driver.driverId)?.vehicle;
-            if (!vehicle) return null;
-            
-            const existingVehicleData = contract.assignedVehicles.find(v => v.vehicleId === vehicle.id);
-
-            return {
-                vehicleId: vehicle.id,
-                licensePlate: vehicle.licensePlate,
-                trailerLicensePlate: vehicle.trailerLicensePlate,
-                modelName: `${vehicle.makeName} ${vehicle.modelName}`,
-                status: existingVehicleData?.status || 'Ready' as VehicleStatus
-            }
-        }).filter((v): v is AssignedVehicle => v !== null);
-
-        onSave(assignedDrivers, updatedVehicles);
+        onSave(assignedDrivers);
+        onOpenChange(false);
     }
     
     return (
@@ -1644,5 +1652,7 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, on
         </Dialog>
     );
 }
+
+    
 
     
