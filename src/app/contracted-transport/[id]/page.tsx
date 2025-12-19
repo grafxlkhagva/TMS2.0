@@ -845,23 +845,18 @@ export default function ContractedTransportDetailPage() {
         const batch = writeBatch(db);
         const contractRef = doc(db, 'contracted_transports', id);
 
-        const newDriverIds = new Set(updatedDrivers.map(d => d.driverId));
-        const oldDriverIds = new Set(contract.assignedDrivers.map(d => d.driverId));
-
-        // Get vehicles to be made available
         const vehiclesToMakeAvailable = contract.assignedVehicles.filter(v => !updatedDrivers.some(d => d.assignedVehicleId === v.vehicleId));
         
-        // Get new vehicles to be set to ready
         const newAssignedVehicles: AssignedVehicle[] = updatedDrivers.map(driver => {
-             const vehicle = drivers.find(d => d.id === driver.driverId)?.vehicle;
+            const vehicle = drivers.find(d => d.id === driver.driverId)?.vehicle;
             if (!vehicle) return null;
-             return {
+            return {
                 vehicleId: vehicle.id,
                 licensePlate: vehicle.licensePlate,
-                trailerLicensePlate: vehicle.trailerLicensePlate,
+                trailerLicensePlate: vehicle.trailerLicensePlate || null,
                 modelName: `${vehicle.makeName} ${vehicle.modelName}`,
                 status: 'Ready' as VehicleStatus,
-             };
+            };
         }).filter((v): v is AssignedVehicle => v !== null);
 
         batch.update(contractRef, {
@@ -869,13 +864,11 @@ export default function ContractedTransportDetailPage() {
             assignedVehicles: newAssignedVehicles,
         });
 
-        // Update status for vehicles that are no longer assigned to this contract
         vehiclesToMakeAvailable.forEach(vehicle => {
             const vehicleRef = doc(db, 'vehicles', vehicle.vehicleId);
             batch.update(vehicleRef, { status: 'Available' });
         });
         
-        // Update status for newly assigned vehicles
         newAssignedVehicles.forEach(vehicle => {
             const vehicleRef = doc(db, 'vehicles', vehicle.vehicleId);
             batch.update(vehicleRef, { status: 'Ready' });
@@ -883,10 +876,11 @@ export default function ContractedTransportDetailPage() {
         
         try {
             await batch.commit();
-            setContract(prev => prev ? { ...prev, assignedDrivers: updatedDrivers, assignedVehicles: newAssignedVehicles } : null);
+            await fetchContractData(); // Refetch all data to ensure consistency
             toast({ title: "Амжилттай", description: "Оноолт хадгалагдлаа."});
             setIsAssignmentsDialogOpen(false);
         } catch (error) {
+             console.error("Error updating assignments", error);
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Оноолт хадгалахад алдаа гарлаа.'});
         }
     }
