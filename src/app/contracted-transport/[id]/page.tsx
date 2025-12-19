@@ -856,7 +856,7 @@ export default function ContractedTransportDetailPage() {
         }
     }
     
-    const handleVehicleStatusChange = async (vehicleId: string, status: VehicleStatus) => {
+    const onVehicleStatusChange = async (vehicleId: string, status: VehicleStatus) => {
         if (!contract) return;
         const updatedVehicles = contract.assignedVehicles.map(v => 
             v.vehicleId === vehicleId ? { ...v, status } : v
@@ -1045,8 +1045,8 @@ export default function ContractedTransportDetailPage() {
                     <Settings className="mr-2 h-4 w-4"/> Удирдах
                 </Button>
             </CardHeader>
-             <CardContent className="overflow-x-auto">
-                <div className="grid grid-flow-col auto-cols-fr gap-6 min-w-[700px] md:min-w-full">
+             <CardContent className="overflow-x-auto pb-2">
+                 <div className="grid grid-flow-col auto-cols-[280px] gap-4 min-w-max">
                     {(Object.keys(groupedVehicles) as VehicleStatus[]).map(status => (
                         <div key={status} className="flex flex-col h-[400px]">
                             <h3 className="font-semibold text-sm mb-3 flex items-center gap-2 px-2">
@@ -1059,13 +1059,10 @@ export default function ContractedTransportDetailPage() {
                                 {groupedVehicles[status].length > 0 ? (
                                     groupedVehicles[status].map((vehicle: any) => (
                                         <Card key={vehicle.vehicleId} className="bg-background/70">
-                                            <CardContent className="p-3">
+                                            <CardHeader className="p-3">
                                                 <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <p className="font-bold text-lg font-mono">{vehicle.licensePlate}</p>
-                                                        <p className="text-xs text-muted-foreground">{vehicle.modelName}</p>
-                                                    </div>
-                                                    <DropdownMenu>
+                                                    <CardTitle className="text-xl font-mono">{vehicle.licensePlate}</CardTitle>
+                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
                                                             <Button variant="ghost" size="icon" className="h-7 w-7">
                                                                 <MoreHorizontal className="h-4 w-4"/>
@@ -1074,7 +1071,7 @@ export default function ContractedTransportDetailPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuRadioGroup
                                                                 value={vehicle.status || 'Available'}
-                                                                onValueChange={(newStatus) => handleVehicleStatusChange(vehicle.vehicleId, newStatus as VehicleStatus)}
+                                                                onValueChange={(newStatus) => onVehicleStatusChange(vehicle.vehicleId, newStatus as VehicleStatus)}
                                                             >
                                                                 {vehicleStatuses.map(s => (
                                                                     <DropdownMenuRadioItem key={s} value={s}>
@@ -1085,7 +1082,9 @@ export default function ContractedTransportDetailPage() {
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </div>
-                                                <Separator className="my-2"/>
+                                                <CardDescription className="text-xs pt-1">{vehicle.modelName}</CardDescription>
+                                            </CardHeader>
+                                            <CardContent className="p-3 pt-0">
                                                 <div className="flex items-center gap-2 text-sm">
                                                     <User className="h-4 w-4 text-muted-foreground"/>
                                                     {vehicle.assignedDriver ? (
@@ -1105,7 +1104,7 @@ export default function ContractedTransportDetailPage() {
                                         </Card>
                                     ))
                                 ) : (
-                                    <div className="flex items-center justify-center h-24 rounded-lg bg-muted/50">
+                                    <div className="flex items-center justify-center h-24 rounded-lg">
                                         <p className="text-xs text-muted-foreground text-center py-4">Тээврийн хэрэгсэл алга.</p>
                                     </div>
                                 )}
@@ -1604,7 +1603,10 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, on
                 </div>
                 <DialogFooter>
                     <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
-                    <Button onClick={() => onSave(assignedDrivers)} disabled={isSaving}>
+                    <Button onClick={async () => {
+                        await onSave(assignedDrivers);
+                        onOpenChange(false);
+                      }} disabled={isSaving}>
                          {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} Хадгалах
                     </Button>
                 </DialogFooter>
