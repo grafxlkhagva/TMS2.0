@@ -394,7 +394,7 @@ export default function ContractedTransportDetailPage() {
             getDoc(doc(db, 'regions', fetchedContract.route.startRegionId)),
             getDoc(doc(db, 'regions', fetchedContract.route.endRegionId)),
             getDoc(doc(db, 'warehouses', fetchedContract.route.startWarehouseId)),
-            getDoc(db, 'warehouses', fetchedContract.route.endWarehouseId)),
+            getDoc(doc(db, 'warehouses', fetchedContract.route.endWarehouseId)),
             getDocs(query(collection(db, 'packaging_types'))),
             getDoc(doc(db, 'users', fetchedContract.transportManagerId)),
             getDocs(query(collection(db, "Drivers"), where('isAvailableForContracted', '==', true))),
@@ -1647,6 +1647,8 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, on
         </Dialog>
     );
 }
+
+    
 
     
 
