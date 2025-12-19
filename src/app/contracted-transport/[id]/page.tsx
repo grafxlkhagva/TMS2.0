@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -847,13 +846,25 @@ export default function ContractedTransportDetailPage() {
         if (!id || !contract) return;
         try {
             const contractRef = doc(db, 'contracted_transports', id);
+            
+            // Set status to "Ready" for newly assigned vehicles, and "Available" for unassigned ones
+            const currentVehicleIds = new Set(contract.assignedVehicles.map(v => v.vehicleId));
+            const updatedVehicleIds = new Set(updatedVehicles.map(v => v.vehicleId));
+            
+            const vehiclesWithUpdatedStatus = updatedVehicles.map(v => ({...v, status: 'Ready' as VehicleStatus}));
+
+            const vehiclesToMakeAvailable = contract.assignedVehicles.filter(v => !updatedVehicleIds.has(v.vehicleId));
+
+            const finalVehicleList = [...vehiclesWithUpdatedStatus, ...vehiclesToMakeAvailable.map(v => ({...v, status: 'Available' as VehicleStatus}))];
+
             await updateDoc(contractRef, {
                 assignedDrivers: updatedDrivers,
-                assignedVehicles: updatedVehicles,
+                assignedVehicles: vehiclesWithUpdatedStatus,
             });
             
-            setContract(prev => prev ? { ...prev, assignedDrivers: updatedDrivers, assignedVehicles: updatedVehicles } : null);
+            setContract(prev => prev ? { ...prev, assignedDrivers: updatedDrivers, assignedVehicles: vehiclesWithUpdatedStatus } : null);
             toast({ title: "Амжилттай", description: "Оноолт хадгалагдлаа."});
+            setIsAssignmentsDialogOpen(false);
         } catch (error) {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Оноолт хадгалахад алдаа гарлаа.'});
         }
@@ -1038,18 +1049,18 @@ export default function ContractedTransportDetailPage() {
         <StatCard title="Замд яваа" value={dashboardStats.inProgress} icon={TrendingUp} description="Идэвхтэй (ачиж/зөөж/буй) гүйцэтгэл." />
       </div>
 
-       <Card className="mb-6">
+      <Card className="mb-6">
             <CardHeader className="flex-row justify-between items-center">
                 <div className="space-y-1.5">
                     <CardTitle>Тээврийн бэлэн байдал</CardTitle>
                     <CardDescription>Оноосон тээврийн хэрэгслүүдийн статус.</CardDescription>
                 </div>
-                 <Button variant="outline" size="sm" onClick={() => setIsAssignmentsDialogOpen(true)}>
+                <Button variant="outline" size="sm" onClick={() => setIsAssignmentsDialogOpen(true)}>
                     <Settings className="mr-2 h-4 w-4"/> Удирдах
                 </Button>
             </CardHeader>
-             <CardContent className="overflow-x-auto pb-2">
-                 <div className="grid grid-flow-col auto-cols-[280px] gap-4 min-w-max">
+            <CardContent className="overflow-x-auto pb-2">
+                <div className="grid grid-flow-col auto-cols-[280px] gap-4 min-w-max">
                     {(Object.keys(groupedVehicles) as VehicleStatus[]).map(status => (
                         <div key={status} className="flex flex-col h-[400px]">
                             <h3 className="font-semibold text-sm mb-3 flex items-center gap-2 px-2">
@@ -1065,7 +1076,7 @@ export default function ContractedTransportDetailPage() {
                                             <CardHeader className="p-3">
                                                 <div className="flex justify-between items-start">
                                                     <CardTitle className="text-xl font-mono">{vehicle.licensePlate}</CardTitle>
-                                                     <DropdownMenu>
+                                                    <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
                                                             <Button variant="ghost" size="icon" className="h-7 w-7">
                                                                 <MoreHorizontal className="h-4 w-4"/>
@@ -1095,22 +1106,22 @@ export default function ContractedTransportDetailPage() {
                                                     ) : (
                                                         <p className="text-muted-foreground italic">Жолоочгүй</p>
                                                     )}
-                                                </CardContent>
-                                                {status === 'Ready' && vehicle.assignedDriver && (
-                                                    <CardFooter className="p-2 border-t">
-                                                        <Button variant="success" size="sm" className="w-full" onClick={() => openNewExecutionDialog(vehicle.assignedDriver.driverId)}>
-                                                            <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
-                                                        </Button>
-                                                    </CardFooter>
-                                                )}
-                                            </Card>
-                                        ))
-                                    ) : (
-                                        <div className="flex items-center justify-center h-24 rounded-lg">
-                                            <p className="text-xs text-muted-foreground text-center py-4">Тээврийн хэрэгсэл алга.</p>
-                                        </div>
-                                    )}
-                                </div>
+                                                </div>
+                                            </CardContent>
+                                            {status === 'Ready' && vehicle.assignedDriver && (
+                                                <CardFooter className="p-2 border-t mt-2">
+                                                    <Button variant="success" size="sm" className="w-full" onClick={() => openNewExecutionDialog(vehicle.assignedDriver.driverId)}>
+                                                        <PlusCircle className="mr-2 h-4 w-4"/> Гүйцэтгэл нэмэх
+                                                    </Button>
+                                                </CardFooter>
+                                            )}
+                                        </Card>
+                                    ))
+                                ) : (
+                                    <div className="flex items-center justify-center h-24 rounded-lg">
+                                        <p className="text-xs text-muted-foreground text-center py-4">Тээврийн хэрэгсэл алга.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -1528,16 +1539,16 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, on
     isSubmitting: boolean;
 }) {
     const [assignedDrivers, setAssignedDrivers] = React.useState<AssignedDriver[]>([]);
-
+    
     React.useEffect(() => {
         if (contract) {
             setAssignedDrivers(contract.assignedDrivers);
         }
-    }, [contract]);
+    }, [contract, open]);
+    
 
     if (!contract) return null;
     
-    // Filter for drivers who are available for contracted transport and have a vehicle assigned
     const availableDriverPairs = drivers.filter(d => 
         d.isAvailableForContracted && 
         d.vehicle &&
@@ -1563,17 +1574,19 @@ function AssignmentsManagementDialog({ open, onOpenChange, contract, drivers, on
         const updatedVehicles = assignedDrivers.map(driver => {
             const vehicle = drivers.find(d => d.id === driver.driverId)?.vehicle;
             if (!vehicle) return null;
+            
+            const existingVehicleData = contract.assignedVehicles.find(v => v.vehicleId === vehicle.id);
+
             return {
                 vehicleId: vehicle.id,
                 licensePlate: vehicle.licensePlate,
                 trailerLicensePlate: vehicle.trailerLicensePlate,
                 modelName: `${vehicle.makeName} ${vehicle.modelName}`,
-                status: 'Ready' as VehicleStatus
+                status: existingVehicleData?.status || 'Ready' as VehicleStatus
             }
         }).filter((v): v is AssignedVehicle => v !== null);
 
         onSave(assignedDrivers, updatedVehicles);
-        onOpenChange(false);
     }
     
     return (
