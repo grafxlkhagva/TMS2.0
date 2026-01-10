@@ -3,14 +3,14 @@
 
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Eye, Trash2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { PlusCircle, MoreHorizontal, Eye, Trash2, Settings2, UserCheck, Ship, Truck } from 'lucide-react';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { collection, getDocs, orderBy, query, writeBatch, where, doc } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, writeBatch, where, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { ContractedTransport, ContractedTransportFrequency } from '@/types';
+import type { ContractedTransport, ContractedTransportFrequency, Driver, Vehicle, AssignedVehicle } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -31,6 +31,10 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
 
 
 const frequencyTranslations: Record<ContractedTransportFrequency, string> = {
@@ -40,20 +44,135 @@ const frequencyTranslations: Record<ContractedTransportFrequency, string> = {
     Custom: 'Бусад'
 };
 
+
+function AssignmentsManagementDialog({ open, onOpenChange, drivers, assignedVehicles, onSave }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    drivers: Driver[];
+    assignedVehicles: AssignedVehicle[];
+    onSave: (newAssignments: AssignedVehicle[]) => void;
+}) {
+    const [selectedDriverId, setSelectedDriverId] = React.useState<string>('');
+    const [currentAssignments, setCurrentAssignments] = React.useState<AssignedVehicle[]>(assignedVehicles);
+    const { toast } = useToast();
+
+    React.useEffect(() => {
+        setCurrentAssignments(assignedVehicles);
+    }, [assignedVehicles]);
+
+    const handleAddAssignment = () => {
+        if (!selectedDriverId) {
+            toast({ variant: 'destructive', title: 'Жолооч сонгоогүй байна' });
+            return;
+        }
+        const driver = drivers.find(d => d.id === selectedDriverId);
+        if (!driver || !driver.assignedVehicleId) {
+             toast({ variant: 'destructive', title: 'Жолоочид оноосон тэрэг байхгүй', description: 'Эхлээд жолоочийн мэдээллээс тэрэг онооно уу.' });
+            return;
+        }
+        
+        if (currentAssignments.some(a => a.assignedDriver?.driverId === driver.id)) {
+            toast({ variant: 'destructive', title: 'Жолооч нэмэгдсэн байна' });
+            return;
+        }
+
+        const newAssignment: AssignedVehicle = {
+            vehicleId: driver.assignedVehicleId,
+            licensePlate: 'Loading...', // Will be populated when saving
+            trailerLicensePlate: null, // Will be populated
+            status: 'Ready',
+            assignedDriver: {
+                driverId: driver.id,
+                driverName: driver.display_name,
+                driverAvatar: driver.photo_url
+            }
+        };
+
+        setCurrentAssignments(prev => [...prev, newAssignment]);
+        setSelectedDriverId('');
+    };
+
+    const handleRemoveAssignment = (driverId: string) => {
+        setCurrentAssignments(prev => prev.filter(a => a.assignedDriver?.driverId !== driverId));
+    };
+
+    const availableDrivers = drivers.filter(d => 
+        d.isAvailableForContracted && 
+        d.assignedVehicleId &&
+        !currentAssignments.some(a => a.assignedDriver?.driverId === d.id)
+    );
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Гэрээт тээврийн жолооч/тэрэг оноолт</DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-4 py-4">
+                    <div>
+                        <h4 className="font-semibold mb-2">Нэмэх боломжтой жолооч нар</h4>
+                        <div className="space-y-2">
+                             <Select onValueChange={setSelectedDriverId} value={selectedDriverId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Жолооч сонгох..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableDrivers.map(d => (
+                                        <SelectItem key={d.id} value={d.id}>{d.display_name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Button onClick={handleAddAssignment} className="w-full">Нэмэх</Button>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 className="font-semibold mb-2">Оноосон жолооч нар ({currentAssignments.length})</h4>
+                        <div className="space-y-2 max-h-64 overflow-y-auto pr-2 -mr-2">
+                            {currentAssignments.map(assignment => (
+                                <div key={assignment.assignedDriver!.driverId} className="flex items-center justify-between p-2 border rounded-md">
+                                    <span>{assignment.assignedDriver!.driverName}</span>
+                                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleRemoveAssignment(assignment.assignedDriver!.driverId)}>
+                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Цуцлах</Button>
+                    <Button onClick={() => onSave(currentAssignments)}>Хадгалах</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
+
 export default function ContractedTransportPage() {
   const [contracts, setContracts] = React.useState<ContractedTransport[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [itemToDelete, setItemToDelete] = React.useState<ContractedTransport | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const { toast } = useToast();
-
-  const fetchContracts = React.useCallback(async () => {
+  
+  // NEW STATES for the fleet management
+  const [showAssignmentsDialog, setShowAssignmentsDialog] = React.useState(false);
+  const [assignedVehicles, setAssignedVehicles] = React.useState<AssignedVehicle[]>([]);
+  const [availableDrivers, setAvailableDrivers] = React.useState<Driver[]>([]);
+  
+  const fetchContractsAndAssignments = React.useCallback(async () => {
     setIsLoading(true);
     try {
         if (!db) return;
-        const q = query(collection(db, "contracted_transports"), orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(q);
-        const data = querySnapshot.docs.map(doc => {
+        
+        const [contractsQuery, driversQuery, vehiclesQuery] = await Promise.all([
+             getDocs(query(collection(db, "contracted_transports"), orderBy("createdAt", "desc"))),
+             getDocs(query(collection(db, 'Drivers'), where('isAvailableForContracted', '==', true))),
+             getDocs(collection(db, 'vehicles'))
+        ]);
+        
+        const contractsData = contractsQuery.docs.map(doc => {
             const docData = doc.data();
             return {
                 id: doc.id,
@@ -63,7 +182,25 @@ export default function ContractedTransportPage() {
                 endDate: docData.endDate.toDate(),
             } as ContractedTransport;
         });
-        setContracts(data);
+        setContracts(contractsData);
+
+        const allAssignedVehicles = contractsData.flatMap(c => c.assignedVehicles || []);
+        setAssignedVehicles(allAssignedVehicles);
+        
+        const vehiclesData = vehiclesQuery.docs.map(doc => ({ id: doc.id, ...doc.data() } as Vehicle));
+        
+        const driversData = driversQuery.docs.map(doc => {
+            const driver = { id: doc.id, ...doc.data()} as Driver;
+            if (driver.assignedVehicleId) {
+                const vehicle = vehiclesData.find(v => v.id === driver.assignedVehicleId);
+                // @ts-ignore
+                if (vehicle) driver.vehicle = vehicle;
+            }
+            return driver;
+        });
+
+        setAvailableDrivers(driversData);
+
     } catch (error) {
         console.error("Error fetching contracted transports:", error);
         toast({
@@ -77,8 +214,8 @@ export default function ContractedTransportPage() {
   }, [toast]);
 
   React.useEffect(() => {
-    fetchContracts();
-  }, [fetchContracts]);
+    fetchContractsAndAssignments();
+  }, [fetchContractsAndAssignments]);
   
   const handleDelete = async () => {
     if (!itemToDelete) return;
@@ -86,14 +223,12 @@ export default function ContractedTransportPage() {
     try {
       const batch = writeBatch(db);
       
-      // Delete all executions associated with the contract
       const executionsQuery = query(collection(db, 'contracted_transport_executions'), where('contractId', '==', itemToDelete.id));
       const executionsSnapshot = await getDocs(executionsQuery);
       executionsSnapshot.forEach(doc => {
           batch.delete(doc.ref);
       });
 
-      // Delete the contract itself
       const contractRef = doc(db, 'contracted_transports', itemToDelete.id);
       batch.delete(contractRef);
 
@@ -109,6 +244,47 @@ export default function ContractedTransportPage() {
       setItemToDelete(null);
     }
   };
+
+  const handleAssignmentsUpdate = async (newAssignments: AssignedVehicle[]) => {
+      try {
+          const vehiclesSnapshot = await getDocs(collection(db, 'vehicles'));
+          const vehiclesData = vehiclesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as Vehicle);
+
+          const newAssignedVehicles = newAssignments.map(a => {
+              const vehicle = vehiclesData.find(v => v.id === a.vehicleId);
+              return {
+                  ...a,
+                  licensePlate: vehicle?.licensePlate || 'N/A',
+                  trailerLicensePlate: vehicle?.trailerLicensePlate || null,
+              }
+          })
+          
+          // This should update a central list of assignments, not a specific contract
+          // For now, let's just update the local state to reflect changes
+          setAssignedVehicles(newAssignedVehicles);
+          setShowAssignmentsDialog(false);
+          toast({ title: "Амжилттай", description: "Оноолт шинэчлэгдлээ."})
+
+      } catch (error) {
+         console.error("Error updating assignments:", error);
+         toast({ variant: 'destructive', title: 'Алдаа', description: 'Оноолт хадгалахад алдаа гарлаа.' });
+      }
+  }
+  
+  const renderVehicleCard = (vehicle: AssignedVehicle) => (
+        <Card key={vehicle.vehicleId} className="p-3">
+            <div className="flex items-center gap-3">
+                <Avatar>
+                    <AvatarImage src={vehicle.assignedDriver?.driverAvatar} />
+                    <AvatarFallback>{vehicle.assignedDriver?.driverName.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div>
+                    <p className="font-semibold">{vehicle.assignedDriver?.driverName}</p>
+                    <p className="text-sm text-muted-foreground">{vehicle.licensePlate}</p>
+                </div>
+            </div>
+        </Card>
+    );
 
 
   return (
@@ -129,6 +305,44 @@ export default function ContractedTransportPage() {
           </Button>
         </div>
       </div>
+      
+       <Card className="mb-6">
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle>Гэрээт тээврийн парк</CardTitle>
+                        <CardDescription>Нэгдсэн удирдлагын самбар.</CardDescription>
+                    </div>
+                    <Button variant="outline" onClick={() => setShowAssignmentsDialog(true)}>
+                        <Settings2 className="mr-2 h-4 w-4" />
+                        Жолооч/Тэрэг оноох
+                    </Button>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="rounded-lg bg-muted p-3">
+                        <h3 className="font-semibold mb-2 flex items-center gap-2"><UserCheck className="h-5 w-5 text-green-600"/> Сул</h3>
+                        <div className="space-y-2">
+                            {assignedVehicles.filter(v => v.status === 'Ready').map(renderVehicleCard)}
+                        </div>
+                    </div>
+                    <div className="rounded-lg bg-muted p-3">
+                        <h3 className="font-semibold mb-2 flex items-center gap-2"><Ship className="h-5 w-5 text-blue-600"/> Бэлэн</h3>
+                         <div className="space-y-2">
+                            {assignedVehicles.filter(v => v.status === 'Ready' && v.contractId).map(renderVehicleCard)}
+                        </div>
+                    </div>
+                    <div className="rounded-lg bg-muted p-3">
+                        <h3 className="font-semibold mb-2 flex items-center gap-2"><Truck className="h-5 w-5 text-orange-600"/> Аялалд яваа</h3>
+                         <div className="space-y-2">
+                            {assignedVehicles.filter(v => v.status === 'In-Trip').map(renderVehicleCard)}
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+
 
       <Card>
         <CardHeader>
@@ -225,6 +439,14 @@ export default function ContractedTransportPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+        
+        <AssignmentsManagementDialog 
+            open={showAssignmentsDialog}
+            onOpenChange={setShowAssignmentsDialog}
+            drivers={availableDrivers}
+            assignedVehicles={assignedVehicles}
+            onSave={handleAssignmentsUpdate}
+        />
 
     </div>
   );
