@@ -1,18 +1,19 @@
 
+
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Driver, DriverStatus, Vehicle } from '@/types';
+import type { Driver, DriverStatus } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Phone, CheckCircle, XCircle, Clock, User, Car } from 'lucide-react';
+import { ArrowLeft, Edit, Phone, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Timestamp } from 'firebase/firestore';
@@ -56,7 +57,6 @@ export default function DriverDetailPage() {
   const { toast } = useToast();
 
   const [driver, setDriver] = React.useState<Driver | null>(null);
-  const [assignedVehicle, setAssignedVehicle] = React.useState<Vehicle | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -74,14 +74,6 @@ export default function DriverDetailPage() {
             created_time: toDateSafe(driverDocSnap.data().created_time),
           } as Driver;
           setDriver(driverData);
-
-          // Fetch assigned vehicle
-          const vehicleQuery = query(collection(db, 'vehicles'), where('driverId', '==', id));
-          const vehicleSnapshot = await getDocs(vehicleQuery);
-          if (!vehicleSnapshot.empty) {
-            const vehicleDoc = vehicleSnapshot.docs[0];
-            setAssignedVehicle({ id: vehicleDoc.id, ...vehicleDoc.data() } as Vehicle);
-          }
 
         } else {
           toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч олдсонгүй.' });
@@ -114,22 +106,13 @@ export default function DriverDetailPage() {
                 <Skeleton className="h-10 w-36" />
             </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="md:col-span-1">
-                <CardHeader> <Skeleton className="h-6 w-1/2" /> </CardHeader>
-                <CardContent className="space-y-4 pt-4">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                </CardContent>
-            </Card>
-             <Card className="md:col-span-2">
-                <CardHeader> <Skeleton className="h-6 w-1/2" /> </CardHeader>
-                <CardContent className="space-y-4 pt-4">
-                    <Skeleton className="h-24 w-full" />
-                </CardContent>
-            </Card>
-        </div>
+        <Card>
+            <CardHeader> <Skeleton className="h-6 w-1/2" /> </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+            </CardContent>
+        </Card>
       </div>
     );
   }
@@ -169,49 +152,15 @@ export default function DriverDetailPage() {
         </div>
       </div>
       
-       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-            <Card className="md:col-span-1">
-              <CardHeader>
-                <CardTitle>Хувийн мэдээлэл</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <DetailItem icon={Phone} label="Утасны дугаар" value={driver.phone_number} />
-                <DetailItem icon={CheckCircle} label="Статус" value={<StatusBadge status={driver.status} />} />
-                 <DetailItem 
-                    icon={User} 
-                    label="Гэрээт тээвэрт явах" 
-                    value={driver.isAvailableForContracted ? 'Тийм' : 'Үгүй'} 
-                />
-              </CardContent>
-            </Card>
-
-            <Card className="md:col-span-2">
-                <CardHeader>
-                    <CardTitle>Оноосон тээврийн хэрэгсэл</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {assignedVehicle ? (
-                        <div className="flex items-center gap-4 p-3 rounded-md border bg-muted">
-                            <Avatar className="h-16 w-16">
-                                <AvatarImage src={assignedVehicle.imageUrls?.[0]} />
-                                <AvatarFallback>{assignedVehicle.makeName?.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                                <p className="font-semibold font-mono text-lg">{assignedVehicle.licensePlate}</p>
-                                <p className="text-sm text-muted-foreground">{assignedVehicle.makeName} {assignedVehicle.modelName} ({assignedVehicle.year})</p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex items-center justify-center h-24 rounded-md border-dashed border-2">
-                             <p className="text-sm text-muted-foreground">Оноосон тээврийн хэрэгсэл байхгүй байна.</p>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-       </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Хувийн мэдээлэл</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <DetailItem icon={Phone} label="Утасны дугаар" value={driver.phone_number} />
+            <DetailItem icon={CheckCircle} label="Статус" value={<StatusBadge status={driver.status} />} />
+          </CardContent>
+        </Card>
     </div>
   );
 }
-
-
-    

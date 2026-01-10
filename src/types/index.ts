@@ -27,8 +27,6 @@ export type Vehicle = {
   fuelType: 'Diesel' | 'Gasoline' | 'Electric' | 'Hybrid';
   status: VehicleStatus;
   notes?: string;
-  driverId: string | null;
-  driverName?: string;
   createdAt: Date;
   imageUrls?: string[];
 };
@@ -43,7 +41,6 @@ export type Driver = {
   created_time: Date | string | Timestamp;
   photo_url?: string;
   authUid?: string; // To link with Firebase Auth user
-  isAvailableForContracted?: boolean;
 };
 
 export type UserRole = 'admin' | 'management' | 'transport_manager' | 'finance_manager' | 'customer_officer' | 'manager' | 'driver';
@@ -440,7 +437,7 @@ export type AssignedDriver = {
 export type AssignedVehicle = {
   vehicleId: string;
   licensePlate: string;
-  trailerLicensePlate?: string;
+  trailerLicensePlate?: string | null;
   modelName: string;
   status?: VehicleStatus;
 }
@@ -474,26 +471,4 @@ export type ContractedTransport = {
     uid: string;
     name: string;
   };
-  assignedDrivers: AssignedDriver[];
-  assignedVehicles: AssignedVehicle[];
 };
-
-    
-
-    
-
-
-    
-
-
-
-    
-
-    
-
-
-
-
-    
-
-    
