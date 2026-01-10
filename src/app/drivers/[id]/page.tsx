@@ -3,17 +3,17 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Driver, DriverStatus } from '@/types';
+import type { Driver, DriverStatus, Vehicle } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Phone, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { ArrowLeft, Edit, Phone, CheckCircle, XCircle, Clock, Car } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Timestamp } from 'firebase/firestore';
@@ -57,6 +57,7 @@ export default function DriverDetailPage() {
   const { toast } = useToast();
 
   const [driver, setDriver] = React.useState<Driver | null>(null);
+  const [vehicle, setVehicle] = React.useState<Vehicle | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -74,6 +75,14 @@ export default function DriverDetailPage() {
             created_time: toDateSafe(driverDocSnap.data().created_time),
           } as Driver;
           setDriver(driverData);
+
+          // Fetch assigned vehicle
+          const vehicleQuery = query(collection(db, 'vehicles'), where('driverId', '==', id));
+          const vehicleSnapshot = await getDocs(vehicleQuery);
+          if (!vehicleSnapshot.empty) {
+              const vehicleData = {id: vehicleSnapshot.docs[0].id, ...vehicleSnapshot.docs[0].data()} as Vehicle;
+              setVehicle(vehicleData);
+          }
 
         } else {
           toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч олдсонгүй.' });
@@ -152,15 +161,33 @@ export default function DriverDetailPage() {
         </div>
       </div>
       
-        <Card>
-          <CardHeader>
-            <CardTitle>Хувийн мэдээлэл</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <DetailItem icon={Phone} label="Утасны дугаар" value={driver.phone_number} />
-            <DetailItem icon={CheckCircle} label="Статус" value={<StatusBadge status={driver.status} />} />
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+            <CardHeader>
+                <CardTitle>Хувийн мэдээлэл</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <DetailItem icon={Phone} label="Утасны дугаар" value={driver.phone_number} />
+                <DetailItem icon={CheckCircle} label="Статус" value={<StatusBadge status={driver.status} />} />
+            </CardContent>
+            </Card>
+
+             <Card>
+                <CardHeader>
+                    <CardTitle>Оноосон тээврийн хэрэгсэл</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {vehicle ? (
+                        <div className="space-y-4">
+                            <DetailItem icon={Car} label="Улсын дугаар" value={vehicle.licensePlate} />
+                            <DetailItem icon={Car} label="Загвар" value={`${vehicle.makeName} ${vehicle.modelName}`} />
+                        </div>
+                    ) : (
+                        <p className="text-sm text-muted-foreground">Оноосон тээврийн хэрэгсэл байхгүй.</p>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
     </div>
   );
 }

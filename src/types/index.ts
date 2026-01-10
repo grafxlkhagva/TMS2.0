@@ -29,6 +29,7 @@ export type Vehicle = {
   notes?: string;
   createdAt: Date;
   imageUrls?: string[];
+  driverName?: string;
 };
 
 export type DriverStatus = 'Active' | 'Inactive' | 'On Leave';
@@ -427,20 +428,6 @@ export type ContractedTransportCargoItem = {
     color?: string;
 };
 
-export type AssignedDriver = {
-    driverId: string;
-    driverName: string;
-    driverPhone: string;
-    assignedVehicleId?: string;
-}
-
-export type AssignedVehicle = {
-  vehicleId: string;
-  licensePlate: string;
-  trailerLicensePlate?: string | null;
-  modelName: string;
-  status?: VehicleStatus;
-}
 
 export type ContractedTransport = {
   id: string;
