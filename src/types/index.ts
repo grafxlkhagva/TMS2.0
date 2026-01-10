@@ -29,7 +29,10 @@ export type Vehicle = {
   notes?: string;
   createdAt: Date;
   imageUrls?: string[];
-  driverName?: string;
+  assignedDriver?: {
+    driverId: string;
+    driverName: string;
+  }
 };
 
 export type DriverStatus = 'Active' | 'Inactive' | 'On Leave';
@@ -42,6 +45,8 @@ export type Driver = {
   created_time: Date | string | Timestamp;
   photo_url?: string;
   authUid?: string; // To link with Firebase Auth user
+  assignedVehicleId?: string;
+  isAvailableForContracted?: boolean;
 };
 
 export type UserRole = 'admin' | 'management' | 'transport_manager' | 'finance_manager' | 'customer_officer' | 'manager' | 'driver';
@@ -393,6 +398,18 @@ export type ContractedTransportStatus = 'Active' | 'Expired' | 'Cancelled';
 export type ContractedTransportFrequency = 'Daily' | 'Weekly' | 'Monthly' | 'Custom';
 export type ContractedTransportExecutionStatus = string;
 
+export type AssignedVehicle = {
+  vehicleId: string;
+  licensePlate: string;
+  trailerLicensePlate: string | null;
+  status: 'Ready' | 'In-Trip';
+  assignedDriver?: {
+    driverId: string;
+    driverName: string;
+    driverAvatar?: string;
+  }
+};
+
 export type RouteStop = {
   id: string;
   description: string;
@@ -458,4 +475,5 @@ export type ContractedTransport = {
     uid: string;
     name: string;
   };
+  assignedVehicles?: AssignedVehicle[];
 };

@@ -77,11 +77,11 @@ export default function DriverDetailPage() {
           setDriver(driverData);
 
           // Fetch assigned vehicle
-          const vehicleQuery = query(collection(db, 'vehicles'), where('driverId', '==', id));
-          const vehicleSnapshot = await getDocs(vehicleQuery);
-          if (!vehicleSnapshot.empty) {
-              const vehicleData = {id: vehicleSnapshot.docs[0].id, ...vehicleSnapshot.docs[0].data()} as Vehicle;
-              setVehicle(vehicleData);
+          if (driverData.assignedVehicleId) {
+              const vehicleDoc = await getDoc(doc(db, 'vehicles', driverData.assignedVehicleId));
+              if (vehicleDoc.exists()) {
+                setVehicle({id: vehicleDoc.id, ...vehicleDoc.data()} as Vehicle);
+              }
           }
 
         } else {
@@ -169,6 +169,7 @@ export default function DriverDetailPage() {
             <CardContent className="space-y-4">
                 <DetailItem icon={Phone} label="Утасны дугаар" value={driver.phone_number} />
                 <DetailItem icon={CheckCircle} label="Статус" value={<StatusBadge status={driver.status} />} />
+                <DetailItem icon={CheckCircle} label="Гэрээт тээвэрт явах" value={driver.isAvailableForContracted ? "Тийм" : "Үгүй"} />
             </CardContent>
             </Card>
 
