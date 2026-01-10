@@ -67,7 +67,8 @@ function AssignmentsManagementDialog({ open, onOpenChange, drivers, assignedVehi
             return;
         }
         const driver = drivers.find(d => d.id === selectedDriverId);
-        if (!driver || !driver.assignedVehicleId) {
+        // @ts-ignore
+        if (!driver || !driver.vehicle?.id) {
              toast({ variant: 'destructive', title: 'Жолоочид оноосон тэрэг байхгүй', description: 'Эхлээд жолоочийн мэдээллээс тэрэг онооно уу.' });
             return;
         }
@@ -78,7 +79,8 @@ function AssignmentsManagementDialog({ open, onOpenChange, drivers, assignedVehi
         }
 
         const newAssignment: AssignedVehicle = {
-            vehicleId: driver.assignedVehicleId,
+            // @ts-ignore
+            vehicleId: driver.vehicle.id,
             licensePlate: 'Loading...', // Will be populated when saving
             trailerLicensePlate: null, // Will be populated
             status: 'Ready',
@@ -98,7 +100,8 @@ function AssignmentsManagementDialog({ open, onOpenChange, drivers, assignedVehi
     };
 
     const availableDrivers = drivers.filter(d => 
-        d.assignedVehicleId &&
+        // @ts-ignore
+        d.vehicle?.id &&
         !currentAssignments.some(a => a.assignedDriver?.driverId === d.id)
     );
 
@@ -129,7 +132,7 @@ function AssignmentsManagementDialog({ open, onOpenChange, drivers, assignedVehi
                         <h4 className="font-semibold mb-2">Оноосон жолооч нар ({currentAssignments.length})</h4>
                         <div className="space-y-2 max-h-64 overflow-y-auto pr-2 -mr-2">
                             {currentAssignments.map(assignment => (
-                                <div key={assignment.assignedDriver?.driverId} className="flex items-center justify-between p-2 border rounded-md">
+                                <div key={assignment.vehicleId} className="flex items-center justify-between p-2 border rounded-md">
                                     <span>{assignment.assignedDriver?.driverName || 'N/A'}</span>
                                     {assignment.assignedDriver && (
                                         <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleRemoveAssignment(assignment.assignedDriver!.driverId)}>
@@ -150,6 +153,31 @@ function AssignmentsManagementDialog({ open, onOpenChange, drivers, assignedVehi
     )
 }
 
+function renderVehicleCard(vehicle: AssignedVehicle) {
+    return (
+        <Card key={vehicle.vehicleId} className="p-3">
+            <div className="flex items-center gap-3">
+                {vehicle.assignedDriver ? (
+                    <>
+                        <Avatar>
+                            <AvatarImage src={vehicle.assignedDriver?.driverAvatar} />
+                            <AvatarFallback>{vehicle.assignedDriver?.driverName?.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <p className="font-semibold">{vehicle.assignedDriver.driverName}</p>
+                            <p className="text-sm text-muted-foreground">{vehicle.licensePlate}</p>
+                        </div>
+                    </>
+                ) : (
+                    <div>
+                        <p className="font-semibold">{vehicle.licensePlate}</p>
+                        <p className="text-sm text-muted-foreground italic">Жолоочгүй</p>
+                    </div>
+                )}
+            </div>
+        </Card>
+    );
+}
 
 export default function ContractedTransportPage() {
   const [contracts, setContracts] = React.useState<ContractedTransport[]>([]);
@@ -170,7 +198,7 @@ export default function ContractedTransportPage() {
         
         const [contractsQuery, driversQuery, vehiclesQuery] = await Promise.all([
              getDocs(query(collection(db, "contracted_transports"), orderBy("createdAt", "desc"))),
-             getDocs(query(collection(db, 'Drivers'))),
+             getDocs(query(collection(db, 'Drivers'), where('isAvailableForContracted', '==', true))),
              getDocs(collection(db, 'vehicles'))
         ]);
         
@@ -193,11 +221,9 @@ export default function ContractedTransportPage() {
         
         const driversData = driversQuery.docs.map(doc => {
             const driver = { id: doc.id, ...doc.data()} as Driver;
-            if (driver.assignedVehicleId) {
-                const vehicle = vehiclesData.find(v => v.id === driver.assignedVehicleId);
-                // @ts-ignore
-                if (vehicle) driver.vehicle = vehicle;
-            }
+            const vehicle = vehiclesData.find(v => v.driverId === driver.id);
+            // @ts-ignore
+            if (vehicle) driver.vehicle = vehicle;
             return driver;
         });
 
@@ -261,8 +287,17 @@ export default function ContractedTransportPage() {
               }
           })
           
-          // This should update a central list of assignments, not a specific contract
-          // For now, let's just update the local state to reflect changes
+          const batch = writeBatch(db);
+          contracts.forEach(c => {
+             const contractRef = doc(db, 'contracted_transports', c.id);
+             // This is a simplified logic. A real-world scenario would need a more
+             // sophisticated way to distribute vehicles among contracts if needed.
+             // For now, we update ALL contracts with the same list of assigned vehicles.
+             batch.update(contractRef, { assignedVehicles: newAssignedVehicles });
+          });
+          
+          await batch.commit();
+
           setAssignedVehicles(newAssignedVehicles);
           setShowAssignmentsDialog(false);
           toast({ title: "Амжилттай", description: "Оноолт шинэчлэгдлээ."})
@@ -272,31 +307,6 @@ export default function ContractedTransportPage() {
          toast({ variant: 'destructive', title: 'Алдаа', description: 'Оноолт хадгалахад алдаа гарлаа.' });
       }
   }
-  
-  const renderVehicleCard = (vehicle: AssignedVehicle) => (
-        <Card key={vehicle.vehicleId} className="p-3">
-            <div className="flex items-center gap-3">
-                {vehicle.assignedDriver ? (
-                    <>
-                        <Avatar>
-                            <AvatarImage src={vehicle.assignedDriver?.driverAvatar} />
-                            <AvatarFallback>{vehicle.assignedDriver?.driverName?.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <p className="font-semibold">{vehicle.assignedDriver.driverName}</p>
-                            <p className="text-sm text-muted-foreground">{vehicle.licensePlate}</p>
-                        </div>
-                    </>
-                ) : (
-                    <div>
-                        <p className="font-semibold">{vehicle.licensePlate}</p>
-                        <p className="text-sm text-muted-foreground italic">Жолоочгүй</p>
-                    </div>
-                )}
-            </div>
-        </Card>
-    );
-
 
   return (
     <div className="container mx-auto py-6">
@@ -462,4 +472,5 @@ export default function ContractedTransportPage() {
     </div>
   );
 }
+
 
