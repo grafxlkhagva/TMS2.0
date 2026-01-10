@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -282,8 +283,8 @@ export default function ContractedTransportDetailPage() {
   const { toast } = useToast();
   const [contract, setContract] = React.useState<ContractedTransport | null>(null);
   const [executions, setExecutions] = React.useState<ContractedTransportExecution[]>([]);
-  const [availableDrivers, setAvailableDrivers] = React.useState<Driver[]>([]);
-  const [availableVehicles, setAvailableVehicles] = React.useState<Vehicle[]>([]);
+  const [allDrivers, setAllDrivers] = React.useState<Driver[]>([]);
+  const [allVehicles, setAllVehicles] = React.useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -401,8 +402,8 @@ export default function ContractedTransportDetailPage() {
             getDocs(query(collection(db, 'vehicles'), where('status', '==', 'Available'))),
         ]);
         
-        setAvailableDrivers(availableDriversSnap.docs.map(d => ({id: d.id, ...d.data()} as Driver)));
-        setAvailableVehicles(availableVehiclesSnap.docs.map(v => ({id: v.id, ...v.data()} as Vehicle)));
+        setAllDrivers(availableDriversSnap.docs.map(d => ({id: d.id, ...d.data()} as Driver)));
+        setAllVehicles(availableVehiclesSnap.docs.map(v => ({id: v.id, ...v.data()} as Vehicle)));
 
 
         setRelatedData({
@@ -507,8 +508,8 @@ export default function ContractedTransportDetailPage() {
         try {
             setIsSubmitting(true);
             const execRef = doc(db, 'contracted_transport_executions', executionToEdit.id);
-            const driver = availableDrivers.find(d => d.id === values.driverId);
-            const vehicle = availableVehicles.find(v => v.id === values.vehicleId);
+            const driver = allDrivers.find(d => d.id === values.driverId);
+            const vehicle = allVehicles.find(v => v.id === values.vehicleId);
 
             // Revert old vehicle status if it's changing
             if (executionToEdit.vehicleId && executionToEdit.vehicleId !== values.vehicleId) {
@@ -544,7 +545,7 @@ export default function ContractedTransportDetailPage() {
         } finally {
              setIsSubmitting(false);
         }
-    }, [executionToEdit, contract, toast, availableDrivers, availableVehicles, fetchContractData]);
+    }, [executionToEdit, contract, toast, allDrivers, allVehicles, fetchContractData]);
     
     const onRouteStopSubmit = async (values: RouteStopFormValues) => {
         if (!id || !contract) return;
@@ -613,8 +614,8 @@ export default function ContractedTransportDetailPage() {
         const batch = writeBatch(db);
         setIsSubmitting(true);
         try {
-            const driver = availableDrivers.find(d => d.id === values.driverId);
-            const vehicle = availableVehicles.find(v => v.id === values.vehicleId);
+            const driver = allDrivers.find(d => d.id === values.driverId);
+            const vehicle = allVehicles.find(v => v.id === values.vehicleId);
 
             if (!driver || !vehicle) {
                  toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч эсвэл тэрэг олдсонгүй.' });
@@ -1133,8 +1134,8 @@ export default function ContractedTransportDetailPage() {
                         </DialogHeader>
                         <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-6 -mr-6">
                             <FormField control={newExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
-                            <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Жолооч</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Сул жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{availableDrivers.map(d => <SelectItem key={d.id} value={d.id}>{d.display_name}</SelectItem> )}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                            <FormField control={newExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Сул т/х сонгох..." /></SelectTrigger></FormControl><SelectContent>{availableVehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.licensePlate} ({v.makeName} {v.modelName})</SelectItem> )}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                            <FormField control={newExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Жолооч</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Сул жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent>{allDrivers.map(d => <SelectItem key={d.id} value={d.id}>{d.display_name}</SelectItem> )}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                            <FormField control={newExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Сул т/х сонгох..." /></SelectTrigger></FormControl><SelectContent>{allVehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.licensePlate} ({v.makeName} {v.modelName})</SelectItem> )}</SelectContent></Select><FormMessage /></FormItem> )}/>
 
                             <Separator />
 
@@ -1205,8 +1206,8 @@ export default function ContractedTransportDetailPage() {
                             </DialogHeader>
                             <div className="space-y-4 py-4">
                                 <FormField control={editExecutionForm.control} name="date" render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>Огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'yyyy-MM-dd') : <span>Огноо сонгох</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem> )}/>
-                                <FormField control={editExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{availableDrivers.map(d => <SelectItem key={d.id} value={d.id}>{d.display_name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
-                                <FormField control={editExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{[...availableVehicles, ...executions.filter(e => e.vehicleId && e.id === executionToEdit.id).map(e => ({id: e.vehicleId, licensePlate: e.vehicleLicense}))].map((v:any) => <SelectItem key={v.id} value={v.id}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                                <FormField control={editExecutionForm.control} name="driverId" render={({ field }) => ( <FormItem><FormLabel>Жолооч</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Жолооч сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{allDrivers.map(d => <SelectItem key={d.id} value={d.id}>{d.display_name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
+                                <FormField control={editExecutionForm.control} name="vehicleId" render={({ field }) => ( <FormItem><FormLabel>Тээврийн хэрэгсэл</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Т/Х сонгох..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="no-selection">Сонгоогүй</SelectItem>{allVehicles.map((v:any) => <SelectItem key={v.id} value={v.id}>{v.licensePlate}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem> )}/>
                             </div>
                             <DialogFooter>
                                 <DialogClose asChild><Button type="button" variant="outline">Цуцлах</Button></DialogClose>
@@ -1378,3 +1379,4 @@ export default function ContractedTransportDetailPage() {
     </div>
   );
 }
+
