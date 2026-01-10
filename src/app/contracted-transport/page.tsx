@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -58,7 +59,7 @@ function AssignmentsManagementDialog({ open, onOpenChange, drivers, assignedVehi
 
     React.useEffect(() => {
         setCurrentAssignments(assignedVehicles);
-    }, [assignedVehicles]);
+    }, [assignedVehicles, open]);
 
     const handleAddAssignment = () => {
         if (!selectedDriverId) {
@@ -97,7 +98,6 @@ function AssignmentsManagementDialog({ open, onOpenChange, drivers, assignedVehi
     };
 
     const availableDrivers = drivers.filter(d => 
-        d.isAvailableForContracted && 
         d.assignedVehicleId &&
         !currentAssignments.some(a => a.assignedDriver?.driverId === d.id)
     );
@@ -129,11 +129,13 @@ function AssignmentsManagementDialog({ open, onOpenChange, drivers, assignedVehi
                         <h4 className="font-semibold mb-2">Оноосон жолооч нар ({currentAssignments.length})</h4>
                         <div className="space-y-2 max-h-64 overflow-y-auto pr-2 -mr-2">
                             {currentAssignments.map(assignment => (
-                                <div key={assignment.assignedDriver!.driverId} className="flex items-center justify-between p-2 border rounded-md">
-                                    <span>{assignment.assignedDriver!.driverName}</span>
-                                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleRemoveAssignment(assignment.assignedDriver!.driverId)}>
-                                        <Trash2 className="h-4 w-4 text-destructive"/>
-                                    </Button>
+                                <div key={assignment.assignedDriver?.driverId} className="flex items-center justify-between p-2 border rounded-md">
+                                    <span>{assignment.assignedDriver?.driverName || 'N/A'}</span>
+                                    {assignment.assignedDriver && (
+                                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleRemoveAssignment(assignment.assignedDriver!.driverId)}>
+                                            <Trash2 className="h-4 w-4 text-destructive"/>
+                                        </Button>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -168,7 +170,7 @@ export default function ContractedTransportPage() {
         
         const [contractsQuery, driversQuery, vehiclesQuery] = await Promise.all([
              getDocs(query(collection(db, "contracted_transports"), orderBy("createdAt", "desc"))),
-             getDocs(query(collection(db, 'Drivers'), where('isAvailableForContracted', '==', true))),
+             getDocs(query(collection(db, 'Drivers'))),
              getDocs(collection(db, 'vehicles'))
         ]);
         
@@ -274,14 +276,23 @@ export default function ContractedTransportPage() {
   const renderVehicleCard = (vehicle: AssignedVehicle) => (
         <Card key={vehicle.vehicleId} className="p-3">
             <div className="flex items-center gap-3">
-                <Avatar>
-                    <AvatarImage src={vehicle.assignedDriver?.driverAvatar} />
-                    <AvatarFallback>{vehicle.assignedDriver?.driverName.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div>
-                    <p className="font-semibold">{vehicle.assignedDriver?.driverName}</p>
-                    <p className="text-sm text-muted-foreground">{vehicle.licensePlate}</p>
-                </div>
+                {vehicle.assignedDriver ? (
+                    <>
+                        <Avatar>
+                            <AvatarImage src={vehicle.assignedDriver?.driverAvatar} />
+                            <AvatarFallback>{vehicle.assignedDriver?.driverName?.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <p className="font-semibold">{vehicle.assignedDriver.driverName}</p>
+                            <p className="text-sm text-muted-foreground">{vehicle.licensePlate}</p>
+                        </div>
+                    </>
+                ) : (
+                    <div>
+                        <p className="font-semibold">{vehicle.licensePlate}</p>
+                        <p className="text-sm text-muted-foreground italic">Жолоочгүй</p>
+                    </div>
+                )}
             </div>
         </Card>
     );
@@ -324,7 +335,7 @@ export default function ContractedTransportPage() {
                     <div className="rounded-lg bg-muted p-3">
                         <h3 className="font-semibold mb-2 flex items-center gap-2"><UserCheck className="h-5 w-5 text-green-600"/> Сул</h3>
                         <div className="space-y-2">
-                            {assignedVehicles.filter(v => v.status === 'Ready').map(renderVehicleCard)}
+                            {assignedVehicles.filter(v => v.status === 'Ready' && !v.contractId).map(renderVehicleCard)}
                         </div>
                     </div>
                     <div className="rounded-lg bg-muted p-3">
@@ -451,3 +462,4 @@ export default function ContractedTransportPage() {
     </div>
   );
 }
+
