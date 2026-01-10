@@ -5,7 +5,7 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { PlusCircle, MoreHorizontal, Eye, Trash2, Settings2, UserCheck, Ship, Truck } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Eye, Trash2, Settings2, UserCheck, Ship, Truck, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { collection, getDocs, orderBy, query, writeBatch, where, doc, updateDoc } from 'firebase/firestore';
@@ -87,7 +87,7 @@ function AssignmentsManagementDialog({ open, onOpenChange, drivers, assignedVehi
             assignedDriver: {
                 driverId: driver.id,
                 driverName: driver.display_name,
-                driverAvatar: driver.photo_url
+                driverAvatar: driver.photo_url || null
             }
         };
 
@@ -160,7 +160,7 @@ function renderVehicleCard(vehicle: AssignedVehicle) {
                 {vehicle.assignedDriver ? (
                     <>
                         <Avatar>
-                            <AvatarImage src={vehicle.assignedDriver?.driverAvatar} />
+                            <AvatarImage src={vehicle.assignedDriver?.driverAvatar || undefined} />
                             <AvatarFallback>{vehicle.assignedDriver?.driverName?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
@@ -214,7 +214,7 @@ export default function ContractedTransportPage() {
         });
         setContracts(contractsData);
 
-        const allAssignedVehicles = contractsData.flatMap(c => c.assignedVehicles || []);
+        const allAssignedVehicles = contractsData[0]?.assignedVehicles || [];
         setAssignedVehicles(allAssignedVehicles);
         
         const vehiclesData = vehiclesQuery.docs.map(doc => ({ id: doc.id, ...doc.data() } as Vehicle));
@@ -284,15 +284,16 @@ export default function ContractedTransportPage() {
                   ...a,
                   licensePlate: vehicle?.licensePlate || 'N/A',
                   trailerLicensePlate: vehicle?.trailerLicensePlate || null,
+                  assignedDriver: a.assignedDriver ? {
+                      ...a.assignedDriver,
+                      driverAvatar: a.assignedDriver.driverAvatar || null,
+                  } : undefined
               }
           })
           
           const batch = writeBatch(db);
           contracts.forEach(c => {
              const contractRef = doc(db, 'contracted_transports', c.id);
-             // This is a simplified logic. A real-world scenario would need a more
-             // sophisticated way to distribute vehicles among contracts if needed.
-             // For now, we update ALL contracts with the same list of assigned vehicles.
              batch.update(contractRef, { assignedVehicles: newAssignedVehicles });
           });
           
@@ -301,6 +302,7 @@ export default function ContractedTransportPage() {
           setAssignedVehicles(newAssignedVehicles);
           setShowAssignmentsDialog(false);
           toast({ title: "Амжилттай", description: "Оноолт шинэчлэгдлээ."})
+          fetchContractsAndAssignments();
 
       } catch (error) {
          console.error("Error updating assignments:", error);
@@ -341,6 +343,13 @@ export default function ContractedTransportPage() {
                 </div>
             </CardHeader>
             <CardContent>
+                {isLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Skeleton className="h-40 w-full"/>
+                        <Skeleton className="h-40 w-full"/>
+                        <Skeleton className="h-40 w-full"/>
+                    </div>
+                ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="rounded-lg bg-muted p-3">
                         <h3 className="font-semibold mb-2 flex items-center gap-2"><UserCheck className="h-5 w-5 text-green-600"/> Сул</h3>
@@ -361,6 +370,7 @@ export default function ContractedTransportPage() {
                         </div>
                     </div>
                 </div>
+                )}
             </CardContent>
         </Card>
 
@@ -472,5 +482,6 @@ export default function ContractedTransportPage() {
     </div>
   );
 }
+
 
 
