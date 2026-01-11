@@ -669,48 +669,50 @@ export default function ContractedTransportDetailPage() {
 
     const handleMoveExecution = async (executionId: string, newStatus: string) => {
         const execution = executions.find(ex => ex.id === executionId);
-        if (!execution || execution.status === newStatus) return;
-        
-        // Skip 'Loaded' stage if there is no cargo
-        if (newStatus === 'Loaded' && !execution.selectedCargoId) {
-            const loadedIndex = executionStatuses.indexOf('Loaded');
-            const nextStatus = executionStatuses[loadedIndex + 1];
-            if (nextStatus) {
-                handleMoveExecution(executionId, nextStatus); // Recursively call to move to the next status
-            }
-            return;
+        if (!execution) return;
+      
+        const isForwardMove = executionStatuses.indexOf(newStatus) > executionStatuses.indexOf(execution.status);
+      
+        if (newStatus === 'Loaded' && isForwardMove) {
+          setExecutionToLoad(execution);
+          setIsLoadCargoDialogOpen(true);
+          return;
         }
-
-        if (newStatus === 'Loaded') {
-            setExecutionToLoad(execution);
-            setIsLoadCargoDialogOpen(true);
-            return; 
+      
+        if (newStatus === 'Unloaded' && isForwardMove) {
+          setExecutionToUnload(execution);
+          setIsUnloadCargoDialogOpen(true);
+          return;
         }
-         if (newStatus === 'Unloaded') {
-            setExecutionToUnload(execution);
-            setIsUnloadCargoDialogOpen(true);
-            return;
-        }
-        
+      
         setIsSubmitting(true);
+        const batch = writeBatch(db);
         const execRef = doc(db, 'contracted_transport_executions', executionId);
+      
         try {
-            await updateDoc(execRef, {
-                status: newStatus,
-                statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
-            });
-            setExecutions((prev) =>
-                prev.map((ex) =>
-                    ex.id === executionId ? { ...ex, status: newStatus as ContractedTransportExecutionStatus } : ex
-                )
-            );
+          batch.update(execRef, {
+            status: newStatus,
+            statusHistory: arrayUnion({ status: newStatus, date: new Date() }),
+          });
+      
+          // If the execution is completed, free up the vehicle
+          if (newStatus === 'Delivered' && execution.vehicleId) {
+            const vehicleRef = doc(db, 'vehicles', execution.vehicleId);
+            batch.update(vehicleRef, { status: 'Available' });
+          }
+      
+          await batch.commit();
+      
+          // Refetch data to get the most accurate state
+          await fetchContractData();
+      
         } catch (error) {
-            console.error("Error updating execution status:", error);
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Явцын төлөв шинэчлэхэд алдаа гарлаа.' });
+          console.error("Error updating execution status:", error);
+          toast({ variant: 'destructive', title: 'Алдаа', description: 'Явцын төлөв шинэчлэхэд алдаа гарлаа.' });
         } finally {
-            setIsSubmitting(false);
+          setIsSubmitting(false);
         }
-    };
+      };
     
     const handleDragEnd = React.useCallback(async (event: DragEndEvent) => {
         const { active, over } = event;
