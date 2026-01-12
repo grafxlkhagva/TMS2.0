@@ -34,9 +34,13 @@ const formSchema = z.object({
   regionId: z.string().min(1, { message: 'Бүс нутаг сонгоно уу.' }),
   location: z.string().min(5, { message: 'Байршил сонгоно уу.' }),
   geolocation: z.object({
-      lat: z.number(),
-      lng: z.number(),
+    lat: z.number(),
+    lng: z.number(),
   }),
+  status: z.enum(['active', 'inactive', 'full', 'maintenance']),
+  type: z.enum(['General', 'Cold Storage', 'Hazardous', 'Bonded']),
+  capacityValue: z.string().optional(),
+  capacityUnit: z.enum(['sqm', 'pallets', 'tons']).default('sqm'),
   conditions: z.string().min(5, { message: 'Нөхцөлийн мэдээлэл дор хаяж 5 тэмдэгттэй байх ёстой.' }),
   contactInfo: z.string().min(5, { message: 'Холбоо барих мэдээлэл дор хаяж 5 тэмдэгттэй байх ёстой.' }),
   contactName: z.string().optional(),
@@ -63,6 +67,10 @@ export default function NewWarehousePage() {
       regionId: '',
       location: '',
       geolocation: defaultGeolocation,
+      status: 'active',
+      type: 'General',
+      capacityValue: '',
+      capacityUnit: 'sqm',
       conditions: '',
       contactInfo: '',
       contactName: '',
@@ -71,7 +79,7 @@ export default function NewWarehousePage() {
       note: '',
     },
   });
-  
+
   React.useEffect(() => {
     const fetchRelatedData = async () => {
       try {
@@ -79,8 +87,8 @@ export default function NewWarehousePage() {
         const regionsQuery = query(collection(db, "regions"), orderBy("name"));
 
         const [customersSnapshot, regionsSnapshot] = await Promise.all([
-            getDocs(customersQuery),
-            getDocs(regionsQuery)
+          getDocs(customersQuery),
+          getDocs(regionsQuery)
         ]);
 
         const customersData = customersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
@@ -91,7 +99,7 @@ export default function NewWarehousePage() {
 
       } catch (error) {
         console.error("Error fetching data:", error);
-        toast({ variant: 'destructive', title: 'Алдаа', description: 'Хамааралтай мэдээлэл татахад алдаа гарлаа.'});
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Хамааралтай мэдээлэл татахад алдаа гарлаа.' });
       }
     };
     fetchRelatedData();
@@ -100,26 +108,33 @@ export default function NewWarehousePage() {
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true);
     try {
-      const customerId = values.customerId === 'no-owner' ? null : values.customerId;
+      const customerId = values.customerId === 'no-owner' || !values.customerId ? null : values.customerId;
       const selectedCustomer = customers.find(c => c.id === customerId);
       const customerRef = customerId ? doc(db, 'customers', customerId) : null;
       const regionRef = doc(db, 'regions', values.regionId);
 
+      const capacity = values.capacityValue ? {
+        value: parseFloat(values.capacityValue),
+        unit: values.capacityUnit
+      } : null;
+
+      const { capacityValue, capacityUnit, ...rest } = values;
 
       await addDoc(collection(db, 'warehouses'), {
-        ...values,
+        ...rest,
+        capacity: capacity,
         customerId: customerId,
         customerName: selectedCustomer ? selectedCustomer.name : 'Эзэмшигчгүй',
         customerRef: customerRef,
         regionRef: regionRef,
         createdAt: serverTimestamp(),
       });
-      
+
       toast({
         title: 'Амжилттай бүртгэлээ',
         description: `${values.name} нэртэй агуулахыг системд бүртгэлээ.`,
       });
-      
+
       router.push('/warehouses');
 
     } catch (error) {
@@ -146,7 +161,7 @@ export default function NewWarehousePage() {
         <CardContent className="pt-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -187,35 +202,127 @@ export default function NewWarehousePage() {
                 />
               </div>
 
-
-               <FormField
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
                   control={form.control}
-                  name="location"
+                  name="type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Агуулахын байршил</FormLabel>
-                      <FormControl>
-                        <Controller
-                            control={form.control}
-                            name="location"
-                            render={({ field: { onChange } }) => (
-                                <LocationPicker
-                                    initialCoordinates={defaultGeolocation}
-                                    onLocationSelect={(address, latLng) => {
-                                        onChange(address);
-                                        form.setValue('geolocation', latLng);
-                                        form.clearErrors('location');
-                                    }}
-                                />
-                            )}
-                        />
-                      </FormControl>
+                      <FormLabel>Агуулахын төрөл</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Төрөл сонгоно уу..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="General">Ердийн</SelectItem>
+                          <SelectItem value="Cold Storage">Хөргүүртэй</SelectItem>
+                          <SelectItem value="Hazardous">Аюултай ачаа</SelectItem>
+                          <SelectItem value="Bonded">Гаалийн баталгаат</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Статус</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Статус сонгоно уу..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="active">Идэвхтэй</SelectItem>
+                          <SelectItem value="inactive">Идэвхгүй</SelectItem>
+                          <SelectItem value="full">Дүүрсэн</SelectItem>
+                          <SelectItem value="maintenance">Засвартай</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-               <FormField
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="col-span-2">
+                    <FormField
+                      control={form.control}
+                      name="capacityValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Хүчин чадал</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="500" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div>
+                    <FormField
+                      control={form.control}
+                      name="capacityUnit"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Нэгж</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="sqm">м.кв</SelectItem>
+                              <SelectItem value="pallets">палет</SelectItem>
+                              <SelectItem value="tons">тонн</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+
+
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Агуулахын байршил</FormLabel>
+                    <FormControl>
+                      <Controller
+                        control={form.control}
+                        name="location"
+                        render={({ field: { onChange } }) => (
+                          <LocationPicker
+                            initialCoordinates={defaultGeolocation}
+                            onLocationSelect={(address, latLng) => {
+                              onChange(address);
+                              form.setValue('geolocation', latLng);
+                              form.clearErrors('location');
+                            }}
+                          />
+                        )}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
                 control={form.control}
                 name="conditions"
                 render={({ field }) => (
@@ -230,7 +337,7 @@ export default function NewWarehousePage() {
               />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <FormField
+                <FormField
                   control={form.control}
                   name="contactName"
                   render={({ field }) => (
@@ -243,7 +350,7 @@ export default function NewWarehousePage() {
                     </FormItem>
                   )}
                 />
-                 <FormField
+                <FormField
                   control={form.control}
                   name="contactPosition"
                   render={({ field }) => (
@@ -257,7 +364,7 @@ export default function NewWarehousePage() {
                   )}
                 />
               </div>
-              
+
               <FormField
                 control={form.control}
                 name="contactInfo"
@@ -278,7 +385,7 @@ export default function NewWarehousePage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Эзэмшигч байгууллага (Сонголттой)</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Эзэмшигч сонгоно уу..." />
@@ -298,7 +405,7 @@ export default function NewWarehousePage() {
                 )}
               />
 
-               <FormField
+              <FormField
                 control={form.control}
                 name="note"
                 render={({ field }) => (
@@ -314,7 +421,7 @@ export default function NewWarehousePage() {
 
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" asChild>
-                    <Link href="/warehouses">Цуцлах</Link>
+                  <Link href="/warehouses">Цуцлах</Link>
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -329,4 +436,4 @@ export default function NewWarehousePage() {
   );
 }
 
-    
+

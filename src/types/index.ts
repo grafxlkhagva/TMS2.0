@@ -188,6 +188,9 @@ export type Industry = {
   createdAt: Date;
 };
 
+export type WarehouseStatus = 'active' | 'inactive' | 'full' | 'maintenance';
+export type WarehouseType = 'General' | 'Cold Storage' | 'Hazardous' | 'Bonded';
+
 export type Warehouse = {
   id: string;
   name: string;
@@ -205,6 +208,13 @@ export type Warehouse = {
   customerId?: string;
   customerName?: string;
   customerRef?: DocumentReference;
+  status: WarehouseStatus;
+  type: WarehouseType;
+  capacity?: {
+    value: number;
+    unit: 'sqm' | 'pallets' | 'tons';
+  };
+  note?: string;
   createdAt: Date;
   updatedAt?: Date;
 };

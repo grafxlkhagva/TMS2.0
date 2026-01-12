@@ -34,10 +34,14 @@ const formSchema = z.object({
   name: z.string().min(2, { message: 'Агуулахын нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
   regionId: z.string().min(1, { message: 'Бүс нутаг сонгоно уу.' }),
   location: z.string().min(5, { message: 'Байршил сонгоно уу.' }),
-   geolocation: z.object({
-      lat: z.number(),
-      lng: z.number(),
+  geolocation: z.object({
+    lat: z.number(),
+    lng: z.number(),
   }),
+  status: z.enum(['active', 'inactive', 'full', 'maintenance']),
+  type: z.enum(['General', 'Cold Storage', 'Hazardous', 'Bonded']),
+  capacityValue: z.string().optional(),
+  capacityUnit: z.enum(['sqm', 'pallets', 'tons']).default('sqm'),
   conditions: z.string().min(5, { message: 'Нөхцөлийн мэдээлэл дор хаяж 5 тэмдэгттэй байх ёстой.' }),
   contactInfo: z.string().min(5, { message: 'Холбоо барих мэдээлэл дор хаяж 5 тэмдэгттэй байх ёстой.' }),
   contactName: z.string().optional(),
@@ -65,6 +69,10 @@ export default function EditWarehousePage() {
       regionId: '',
       location: '',
       geolocation: { lat: 0, lng: 0 },
+      status: 'active',
+      type: 'General',
+      capacityValue: '',
+      capacityUnit: 'sqm',
       conditions: '',
       contactInfo: '',
       contactName: '',
@@ -73,16 +81,16 @@ export default function EditWarehousePage() {
       note: '',
     },
   });
-  
+
   React.useEffect(() => {
-     const fetchRelatedData = async () => {
+    const fetchRelatedData = async () => {
       try {
         const customersQuery = query(collection(db, "customers"), orderBy("name"));
         const regionsQuery = query(collection(db, "regions"), orderBy("name"));
 
         const [customersSnapshot, regionsSnapshot] = await Promise.all([
-            getDocs(customersQuery),
-            getDocs(regionsQuery)
+          getDocs(customersQuery),
+          getDocs(regionsQuery)
         ]);
 
         const customersData = customersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
@@ -93,7 +101,7 @@ export default function EditWarehousePage() {
 
       } catch (error) {
         console.error("Error fetching data:", error);
-        toast({ variant: 'destructive', title: 'Алдаа', description: 'Хамааралтай мэдээлэл татахад алдаа гарлаа.'});
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Хамааралтай мэдээлэл татахад алдаа гарлаа.' });
       }
     };
     fetchRelatedData();
@@ -102,29 +110,33 @@ export default function EditWarehousePage() {
   React.useEffect(() => {
     if (!id) return;
     const fetchWarehouse = async () => {
-        try {
-            const docRef = doc(db, 'warehouses', id);
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                const data = docSnap.data() as Warehouse;
-                form.reset({
-                  ...data,
-                  contactName: data.contactName || '',
-                  contactPosition: data.contactPosition || '',
-                  customerId: data.customerId || 'no-owner',
-                  note: data.note || '',
-                });
-                setWarehouseName(data.name);
-            } else {
-                toast({ variant: 'destructive', title: 'Алдаа', description: 'Агуулах олдсонгүй.' });
-                router.push(`/warehouses`);
-            }
-        } catch (error) {
-            console.error("Error fetching warehouse:", error);
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Агуулахын мэдээлэл татахад алдаа гарлаа.'});
-        } finally {
-            setIsLoading(false);
+      try {
+        const docRef = doc(db, 'warehouses', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data() as Warehouse;
+          form.reset({
+            ...data,
+            status: data.status || 'active',
+            type: data.type || 'General',
+            capacityValue: data.capacity?.value?.toString() || '',
+            capacityUnit: data.capacity?.unit || 'sqm',
+            contactName: data.contactName || '',
+            contactPosition: data.contactPosition || '',
+            customerId: data.customerId || 'no-owner',
+            note: data.note || '',
+          });
+          setWarehouseName(data.name);
+        } else {
+          toast({ variant: 'destructive', title: 'Алдаа', description: 'Агуулах олдсонгүй.' });
+          router.push(`/warehouses`);
         }
+      } catch (error) {
+        console.error("Error fetching warehouse:", error);
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Агуулахын мэдээлэл татахад алдаа гарлаа.' });
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchWarehouse();
   }, [id, router, toast, form]);
@@ -133,25 +145,33 @@ export default function EditWarehousePage() {
     setIsSubmitting(true);
     try {
       const warehouseRef = doc(db, 'warehouses', id);
-      const customerId = values.customerId === 'no-owner' ? null : values.customerId;
+      const customerId = values.customerId === 'no-owner' || !values.customerId ? null : values.customerId;
       const selectedCustomer = customers.find(c => c.id === customerId);
       const customerRef = customerId ? doc(db, 'customers', customerId) : null;
       const regionRef = doc(db, 'regions', values.regionId);
-      
+
+      const capacity = values.capacityValue ? {
+        value: parseFloat(values.capacityValue),
+        unit: values.capacityUnit
+      } : null;
+
+      const { capacityValue, capacityUnit, ...rest } = values;
+
       await updateDoc(warehouseRef, {
-        ...values,
+        ...rest,
+        capacity: capacity,
         customerId: customerId,
         customerName: selectedCustomer ? selectedCustomer.name : 'Эзэмшигчгүй',
         customerRef: customerRef,
         regionRef: regionRef,
         updatedAt: serverTimestamp(),
       });
-      
+
       toast({
         title: 'Амжилттай шинэчиллээ',
         description: `${values.name} нэртэй агуулахын мэдээллийг шинэчиллээ.`,
       });
-      
+
       router.push(`/warehouses/${id}`);
 
     } catch (error) {
@@ -168,26 +188,26 @@ export default function EditWarehousePage() {
 
   if (isLoading) {
     return (
-        <div className="container mx-auto py-6">
-             <div className="mb-6">
-                <Skeleton className="h-8 w-1/4 mb-4" />
-                <Skeleton className="h-4 w-1/2" />
-             </div>
-            <Card>
-                <CardContent className="pt-6 space-y-8">
-                    <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
-                    <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-40 w-full" /></div>
-                    <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-20 w-full" /></div>
-                    <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
-                    <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
-                    <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-20 w-full" /></div>
-                    <div className="flex justify-end gap-2">
-                        <Skeleton className="h-10 w-20" />
-                        <Skeleton className="h-10 w-24" />
-                    </div>
-                </CardContent>
-            </Card>
+      <div className="container mx-auto py-6">
+        <div className="mb-6">
+          <Skeleton className="h-8 w-1/4 mb-4" />
+          <Skeleton className="h-4 w-1/2" />
         </div>
+        <Card>
+          <CardContent className="pt-6 space-y-8">
+            <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
+            <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-40 w-full" /></div>
+            <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-20 w-full" /></div>
+            <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
+            <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-10 w-full" /></div>
+            <div className="space-y-2"><Skeleton className="h-4 w-1/4" /><Skeleton className="h-20 w-full" /></div>
+            <div className="flex justify-end gap-2">
+              <Skeleton className="h-10 w-20" />
+              <Skeleton className="h-10 w-24" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
@@ -195,10 +215,10 @@ export default function EditWarehousePage() {
     <div className="container mx-auto py-6">
       <div className="mb-6">
         <Button variant="outline" size="sm" asChild className="mb-4">
-             <Link href={`/warehouses/${id}`}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Буцах
-             </Link>
+          <Link href={`/warehouses/${id}`}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Буцах
+          </Link>
         </Button>
         <h1 className="text-3xl font-headline font-bold">Мэдээлэл засах: {warehouseName}</h1>
         <p className="text-muted-foreground">
@@ -209,7 +229,7 @@ export default function EditWarehousePage() {
         <CardContent className="pt-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -224,7 +244,7 @@ export default function EditWarehousePage() {
                     </FormItem>
                   )}
                 />
-                 <FormField
+                <FormField
                   control={form.control}
                   name="regionId"
                   render={({ field }) => (
@@ -250,35 +270,128 @@ export default function EditWarehousePage() {
                 />
               </div>
 
-              <FormField
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
                   control={form.control}
-                  name="location"
+                  name="type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Агуулахын байршил</FormLabel>
-                      <FormControl>
-                        <Controller
-                            control={form.control}
-                            name="location"
-                            render={({ field: { onChange, value } }) => (
-                                <LocationPicker
-                                    initialValue={value}
-                                    initialCoordinates={form.getValues('geolocation')}
-                                    onLocationSelect={(address, latLng) => {
-                                        onChange(address);
-                                        form.setValue('geolocation', latLng);
-                                        form.clearErrors('location');
-                                    }}
-                                />
-                            )}
-                        />
-                      </FormControl>
+                      <FormLabel>Агуулахын төрөл</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Төрөл сонгоно уу..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="General">Ердийн</SelectItem>
+                          <SelectItem value="Cold Storage">Хөргүүртэй</SelectItem>
+                          <SelectItem value="Hazardous">Аюултай ачаа</SelectItem>
+                          <SelectItem value="Bonded">Гаалийн баталгаат</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              
-               <FormField
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Статус</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Статус сонгоно уу..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="active">Идэвхтэй</SelectItem>
+                          <SelectItem value="inactive">Идэвхгүй</SelectItem>
+                          <SelectItem value="full">Дүүрсэн</SelectItem>
+                          <SelectItem value="maintenance">Засвартай</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="col-span-2">
+                    <FormField
+                      control={form.control}
+                      name="capacityValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Хүчин чадал</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="500" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div>
+                    <FormField
+                      control={form.control}
+                      name="capacityUnit"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Нэгж</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="sqm">м.кв</SelectItem>
+                              <SelectItem value="pallets">палет</SelectItem>
+                              <SelectItem value="tons">тонн</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+
+
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Агуулахын байршил</FormLabel>
+                    <FormControl>
+                      <Controller
+                        control={form.control}
+                        name="location"
+                        render={({ field: { onChange, value } }) => (
+                          <LocationPicker
+                            initialValue={value}
+                            initialCoordinates={form.getValues('geolocation')}
+                            onLocationSelect={(address, latLng) => {
+                              onChange(address);
+                              form.setValue('geolocation', latLng);
+                              form.clearErrors('location');
+                            }}
+                          />
+                        )}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
                 control={form.control}
                 name="conditions"
                 render={({ field }) => (
@@ -293,7 +406,7 @@ export default function EditWarehousePage() {
               />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <FormField
+                <FormField
                   control={form.control}
                   name="contactName"
                   render={({ field }) => (
@@ -306,7 +419,7 @@ export default function EditWarehousePage() {
                     </FormItem>
                   )}
                 />
-                 <FormField
+                <FormField
                   control={form.control}
                   name="contactPosition"
                   render={({ field }) => (
@@ -320,7 +433,7 @@ export default function EditWarehousePage() {
                   )}
                 />
               </div>
-              
+
               <FormField
                 control={form.control}
                 name="contactInfo"
@@ -341,7 +454,7 @@ export default function EditWarehousePage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Эзэмшигч байгууллага (Сонголттой)</FormLabel>
-                     <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Эзэмшигч сонгоно уу..." />
@@ -361,7 +474,7 @@ export default function EditWarehousePage() {
                 )}
               />
 
-               <FormField
+              <FormField
                 control={form.control}
                 name="note"
                 render={({ field }) => (
@@ -377,7 +490,7 @@ export default function EditWarehousePage() {
 
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" asChild>
-                    <Link href={`/warehouses/${id}`}>Цуцлах</Link>
+                  <Link href={`/warehouses/${id}`}>Цуцлах</Link>
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

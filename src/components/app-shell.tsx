@@ -56,22 +56,20 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { cn } from '@/lib/utils';
 import { Skeleton } from './ui/skeleton';
+interface NavItem {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  subItems?: { href: string; label: string }[];
+}
 
-const baseNavItems = [
+const baseNavItems: NavItem[] = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/orders', icon: Briefcase, label: 'Захиалга' },
   { href: '/contracted-transport', icon: FileSignature, label: 'Гэрээт тээвэр' },
   { href: '/direct-shipments', icon: Truck, label: 'Шууд тээвэрлэлт' },
   { href: '/shipments', icon: Truck, label: 'Тээвэрлэлт' },
-  {
-    href: '/customers',
-    icon: Building2,
-    label: 'Харилцагчид',
-    subItems: [
-      { href: '/customers/dashboard', label: 'Хянах самбар' },
-      { href: '/customers', label: 'Жагсаалт' },
-    ]
-  },
+  { href: '/customers', icon: Building2, label: 'Харилцагчид' },
   { href: '/warehouses', icon: Warehouse, label: 'Агуулах' },
   {
     href: '/vehicles',
@@ -82,7 +80,7 @@ const baseNavItems = [
   { href: '/fuel', icon: Fuel, label: 'Түлшний хяналт' },
 ];
 
-const transportManagerNavItems = [
+const transportManagerNavItems: NavItem[] = [
   { href: '/my-dashboard', icon: LayoutGrid, label: 'Миний самбар' },
   ...baseNavItems,
   {
@@ -92,7 +90,7 @@ const transportManagerNavItems = [
   },
 ];
 
-const managementNavItems = [
+const managementNavItems: NavItem[] = [
   { href: '/management', icon: Shield, label: 'Удирдлага' },
   ...baseNavItems,
   {
@@ -113,7 +111,7 @@ function Nav() {
   const pathname = usePathname();
   const { state } = useSidebar();
   const { user } = useAuth();
-  const [items, setItems] = React.useState(baseNavItems);
+  const [items, setItems] = React.useState<NavItem[]>(baseNavItems);
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -157,7 +155,7 @@ function Nav() {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <SidebarMenuSub>
-                  {item.subItems.map(subItem => (
+                  {item.subItems?.map(subItem => (
                     <li key={subItem.href}>
                       <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
                         <Link href={subItem.href}>
