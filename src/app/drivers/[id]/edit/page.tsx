@@ -42,70 +42,49 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+import { DriverForm, DriverFormValues } from '@/components/forms/driver-form';
+
 export default function EditDriverPage() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [initialData, setInitialData] = React.useState<Driver | undefined>(undefined);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      display_name: '',
-      phone_number: '',
-      status: 'Active',
-      isAvailableForContracted: false,
-    }
-  });
-  
   React.useEffect(() => {
-    if (!id) return;
+    if (!id || !db) return;
     const fetchDriver = async () => {
-        try {
-            const docRef = doc(db, 'Drivers', id);
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                const data = docSnap.data() as Driver;
-                form.reset({
-                  display_name: data.display_name,
-                  phone_number: data.phone_number,
-                  status: data.status || 'Active',
-                  isAvailableForContracted: data.isAvailableForContracted || false,
-                });
-                setAvatarPreview(data.photo_url || null);
-            } else {
-                toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч олдсонгүй.' });
-                router.push(`/drivers`);
-            }
-        } catch (error) {
-            console.error("Error fetching driver:", error);
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолоочийн мэдээлэл татахад алдаа гарлаа.'});
-        } finally {
-            setIsLoading(false);
+      try {
+        const docRef = doc(db!, 'Drivers', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setInitialData({ id: docSnap.id, ...docSnap.data() } as Driver);
+        } else {
+          toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч олдсонгүй.' });
+          router.push(`/drivers`);
         }
+      } catch (error) {
+        console.error("Error fetching driver:", error);
+        toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолоочийн мэдээлэл татахад алдаа гарлаа.' });
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchDriver();
-  }, [id, router, toast, form]);
+  }, [id, router, toast]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
-    }
-  };
-
-  async function onSubmit(values: FormValues) {
-    if (!id) return;
+  async function onSubmit(values: DriverFormValues, avatarFile: File | null, licenseFile: File | null) {
+    if (!id || !db || !storage) return;
     setIsSubmitting(true);
     try {
       const driverRef = doc(db, 'Drivers', id);
-      let dataToUpdate: any = { 
-        ...values,
+      const cleanedValues = Object.fromEntries(
+        Object.entries(values).filter(([_, v]) => v !== undefined)
+      );
+
+      let dataToUpdate: any = {
+        ...cleanedValues,
         edited_time: serverTimestamp(),
       };
 
@@ -114,14 +93,20 @@ export default function EditDriverPage() {
         const snapshot = await uploadBytes(storageRef, avatarFile);
         dataToUpdate.photo_url = await getDownloadURL(snapshot.ref);
       }
-      
+
+      if (licenseFile) {
+        const storageRef = ref(storage, `driver_licenses/${id}/${licenseFile.name}`);
+        const snapshot = await uploadBytes(storageRef, licenseFile);
+        dataToUpdate.licenseImageUrl = await getDownloadURL(snapshot.ref);
+      }
+
       await updateDoc(driverRef, dataToUpdate);
-      
+
       toast({
         title: 'Амжилттай шинэчиллээ',
         description: `${values.display_name} жолоочийн мэдээллийг шинэчиллээ.`,
       });
-      
+
       router.push(`/drivers`);
 
     } catch (error) {
@@ -129,7 +114,7 @@ export default function EditDriverPage() {
       toast({
         variant: 'destructive',
         title: 'Алдаа',
-        description: 'Жолооч шинэчлэхэд алдаа гарлаа. Та дахин оролдоно уу.',
+        description: 'Жолооч шинэчлэхэд алдаа гарлаа.',
       });
     } finally {
       setIsSubmitting(false);
@@ -137,18 +122,18 @@ export default function EditDriverPage() {
   }
 
   if (isLoading) {
-      return (
-        <div className="container mx-auto py-6">
-             <div className="mb-6"><Skeleton className="h-8 w-1/4 mb-4" /><Skeleton className="h-4 w-1/2" /></div>
-            <Card>
-                <CardContent className="pt-6 space-y-8">
-                    <Skeleton className="h-24 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <div className="flex justify-end gap-2"><Skeleton className="h-10 w-20" /><Skeleton className="h-10 w-24" /></div>
-                </CardContent>
-            </Card>
-        </div>
+    return (
+      <div className="container mx-auto py-6">
+        <div className="mb-6"><Skeleton className="h-8 w-1/4 mb-4" /><Skeleton className="h-4 w-1/2" /></div>
+        <Card>
+          <CardContent className="pt-6 space-y-8">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <div className="flex justify-end gap-2"><Skeleton className="h-10 w-20" /><Skeleton className="h-10 w-24" /></div>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
@@ -156,130 +141,20 @@ export default function EditDriverPage() {
     <div className="container mx-auto py-6">
       <div className="mb-6">
         <Button variant="outline" size="sm" asChild className="mb-4">
-             <Link href={`/drivers`}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Буцах
-             </Link>
+          <Link href={`/drivers`}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Буцах
+          </Link>
         </Button>
         <h1 className="text-3xl font-headline font-bold">Жолоочийн мэдээлэл засах</h1>
       </div>
       <Card>
-          <CardHeader>
-              <CardTitle>Хувийн мэдээлэл</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-2">
-          <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <div className="flex items-center gap-6">
-                      <div className="relative">
-                          <Avatar className="h-24 w-24 border">
-                              <AvatarImage src={avatarPreview ?? undefined} />
-                              <AvatarFallback className="text-3xl">
-                                  {form.getValues('display_name')?.charAt(0)}
-                              </AvatarFallback>
-                          </Avatar>
-                          <Input 
-                              type="file" 
-                              className="hidden" 
-                              ref={fileInputRef}
-                              onChange={handleFileChange} 
-                              accept="image/*"
-                          />
-                          <Button 
-                              type="button" 
-                              variant="outline" 
-                              size="icon" 
-                              className="absolute bottom-0 right-0 rounded-full"
-                              onClick={() => fileInputRef.current?.click()}
-                          >
-                              <Camera className="h-4 w-4" />
-                          </Button>
-                      </div>
-                      <div className="flex-1 space-y-4">
-                          <FormField
-                          control={form.control}
-                          name="display_name"
-                          render={({ field }) => (
-                              <FormItem>
-                              <FormLabel>Нэр</FormLabel>
-                              <FormControl>
-                                  <Input placeholder="Бат Болд" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                              </FormItem>
-                          )}
-                          />
-                      </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                      control={form.control}
-                      name="phone_number"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Утасны дугаар</FormLabel>
-                          <FormControl>
-                              <Input placeholder="8811-XXXX" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                      />
-                      <FormField
-                      control={form.control}
-                      name="status"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Статус</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Статус сонгоно уу..." />
-                              </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                  <SelectItem value="Active">Идэвхтэй</SelectItem>
-                                  <SelectItem value="Inactive">Идэвхгүй</SelectItem>
-                                  <SelectItem value="On Leave">Чөлөөнд</SelectItem>
-                              </SelectContent>
-                          </Select>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                      />
-                  </div>
-                  <FormField
-                    control={form.control}
-                    name="isAvailableForContracted"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                            <FormControl>
-                                <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                                <FormLabel>
-                                Гэрээт тээвэрт явах боломжтой
-                                </FormLabel>
-                            </div>
-                        </FormItem>
-                    )}
-                    />
-              <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="outline" asChild>
-                      <Link href={`/drivers`}>Цуцлах</Link>
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Хадгалах
-                  </Button>
-              </div>
-              </form>
-          </Form>
-          </CardContent>
+        <CardHeader>
+          <CardTitle>Хувийн мэдээлэл</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <DriverForm initialData={initialData} onSubmit={onSubmit} isSubmitting={isSubmitting} />
+        </CardContent>
       </Card>
     </div>
   );

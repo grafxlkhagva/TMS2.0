@@ -4,8 +4,18 @@ import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker } from "react-day-picker"
 
+import { format } from "date-fns"
+
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
@@ -23,7 +33,8 @@ function Calendar({
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
         caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium",
+        caption_label: cn("text-sm font-medium", (props.captionLayout === "dropdown" || props.captionLayout === "dropdown-buttons") && "hidden"),
+        caption_dropdowns: "flex justify-center gap-1",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
@@ -51,9 +62,51 @@ function Calendar({
         day_range_middle:
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_hidden: "invisible",
+        vhidden: "hidden",
+        dropdown: "rdp-dropdown bg-transparent font-medium focus:outline-none appearance-none cursor-pointer p-1 rounded-md hover:bg-accent text-sm",
+        dropdown_month: "relative inline-flex items-center",
+        dropdown_year: "relative inline-flex items-center ml-1",
         ...classNames,
       }}
       components={{
+        Dropdown: ({ value, onChange, children, ...props }: any) => {
+          const options = React.Children.toArray(children) as React.ReactElement<React.HTMLProps<HTMLOptionElement>>[];
+          const selected = options.find((child) => child.props.value === value);
+          const handleChange = (value: string) => {
+            const changeEvent = {
+              target: { value },
+            } as React.ChangeEvent<HTMLSelectElement>;
+            onChange?.(changeEvent);
+          };
+          return (
+            <Select
+              value={value?.toString()}
+              onValueChange={(val) => handleChange(val)}
+            >
+              <SelectTrigger className="h-8 w-fit gap-1 bg-transparent border-none py-1 px-2 font-medium focus:ring-0 focus:ring-offset-0 hover:bg-accent hover:text-accent-foreground text-sm">
+                <SelectValue>{selected?.props.children}</SelectValue>
+              </SelectTrigger>
+              <SelectContent position="popper">
+                <ScrollArea className="h-80">
+                  {options.map((option, id) => (
+                    <SelectItem
+                      key={`${option.props.value}-${id}`}
+                      value={option.props.value?.toString() ?? ""}
+                    >
+                      {option.props.children}
+                    </SelectItem>
+                  ))}
+                </ScrollArea>
+              </SelectContent>
+            </Select>
+          );
+        },
+        CaptionLabel: ({ displayMonth }) => {
+          if (props.captionLayout === "dropdown" || props.captionLayout === "dropdown-buttons") {
+            return null;
+          }
+          return <div className="text-sm font-medium">{format(displayMonth, "MMMM yyyy")}</div>;
+        },
         IconLeft: ({ className, ...props }) => (
           <ChevronLeft className={cn("h-4 w-4", className)} {...props} />
         ),

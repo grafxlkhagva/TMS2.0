@@ -40,42 +40,29 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+import { DriverForm, DriverFormValues } from '@/components/forms/driver-form';
+
 export default function NewDriverPage() {
   const { toast } = useToast();
   const router = useRouter();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      display_name: '',
-      phone_number: '',
-      status: 'Active',
-    },
-  });
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
-    }
-  };
-
-  async function onSubmit(values: FormValues) {
+  async function onSubmit(values: DriverFormValues, avatarFile: File | null, licenseFile: File | null) {
     if (!db || !storage || !user) {
-        toast({ variant: 'destructive', title: 'Алдаа', description: 'Firebase-тэй холбогдож чадсангүй эсвэл хэрэглэгч нэвтрээгүй байна.' });
-        return;
+      toast({ variant: 'destructive', title: 'Алдаа', description: 'Системтэй холбогдож чадсангүй.' });
+      return;
     }
     setIsSubmitting(true);
     try {
+      const cleanedValues = Object.fromEntries(
+        Object.entries(values).filter(([_, v]) => v !== undefined)
+      );
+
       const docRef = await addDoc(collection(db, 'Drivers'), {
-        ...values,
+        ...cleanedValues,
         photo_url: '',
+        licenseImageUrl: '',
         created_time: serverTimestamp(),
         edited_time: serverTimestamp(),
         createdBy: {
@@ -84,19 +71,29 @@ export default function NewDriverPage() {
         },
       });
 
+      const updates: any = {};
+
       if (avatarFile) {
         const storageRef = ref(storage, `driver_avatars/${docRef.id}/${avatarFile.name}`);
         const snapshot = await uploadBytes(storageRef, avatarFile);
-        const photo_url = await getDownloadURL(snapshot.ref);
-        const driverDocRef = doc(db, 'Drivers', docRef.id);
-        await updateDoc(driverDocRef, { photo_url });
+        updates.photo_url = await getDownloadURL(snapshot.ref);
       }
-      
+
+      if (licenseFile) {
+        const storageRef = ref(storage, `driver_licenses/${docRef.id}/${licenseFile.name}`);
+        const snapshot = await uploadBytes(storageRef, licenseFile);
+        updates.licenseImageUrl = await getDownloadURL(snapshot.ref);
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await updateDoc(doc(db, 'Drivers', docRef.id), updates);
+      }
+
       toast({
         title: 'Амжилттай бүртгэлээ',
         description: `${values.display_name} нэртэй жолоочийг системд бүртгэлээ.`,
       });
-      
+
       router.push('/drivers');
 
     } catch (error) {
@@ -104,7 +101,7 @@ export default function NewDriverPage() {
       toast({
         variant: 'destructive',
         title: 'Алдаа',
-        description: 'Жолооч бүртгэхэд алдаа гарлаа. Та дахин оролдоно уу.',
+        description: 'Жолооч бүртгэхэд алдаа гарлаа.',
       });
     } finally {
       setIsSubmitting(false);
@@ -114,11 +111,11 @@ export default function NewDriverPage() {
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
-         <Button variant="outline" size="sm" asChild className="mb-4">
-             <Link href="/drivers">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Буцах
-             </Link>
+        <Button variant="outline" size="sm" asChild className="mb-4">
+          <Link href="/drivers">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Буцах
+          </Link>
         </Button>
         <h1 className="text-3xl font-headline font-bold">Шинэ жолооч бүртгэх</h1>
         <p className="text-muted-foreground">
@@ -127,99 +124,7 @@ export default function NewDriverPage() {
       </div>
       <Card>
         <CardContent className="pt-6">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                <div className="flex items-center gap-6">
-                    <div className="relative">
-                        <Avatar className="h-24 w-24 border">
-                            <AvatarImage src={avatarPreview ?? undefined} />
-                            <AvatarFallback className="text-3xl">
-                                {form.getValues('display_name')?.charAt(0)}
-                            </AvatarFallback>
-                        </Avatar>
-                        <Input 
-                            type="file" 
-                            className="hidden" 
-                            ref={fileInputRef}
-                            onChange={handleFileChange} 
-                            accept="image/*"
-                        />
-                        <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="icon" 
-                            className="absolute bottom-0 right-0 rounded-full"
-                            onClick={() => fileInputRef.current?.click()}
-                        >
-                            <Camera className="h-4 w-4" />
-                        </Button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
-                        <FormField
-                        control={form.control}
-                        name="display_name"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Нэр</FormLabel>
-                            <FormControl>
-                                <Input placeholder="Бат Болд" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                    </div>
-                </div>
-              
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                    control={form.control}
-                    name="phone_number"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Утасны дугаар</FormLabel>
-                        <FormControl>
-                            <Input placeholder="8811-XXXX" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Статус</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Статус сонгоно уу..." />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                <SelectItem value="Active">Идэвхтэй</SelectItem>
-                                <SelectItem value="Inactive">Идэвхгүй</SelectItem>
-                                <SelectItem value="On Leave">Чөлөөнд</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                </div>
-
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" asChild>
-                    <Link href="/drivers">Цуцлах</Link>
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Хадгалах
-                </Button>
-              </div>
-            </form>
-          </Form>
+          <DriverForm onSubmit={onSubmit} isSubmitting={isSubmitting} />
         </CardContent>
       </Card>
     </div>

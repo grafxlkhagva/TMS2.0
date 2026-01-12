@@ -21,6 +21,8 @@ import {
   FileSignature,
   Shield,
   AreaChart,
+  Wrench,
+  Fuel,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -43,13 +45,13 @@ import {
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
-import { 
-  DropdownMenu, 
-  DropdownMenuTrigger, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator 
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator
 } from './ui/dropdown-menu';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { cn } from '@/lib/utils';
@@ -61,52 +63,42 @@ const baseNavItems = [
   { href: '/contracted-transport', icon: FileSignature, label: 'Гэрээт тээвэр' },
   { href: '/direct-shipments', icon: Truck, label: 'Шууд тээвэрлэлт' },
   { href: '/shipments', icon: Truck, label: 'Тээвэрлэлт' },
-  { 
-    href: '/customers', 
-    icon: Building2, 
+  {
+    href: '/customers',
+    icon: Building2,
     label: 'Харилцагчид',
     subItems: [
-        { href: '/customers/dashboard', label: 'Хянах самбар' },
-        { href: '/customers', label: 'Жагсаалт' },
+      { href: '/customers/dashboard', label: 'Хянах самбар' },
+      { href: '/customers', label: 'Жагсаалт' },
     ]
   },
   { href: '/warehouses', icon: Warehouse, label: 'Агуулах' },
-  { 
-    href: '/vehicles', 
-    icon: Car, 
+  {
+    href: '/vehicles',
+    icon: Car,
     label: 'Тээврийн хэрэгсэл',
-    subItems: [
-        { href: '/vehicles/dashboard', label: 'Хянах самбар' },
-        { href: '/vehicles', label: 'Жагсаалт' },
-    ]
   },
+  { href: '/maintenances', icon: Wrench, label: 'Засвар үйлчилгээ' },
+  { href: '/fuel', icon: Fuel, label: 'Түлшний хяналт' },
 ];
 
 const transportManagerNavItems = [
   { href: '/my-dashboard', icon: LayoutGrid, label: 'Миний самбар' },
   ...baseNavItems,
-  { 
-    href: '/drivers', 
-    icon: UserSquare, 
+  {
+    href: '/drivers',
+    icon: UserSquare,
     label: 'Тээвэрчин',
-    subItems: [
-        { href: '/drivers', label: 'Жолооч нарын жагсаалт' },
-        { href: '/drivers/reconciliation', label: 'Бүртгэл цэгцлэх' },
-    ]
   },
 ];
 
 const managementNavItems = [
-  { href: '/management', icon: Shield, label: 'Удирдлага'},
+  { href: '/management', icon: Shield, label: 'Удирдлага' },
   ...baseNavItems,
-   { 
-    href: '/drivers', 
-    icon: UserSquare, 
+  {
+    href: '/drivers',
+    icon: UserSquare,
     label: 'Тээвэрчин',
-    subItems: [
-        { href: '/drivers', label: 'Жолооч нарын жагсаалт' },
-        { href: '/drivers/reconciliation', label: 'Бүртгэл цэгцлэх' },
-    ]
   },
   { href: '/users', icon: Users, label: 'Системийн хэрэглэгчид' },
   { href: '/settings', icon: Settings, label: 'Тохиргоо' },
@@ -123,39 +115,26 @@ function Nav() {
   const { user } = useAuth();
   const [items, setItems] = React.useState(baseNavItems);
   const [mounted, setMounted] = React.useState(false);
-  
+
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
   React.useEffect(() => {
     if (user?.role) {
-        if (user.role === 'admin') {
-            setItems(adminNavItems);
-        } else if (user.role === 'management') {
-            setItems(managementNavItems);
-        } else if (user.role === 'transport_manager') {
-            setItems(transportManagerNavItems);
-        } else {
-            setItems(baseNavItems);
-        }
+      if (user.role === 'admin') {
+        setItems(adminNavItems);
+      } else if (user.role === 'management') {
+        setItems(managementNavItems);
+      } else if (user.role === 'transport_manager') {
+        setItems(transportManagerNavItems);
+      } else {
+        setItems(baseNavItems);
+      }
     }
   }, [user?.role]);
 
-  if (!mounted) {
-    return (
-        <SidebarMenu>
-            {baseNavItems.map(item => 
-                <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton>
-                        <item.icon className="mr-2 h-4 w-4 shrink-0" />
-                        <span>{item.label}</span>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            )}
-        </SidebarMenu>
-    );
-  }
+
 
   return (
     <SidebarMenu>
@@ -165,28 +144,28 @@ function Nav() {
             <Collapsible defaultOpen={pathname.startsWith(item.href)}>
               <CollapsibleTrigger asChild>
                 <SidebarMenuButton
-                    isActive={pathname.startsWith(item.href)}
-                    className="justify-between"
-                    tooltip={state === 'collapsed' ? { children: item.label, side: 'right' } : undefined}
+                  isActive={pathname.startsWith(item.href)}
+                  className="justify-between"
+                  tooltip={state === 'collapsed' ? { children: item.label, side: 'right' } : undefined}
                 >
-                    <div className="flex items-center gap-2">
-                        <item.icon className="mr-2 h-4 w-4 shrink-0" />
-                        <span>{item.label}</span>
-                    </div>
-                    <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform duration-200", state === 'collapsed' && "hidden", "group-data-[state=open]:rotate-180")} />
+                  <div className="flex items-center gap-2">
+                    <item.icon className="mr-2 h-4 w-4 shrink-0" />
+                    <span>{item.label}</span>
+                  </div>
+                  <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform duration-200", state === 'collapsed' && "hidden", "group-data-[state=open]:rotate-180")} />
                 </SidebarMenuButton>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <SidebarMenuSub>
-                    {item.subItems.map(subItem => (
-                        <li key={subItem.href}>
-                            <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
-                               <Link href={subItem.href}>
-                                <span>{subItem.label}</span>
-                               </Link>
-                            </SidebarMenuSubButton>
-                        </li>
-                    ))}
+                  {item.subItems.map(subItem => (
+                    <li key={subItem.href}>
+                      <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                        <Link href={subItem.href}>
+                          <span>{subItem.label}</span>
+                        </Link>
+                      </SidebarMenuSubButton>
+                    </li>
+                  ))}
                 </SidebarMenuSub>
               </CollapsibleContent>
             </Collapsible>
@@ -213,7 +192,9 @@ function UserProfile() {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      if (auth) {
+        await signOut(auth);
+      }
       router.push('/login');
     } catch (error) {
       console.error('Error signing out: ', error);
@@ -222,24 +203,24 @@ function UserProfile() {
 
   if (loading) {
     return (
-       <div className="flex items-center gap-2 rounded-lg bg-background/50 p-2">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback>?</AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold">Loading...</span>
-            <span className="text-xs text-muted-foreground">
-              Please wait...
-            </span>
-          </div>
+      <div className="flex items-center gap-2 rounded-lg bg-background/50 p-2">
+        <Avatar className="h-8 w-8">
+          <AvatarFallback>?</AvatarFallback>
+        </Avatar>
+        <div className="flex flex-col">
+          <span className="text-sm font-semibold">Loading...</span>
+          <span className="text-xs text-muted-foreground">
+            Please wait...
+          </span>
         </div>
+      </div>
     )
   }
 
   if (!user) {
-     return null;
+    return null;
   }
-  
+
   const fallbackText = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || 'U';
 
 
@@ -280,85 +261,85 @@ function UserProfile() {
 
 
 function AppShellContent({ children }: { children: React.ReactNode }) {
-    const { state } = useSidebar();
-  
-    return (
-      <>
-        <Sidebar>
-          <SidebarHeader>
-             <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                <svg
-                    width="100%"
-                    height="100%"
-                    viewBox="0 0 714 735"
-                    version="1.1"
-                    xmlns="http://www.w3.org/2000/svg"
-                    xmlnsXlink="http://www.w3.org/1999/xlink"
-                    xmlSpace="preserve"
-                    style={{
-                    fillRule: 'evenodd',
-                    clipRule: 'evenodd',
-                    strokeLinejoin: 'round',
-                    strokeMiterlimit: 2,
-                    }}
-                >
-                    <g transform="matrix(1,0,0,1,-7830.54,-17449.4)">
-                    <g transform="matrix(1.2013e-16,1.96187,-1.96187,1.2013e-16,13141.4,-15700.3)">
-                        <path
-                        d="M17271.2,2506.18L17066.3,2506.18L17066.3,2707.06C17053.3,2705.87 17040.7,2703.4 17028.6,2699.78L17028.6,2468.5L17263,2468.5C17267.1,2480.56 17269.9,2493.17 17271.2,2506.18ZM17245.2,2430.82L17179.4,2430.82L17179.4,2367.56C17206.4,2383 17229,2404.79 17245.2,2430.82ZM17245.4,2619.23C17229.2,2645.36 17206.4,2667.24 17179.4,2682.72L17179.4,2619.23L17245.4,2619.23ZM17263.1,2581.55L17141.7,2581.55L17141.7,2699.14C17129.6,2702.91 17117,2705.53 17104,2706.86L17104,2543.87L17271.3,2543.87C17269.9,2556.88 17267.1,2569.49 17263.1,2581.55ZM16991,2683.89C16963,2668.35 16939.5,2646.02 16922.8,2619.23L16991,2619.23L16991,2683.89ZM16905.1,2581.55C16901.1,2569.49 16898.3,2556.88 16897,2543.87L16991,2543.87L16991,2581.55L16905.1,2581.55ZM16897,2506.18C16898.4,2493.17 16901.2,2480.56 16905.2,2468.5L16991,2468.5L16991,2506.18L16897,2506.18ZM16923,2430.82C16939.6,2404.13 16963,2381.89 16991,2366.39L16991,2430.82L16923,2430.82ZM17028.6,2350.5C17040.7,2346.88 17053.3,2344.41 17066.3,2343.22L17066.3,2430.82L17028.6,2430.82L17028.6,2350.5ZM17104,2343.42C17117,2344.75 17129.6,2347.37 17141.7,2351.14L17141.7,2430.82L17104,2430.82L17104,2343.42Z"
-                        style={{ fill: 'rgb(242,99,33)' }}
-                        />
-                    </g>
-                    </g>
-                </svg>
-                </Button>
-                <span className={cn("font-headline text-lg font-semibold", state === "collapsed" && "hidden")}>Tumen Tech</span>
-            </div>
-          </SidebarHeader>
-          <SidebarContent>
-            <Nav />
-          </SidebarContent>
-          <SidebarFooter>
-            <div className="flex flex-col gap-2">
-              <UserProfile />
-            </div>
-          </SidebarFooter>
-        </Sidebar>
-        <SidebarInset>
-            <header className="flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm md:px-6">
-            <SidebarTrigger />
-            <div className="flex-1">
-                {/* Can add breadcrumbs or page title here */}
-            </div>
-            </header>
-            <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
-        </SidebarInset>
-      </>
-    );
-  }
+  const { state } = useSidebar();
+
+  return (
+    <>
+      <Sidebar>
+        <SidebarHeader>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <svg
+                width="100%"
+                height="100%"
+                viewBox="0 0 714 735"
+                version="1.1"
+                xmlns="http://www.w3.org/2000/svg"
+                xmlnsXlink="http://www.w3.org/1999/xlink"
+                xmlSpace="preserve"
+                style={{
+                  fillRule: 'evenodd',
+                  clipRule: 'evenodd',
+                  strokeLinejoin: 'round',
+                  strokeMiterlimit: 2,
+                }}
+              >
+                <g transform="matrix(1,0,0,1,-7830.54,-17449.4)">
+                  <g transform="matrix(1.2013e-16,1.96187,-1.96187,1.2013e-16,13141.4,-15700.3)">
+                    <path
+                      d="M17271.2,2506.18L17066.3,2506.18L17066.3,2707.06C17053.3,2705.87 17040.7,2703.4 17028.6,2699.78L17028.6,2468.5L17263,2468.5C17267.1,2480.56 17269.9,2493.17 17271.2,2506.18ZM17245.2,2430.82L17179.4,2430.82L17179.4,2367.56C17206.4,2383 17229,2404.79 17245.2,2430.82ZM17245.4,2619.23C17229.2,2645.36 17206.4,2667.24 17179.4,2682.72L17179.4,2619.23L17245.4,2619.23ZM17263.1,2581.55L17141.7,2581.55L17141.7,2699.14C17129.6,2702.91 17117,2705.53 17104,2706.86L17104,2543.87L17271.3,2543.87C17269.9,2556.88 17267.1,2569.49 17263.1,2581.55ZM16991,2683.89C16963,2668.35 16939.5,2646.02 16922.8,2619.23L16991,2619.23L16991,2683.89ZM16905.1,2581.55C16901.1,2569.49 16898.3,2556.88 16897,2543.87L16991,2543.87L16991,2581.55L16905.1,2581.55ZM16897,2506.18C16898.4,2493.17 16901.2,2480.56 16905.2,2468.5L16991,2468.5L16991,2506.18L16897,2506.18ZM16923,2430.82C16939.6,2404.13 16963,2381.89 16991,2366.39L16991,2430.82L16923,2430.82ZM17028.6,2350.5C17040.7,2346.88 17053.3,2344.41 17066.3,2343.22L17066.3,2430.82L17028.6,2430.82L17028.6,2350.5ZM17104,2343.42C17117,2344.75 17129.6,2347.37 17141.7,2351.14L17141.7,2430.82L17104,2430.82L17104,2343.42Z"
+                      style={{ fill: 'rgb(242,99,33)' }}
+                    />
+                  </g>
+                </g>
+              </svg>
+            </Button>
+            <span className={cn("font-headline text-lg font-semibold", state === "collapsed" && "hidden")}>Tumen Tech</span>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <Nav />
+        </SidebarContent>
+        <SidebarFooter>
+          <div className="flex flex-col gap-2">
+            <UserProfile />
+          </div>
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset>
+        <header className="flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm md:px-6">
+          <SidebarTrigger />
+          <div className="flex-1">
+            {/* Can add breadcrumbs or page title here */}
+          </div>
+        </header>
+        <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+      </SidebarInset>
+    </>
+  );
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-    const [defaultOpen, setDefaultOpen] = React.useState(true);
-    const [isClient, setIsClient] = React.useState(false);
+  const [defaultOpen, setDefaultOpen] = React.useState(true);
+  const [isClient, setIsClient] = React.useState(false);
 
-    React.useEffect(() => {
-        setIsClient(true);
-        const checkScreenSize = () => {
-            setDefaultOpen(window.innerWidth >= 1536);
-        };
-        checkScreenSize();
-    }, []);
+  React.useEffect(() => {
+    setIsClient(true);
+    const checkScreenSize = () => {
+      setDefaultOpen(window.innerWidth >= 1536);
+    };
+    checkScreenSize();
+  }, []);
 
-    // Render a placeholder or null on the server, and the actual component on the client
-    if (!isClient) {
-        // You can return a skeleton loader here if you want to avoid layout shifts
-        return null;
-    }
+  // Render a placeholder or null on the server, and the actual component on the client
+  if (!isClient) {
+    // You can return a skeleton loader here if you want to avoid layout shifts
+    return null;
+  }
 
-    return (
-        <SidebarProvider defaultOpen={defaultOpen}>
-            <AppShellContent>{children}</AppShellContent>
-        </SidebarProvider>
-    );
+  return (
+    <SidebarProvider defaultOpen={defaultOpen}>
+      <AppShellContent>{children}</AppShellContent>
+    </SidebarProvider>
+  );
 }

@@ -22,17 +22,89 @@ export type Vehicle = {
   trailerLicensePlateChars?: string;
   vin: string;
   vehicleTypeId: string;
+  vehicleTypeName?: string;
   trailerTypeId: string;
+  trailerTypeName?: string;
   capacity: string;
   fuelType: 'Diesel' | 'Gasoline' | 'Electric' | 'Hybrid';
   status: VehicleStatus;
   notes?: string;
   createdAt: Date;
   imageUrls?: string[];
+  driverId?: string;
+  driverName?: string;
   assignedDriver?: {
     driverId: string;
     driverName: string;
-  }
+  };
+  odometer?: number;
+  lastOdometerUpdate?: Date;
+  specs?: {
+    tankCapacity?: number;
+    fuelType?: string;
+    transmission?: string;
+    axleConfig?: string;
+    engineType?: string;
+  };
+  dates?: {
+    purchase?: Date;
+    warrantyExpiry?: Date;
+    registrationExpiry?: Date;
+    insuranceExpiry?: Date;
+    roadPermitExpiry?: Date;
+    inspectionExpiry?: Date;
+  };
+};
+
+export type MaintenanceType = 'Preventive' | 'Repair' | 'Inspection' | 'TireChange' | 'Other';
+
+export type VehicleAssignment = {
+  id: string;
+  vehicleId: string;
+  vehiclePlate: string; // Added for easy history viewing
+  driverId: string;
+  driverName: string;
+  assignedAt: Date | Timestamp;
+  assignedBy: string;
+  startOdometer?: number;
+  status: 'Active' | 'Ended';
+  isPrimary?: boolean; // New field to track the primary assignment for a driver
+  endedAt?: Date | Timestamp;
+  endedBy?: string; // Added to track who ended the assignment
+  endOdometer?: number;
+  notes?: string;
+};
+
+export type FuelLog = {
+  id: string;
+  vehicleId: string;
+  driverId?: string; // Who filled up
+  date: Date;
+  odometer: number;
+  liters: number;
+  pricePerLiter: number;
+  totalCost: number;
+  stationName?: string; // e.g. Sod Mongol, Petrovis
+  fullTank: boolean; // Useful for efficiency calc
+  imageUrl?: string; // Receipt photo
+  notes?: string;
+  createdAt?: Date;
+  efficiency?: number; // Calculated L/100km since last full tank
+};
+
+export type MaintenanceRecord = {
+  id: string;
+  vehicleId: string;
+  type: MaintenanceType;
+  date: Date;
+  odometer: number;
+  cost: number;
+  garageName?: string;
+  description: string;
+  status: 'Scheduled' | 'In Progress' | 'Completed' | 'Cancelled';
+  attachments?: string[]; // URLs
+  createdAt: Date;
+  createdBy: string;
 };
 
 export type DriverStatus = 'Active' | 'Inactive' | 'On Leave';
@@ -44,9 +116,20 @@ export type Driver = {
   status: DriverStatus;
   created_time: Date | string | Timestamp;
   photo_url?: string;
-  authUid?: string; // To link with Firebase Auth user
+  authUid?: string;
   assignedVehicleId?: string;
   isAvailableForContracted?: boolean;
+  // Compliance & Personal Fields
+  registerNumber?: string;
+  birthDate?: Date | Timestamp;
+  licenseNumber?: string;
+  licenseClasses?: string[]; // e.g., ["BC", "E"]
+  licenseExpiryDate?: Date | Timestamp;
+  licenseImageUrl?: string;
+  emergencyContact?: {
+    name: string;
+    phone: string;
+  };
 };
 
 export type UserRole = 'admin' | 'management' | 'transport_manager' | 'finance_manager' | 'customer_officer' | 'manager' | 'driver';
@@ -106,24 +189,24 @@ export type Industry = {
 };
 
 export type Warehouse = {
-    id: string;
-    name: string;
-    location: string;
-    regionId: string;
-    regionRef?: DocumentReference;
-    geolocation: {
-        lat: number;
-        lng: number;
-    };
-    conditions: string;
-    contactInfo: string;
-    contactName?: string;
-    contactPosition?: string;
-    customerId?: string;
-    customerName?: string;
-    customerRef?: DocumentReference;
-    createdAt: Date;
-    updatedAt?: Date;
+  id: string;
+  name: string;
+  location: string;
+  regionId: string;
+  regionRef?: DocumentReference;
+  geolocation: {
+    lat: number;
+    lng: number;
+  };
+  conditions: string;
+  contactInfo: string;
+  contactName?: string;
+  contactPosition?: string;
+  customerId?: string;
+  customerName?: string;
+  customerRef?: DocumentReference;
+  createdAt: Date;
+  updatedAt?: Date;
 };
 
 export type Region = {
@@ -177,96 +260,96 @@ export type VehicleAvailability = '8 цаг' | '12 цаг' | '24 цаг' | '48 �
 export type PaymentTerm = 'Урьдчилгаа 30%' | 'Урьдчилгаа 40%' | 'Урьдчилгаа 50%' | 'Тээвэрлэлт дуусаад' | 'Гэрээгээр тохиролцоно';
 
 export type TransportationConditions = {
-    loading: LoadingUnloadingResponsibility;
-    unloading: LoadingUnloadingResponsibility;
-    permits: {
-      roadPermit: boolean;
-      roadToll: boolean;
-    };
-    vehicleAvailability: VehicleAvailability;
-    paymentTerm: PaymentTerm;
-    insurance: string;
-    additionalConditions?: string;
+  loading: LoadingUnloadingResponsibility;
+  unloading: LoadingUnloadingResponsibility;
+  permits: {
+    roadPermit: boolean;
+    roadToll: boolean;
+  };
+  vehicleAvailability: VehicleAvailability;
+  paymentTerm: PaymentTerm;
+  insurance: string;
+  additionalConditions?: string;
 };
 
 export type Order = {
-    id: string;
-    orderNumber: string;
-    customerId: string;
-    customerName: string;
-    customerRef?: DocumentReference;
-    employeeId: string;
-    employeeName: string;
-    employeeRef?: DocumentReference;
-    transportManagerId?: string;
-    transportManagerName?: string;
-    transportManagerRef?: DocumentReference;
-    status: OrderStatus;
-    createdAt: Date;
-    createdBy: {
-        uid: string;
-        name: string;
-    };
-    conditions?: TransportationConditions;
+  id: string;
+  orderNumber: string;
+  customerId: string;
+  customerName: string;
+  customerRef?: DocumentReference;
+  employeeId: string;
+  employeeName: string;
+  employeeRef?: DocumentReference;
+  transportManagerId?: string;
+  transportManagerName?: string;
+  transportManagerRef?: DocumentReference;
+  status: OrderStatus;
+  createdAt: Date;
+  createdBy: {
+    uid: string;
+    name: string;
+  };
+  conditions?: TransportationConditions;
 };
 
 export type OrderItem = {
-    id: string;
-    orderId: string;
-    orderRef?: DocumentReference;
-    startRegionId: string;
-    startRegionRef?: DocumentReference;
-    startWarehouseId: string;
-    startWarehouseRef?: DocumentReference;
-    endRegionId: string;
-    endRegionRef?: DocumentReference;
-    endWarehouseId: string;
-    endWarehouseRef?: DocumentReference;
-    loadingStartDate: Date;
-    loadingEndDate: Date;
-    unloadingStartDate: Date;
-    unloadingEndDate: Date;
-    serviceTypeId: string;
-    serviceTypeRef?: DocumentReference;
-    vehicleTypeId: string;
-    vehicleTypeRef?: DocumentReference;
-    trailerTypeId: string;
-    trailerTypeRef?: DocumentReference;
-    totalDistance: number;
-    status: OrderItemStatus;
-    createdAt: Date;
-    frequency: number;
-    acceptedQuoteId?: string;
-    finalPrice?: number;
-    profitMargin?: number;
-    withVAT?: boolean;
-    tenderStatus?: 'Open' | 'Closed';
-    cargoItems?: OrderItemCargo[];
+  id: string;
+  orderId: string;
+  orderRef?: DocumentReference;
+  startRegionId: string;
+  startRegionRef?: DocumentReference;
+  startWarehouseId: string;
+  startWarehouseRef?: DocumentReference;
+  endRegionId: string;
+  endRegionRef?: DocumentReference;
+  endWarehouseId: string;
+  endWarehouseRef?: DocumentReference;
+  loadingStartDate: Date;
+  loadingEndDate: Date;
+  unloadingStartDate: Date;
+  unloadingEndDate: Date;
+  serviceTypeId: string;
+  serviceTypeRef?: DocumentReference;
+  vehicleTypeId: string;
+  vehicleTypeRef?: DocumentReference;
+  trailerTypeId: string;
+  trailerTypeRef?: DocumentReference;
+  totalDistance: number;
+  status: OrderItemStatus;
+  createdAt: Date;
+  frequency: number;
+  acceptedQuoteId?: string;
+  finalPrice?: number;
+  profitMargin?: number;
+  withVAT?: boolean;
+  tenderStatus?: 'Open' | 'Closed';
+  cargoItems?: OrderItemCargo[];
 };
 
 export type OrderItemCargo = {
-    id: string;
-    orderItemId: string;
-    orderItemRef?: DocumentReference;
-    name: string;
-    quantity: number;
-    unit: string;
-    packagingTypeId: string;
-    packagingTypeRef?: DocumentReference;
-    notes?: string;
+  id: string;
+  orderItemId: string;
+  orderItemRef?: DocumentReference;
+  name: string;
+  quantity: number;
+  unit: string;
+  packagingTypeId: string;
+  packagingTypeRef?: DocumentReference;
+  notes?: string;
 };
 
 export type DriverQuote = {
-    id: string;
-    orderItemId: string;
-    orderItemRef?: DocumentReference;
-    driverName: string;
-    driverPhone: string;
-    price: number;
-    notes?: string;
-    createdAt: Date;
-    status: 'Pending' | 'Accepted' | 'Rejected';
-    channel: 'Phone' | 'App';
+  id: string;
+  orderItemId: string;
+  orderItemRef?: DocumentReference;
+  driverName: string;
+  driverPhone: string;
+  price: number;
+  notes?: string;
+  createdAt: Date;
+  status: 'Pending' | 'Accepted' | 'Rejected';
+  channel: 'Phone' | 'App';
 };
 
 export type ShipmentStatusType = 'Preparing' | 'Ready For Loading' | 'Loading' | 'In Transit' | 'Unloading' | 'Delivered' | 'Delayed' | 'Cancelled';
@@ -328,52 +411,52 @@ export type Shipment = {
 export type ContractStatus = 'pending' | 'signed' | 'declined' | 'expired';
 
 export type Contract = {
-    id: string;
-    shipmentId: string;
-    shipmentRef: DocumentReference;
-    shipmentNumber: string;
-    orderId: string;
-    orderRef: DocumentReference;
-    // Snapshot of key information at time of creation
-    driverInfo: {
-        name: string;
-        phone: string;
-    };
-    routeInfo: {
-        start: string;
-        end: string;
-    };
-    vehicleInfo: {
-        type: string;
-    };
-    price: number;
-    priceWithVAT: boolean;
-    estimatedDeliveryDate: Date;
-    // Contract status and audit trail
-    status: ContractStatus;
-    createdAt: Date;
-    content?: string; // Optional: For storing the exact HTML/text of the contract
-    signedAt?: Date;
-    signatureDataUrl?: string;
-    ipAddress?: string;
-    userAgent?: string;
+  id: string;
+  shipmentId: string;
+  shipmentRef: DocumentReference;
+  shipmentNumber: string;
+  orderId: string;
+  orderRef: DocumentReference;
+  // Snapshot of key information at time of creation
+  driverInfo: {
+    name: string;
+    phone: string;
+  };
+  routeInfo: {
+    start: string;
+    end: string;
+  };
+  vehicleInfo: {
+    type: string;
+  };
+  price: number;
+  priceWithVAT: boolean;
+  estimatedDeliveryDate: Date;
+  // Contract status and audit trail
+  status: ContractStatus;
+  createdAt: Date;
+  content?: string; // Optional: For storing the exact HTML/text of the contract
+  signedAt?: Date;
+  signatureDataUrl?: string;
+  ipAddress?: string;
+  userAgent?: string;
 };
 
 export type SafetyBriefingStatus = 'pending' | 'signed';
 
 export type SafetyBriefing = {
-    id: string;
-    shipmentId: string;
-    shipmentRef: DocumentReference;
-    driverInfo: {
-        name: string;
-        phone: string;
-    };
-    status: SafetyBriefingStatus;
-    createdAt: Date;
-    signedAt?: Date;
-    signatureDataUrl?: string;
-    userAgent?: string;
+  id: string;
+  shipmentId: string;
+  shipmentRef: DocumentReference;
+  driverInfo: {
+    name: string;
+    phone: string;
+  };
+  status: SafetyBriefingStatus;
+  createdAt: Date;
+  signedAt?: Date;
+  signatureDataUrl?: string;
+  userAgent?: string;
 };
 
 export type ShipmentUpdateStatus = 'On Schedule' | 'Delayed';
@@ -416,33 +499,33 @@ export type RouteStop = {
 }
 
 export type ContractedTransportExecution = {
-    id: string;
-    contractId: string;
-    date: Date;
-    status: ContractedTransportExecutionStatus;
-    statusHistory: { status: ContractedTransportExecutionStatus, date: Date | Timestamp }[];
-    vehicleId?: string;
-    vehicleLicense?: string;
-    driverId?: string;
-    driverName?: string;
-    createdAt: Date;
-    selectedCargoId?: string;
-    totalLoadedWeight?: number;
-    totalUnloadedWeight?: number;
-    cargoColor?: string;
-    imageUrls?: string[];
+  id: string;
+  contractId: string;
+  date: Date;
+  status: ContractedTransportExecutionStatus;
+  statusHistory: { status: ContractedTransportExecutionStatus, date: Date | Timestamp }[];
+  vehicleId?: string;
+  vehicleLicense?: string;
+  driverId?: string;
+  driverName?: string;
+  createdAt: Date;
+  selectedCargoId?: string;
+  totalLoadedWeight?: number;
+  totalUnloadedWeight?: number;
+  cargoColor?: string;
+  imageUrls?: string[];
 }
 
 export type ContractedTransportCargoItem = {
-    id: string;
-    name: string;
-    unit: string;
-    packagingTypeId: string;
-    notes?: string;
-    driverPrice: number;
-    mainContractorPrice?: number;
-    ourPrice?: number;
-    color?: string;
+  id: string;
+  name: string;
+  unit: string;
+  packagingTypeId: string;
+  notes?: string;
+  driverPrice: number;
+  mainContractorPrice?: number;
+  ourPrice?: number;
+  color?: string;
 };
 
 

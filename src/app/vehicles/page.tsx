@@ -18,9 +18,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Vehicle, VehicleStatus, Driver, VehicleType, TrailerType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { collection, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, doc, updateDoc, Timestamp, Firestore } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { PlusCircle, RefreshCw, MoreHorizontal, Eye, Edit, Search } from 'lucide-react';
+import { PlusCircle, RefreshCw, MoreHorizontal, Eye, Edit, Search, AlertTriangle, Car } from 'lucide-react';
+import { differenceInDays } from 'date-fns';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AssignVehicleDialog } from '@/components/assign-vehicle-dialog';
+
+
 import Link from 'next/link';
 import {
   DropdownMenu,
@@ -36,69 +41,46 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 
 
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { Check, Truck, Wrench as WrenchIcon } from 'lucide-react';
+
 function StatusBadge({ status }: { status: VehicleStatus }) {
   const variant = status === 'Available' ? 'success' : status === 'Maintenance' ? 'destructive' : status === 'Ready' ? 'default' : 'secondary';
   const text = status === 'Available' ? 'Сул' : status === 'In Use' ? 'Ашиглаж буй' : status === 'Maintenance' ? 'Засварт' : 'Бэлэн';
   return <Badge variant={variant}>{text}</Badge>;
 }
 
-function AssignDriverDialog({
-  vehicle,
-  open,
-  onOpenChange,
-  onAssign,
-  drivers
-}: {
-  vehicle: Vehicle | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onAssign: (vehicleId: string, driverId: string) => void;
-  drivers: Driver[];
-}) {
-  const [selectedDriver, setSelectedDriver] = React.useState('');
+type StatCardProps = {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+  isLoading: boolean;
+};
 
-  const handleAssign = () => {
-    if (vehicle && selectedDriver) {
-      onAssign(vehicle.id, selectedDriver);
-      onOpenChange(false);
-    }
-  };
-  
-  React.useEffect(() => {
-    if (!open) {
-      setSelectedDriver('');
-    }
-  }, [open]);
-
+function StatCard({ title, value, icon: Icon, isLoading }: StatCardProps) {
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          <Skeleton className="h-4 w-4" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-8 w-1/2" />
+        </CardContent>
+      </Card>
+    )
+  }
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{vehicle?.modelName} - жолооч оноох</DialogTitle>
-          <DialogDescription>
-            {vehicle?.licensePlate} дугаартай тээврийн хэрэгсэлд жолооч онооно уу.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="py-4">
-          <Select onValueChange={setSelectedDriver}>
-            <SelectTrigger>
-              <SelectValue placeholder="Жолооч сонгоно уу..." />
-            </SelectTrigger>
-            <SelectContent>
-              {drivers.filter(d => d.status === 'Active').map((driver) => (
-                <SelectItem key={driver.id} value={driver.id}>
-                  {driver.display_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Цуцлах</Button>
-          <Button onClick={handleAssign} disabled={!selectedDriver}>Оноох</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -112,49 +94,92 @@ export default function VehiclesPage() {
   const [selectedVehicle, setSelectedVehicle] = React.useState<Vehicle | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const { toast } = useToast();
-  
+
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
   const [typeFilter, setTypeFilter] = React.useState('all');
-  
+
+  const [stats, setStats] = React.useState({
+    total: 0,
+    available: 0,
+    inUse: 0,
+    maintenance: 0,
+  });
+  const [makeChartData, setMakeChartData] = React.useState<any[]>([]);
+  const [typeChartData, setTypeChartData] = React.useState<any[]>([]);
+  const [trailerChartData, setTrailerChartData] = React.useState<any[]>([]);
+
   const fetchData = React.useCallback(async () => {
-      setIsLoading(true);
-      try {
-        const [vehiclesSnapshot, driversSnapshot, vehicleTypesSnapshot, trailerTypesSnapshot] = await Promise.all([
-          getDocs(query(collection(db, 'vehicles'), orderBy('createdAt', 'desc'))),
-          getDocs(query(collection(db, 'Drivers'), orderBy('display_name'))),
-          getDocs(query(collection(db, 'vehicle_types'), orderBy('name'))),
-          getDocs(query(collection(db, 'trailer_types'), orderBy('name'))),
-        ]);
+    if (!db) return;
+    setIsLoading(true);
+    try {
+      const [vehiclesSnapshot, driversSnapshot, vehicleTypesSnapshot, trailerTypesSnapshot] = await Promise.all([
+        getDocs(query(collection(db, 'vehicles'), orderBy('createdAt', 'desc'))),
+        getDocs(query(collection(db, 'Drivers'), orderBy('display_name'))),
+        getDocs(query(collection(db, 'vehicle_types'), orderBy('name'))),
+        getDocs(query(collection(db, 'trailer_types'), orderBy('name'))),
+      ]);
 
-        const vehiclesData = vehiclesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as Vehicle));
-        setVehicles(vehiclesData);
+      const vehiclesData = vehiclesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Vehicle));
+      setVehicles(vehiclesData);
 
-        const driversData = driversSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as Driver));
-        setDrivers(driversData);
-        
-        const vehicleTypesData = vehicleTypesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as VehicleType));
-        setVehicleTypes(vehicleTypesData);
+      const driversData = driversSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Driver));
+      setDrivers(driversData);
 
-        const trailerTypesData = trailerTypesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as TrailerType));
-        setTrailerTypes(trailerTypesData);
-          
-      } catch (error) {
-        console.error("Error fetching data: ", error);
-        toast({
-          variant: "destructive",
-          title: "Алдаа",
-          description: "Мэдээлэл татахад алдаа гарлаа.",
-        });
-      } finally {
-        setIsLoading(false);
-      }
+      const vehicleTypesData = vehicleTypesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VehicleType));
+      setVehicleTypes(vehicleTypesData);
+
+      const trailerTypesData = trailerTypesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrailerType));
+      setTrailerTypes(trailerTypesData);
+
+      // Dashboard logic
+      const vehicleTypesMap = new Map(vehicleTypesData.map(vt => [vt.id, vt.name]));
+      const trailerTypesMap = new Map(trailerTypesData.map(tt => [tt.id, tt.name]));
+
+      setStats({
+        total: vehiclesData.length,
+        available: vehiclesData.filter(v => v.status === 'Available').length,
+        inUse: vehiclesData.filter(v => v.status === 'In Use').length,
+        maintenance: vehiclesData.filter(v => v.status === 'Maintenance').length,
+      });
+
+      const makeCounts = vehiclesData.reduce((acc, vehicle) => {
+        const make = vehicle.makeName || 'Тодорхойгүй';
+        acc[make] = (acc[make] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      setMakeChartData(Object.entries(makeCounts).map(([name, count]) => ({ name, тоо: count })));
+
+      const typeCounts = vehiclesData.reduce((acc, vehicle) => {
+        const typeName = vehicleTypesMap.get(vehicle.vehicleTypeId) || 'Тодорхойгүй';
+        acc[typeName] = (acc[typeName] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      setTypeChartData(Object.entries(typeCounts).map(([name, count]) => ({ name, тоо: count })));
+
+      const trailerCounts = vehiclesData.reduce((acc, vehicle) => {
+        const trailerName = trailerTypesMap.get(vehicle.trailerTypeId) || 'Тодорхойгүй';
+        acc[trailerName] = (acc[trailerName] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      setTrailerChartData(Object.entries(trailerCounts).map(([name, count]) => ({ name, тоо: count })));
+
+    } catch (error) {
+      console.error("Error fetching data: ", error);
+      toast({
+        variant: "destructive",
+        title: "Алдаа",
+        description: "Мэдээлэл татахад алдаа гарлаа.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }, [toast]);
 
   React.useEffect(() => {
@@ -166,39 +191,12 @@ export default function VehiclesPage() {
     setIsDialogOpen(true);
   };
 
-  const handleAssignDriver = async (vehicleId: string, driverId: string) => {
-    const driver = drivers.find(d => d.id === driverId);
-    if (!driver) return;
-
-    try {
-        const vehicleRef = doc(db, 'vehicles', vehicleId);
-        await updateDoc(vehicleRef, {
-            driverId: driver.id,
-            driverName: driver.display_name,
-            status: 'In Use',
-        });
-        
-        await fetchData();
-
-        toast({
-            title: 'Амжилттай',
-            description: `${driver?.display_name}-г ${selectedVehicle?.licensePlate} дугаартай тээврийн хэрэгсэлд оноолоо.`,
-        });
-    } catch (error) {
-         toast({
-            variant: "destructive",
-            title: 'Алдаа',
-            description: `Жолооч онооход алдаа гарлаа.`,
-        });
-    }
-  };
-
   const filteredVehicles = React.useMemo(() => {
     return vehicles
       .map(v => {
         const vehicleTypeName = vehicleTypes.find(vt => vt.id === v.vehicleTypeId)?.name || v.vehicleTypeId;
         const trailerTypeName = trailerTypes.find(tt => tt.id === v.trailerTypeId)?.name || v.trailerTypeId;
-        return {...v, vehicleTypeName, trailerTypeName };
+        return { ...v, vehicleTypeName, trailerTypeName };
       })
       .filter(vehicle => {
         if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
@@ -221,16 +219,136 @@ export default function VehiclesPage() {
       });
   }, [vehicles, searchTerm, statusFilter, typeFilter, vehicleTypes, trailerTypes]);
 
+  const getVehicleAlerts = (vehicle: Vehicle) => {
+    const alerts: { type: 'warning' | 'destructive', message: string }[] = [];
+
+    if (vehicle.dates) {
+      const today = new Date();
+      const checkExpiry = (date: Date | undefined, label: string) => {
+        if (!date) return;
+        const daysLeft = differenceInDays(date instanceof Timestamp ? date.toDate() : date, today);
+        if (daysLeft < 0) {
+          alerts.push({ type: 'destructive', message: `${label} хугацаа дууссан!` });
+        } else if (daysLeft <= 30) {
+          alerts.push({ type: 'warning', message: `${label} дуусахад ${daysLeft} хоног үлдлээ.` });
+        }
+      };
+
+      checkExpiry(vehicle.dates.registrationExpiry, 'Техникийн үзлэг');
+      checkExpiry(vehicle.dates.insuranceExpiry, 'Даатгал');
+      checkExpiry(vehicle.dates.roadPermitExpiry, 'Замын зөвшөөрөл');
+    }
+
+    return alerts;
+  };
+
+  if (!db) {
+    return (
+      <div className="flex items-center justify-center h-40">
+        <p className="text-muted-foreground">Системтэй холбогдоход алдаа гарлаа. (Firestore initialization failed)</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto py-6">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-            <h1 className="text-3xl font-headline font-bold">Тээврийн хэрэгсэл</h1>
-            <p className="text-muted-foreground">
-                Бүртгэлтэй тээврийн хэрэгслүүдийн жагсаалт, удирдлага.
-            </p>
+          <h1 className="text-3xl font-headline font-bold">Тээврийн хэрэгсэл</h1>
+          <p className="text-muted-foreground">
+            Бүртгэлтэй тээврийн хэрэгслүүдийн нэгдсэн хяналт болон жагсаалт.
+          </p>
         </div>
-         <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading}>
+            <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
+          </Button>
+          <Button asChild>
+            <Link href="/vehicles/new">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Шинэ хэрэгсэл
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard title="Нийт" value={stats.total} icon={Car} isLoading={isLoading} />
+        <StatCard title="Сул" value={stats.available} icon={Check} isLoading={isLoading} />
+        <StatCard title="Ашиглаж буй" value={stats.inUse} icon={Truck} isLoading={isLoading} />
+        <StatCard title="Засварт" value={stats.maintenance} icon={WrenchIcon} isLoading={isLoading} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Үйлдвэрлэгчээр</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? <Skeleton className="h-[200px] w-full" /> : (
+              <div className="h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={makeChartData} layout="vertical" margin={{ left: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" hide />
+                    <YAxis type="category" dataKey="name" fontSize={10} width={80} />
+                    <RechartsTooltip contentStyle={{ fontSize: '12px' }} />
+                    <Bar dataKey="тоо" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Машины төрлөөр</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? <Skeleton className="h-[200px] w-full" /> : (
+              <div className="h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={typeChartData} layout="vertical" margin={{ left: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" hide />
+                    <YAxis type="category" dataKey="name" fontSize={10} width={80} />
+                    <RechartsTooltip contentStyle={{ fontSize: '12px' }} />
+                    <Bar dataKey="тоо" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Тэвшний төрлөөр</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? <Skeleton className="h-[200px] w-full" /> : (
+              <div className="h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={trailerChartData} layout="vertical" margin={{ left: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" hide />
+                    <YAxis type="category" dataKey="name" fontSize={10} width={80} />
+                    <RechartsTooltip contentStyle={{ fontSize: '12px' }} />
+                    <Bar dataKey="тоо" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Тээврийн хэрэгслийн жагсаалт</CardTitle>
+            <CardDescription>Олдсон: {filteredVehicles.length} / Нийт: {vehicles.length}</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -263,22 +381,7 @@ export default function VehiclesPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading}>
-                <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
-            </Button>
-            <Button asChild>
-                <Link href="/vehicles/new">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Шинэ хэрэгсэл
-                </Link>
-            </Button>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Тээврийн хэрэгслийн парк</CardTitle>
-          <CardDescription>Олдсон: {filteredVehicles.length} / Нийт: {vehicles.length}</CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -291,6 +394,7 @@ export default function VehiclesPage() {
                 <TableHead>Загвар</TableHead>
                 <TableHead>Даац</TableHead>
                 <TableHead>Төрөл / Тэвш</TableHead>
+                <TableHead>Гүйлт (км)</TableHead>
                 <TableHead>Төлөв</TableHead>
                 <TableHead>Оноосон жолооч</TableHead>
                 <TableHead className="text-right">Үйлдэл</TableHead>
@@ -299,68 +403,94 @@ export default function VehiclesPage() {
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
-                        <TableCell><Skeleton className="h-10 w-10 rounded-full"/></TableCell>
-                        <TableCell><Skeleton className="h-5 w-24"/></TableCell>
-                        <TableCell><Skeleton className="h-5 w-24"/></TableCell>
-                        <TableCell><Skeleton className="h-5 w-20"/></TableCell>
-                        <TableCell><Skeleton className="h-5 w-20"/></TableCell>
-                        <TableCell><Skeleton className="h-5 w-16"/></TableCell>
-                        <TableCell><Skeleton className="h-5 w-32"/></TableCell>
-                        <TableCell><Skeleton className="h-6 w-20 rounded-full"/></TableCell>
-                        <TableCell><Skeleton className="h-5 w-28"/></TableCell>
-                        <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto"/></TableCell>
-                    </TableRow>
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                  </TableRow>
                 ))
               ) : filteredVehicles.length > 0 ? (
                 filteredVehicles.map((vehicle) => (
-                    <TableRow key={vehicle.id}>
-                        <TableCell>
-                            <Avatar>
-                                <AvatarImage src={vehicle.imageUrls?.[0]} alt={vehicle.modelName} />
-                                <AvatarFallback>{vehicle.makeName.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                        </TableCell>
-                      <TableCell className="font-mono">{vehicle.licensePlate}</TableCell>
-                      <TableCell className="font-mono">{vehicle.trailerLicensePlate || '-'}</TableCell>
-                      <TableCell>{vehicle.makeName}</TableCell>
-                      <TableCell className="font-medium">{vehicle.modelName}</TableCell>
-                      <TableCell>{vehicle.capacity}</TableCell>
-                      <TableCell>{vehicle.vehicleTypeName} / {vehicle.trailerTypeName}</TableCell>
-                      <TableCell>
-                        <StatusBadge status={vehicle.status} />
-                      </TableCell>
-                      <TableCell>{vehicle.driverName || 'Оноогоогүй'}</TableCell>
-                      <TableCell className="text-right">
-                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Цэс нээх</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Үйлдлүүд</DropdownMenuLabel>
-                                <DropdownMenuItem asChild>
-                                  <Link href={`/vehicles/${vehicle.id}`}>
-                                    <Eye className="mr-2 h-4 w-4"/>
-                                    Дэлгэрэнгүй
-                                  </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <Link href={`/vehicles/${vehicle.id}/edit`}>
-                                    <Edit className="mr-2 h-4 w-4"/>
-                                    Засах
-                                  </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => handleAssignClick(vehicle)} disabled={vehicle.status !== 'Available'}>
-                                   Жолооч оноох
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
+                  <TableRow key={vehicle.id}>
+                    <TableCell>
+                      <Avatar>
+                        <AvatarImage src={vehicle.imageUrls?.[0]} alt={vehicle.modelName} />
+                        <AvatarFallback>{vehicle.makeName.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                    </TableCell>
+                    <TableCell className="font-mono">
+                      <div className="flex items-center gap-2">
+                        {vehicle.licensePlate}
+                        {(() => {
+                          const alerts = getVehicleAlerts(vehicle);
+                          if (alerts.length > 0) {
+                            return (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <AlertTriangle className={cn("h-4 w-4", alerts.some(a => a.type === 'destructive') ? "text-destructive" : "text-yellow-500")} />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {alerts.map((alert, i) => (
+                                      <p key={i} className={cn("text-xs", alert.type === 'destructive' && "text-destructive")}>• {alert.message}</p>
+                                    ))}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )
+                          }
+                          return null;
+                        })()}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono">{vehicle.trailerLicensePlate || '-'}</TableCell>
+                    <TableCell>{vehicle.makeName}</TableCell>
+                    <TableCell className="font-medium">{vehicle.modelName}</TableCell>
+                    <TableCell>{vehicle.capacity}</TableCell>
+                    <TableCell>{vehicle.vehicleTypeName} / {vehicle.trailerTypeName}</TableCell>
+                    <TableCell>{vehicle.odometer?.toLocaleString() || '-'}</TableCell>
+                    <TableCell>
+                      <StatusBadge status={vehicle.status} />
+                    </TableCell>
+                    <TableCell>{vehicle.driverName || 'Оноогоогүй'}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Цэс нээх</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Үйлдлүүд</DropdownMenuLabel>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/vehicles/${vehicle.id}`}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Дэлгэрэнгүй
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/vehicles/${vehicle.id}/edit`}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Засах
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleAssignClick(vehicle)} disabled={vehicle.status !== 'Available'}>
+                            Жолооч оноох
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
                 ))
               ) : (
                 <TableRow>
@@ -373,15 +503,13 @@ export default function VehiclesPage() {
           </Table>
         </CardContent>
       </Card>
-      <AssignDriverDialog 
-        vehicle={selectedVehicle} 
-        drivers={drivers}
+      <AssignVehicleDialog
+        vehicle={selectedVehicle || undefined}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        onAssign={handleAssignDriver}
+        onSuccess={fetchData}
       />
     </div>
   );
 }
 
-    
