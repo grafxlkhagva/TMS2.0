@@ -8,6 +8,8 @@ import { Loader2, Camera, X, CalendarIcon } from 'lucide-react';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
+import { Switch } from '@/components/ui/switch';
+import { FormDescription } from '@/components/ui/form';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -41,6 +43,7 @@ export const driverFormSchema = z.object({
         name: z.string().min(1, "Нэр оруулна уу."),
         phone: z.string().min(8, "Утасны дугаар оруулна уу."),
     }),
+    isAvailableForContracted: z.boolean().default(false),
 });
 
 export type DriverFormValues = z.infer<typeof driverFormSchema>;
@@ -77,6 +80,7 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
                 name: initialData?.emergencyContact?.name || '',
                 phone: initialData?.emergencyContact?.phone || '',
             },
+            isAvailableForContracted: initialData?.isAvailableForContracted || false,
         },
     });
 
@@ -262,6 +266,29 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
                                     )}
                                 />
                             </div>
+                        </div>
+                        <div className="space-y-4 pt-4">
+                            <h3 className="text-lg font-semibold border-b pb-2">Тээвэрлэлтийн тохиргоо</h3>
+                            <FormField
+                                control={form.control}
+                                name="isAvailableForContracted"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 space-y-0">
+                                        <div className="space-y-0.5">
+                                            <FormLabel className="text-base">Гэрээт тээвэрт явах</FormLabel>
+                                            <FormDescription>
+                                                Энэ жолооч гэрээт (тогтмол) тээвэрлэлтэд явах боломжтой эсэх.
+                                            </FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
                         </div>
                     </div>
 

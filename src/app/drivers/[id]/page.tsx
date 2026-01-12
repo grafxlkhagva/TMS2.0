@@ -3,7 +3,7 @@
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
 import type { Driver, DriverStatus, Vehicle } from '@/types';
@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Phone, CheckCircle, XCircle, Clock, Car, Info } from 'lucide-react';
+import { ArrowLeft, Edit, Phone, CheckCircle, XCircle, Clock, Car, Info, Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Timestamp } from 'firebase/firestore';
@@ -83,6 +83,8 @@ export default function DriverDetailPage() {
   const [isUnassigning, setIsUnassigning] = React.useState(false);
   const [primaryConflict, setPrimaryConflict] = React.useState<{ vehicleId: string, driverName: string } | null>(null);
   const [isSettingPrimary, setIsSettingPrimary] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
 
   const { user } = useAuth();
 
@@ -180,6 +182,21 @@ export default function DriverDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!driver || !db) return;
+    setIsDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'Drivers', driver.id));
+      toast({ title: 'Амжилттай', description: `${driver.display_name} жолоочийг устгалаа.` });
+      router.push('/drivers');
+    } catch (error) {
+      console.error("Error deleting driver:", error);
+      toast({ variant: 'destructive', title: 'Алдаа', description: 'Жолооч устгахад алдаа гарлаа.' });
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-6 space-y-6">
@@ -233,12 +250,18 @@ export default function DriverDetailPage() {
               </p>
             </div>
           </div>
-          <Button asChild>
-            <Link href={`/drivers/${id}/edit`}>
-              <Edit className="mr-2 h-4 w-4" />
-              Мэдээлэл засах
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <Link href={`/drivers/${id}/edit`}>
+                <Edit className="mr-2 h-4 w-4" />
+                Засах
+              </Link>
+            </Button>
+            <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Устгах
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -414,6 +437,27 @@ export default function DriverDetailPage() {
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               Тийм, шилжүүлэх
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{driver.display_name}" нэртэй жолоочийг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Цуцлах</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              Устгах
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
