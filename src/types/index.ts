@@ -570,3 +570,5 @@ export type ContractedTransport = {
   };
   assignedVehicles?: AssignedVehicle[];
 };
+
+export type DriverWithVehicle = Driver & { vehicle?: Vehicle & { vehicleTypeName?: string; trailerTypeName?: string; } };
