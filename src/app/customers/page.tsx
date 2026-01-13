@@ -2,31 +2,15 @@
 'use client';
 
 import * as React from 'react';
-import { collection, getDocs, orderBy, query, doc, deleteDoc, where, writeBatch } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { Customer } from '@/types';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { MoreHorizontal, PlusCircle, RefreshCw, Eye, Edit, Trash2, Search } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, RefreshCw, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { CustomerStats } from '@/components/customers/CustomerStats';
+import { CustomerListTable } from '@/components/customers/CustomerListTable';
+import { customerService } from '@/services/customerService';
+import type { Customer } from '@/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,11 +20,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CustomerDashboard } from '@/components/customers/customer-dashboard';
-
+} from "@/components/ui/alert-dialog";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = React.useState<Customer[]>([]);
@@ -52,29 +33,10 @@ export default function CustomersPage() {
 
   const fetchCustomers = React.useCallback(async () => {
     setIsLoading(true);
-    if (!db) {
-      toast({
-        variant: 'destructive',
-        title: 'Алдаа',
-        description: 'Firebase-тэй холбогдож чадсангүй. Тохиргоогоо шалгана уу.',
-      });
-      setIsLoading(false);
-      return;
-    }
     try {
-      const q = query(collection(db, "customers"), orderBy("createdAt", "desc"));
-      const querySnapshot = await getDocs(q);
-      const customersData = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt.toDate(),
-        } as Customer;
-      });
-      setCustomers(customersData);
+      const { customers: data } = await customerService.getCustomers(null, 50, searchTerm);
+      setCustomers(data);
     } catch (error) {
-      console.error("Error fetching customers: ", error);
       toast({
         variant: 'destructive',
         title: 'Алдаа',
@@ -83,45 +45,26 @@ export default function CustomersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [searchTerm, toast]);
 
   React.useEffect(() => {
     fetchCustomers();
   }, [fetchCustomers]);
 
   const handleDeleteCustomer = async () => {
-    if (!customerToDelete || !db) return;
+    if (!customerToDelete) return;
     setIsDeleting(true);
     try {
-      const batch = writeBatch(db);
-
-      // 1. Delete all employees associated with the customer
-      const employeesQuery = query(collection(db, 'customer_employees'), where('customerId', '==', customerToDelete.id));
-      const employeesSnapshot = await getDocs(employeesQuery);
-      employeesSnapshot.forEach(doc => {
-        batch.delete(doc.ref);
-      });
-
-      // 2. Delete the customer itself
-      const customerRef = doc(db, 'customers', customerToDelete.id);
-      batch.delete(customerRef);
-
-      await batch.commit();
-
+      await customerService.deleteCustomer(customerToDelete.id);
       setCustomers(prev => prev.filter(c => c.id !== customerToDelete.id));
       toast({ title: 'Амжилттай', description: `${customerToDelete.name} харилцагчийг устгалаа.` });
     } catch (error) {
-      console.error("Error deleting customer:", error);
       toast({ variant: 'destructive', title: 'Алдаа', description: 'Харилцагч устгахад алдаа гарлаа.' });
     } finally {
       setIsDeleting(false);
       setCustomerToDelete(null);
     }
   };
-
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="container mx-auto py-6">
@@ -155,103 +98,22 @@ export default function CustomersPage() {
       </div>
 
       <div className="space-y-6">
-        <CustomerDashboard customers={customers} isLoading={isLoading} />
+        <CustomerStats customers={customers} isLoading={isLoading} />
 
         <Card>
           <CardHeader>
             <CardTitle>Харилцагчдын жагсаалт</CardTitle>
-            <CardDescription>Нийт {filteredCustomers.length} харилцагч байна.</CardDescription>
+            <CardDescription>Нийт {customers.length} харилцагч байна.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Лого</TableHead>
-                  <TableHead>Нэр</TableHead>
-                  <TableHead>Регистрийн дугаар</TableHead>
-                  <TableHead>Утас</TableHead>
-                  <TableHead>Бүртгэсэн</TableHead>
-                  <TableHead>Хариуцсан</TableHead>
-                  <TableHead>Бүртгүүлсэн</TableHead>
-                  <TableHead><span className="sr-only">Үйлдэл</span></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  Array.from({ length: 5 }).map((_, index) => (
-                    <TableRow key={index}>
-                      <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
-                    </TableRow>
-                  ))
-                ) : filteredCustomers.length > 0 ? (
-                  filteredCustomers.map((customer) => (
-                    <TableRow key={customer.id}>
-                      <TableCell>
-                        <Avatar>
-                          <AvatarImage src={customer.logoUrl} alt={customer.name} />
-                          <AvatarFallback>{customer.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        <Link href={`/customers/${customer.id}`} className="hover:underline">
-                          {customer.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{customer.registerNumber}</TableCell>
-                      <TableCell>{customer.officePhone}</TableCell>
-                      <TableCell>{customer.createdBy?.name || 'N/A'}</TableCell>
-                      <TableCell>{customer.assignedTo?.name || 'N/A'}</TableCell>
-                      <TableCell>{customer.createdAt.toLocaleDateString()}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Цэс нээх</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Үйлдлүүд</DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/customers/${customer.id}`}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                Дэлгэрэнгүй
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/customers/${customer.id}/edit`}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Засах
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => setCustomerToDelete(customer)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Устгах
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center">
-                      Бүртгэлтэй харилцагч олдсонгүй.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <CustomerListTable
+              customers={customers}
+              isLoading={isLoading}
+              onDelete={setCustomerToDelete}
+            />
           </CardContent>
         </Card>
+
         <AlertDialog open={!!customerToDelete} onOpenChange={(open) => !open && setCustomerToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -272,3 +134,4 @@ export default function CustomersPage() {
     </div>
   );
 }
+
