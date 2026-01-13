@@ -41,7 +41,12 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   Sidebar,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarMenuBadge,
 } from '@/components/ui/sidebar';
+import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
@@ -111,7 +116,7 @@ function Nav() {
   const pathname = usePathname();
   const { state } = useSidebar();
   const { user } = useAuth();
-  const [items, setItems] = React.useState<NavItem[]>(baseNavItems);
+  const [groups, setGroups] = React.useState<{ title: string; items: NavItem[] }[]>([]);
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -120,67 +125,129 @@ function Nav() {
 
   React.useEffect(() => {
     if (user?.role) {
-      if (user.role === 'admin') {
-        setItems(adminNavItems);
-      } else if (user.role === 'management') {
-        setItems(managementNavItems);
-      } else if (user.role === 'transport_manager') {
-        setItems(transportManagerNavItems);
-      } else {
-        setItems(baseNavItems);
-      }
+      const getGroups = (role: string) => {
+        const mainItems = [];
+        if (role === 'transport_manager') {
+          mainItems.push({ href: '/my-dashboard', icon: LayoutGrid, label: 'Миний самбар' });
+        }
+        if (role === 'management' || role === 'admin') {
+          mainItems.push({ href: '/management', icon: Shield, label: 'Удирдлага' });
+        }
+        mainItems.push({ href: '/dashboard', icon: LayoutDashboard, label: 'Хянах самбар' });
+
+        const operationsItems = [
+          { href: '/orders', icon: Briefcase, label: 'Захиалга' },
+          { href: '/contracted-transport', icon: FileSignature, label: 'Гэрээт тээвэр' },
+          { href: '/direct-shipments', icon: Truck, label: 'Шууд тээвэрлэлт' },
+          { href: '/shipments', icon: Truck, label: 'Тээвэрлэлт' },
+        ];
+
+        const resourcesItems = [
+          { href: '/customers', icon: Building2, label: 'Харилцагчид' },
+          { href: '/warehouses', icon: Warehouse, label: 'Агуулах' },
+          { href: '/vehicles', icon: Car, label: 'Тээврийн хэрэгсэл' },
+        ];
+
+        if (role !== 'user') {
+          resourcesItems.push({ href: '/drivers', icon: UserSquare, label: 'Тээвэрчин' });
+        }
+
+        const systemItems = [
+          { href: '/maintenances', icon: Wrench, label: 'Засвар үйлчилгээ' },
+          { href: '/fuel', icon: Fuel, label: 'Түлшний хяналт' },
+        ];
+
+        if (role === 'admin' || role === 'management') {
+          systemItems.push({ href: '/users', icon: Users, label: 'Хэрэглэгчид' });
+          systemItems.push({ href: '/settings', icon: Settings, label: 'Тохиргоо' });
+        }
+
+        return [
+          { title: "Үндсэн", items: mainItems },
+          { title: "Үйл ажиллагаа", items: operationsItems },
+          { title: "Нөөц", items: resourcesItems },
+          { title: "Систем", items: systemItems },
+        ];
+      };
+
+      setGroups(getGroups(user.role));
     }
   }, [user?.role]);
 
 
 
   return (
-    <SidebarMenu>
-      {items.map((item) => (
-        <SidebarMenuItem key={item.href}>
-          {item.subItems ? (
-            <Collapsible defaultOpen={pathname.startsWith(item.href)}>
-              <CollapsibleTrigger asChild>
-                <SidebarMenuButton
-                  isActive={pathname.startsWith(item.href)}
-                  className="justify-between"
-                  tooltip={state === 'collapsed' ? { children: item.label, side: 'right' } : undefined}
-                >
-                  <div className="flex items-center gap-2">
-                    <item.icon className="mr-2 h-4 w-4 shrink-0" />
-                    <span>{item.label}</span>
-                  </div>
-                  <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform duration-200", state === 'collapsed' && "hidden", "group-data-[state=open]:rotate-180")} />
-                </SidebarMenuButton>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <SidebarMenuSub>
-                  {item.subItems?.map(subItem => (
-                    <li key={subItem.href}>
-                      <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
-                        <Link href={subItem.href}>
-                          <span>{subItem.label}</span>
-                        </Link>
-                      </SidebarMenuSubButton>
-                    </li>
-                  ))}
-                </SidebarMenuSub>
-              </CollapsibleContent>
-            </Collapsible>
-          ) : (
-            <Link href={item.href}>
-              <SidebarMenuButton
-                isActive={pathname === item.href}
-                tooltip={state === 'collapsed' ? { children: item.label, side: 'right' } : undefined}
-              >
-                <item.icon className="mr-2 h-4 w-4 shrink-0" />
-                <span>{item.label}</span>
-              </SidebarMenuButton>
-            </Link>
-          )}
-        </SidebarMenuItem>
+    <>
+      {groups.map((group) => (
+        <SidebarGroup key={group.title}>
+          <SidebarGroupLabel className="px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/50">
+            {group.title}
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {group.items.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  {item.subItems ? (
+                    <Collapsible defaultOpen={pathname.startsWith(item.href)}>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton
+                          isActive={pathname.startsWith(item.href)}
+                          className="justify-between"
+                          tooltip={state === 'collapsed' ? { children: item.label, side: 'right' } : undefined}
+                        >
+                          <div className="flex items-center gap-2">
+                            <item.icon className="mr-2 h-4 w-4 shrink-0" />
+                            <span>{item.label}</span>
+                          </div>
+                          <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform duration-200", state === 'collapsed' && "hidden", "group-data-[state=open]:rotate-180")} />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {item.subItems?.map(subItem => (
+                            <li key={subItem.href}>
+                              <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                                <Link href={subItem.href}>
+                                  <span>{subItem.label}</span>
+                                </Link>
+                              </SidebarMenuSubButton>
+                            </li>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ) : (
+                    <Link href={item.href}>
+                      <SidebarMenuButton
+                        isActive={pathname === item.href}
+                        tooltip={state === 'collapsed' ? { children: item.label, side: 'right' } : undefined}
+                        className="relative"
+                      >
+                        {pathname === item.href && (
+                          <div className="absolute left-0 h-4 w-1 rounded-r-full bg-primary" />
+                        )}
+                        <item.icon className="mr-2 h-4 w-4 shrink-0" />
+                        <span>{item.label}</span>
+                        {item.label === 'Захиалга' && (
+                          <SidebarMenuBadge className="bg-primary/10 text-primary group-data-[active=true]:bg-white group-data-[active=true]:text-primary">
+                            12
+                          </SidebarMenuBadge>
+                        )}
+                        {item.label === 'Засвар үйлчилгээ' && (
+                          <SidebarMenuBadge className="bg-destructive/10 text-destructive group-data-[active=true]:bg-white group-data-[active=true]:text-destructive">
+                            3
+                          </SidebarMenuBadge>
+                        )}
+                      </SidebarMenuButton>
+                    </Link>
+                  )}
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       ))}
-    </SidebarMenu>
+    </>
   );
 }
 
@@ -225,14 +292,14 @@ function UserProfile() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <div className="flex cursor-pointer items-center gap-2 rounded-lg bg-background/50 p-2 transition-colors hover:bg-muted">
-          <Avatar className="h-8 w-8">
+        <div className="flex cursor-pointer items-center gap-3 rounded-xl bg-muted/50 p-2.5 transition-all hover:bg-muted hover:shadow-sm">
+          <Avatar className="h-9 w-9 border-2 border-background shadow-sm">
             {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt="User Avatar" />}
-            <AvatarFallback>{fallbackText}</AvatarFallback>
+            <AvatarFallback className="bg-primary/10 text-primary font-bold">{fallbackText}</AvatarFallback>
           </Avatar>
-          <div className="flex flex-col text-left">
-            <span className="truncate text-sm font-semibold">{user.firstName} {user.lastName}</span>
-            <span className="truncate text-xs text-muted-foreground">
+          <div className="flex flex-col text-left overflow-hidden">
+            <span className="truncate text-sm font-bold leading-none mb-1 text-foreground">{user.firstName} {user.lastName}</span>
+            <span className="truncate text-[11px] text-muted-foreground leading-none">
               {user.email}
             </span>
           </div>
@@ -266,10 +333,10 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <div className="p-1 rounded-lg bg-primary/10">
               <svg
-                width="100%"
-                height="100%"
+                width="24"
+                height="24"
                 viewBox="0 0 714 735"
                 version="1.1"
                 xmlns="http://www.w3.org/2000/svg"
@@ -291,8 +358,14 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                   </g>
                 </g>
               </svg>
-            </Button>
-            <span className={cn("font-headline text-lg font-semibold", state === "collapsed" && "hidden")}>Tumen Tech</span>
+            </div>
+            <div className={cn("flex flex-col", state === "collapsed" && "hidden")}>
+              <div className="flex items-center gap-1.5">
+                <span className="font-headline text-lg font-bold leading-none tracking-tight">Tumen Tech</span>
+                <Badge variant="outline" className="h-4 px-1 text-[8px] font-bold border-primary/20 bg-primary/5 text-primary">v2.0</Badge>
+              </div>
+              <span className="text-[10px] text-primary font-bold uppercase tracking-widest mt-0.5 opacity-80">Logistics TMS</span>
+            </div>
           </div>
         </SidebarHeader>
         <SidebarContent>
