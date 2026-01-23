@@ -153,6 +153,28 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
         });
     };
 
+    // Огноог аюулгүй parse хийх
+    const safeParseDate = (dateString: string | undefined | null): Date | null => {
+        if (!dateString || dateString === 'null' || dateString === 'undefined') {
+            return null;
+        }
+        try {
+            const date = new Date(dateString);
+            // Invalid Date эсэхийг шалгах
+            if (isNaN(date.getTime())) {
+                return null;
+            }
+            // Хэт эрт эсвэл хэт хожуу огноо эсэхийг шалгах
+            const year = date.getFullYear();
+            if (year < 1900 || year > 2100) {
+                return null;
+            }
+            return date;
+        } catch {
+            return null;
+        }
+    };
+
     // AI-аар үнэмлэх шинжлэх
     const handleAIAnalysis = async () => {
         if (!licenseFrontFile && !licenseBackFile && !licenseFrontPreview && !licenseBackPreview) {
@@ -204,8 +226,11 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
                 fieldsUpdated++;
             }
             if (result.birthDate) {
-                form.setValue('birthDate', new Date(result.birthDate));
-                fieldsUpdated++;
+                const parsedBirthDate = safeParseDate(result.birthDate);
+                if (parsedBirthDate) {
+                    form.setValue('birthDate', parsedBirthDate);
+                    fieldsUpdated++;
+                }
             }
             if (result.licenseNumber) {
                 form.setValue('licenseNumber', result.licenseNumber);
@@ -225,8 +250,11 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
                 fieldsUpdated++;
             }
             if (result.licenseExpiryDate) {
-                form.setValue('licenseExpiryDate', new Date(result.licenseExpiryDate));
-                fieldsUpdated++;
+                const parsedExpiryDate = safeParseDate(result.licenseExpiryDate);
+                if (parsedExpiryDate) {
+                    form.setValue('licenseExpiryDate', parsedExpiryDate);
+                    fieldsUpdated++;
+                }
             }
 
             toast({
