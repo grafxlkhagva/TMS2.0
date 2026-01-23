@@ -55,9 +55,14 @@ interface LicenseFiles {
     back: File | null;
 }
 
+interface NationalIdFiles {
+    front: File | null;
+    back: File | null;
+}
+
 interface DriverFormProps {
     initialData?: Driver;
-    onSubmit: (values: DriverFormValues, avatarFile: File | null, licenseFiles: LicenseFiles) => Promise<void>;
+    onSubmit: (values: DriverFormValues, avatarFile: File | null, licenseFiles: LicenseFiles, nationalIdFiles: NationalIdFiles) => Promise<void>;
     isSubmitting: boolean;
 }
 
@@ -74,10 +79,22 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
         initialData?.licenseImageFrontUrl || initialData?.licenseImageUrl || null
     );
     
-    // Үнэмлэхний ар тал
+    // Жолооны үнэмлэхний ар тал
     const [licenseBackFile, setLicenseBackFile] = React.useState<File | null>(null);
     const [licenseBackPreview, setLicenseBackPreview] = React.useState<string | null>(
         initialData?.licenseImageBackUrl || null
+    );
+
+    // Иргэний үнэмлэхний урд тал
+    const [nationalIdFrontFile, setNationalIdFrontFile] = React.useState<File | null>(null);
+    const [nationalIdFrontPreview, setNationalIdFrontPreview] = React.useState<string | null>(
+        initialData?.nationalIdFrontUrl || null
+    );
+    
+    // Иргэний үнэмлэхний ар тал
+    const [nationalIdBackFile, setNationalIdBackFile] = React.useState<File | null>(null);
+    const [nationalIdBackPreview, setNationalIdBackPreview] = React.useState<string | null>(
+        initialData?.nationalIdBackUrl || null
     );
 
     // AI шинжилгээ
@@ -86,6 +103,8 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
     const avatarInputRef = React.useRef<HTMLInputElement>(null);
     const licenseFrontInputRef = React.useRef<HTMLInputElement>(null);
     const licenseBackInputRef = React.useRef<HTMLInputElement>(null);
+    const nationalIdFrontInputRef = React.useRef<HTMLInputElement>(null);
+    const nationalIdBackInputRef = React.useRef<HTMLInputElement>(null);
 
     const form = useForm<DriverFormValues>({
         resolver: zodResolver(driverFormSchema),
@@ -130,8 +149,29 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
         }
     };
 
+    const handleNationalIdFrontChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setNationalIdFrontFile(file);
+            setNationalIdFrontPreview(URL.createObjectURL(file));
+        }
+    };
+
+    const handleNationalIdBackChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setNationalIdBackFile(file);
+            setNationalIdBackPreview(URL.createObjectURL(file));
+        }
+    };
+
     const handleFormSubmit = (values: DriverFormValues) => {
-        onSubmit(values, avatarFile, { front: licenseFrontFile, back: licenseBackFile });
+        onSubmit(
+            values, 
+            avatarFile, 
+            { front: licenseFrontFile, back: licenseBackFile },
+            { front: nationalIdFrontFile, back: nationalIdBackFile }
+        );
     };
 
     const toggleClass = (cls: string) => {
@@ -623,6 +663,88 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
                             <p className="text-xs text-muted-foreground text-center">
                                 Зургаас нэр, регистр, үнэмлэхний дугаар, ангилал зэргийг автоматаар таниулна
                             </p>
+                        </div>
+
+                        {/* Иргэний үнэмлэх */}
+                        <div className="space-y-4 pt-6 border-t">
+                            <FormLabel>Иргэний үнэмлэх</FormLabel>
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Урд тал */}
+                                <div className="space-y-2">
+                                    <span className="text-sm font-medium text-muted-foreground">Урд тал</span>
+                                    <div className="relative aspect-[4/3] w-full rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden bg-muted">
+                                        {nationalIdFrontPreview ? (
+                                            <>
+                                                <Image src={nationalIdFrontPreview} alt="National ID Front" fill className="object-contain" />
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    className="absolute top-2 right-2 rounded-full h-7 w-7"
+                                                    onClick={() => { setNationalIdFrontFile(null); setNationalIdFrontPreview(null); }}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                onClick={() => nationalIdFrontInputRef.current?.click()}
+                                                className="flex flex-col h-auto p-3 gap-1"
+                                            >
+                                                <Camera className="h-8 w-8 text-muted-foreground" />
+                                                <span className="text-xs text-muted-foreground">Урд тал</span>
+                                            </Button>
+                                        )}
+                                        <input
+                                            type="file"
+                                            ref={nationalIdFrontInputRef}
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={handleNationalIdFrontChange}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Ар тал */}
+                                <div className="space-y-2">
+                                    <span className="text-sm font-medium text-muted-foreground">Ар тал</span>
+                                    <div className="relative aspect-[4/3] w-full rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden bg-muted">
+                                        {nationalIdBackPreview ? (
+                                            <>
+                                                <Image src={nationalIdBackPreview} alt="National ID Back" fill className="object-contain" />
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    className="absolute top-2 right-2 rounded-full h-7 w-7"
+                                                    onClick={() => { setNationalIdBackFile(null); setNationalIdBackPreview(null); }}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                onClick={() => nationalIdBackInputRef.current?.click()}
+                                                className="flex flex-col h-auto p-3 gap-1"
+                                            >
+                                                <Camera className="h-8 w-8 text-muted-foreground" />
+                                                <span className="text-xs text-muted-foreground">Ар тал</span>
+                                            </Button>
+                                        )}
+                                        <input
+                                            type="file"
+                                            ref={nationalIdBackInputRef}
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={handleNationalIdBackChange}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

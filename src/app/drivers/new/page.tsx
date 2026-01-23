@@ -48,7 +48,12 @@ export default function NewDriverPage() {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  async function onSubmit(values: DriverFormValues, avatarFile: File | null, licenseFiles: { front: File | null; back: File | null }) {
+  async function onSubmit(
+    values: DriverFormValues, 
+    avatarFile: File | null, 
+    licenseFiles: { front: File | null; back: File | null },
+    nationalIdFiles: { front: File | null; back: File | null }
+  ) {
     if (!db || !storage || !user) {
       toast({ variant: 'destructive', title: 'Алдаа', description: 'Системтэй холбогдож чадсангүй.' });
       return;
@@ -64,6 +69,8 @@ export default function NewDriverPage() {
         photo_url: '',
         licenseImageFrontUrl: '',
         licenseImageBackUrl: '',
+        nationalIdFrontUrl: '',
+        nationalIdBackUrl: '',
         created_time: serverTimestamp(),
         edited_time: serverTimestamp(),
         createdBy: {
@@ -80,18 +87,32 @@ export default function NewDriverPage() {
         updates.photo_url = await getDownloadURL(snapshot.ref);
       }
 
-      // Үнэмлэхний урд тал
+      // Жолооны үнэмлэхний урд тал
       if (licenseFiles.front) {
         const storageRef = ref(storage, `driver_licenses/${docRef.id}/front_${licenseFiles.front.name}`);
         const snapshot = await uploadBytes(storageRef, licenseFiles.front);
         updates.licenseImageFrontUrl = await getDownloadURL(snapshot.ref);
       }
 
-      // Үнэмлэхний ар тал
+      // Жолооны үнэмлэхний ар тал
       if (licenseFiles.back) {
         const storageRef = ref(storage, `driver_licenses/${docRef.id}/back_${licenseFiles.back.name}`);
         const snapshot = await uploadBytes(storageRef, licenseFiles.back);
         updates.licenseImageBackUrl = await getDownloadURL(snapshot.ref);
+      }
+
+      // Иргэний үнэмлэхний урд тал
+      if (nationalIdFiles.front) {
+        const storageRef = ref(storage, `driver_national_ids/${docRef.id}/front_${nationalIdFiles.front.name}`);
+        const snapshot = await uploadBytes(storageRef, nationalIdFiles.front);
+        updates.nationalIdFrontUrl = await getDownloadURL(snapshot.ref);
+      }
+
+      // Иргэний үнэмлэхний ар тал
+      if (nationalIdFiles.back) {
+        const storageRef = ref(storage, `driver_national_ids/${docRef.id}/back_${nationalIdFiles.back.name}`);
+        const snapshot = await uploadBytes(storageRef, nationalIdFiles.back);
+        updates.nationalIdBackUrl = await getDownloadURL(snapshot.ref);
       }
 
       if (Object.keys(updates).length > 0) {
