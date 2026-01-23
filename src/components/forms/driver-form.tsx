@@ -34,18 +34,18 @@ import type { Driver, DriverStatus } from '@/types';
 const driverStatuses: DriverStatus[] = ['Active', 'Inactive', 'On Leave'];
 
 export const driverFormSchema = z.object({
-    display_name: z.string().min(2, "Нэр дор хаяж 2 үсэгтэй байх ёстой."),
-    phone_number: z.string().min(8, "Утасны дугаар буруу байна."),
-    status: z.enum(['Active', 'Inactive', 'On Leave']),
-    registerNumber: z.string().min(1, "Регистрийн дугаар оруулна уу."),
+    display_name: z.string().optional(),
+    phone_number: z.string().optional(),
+    status: z.enum(['Active', 'Inactive', 'On Leave']).default('Active'),
+    registerNumber: z.string().optional(),
     birthDate: z.date().optional(),
-    licenseNumber: z.string().min(1, "Үнэмлэхний дугаар оруулна уу."),
-    licenseClasses: z.array(z.string()).min(1, "Доод тал нь нэг ангилал сонгоно уу."),
+    licenseNumber: z.string().optional(),
+    licenseClasses: z.array(z.string()).default([]),
     licenseExpiryDate: z.date().optional(),
     emergencyContact: z.object({
-        name: z.string().min(1, "Нэр оруулна уу."),
-        phone: z.string().min(8, "Утасны дугаар оруулна уу."),
-    }),
+        name: z.string().optional(),
+        phone: z.string().optional(),
+    }).optional(),
     isAvailableForContracted: z.boolean().default(false),
 });
 
