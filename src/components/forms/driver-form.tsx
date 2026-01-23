@@ -4,12 +4,14 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, Camera, X, CalendarIcon } from 'lucide-react';
+import { Loader2, Camera, X, CalendarIcon, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import { Switch } from '@/components/ui/switch';
 import { FormDescription } from '@/components/ui/form';
+import { analyzeDriverLicense } from '@/ai/flows/analyze-driver-license';
+import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -48,22 +50,42 @@ export const driverFormSchema = z.object({
 
 export type DriverFormValues = z.infer<typeof driverFormSchema>;
 
+interface LicenseFiles {
+    front: File | null;
+    back: File | null;
+}
+
 interface DriverFormProps {
     initialData?: Driver;
-    onSubmit: (values: DriverFormValues, avatarFile: File | null, licenseFile: File | null) => Promise<void>;
+    onSubmit: (values: DriverFormValues, avatarFile: File | null, licenseFiles: LicenseFiles) => Promise<void>;
     isSubmitting: boolean;
 }
 
 const LICENSE_CLASSES = ['A', 'B', 'BC', 'C', 'D', 'E', 'M'];
 
 export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormProps) {
+    const { toast } = useToast();
     const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = React.useState<string | null>(initialData?.photo_url || null);
-    const [licenseFile, setLicenseFile] = React.useState<File | null>(null);
-    const [licensePreview, setLicensePreview] = React.useState<string | null>(initialData?.licenseImageUrl || null);
+    
+    // Үнэмлэхний урд тал
+    const [licenseFrontFile, setLicenseFrontFile] = React.useState<File | null>(null);
+    const [licenseFrontPreview, setLicenseFrontPreview] = React.useState<string | null>(
+        initialData?.licenseImageFrontUrl || initialData?.licenseImageUrl || null
+    );
+    
+    // Үнэмлэхний ар тал
+    const [licenseBackFile, setLicenseBackFile] = React.useState<File | null>(null);
+    const [licenseBackPreview, setLicenseBackPreview] = React.useState<string | null>(
+        initialData?.licenseImageBackUrl || null
+    );
+
+    // AI шинжилгээ
+    const [isAnalyzing, setIsAnalyzing] = React.useState(false);
 
     const avatarInputRef = React.useRef<HTMLInputElement>(null);
-    const licenseInputRef = React.useRef<HTMLInputElement>(null);
+    const licenseFrontInputRef = React.useRef<HTMLInputElement>(null);
+    const licenseBackInputRef = React.useRef<HTMLInputElement>(null);
 
     const form = useForm<DriverFormValues>({
         resolver: zodResolver(driverFormSchema),
@@ -92,16 +114,24 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
         }
     };
 
-    const handleLicenseFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleLicenseFrontChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            setLicenseFile(file);
-            setLicensePreview(URL.createObjectURL(file));
+            setLicenseFrontFile(file);
+            setLicenseFrontPreview(URL.createObjectURL(file));
+        }
+    };
+
+    const handleLicenseBackChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setLicenseBackFile(file);
+            setLicenseBackPreview(URL.createObjectURL(file));
         }
     };
 
     const handleFormSubmit = (values: DriverFormValues) => {
-        onSubmit(values, avatarFile, licenseFile);
+        onSubmit(values, avatarFile, { front: licenseFrontFile, back: licenseBackFile });
     };
 
     const toggleClass = (cls: string) => {
@@ -110,6 +140,109 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
             form.setValue('licenseClasses', current.filter(c => c !== cls));
         } else {
             form.setValue('licenseClasses', [...current, cls]);
+        }
+    };
+
+    // File-ыг base64 болгох
+    const fileToBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+        });
+    };
+
+    // AI-аар үнэмлэх шинжлэх
+    const handleAIAnalysis = async () => {
+        if (!licenseFrontFile && !licenseBackFile && !licenseFrontPreview && !licenseBackPreview) {
+            toast({
+                variant: 'destructive',
+                title: 'Зураг оруулна уу',
+                description: 'AI шинжилгээ хийхийн тулд үнэмлэхний зураг оруулна уу.',
+            });
+            return;
+        }
+
+        setIsAnalyzing(true);
+        try {
+            let frontBase64: string | undefined;
+            let backBase64: string | undefined;
+
+            // Шинэ файл байвал түүнийг ашиглана, үгүй бол URL fetch хийнэ
+            if (licenseFrontFile) {
+                frontBase64 = await fileToBase64(licenseFrontFile);
+            } else if (licenseFrontPreview && !licenseFrontPreview.startsWith('blob:')) {
+                // URL-ээс fetch хийх (Firebase Storage URL)
+                const response = await fetch(licenseFrontPreview);
+                const blob = await response.blob();
+                frontBase64 = await fileToBase64(new File([blob], 'front.jpg', { type: blob.type }));
+            }
+
+            if (licenseBackFile) {
+                backBase64 = await fileToBase64(licenseBackFile);
+            } else if (licenseBackPreview && !licenseBackPreview.startsWith('blob:')) {
+                const response = await fetch(licenseBackPreview);
+                const blob = await response.blob();
+                backBase64 = await fileToBase64(new File([blob], 'back.jpg', { type: blob.type }));
+            }
+
+            const result = await analyzeDriverLicense({
+                frontImageBase64: frontBase64,
+                backImageBase64: backBase64,
+            });
+
+            // Форм талбаруудыг бөглөх
+            let fieldsUpdated = 0;
+
+            if (result.displayName) {
+                form.setValue('display_name', result.displayName);
+                fieldsUpdated++;
+            }
+            if (result.registerNumber) {
+                form.setValue('registerNumber', result.registerNumber);
+                fieldsUpdated++;
+            }
+            if (result.birthDate) {
+                form.setValue('birthDate', new Date(result.birthDate));
+                fieldsUpdated++;
+            }
+            if (result.licenseNumber) {
+                form.setValue('licenseNumber', result.licenseNumber);
+                fieldsUpdated++;
+            }
+            if (result.licenseClasses && result.licenseClasses.length > 0) {
+                // BC гэх мэтийг B, C болгож салгах
+                const expandedClasses: string[] = [];
+                result.licenseClasses.forEach(cls => {
+                    if (cls === 'BC') {
+                        expandedClasses.push('B', 'C');
+                    } else if (LICENSE_CLASSES.includes(cls)) {
+                        expandedClasses.push(cls);
+                    }
+                });
+                form.setValue('licenseClasses', [...new Set(expandedClasses)]);
+                fieldsUpdated++;
+            }
+            if (result.licenseExpiryDate) {
+                form.setValue('licenseExpiryDate', new Date(result.licenseExpiryDate));
+                fieldsUpdated++;
+            }
+
+            toast({
+                title: 'AI шинжилгээ дууслаа',
+                description: `${fieldsUpdated} талбар автоматаар бөглөгдлөө. ${result.confidence ? `(${result.confidence}% итгэлтэй)` : ''}`,
+            });
+
+        } catch (error) {
+            console.error('AI analysis error:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Алдаа',
+                description: 'AI шинжилгээ хийхэд алдаа гарлаа. Дахин оролдоно уу.',
+            });
+        } finally {
+            setIsAnalyzing(false);
         }
     };
 
@@ -361,41 +494,107 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
 
                         <div className="space-y-4 pt-4">
                             <FormLabel>Үнэмлэхний зураг</FormLabel>
-                            <div className="relative aspect-video w-full rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden bg-muted">
-                                {licensePreview ? (
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Урд тал */}
+                                <div className="space-y-2">
+                                    <span className="text-sm font-medium text-muted-foreground">Урд тал</span>
+                                    <div className="relative aspect-[4/3] w-full rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden bg-muted">
+                                        {licenseFrontPreview ? (
+                                            <>
+                                                <Image src={licenseFrontPreview} alt="License Front" fill className="object-contain" />
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    className="absolute top-2 right-2 rounded-full h-7 w-7"
+                                                    onClick={() => { setLicenseFrontFile(null); setLicenseFrontPreview(null); }}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                onClick={() => licenseFrontInputRef.current?.click()}
+                                                className="flex flex-col h-auto p-3 gap-1"
+                                            >
+                                                <Camera className="h-8 w-8 text-muted-foreground" />
+                                                <span className="text-xs text-muted-foreground">Урд тал</span>
+                                            </Button>
+                                        )}
+                                        <input
+                                            type="file"
+                                            ref={licenseFrontInputRef}
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={handleLicenseFrontChange}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Ар тал */}
+                                <div className="space-y-2">
+                                    <span className="text-sm font-medium text-muted-foreground">Ар тал</span>
+                                    <div className="relative aspect-[4/3] w-full rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden bg-muted">
+                                        {licenseBackPreview ? (
+                                            <>
+                                                <Image src={licenseBackPreview} alt="License Back" fill className="object-contain" />
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    className="absolute top-2 right-2 rounded-full h-7 w-7"
+                                                    onClick={() => { setLicenseBackFile(null); setLicenseBackPreview(null); }}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                onClick={() => licenseBackInputRef.current?.click()}
+                                                className="flex flex-col h-auto p-3 gap-1"
+                                            >
+                                                <Camera className="h-8 w-8 text-muted-foreground" />
+                                                <span className="text-xs text-muted-foreground">Ар тал</span>
+                                            </Button>
+                                        )}
+                                        <input
+                                            type="file"
+                                            ref={licenseBackInputRef}
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={handleLicenseBackChange}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* AI шинжилгээ товч */}
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full mt-4 bg-gradient-to-r from-violet-500/10 to-purple-500/10 border-violet-300 hover:border-violet-400 hover:bg-gradient-to-r hover:from-violet-500/20 hover:to-purple-500/20"
+                                onClick={handleAIAnalysis}
+                                disabled={isAnalyzing || (!licenseFrontFile && !licenseBackFile && !licenseFrontPreview && !licenseBackPreview)}
+                            >
+                                {isAnalyzing ? (
                                     <>
-                                        <Image src={licensePreview} alt="License" fill className="object-contain" />
-                                        <Button
-                                            type="button"
-                                            variant="destructive"
-                                            size="icon"
-                                            className="absolute top-2 right-2 rounded-full h-8 w-8"
-                                            onClick={() => { setLicenseFile(null); setLicensePreview(null); }}
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </Button>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        AI шинжилж байна...
                                     </>
                                 ) : (
-                                    <div className="text-center p-6 space-y-2">
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            onClick={() => licenseInputRef.current?.click()}
-                                            className="flex flex-col h-auto p-4 gap-2"
-                                        >
-                                            <Camera className="h-10 w-10 text-muted-foreground" />
-                                            <span className="text-sm text-muted-foreground">Зураг оруулах</span>
-                                        </Button>
-                                    </div>
+                                    <>
+                                        <Sparkles className="mr-2 h-4 w-4 text-violet-500" />
+                                        AI-аар мэдээлэл таних
+                                    </>
                                 )}
-                                <input
-                                    type="file"
-                                    ref={licenseInputRef}
-                                    className="hidden"
-                                    accept="image/*"
-                                    onChange={handleLicenseFileChange}
-                                />
-                            </div>
+                            </Button>
+                            <p className="text-xs text-muted-foreground text-center">
+                                Зургаас нэр, регистр, үнэмлэхний дугаар, ангилал зэргийг автоматаар таниулна
+                            </p>
                         </div>
                     </div>
                 </div>

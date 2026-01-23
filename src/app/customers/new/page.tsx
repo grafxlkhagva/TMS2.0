@@ -30,13 +30,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 
 const formSchema = z.object({
-  name: z.string().min(2, { message: 'Харилцагчийн нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
-  registerNumber: z.string().min(7, { message: 'Регистрийн дугаар буруу байна.' }),
-  industry: z.string().min(1, { message: 'Үйл ажиллагааны чиглэл сонгоно уу.' }),
-  address: z.string().min(5, { message: 'Хаяг дор хаяж 5 тэмдэгттэй байх ёстой.' }),
-  officePhone: z.string().min(8, { message: 'Утасны дугаар буруу байна.' }),
-  email: z.string().email({ message: 'Хүчинтэй и-мэйл хаяг оруулна уу.' }),
-  assignedToUid: z.string().min(1, { message: 'Хариуцсан ажилтан сонгоно уу.' }),
+  name: z.string().optional(),
+  registerNumber: z.string().optional(),
+  industry: z.string().optional(),
+  address: z.string().optional(),
+  officePhone: z.string().optional(),
+  email: z.string().optional(),
+  assignedToUid: z.string().optional(),
   note: z.string().optional(),
 });
 
@@ -101,35 +101,42 @@ export default function NewCustomerPage() {
 
     setIsSubmitting(true);
     try {
-      const assignedUser = systemUsers.find(u => u.uid === values.assignedToUid);
+      const assignedUser = values.assignedToUid ? systemUsers.find(u => u.uid === values.assignedToUid) : undefined;
       const assignedToRef = assignedUser ? doc(db, 'users', assignedUser.uid) : undefined;
 
-
-      await addDoc(collection(db, 'customers'), {
-        name: values.name,
-        registerNumber: values.registerNumber,
-        industry: values.industry,
-        address: values.address,
-        officePhone: values.officePhone,
-        email: values.email,
-        note: values.note,
+      const nameVal = values.name ?? '';
+      const payload: Record<string, unknown> = {
+        name: nameVal,
+        nameLower: nameVal.toLowerCase(),
+        registerNumber: values.registerNumber ?? '',
+        industry: values.industry ?? '',
+        address: values.address ?? '',
+        officePhone: values.officePhone ?? '',
+        email: values.email ?? '',
+        note: values.note ?? '',
         createdBy: {
           uid: user.uid,
           name: `${user.lastName} ${user.firstName}`,
         },
-        assignedTo: {
-            uid: assignedUser?.uid,
-            name: `${assignedUser?.lastName} ${assignedUser?.firstName}`,
-        },
-        assignedToRef: assignedToRef,
         createdAt: serverTimestamp(),
-      });
-      
+      };
+
+      if (values.assignedToUid && assignedUser) {
+        payload.assignedTo = {
+          uid: assignedUser.uid,
+          name: `${assignedUser.lastName} ${assignedUser.firstName}`,
+        };
+        payload.assignedToRef = assignedToRef;
+      }
+
+      await addDoc(collection(db, 'customers'), payload);
+
+      const displayName = values.name?.trim() || values.officePhone || values.email || values.registerNumber || 'Харилцагч';
       toast({
         title: 'Амжилттай бүртгэлээ',
-        description: `${values.name} нэртэй харилцагчийг системд бүртгэлээ.`,
+        description: `${displayName}-ийг системд бүртгэлээ. Дэлгэрэнгүйг дараа нь нэмж болно.`,
       });
-      
+
       router.push('/customers');
 
     } catch (error) {
@@ -149,7 +156,7 @@ export default function NewCustomerPage() {
       <div className="mb-6">
         <h1 className="text-3xl font-headline font-bold">Шинэ харилцагч бүртгэх</h1>
         <p className="text-muted-foreground">
-          Харилцагчийн дэлгэрэнгүй мэдээллийг оруулна уу.
+          Бүх талбар заавал бөглөхгүй. Ганц нэг талбар (жишээ нь нэр эсвэл утас) бөглөөд хурдан нэмж, дэлгэрэнгүйг дараа нь засвар хэсгээс нэмж болно.
         </p>
       </div>
       <Card>

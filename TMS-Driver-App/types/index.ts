@@ -1,5 +1,57 @@
 import type { DocumentReference, Timestamp } from 'firebase/firestore';
 
+export type VehicleStatus = 'Available' | 'Maintenance' | 'Ready' | 'In Use';
+
+export type Vehicle = {
+    id: string;
+    makeId: string;
+    makeName: string;
+    modelId: string;
+    modelName: string;
+    year: number;
+    importedYear: number;
+    licensePlate: string;
+    licensePlateDigits: string;
+    licensePlateChars: string;
+    trailerLicensePlate?: string;
+    trailerLicensePlateDigits?: string;
+    trailerLicensePlateChars?: string;
+    vin: string;
+    vehicleTypeId: string;
+    vehicleTypeName?: string;
+    trailerTypeId: string;
+    trailerTypeName?: string;
+    capacity: string;
+    fuelType: 'Diesel' | 'Gasoline' | 'Electric' | 'Hybrid';
+    status: VehicleStatus;
+    notes?: string;
+    createdAt: Date;
+    imageUrls?: string[];
+    driverId?: string;
+    driverName?: string;
+    assignedDriver?: {
+        driverId: string;
+        driverName: string;
+    };
+    odometer?: number;
+    lastOdometerUpdate?: Date;
+    specs?: {
+        tankCapacity?: number;
+        fuelType?: string;
+        transmission?: string;
+        axleConfig?: string;
+        engineType?: string;
+    };
+    dates?: {
+        purchase?: Date;
+        warrantyExpiry?: Date;
+        registrationExpiry?: Date;
+        insuranceExpiry?: Date;
+        roadPermitExpiry?: Date;
+        inspectionExpiry?: Date;
+    };
+};
+
 // User & Auth Types
 export type UserRole = 'admin' | 'management' | 'transport_manager' | 'finance_manager' | 'customer_officer' | 'manager' | 'driver';
 export type UserStatus = 'pending' | 'active' | 'inactive';

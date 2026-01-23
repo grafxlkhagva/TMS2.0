@@ -13,14 +13,14 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Vehicle, VehicleStatus, Driver, VehicleType, TrailerType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { collection, getDocs, query, orderBy, doc, updateDoc, Timestamp, Firestore } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { PlusCircle, RefreshCw, MoreHorizontal, Eye, Edit, Search, AlertTriangle, Car } from 'lucide-react';
+import { PlusCircle, RefreshCw, MoreHorizontal, Eye, Edit, Search, AlertTriangle, Car, ChevronLeft, ChevronRight } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AssignVehicleDialog } from '@/components/assign-vehicle-dialog';
@@ -98,6 +98,11 @@ export default function VehiclesPage() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
   const [typeFilter, setTypeFilter] = React.useState('all');
+
+  // Хуудаслалт
+  const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(20);
 
   const [stats, setStats] = React.useState({
     total: 0,
@@ -218,6 +223,17 @@ export default function VehiclesPage() {
         return true;
       });
   }, [vehicles, searchTerm, statusFilter, typeFilter, vehicleTypes, trailerTypes]);
+
+  // Хуудаслалтын тооцоо
+  const totalPages = Math.ceil(filteredVehicles.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedVehicles = filteredVehicles.slice(startIndex, endIndex);
+
+  // Хайлт/шүүлт өөрчлөгдөхөд эхний хуудас руу буцах
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, typeFilter, pageSize]);
 
   const getVehicleAlerts = (vehicle: Vehicle) => {
     const alerts: { type: 'warning' | 'destructive', message: string }[] = [];
@@ -343,11 +359,17 @@ export default function VehiclesPage() {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Тээврийн хэрэгслийн жагсаалт</CardTitle>
-            <CardDescription>Олдсон: {filteredVehicles.length} / Нийт: {vehicles.length}</CardDescription>
-          </div>
+        <CardHeader className="space-y-4">
+          <div className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Тээврийн хэрэгслийн жагсаалт</CardTitle>
+              <CardDescription>
+                {totalPages > 1 
+                  ? `Олдсон: ${filteredVehicles.length} (${currentPage}/${totalPages} хуудас)`
+                  : `Олдсон: ${filteredVehicles.length}`
+                } / Нийт: {vehicles.length}
+              </CardDescription>
+            </div>
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -381,6 +403,22 @@ export default function VehiclesPage() {
                 ))}
               </SelectContent>
             </Select>
+            </div>
+          </div>
+
+          {/* Анхааруулгын тайлбар */}
+          <div className="flex flex-wrap items-center gap-4 p-3 rounded-lg bg-muted/50 text-sm">
+            <span className="font-medium text-muted-foreground">Анхааруулга:</span>
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <span>Хугацаа дууссан</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              <span>30 хоногоос бага үлдсэн</span>
+            </div>
+            <span className="text-muted-foreground">|</span>
+            <span className="text-muted-foreground">Шалгагдах: Техникийн үзлэг, Даатгал, Замын зөвшөөрөл</span>
           </div>
         </CardHeader>
         <CardContent>
@@ -417,8 +455,8 @@ export default function VehiclesPage() {
                     <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                   </TableRow>
                 ))
-              ) : filteredVehicles.length > 0 ? (
-                filteredVehicles.map((vehicle) => (
+              ) : paginatedVehicles.length > 0 ? (
+                paginatedVehicles.map((vehicle) => (
                   <TableRow key={vehicle.id}>
                     <TableCell>
                       <Avatar>
@@ -502,6 +540,106 @@ export default function VehiclesPage() {
             </TableBody>
           </Table>
         </CardContent>
+
+        {/* Хуудаслалт */}
+        {filteredVehicles.length > 0 && (
+          <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Хуудсанд:</span>
+              <Select
+                value={pageSize.toString()}
+                onValueChange={(value) => setPageSize(Number(value))}
+              >
+                <SelectTrigger className="h-8 w-[70px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <SelectItem key={size} value={size.toString()}>
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="hidden sm:inline">
+                | {startIndex + 1}–{Math.min(endIndex, filteredVehicles.length)} / {filteredVehicles.length}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+              >
+                <span className="sr-only">Эхний хуудас</span>
+                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4 -ml-2" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <span className="sr-only">Өмнөх</span>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              <div className="flex items-center gap-1 mx-2">
+                {/* Хуудасны дугаарууд */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? 'default' : 'outline'}
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setCurrentPage(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <span className="sr-only">Дараах</span>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+              >
+                <span className="sr-only">Сүүлийн хуудас</span>
+                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4 -ml-2" />
+              </Button>
+            </div>
+          </CardFooter>
+        )}
       </Card>
       <AssignVehicleDialog
         vehicle={selectedVehicle || undefined}

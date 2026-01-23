@@ -74,7 +74,7 @@ export default function EditDriverPage() {
     fetchDriver();
   }, [id, router, toast]);
 
-  async function onSubmit(values: DriverFormValues, avatarFile: File | null, licenseFile: File | null) {
+  async function onSubmit(values: DriverFormValues, avatarFile: File | null, licenseFiles: { front: File | null; back: File | null }) {
     if (!id || !db || !storage) return;
     setIsSubmitting(true);
     try {
@@ -94,10 +94,18 @@ export default function EditDriverPage() {
         dataToUpdate.photo_url = await getDownloadURL(snapshot.ref);
       }
 
-      if (licenseFile) {
-        const storageRef = ref(storage, `driver_licenses/${id}/${licenseFile.name}`);
-        const snapshot = await uploadBytes(storageRef, licenseFile);
-        dataToUpdate.licenseImageUrl = await getDownloadURL(snapshot.ref);
+      // Үнэмлэхний урд тал
+      if (licenseFiles.front) {
+        const storageRef = ref(storage, `driver_licenses/${id}/front_${licenseFiles.front.name}`);
+        const snapshot = await uploadBytes(storageRef, licenseFiles.front);
+        dataToUpdate.licenseImageFrontUrl = await getDownloadURL(snapshot.ref);
+      }
+
+      // Үнэмлэхний ар тал
+      if (licenseFiles.back) {
+        const storageRef = ref(storage, `driver_licenses/${id}/back_${licenseFiles.back.name}`);
+        const snapshot = await uploadBytes(storageRef, licenseFiles.back);
+        dataToUpdate.licenseImageBackUrl = await getDownloadURL(snapshot.ref);
       }
 
       await updateDoc(driverRef, dataToUpdate);

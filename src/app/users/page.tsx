@@ -86,9 +86,10 @@ export default function UsersPage() {
     }
     try {
       const querySnapshot = await getDocs(collection(db, "users"));
-      const usersData = querySnapshot.docs.map(doc => {
-        const data = doc.data();
+      const usersData = querySnapshot.docs.map(docSnap => {
+        const data = docSnap.data();
         return {
+          uid: docSnap.id, // Document ID-г uid болгоно
           ...data,
           createdAt: data.createdAt?.toDate() || new Date(),
         } as SystemUser;

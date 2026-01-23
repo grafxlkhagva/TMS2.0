@@ -2,41 +2,91 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper function to check user role
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-    
-    function isDriver() {
-      return request.auth != null && getUserData().role == 'driver';
-    }
-    
-    function isAdmin() {
-      return request.auth != null && getUserData().role == 'admin';
-    }
-    
-    // Shipments collection
-    match /shipments/{shipmentId} {
-      // Drivers can read only their assigned shipments
-      allow read: if isDriver() && resource.data.driverId == request.auth.uid;
-      // Drivers can update status of their shipments
-      allow update: if isDriver() && 
-                       resource.data.driverId == request.auth.uid &&
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']);
-      // Admins have full access
-      allow read, write: if isAdmin();
-    }
-    
-    // Users collection
-    match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      allow write: if isAdmin();
+
+    // Safely get role (handles missing user doc)
+    function getRole() {
+      let d = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return d != null ? d.get('role', '') : '';
     }
 
-    // Default rule for other collections (strict for now)
+    // Safely get phone for Drivers rule
+    function getPhone() {
+      let d = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return d != null ? d.get('phone', '') : '';
+    }
+
+    function isAdmin() {
+      return request.auth != null && getRole() == 'admin';
+    }
+
+    function isDriver() {
+      return request.auth != null && getRole() == 'driver';
+    }
+
+    function isManagement() {
+      return request.auth != null && getRole() == 'management';
+    }
+
+    function isTransportManager() {
+      return request.auth != null && getRole() == 'transport_manager';
+    }
+
+    // Staff = admin, management, or transport_manager (for shared rules)
+    function isStaff() {
+      return isAdmin() || isManagement() || isTransportManager();
+    }
+
+    // Shipments collection
+    match /shipments/{shipmentId} {
+      allow read: if (isDriver() && resource.data.driverId == request.auth.uid) || isStaff();
+      allow update: if (isDriver() &&
+                       resource.data.driverId == request.auth.uid &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])) || isStaff();
+      allow create, delete: if isStaff();
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if request.auth != null && (
+        request.auth.uid == userId ||
+        isAdmin() ||
+        isManagement() ||
+        (isDriver() && resource.data.phone == request.auth.token.phone_number)
+      );
+      allow list: if request.auth != null;
+      allow write: if isAdmin() || isManagement();
+    }
+
+    // Driver Requests collection
+    match /driver_requests/{requestId} {
+      allow create: if true;
+      allow read, write: if isAdmin() || isManagement();
+    }
+
+    // Drivers collection
+    match /Drivers/{driverId} {
+      allow read, write: if isStaff() || (isDriver() && resource.data.phone_number == getPhone());
+    }
+
+    // Vehicles collection
+    match /vehicles/{vehicleId} {
+      allow read: if request.auth != null;
+      allow write: if isStaff();
+    }
+
+    // Vehicle and Trailer types
+    match /vehicle_types/{typeId} {
+      allow read: if request.auth != null;
+    }
+
+    match /trailer_types/{typeId} {
+      allow read: if request.auth != null;
+    }
+
+    // All other collections (orders, order_items, warehouses, customers, etc.)
     match /{document=**} {
-      allow read, write: if isAdmin();
+      allow read: if request.auth != null && isStaff();
+      allow write: if isStaff();
     }
   }
 }

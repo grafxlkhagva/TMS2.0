@@ -112,9 +112,11 @@ export default function EditCustomerPage() {
       const assignedToRef = assignedUser ? doc(db, 'users', assignedUser.uid) : undefined;
       
       const { assignedToUid, ...restOfValues } = values;
+      const nameVal = restOfValues.name ?? '';
 
       await updateDoc(customerRef, {
         ...restOfValues,
+        nameLower: nameVal.toLowerCase(),
         assignedTo: {
             uid: assignedUser?.uid,
             name: `${assignedUser?.lastName} ${assignedUser?.firstName}`,

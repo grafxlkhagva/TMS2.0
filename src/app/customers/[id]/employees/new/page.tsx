@@ -26,11 +26,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
-  lastName: z.string().min(2, { message: 'Овог дор хаяж 2 үсэгтэй байх ёстой.' }),
-  firstName: z.string().min(2, { message: 'Нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
-  position: z.string().min(2, { message: 'Албан тушаал дор хаяж 2 үсэгтэй байх ёстой.' }),
-  phone: z.string().min(8, { message: 'Утасны дугаар буруу байна.' }),
-  email: z.string().email({ message: 'Хүчинтэй и-мэйл хаяг оруулна уу.' }),
+  lastName: z.string().optional(),
+  firstName: z.string().optional(),
+  position: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().optional(),
   note: z.string().optional(),
 });
 
@@ -58,17 +58,23 @@ export default function NewEmployeePage() {
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, 'customer_employees'), {
-        ...values,
+        lastName: values.lastName ?? '',
+        firstName: values.firstName ?? '',
+        position: values.position ?? '',
+        phone: values.phone ?? '',
+        email: values.email ?? '',
+        note: values.note ?? '',
         customerId: customerId,
         customerRef: doc(db, 'customers', customerId),
         createdAt: serverTimestamp(),
       });
-      
+
+      const displayName = [values.firstName, values.lastName].filter(Boolean).join(' ') || values.phone || values.email || 'Ажилтан';
       toast({
         title: 'Амжилттай бүртгэлээ',
-        description: `${values.firstName} нэртэй ажилтныг системд бүртгэлээ.`,
+        description: `${displayName}-ийг системд бүртгэлээ. Дэлгэрэнгүйг дараа нь нэмж болно.`,
       });
-      
+
       router.push(`/customers/${customerId}`);
 
     } catch (error) {
@@ -94,7 +100,7 @@ export default function NewEmployeePage() {
         </Button>
         <h1 className="text-3xl font-headline font-bold">Шинэ ажилтан бүртгэх</h1>
         <p className="text-muted-foreground">
-          Харилцагчийн ажилтны дэлгэрэнгүй мэдээллийг оруулна уу.
+          Бүх талбар заавал бөглөхгүй. Ганц нэг талбар (жишээ нь нэр эсвэл утас) бөглөөд хурдан нэмж, дэлгэрэнгүйг дараа нь засвар хэсгээс нэмж болно.
         </p>
       </div>
       <Card>

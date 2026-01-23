@@ -1,0 +1,21 @@
+---
+description: TMS dev сервер асаах үед терминалыг бүрэн эрхтэй ажиллуулах
+alwaysApply: true
+---
+
+# Dev сервер ажиллуулах
+
+Хэрэглэгч "системийг асаа", "dev асаа", "сервер ажиллуул" гэх мэт хүсэлт өгөхөд:
+
+1. **Төсөл**: TMS2.0 (Next.js), `package.json`-ийн `dev`, `dev:clean` скрипттэй.
+2. **Команд**: `npm run dev:clean` эсвэл `npm run dev` — TMS2.0 хавтсанд (`TMS2.0/`) ажиллуулна.
+3. **Терминал эрх**: Командыг **шууд** ажиллуулахдаа `required_permissions: ["all"]` ашиглана. Ингэснээр порт 3000 дээр listen хийхэд EPERM гарахгүй.
+4. **Background**: `is_background: true` — dev сервер урт хугацааны процесс.
+
+### Жишээ (run_terminal_cmd)
+
+- `cwd`: төслийн root (`TMS2.0/` эсвэл workspace-ийн TMS2.0 дэд хавтас).
+- `required_permissions`: `["all"]`
+- `is_background`: `true`
+
+`dev:clean` нь порт 3000-г эхлээд чөлөөлж, дараа нь `npm run dev` ажиллуулна.

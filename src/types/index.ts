@@ -125,7 +125,9 @@ export type Driver = {
   licenseNumber?: string;
   licenseClasses?: string[]; // e.g., ["BC", "E"]
   licenseExpiryDate?: Date | Timestamp;
-  licenseImageUrl?: string;
+  licenseImageUrl?: string; // Deprecated - use licenseImageFrontUrl and licenseImageBackUrl
+  licenseImageFrontUrl?: string; // Үнэмлэхний урд тал
+  licenseImageBackUrl?: string;  // Үнэмлэхний ар тал
   emergencyContact?: {
     name: string;
     phone: string;

@@ -1,176 +1,306 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+    StyleSheet,
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    Image,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { auth, db } from '../services/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import {
+    PhoneAuthProvider,
+    signInWithCredential,
+    onAuthStateChanged
+} from 'firebase/auth';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
+import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 
 export default function LoginScreen() {
     const router = useRouter();
-    const [phone, setPhone] = useState('');
-    const [password, setPassword] = useState('');
+    const recaptchaVerifier = useRef(null);
+
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [verificationId, setVerificationId] = useState<string | null>(null);
+    const [verificationCode, setVerificationCode] = useState('');
+
     const [loading, setLoading] = useState(false);
+    const [isCodeSent, setIsCodeSent] = useState(false);
 
     useEffect(() => {
-        // Check if user is already logged in
-        const unsubscribe = auth?.onAuthStateChanged(async (user) => {
-            if (user && db) {
-                // Check if user is a driver
-                const userDoc = await getDoc(doc(db, 'users', user.uid));
-                if (userDoc.exists() && userDoc.data()?.role === 'driver') {
-                    router.replace('/(tabs)');
-                }
+        if (!auth) return;
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                checkUserRole(user.uid, user.phoneNumber);
             }
         });
-
-        return () => unsubscribe?.();
+        return unsubscribe;
     }, []);
 
-    const handleLogin = async () => {
-        if (!phone || !password) {
-            Alert.alert('Алдаа', 'Утасны дугаар болон нууц үгээ оруулна уу');
-            return;
-        }
+    const checkUserRole = async (uid: string, phone: string | null) => {
+        try {
+            if (!db) return;
+            // Use full phone number with country code (e.g., +97699112233)
+            const searchPhone = phone || '';
 
-        if (!auth || !db) {
-            Alert.alert('Алдаа', 'Firebase холбогдоогүй байна');
+            const q = query(
+                collection(db, 'users'),
+                where('phone', '==', searchPhone),
+                where('role', '==', 'driver')
+            );
+
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                const userData = querySnapshot.docs[0].data();
+                if (userData.status === 'active') {
+                    router.replace('/(tabs)');
+                } else {
+                    Alert.alert('Хязгаарлагдсан', 'Таны эрх идэвхгүй байна. Админтай холбогдоно уу.');
+                    await auth.signOut();
+                }
+            } else {
+                Alert.alert('Хандах эрхгүй', 'Та жолоочоор бүртгүүлээгүй байна эсвэл хүсэлт хараахан зөвшөөрөгдөөгүй байна.');
+                if (auth) await auth.signOut();
+            }
+        } catch (error) {
+            console.error('Check role error:', error);
+        }
+    };
+
+    const handleSendCode = async () => {
+        if (phoneNumber.length < 8) {
+            Alert.alert('Алдаа', 'Утасны дугаараа зөв оруулна уу.');
             return;
         }
 
         setLoading(true);
-
         try {
-            // For now, use email/password auth (can be changed to phone auth later)
-            const email = `${phone}@tms-driver.app`; // Convert phone to email format
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            if (!auth) throw new Error('Auth not initialized');
+            const phoneProvider = new PhoneAuthProvider(auth);
+            // Format phone for Mongolia
+            const formatPhone = `+976${phoneNumber.replace('+976', '')}`;
 
-            // Check if user is a driver
-            const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+            const verificationId = await phoneProvider.verifyPhoneNumber(
+                formatPhone,
+                recaptchaVerifier.current!
+            );
 
-            if (!userDoc.exists()) {
-                await auth.signOut();
-                Alert.alert('Алдаа', 'Хэрэглэгч олдсонгүй');
-                return;
-            }
-
-            const userData = userDoc.data();
-
-            if (userData.role !== 'driver') {
-                await auth.signOut();
-                Alert.alert('Алдаа', 'Та жолоочийн эрхгүй байна');
-                return;
-            }
-
-            // Navigate to main app
-            router.replace('/(tabs)');
+            setVerificationId(verificationId);
+            setIsCodeSent(true);
+            Alert.alert('Амжилттай', 'Баталгаажуулах код таны утсанд илгээгдлээ.');
         } catch (error: any) {
-            console.error('Login error:', error);
-            Alert.alert('Нэвтрэх алдаа', error.message || 'Утасны дугаар эсвэл нууц үг буруу байна');
+            console.error('Send code error:', error);
+            Alert.alert('Алдаа', 'Код илгээхэд алдаа гарлаа. ' + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerifyCode = async () => {
+        if (!verificationCode) {
+            Alert.alert('Алдаа', 'Баталгаажуулах кодыг оруулна уу.');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            if (!auth) throw new Error('Auth not initialized');
+            const credential = PhoneAuthProvider.credential(
+                verificationId!,
+                verificationCode
+            );
+            await signInWithCredential(auth, credential);
+            // The onAuthStateChanged listener will handle the redirection
+        } catch (error: any) {
+            console.error('Verify code error:', error);
+            Alert.alert('Алдаа', 'Баталгаажуулах код буруу байна.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.container}
+        >
+            {Constants.expoConfig?.extra?.firebaseApiKey && (
+                <FirebaseRecaptchaVerifierModal
+                    ref={recaptchaVerifier}
+                    firebaseConfig={{
+                        apiKey: Constants.expoConfig?.extra?.firebaseApiKey,
+                        authDomain: Constants.expoConfig?.extra?.firebaseAuthDomain,
+                        projectId: Constants.expoConfig?.extra?.firebaseProjectId,
+                        storageBucket: Constants.expoConfig?.extra?.firebaseStorageBucket,
+                        messagingSenderId: Constants.expoConfig?.extra?.firebaseMessagingSenderId,
+                        appId: Constants.expoConfig?.extra?.firebaseAppId,
+                    }}
+                    title="Би робот биш"
+                    cancelLabel="Цуцлах"
+                />
+            )}
+
             <View style={styles.header}>
+                <Image
+                    source={{ uri: 'https://images.unsplash.com/photo-1519003722824-192d99233405?q=80&w=200&h=200&auto=format&fit=crop' }}
+                    style={styles.logo}
+                />
                 <Text style={styles.title}>TMS Driver</Text>
-                <Text style={styles.subtitle}>Жолоочийн апп</Text>
+                <Text style={styles.subtitle}>Түмэн тээх системд тавтай морил</Text>
             </View>
 
             <View style={styles.form}>
-                <Text style={styles.label}>Утасны дугаар</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="99999999"
-                    keyboardType="phone-pad"
-                    value={phone}
-                    onChangeText={setPhone}
-                    autoCapitalize="none"
-                />
+                {!isCodeSent ? (
+                    <>
+                        <Text style={styles.label}>Утасны дугаар</Text>
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.prefix}>+976</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="99112233"
+                                keyboardType="phone-pad"
+                                value={phoneNumber}
+                                onChangeText={setPhoneNumber}
+                                maxLength={8}
+                            />
+                        </View>
 
-                <Text style={styles.label}>Нууц үг</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="••••••••"
-                    secureTextEntry
-                    value={password}
-                    onChangeText={setPassword}
-                    autoCapitalize="none"
-                />
+                        <TouchableOpacity
+                            style={[styles.button, loading && styles.buttonDisabled]}
+                            onPress={handleSendCode}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={styles.buttonText}>Код авах</Text>
+                            )}
+                        </TouchableOpacity>
+                    </>
+                ) : (
+                    <>
+                        <Text style={styles.label}>Баталгаажуулах код</Text>
+                        <TextInput
+                            style={styles.otpInput}
+                            placeholder="123456"
+                            keyboardType="number-pad"
+                            value={verificationCode}
+                            onChangeText={setVerificationCode}
+                            maxLength={6}
+                        />
 
-                <TouchableOpacity
-                    style={[styles.button, loading && styles.buttonDisabled]}
-                    onPress={handleLogin}
-                    disabled={loading}
-                >
-                    {loading ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <Text style={styles.buttonText}>Нэвтрэх</Text>
-                    )}
-                </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.button, loading && styles.buttonDisabled]}
+                            onPress={handleVerifyCode}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={styles.buttonText}>Нэвтрэх</Text>
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.resendButton}
+                            onPress={() => setIsCodeSent(false)}
+                        >
+                            <Text style={styles.resendText}>Дугаар өөрчлөх</Text>
+                        </TouchableOpacity>
+                    </>
+                )}
             </View>
 
-            <Text style={styles.footer}>
-                Асуудал гарвал админтай холбогдоно уу
-            </Text>
-        </View>
+            <View style={styles.registerFooter}>
+                <Text style={styles.footerText}>Танд эрх байхгүй юу?</Text>
+                <TouchableOpacity onPress={() => router.push('/register')}>
+                    <Text style={styles.registerLink}> Бүртгүүлэх хүсэлт илгээх</Text>
+                </TouchableOpacity>
+            </View>
+        </KeyboardAvoidingView>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#fff',
         justifyContent: 'center',
-        padding: 20,
+        padding: 24,
     },
     header: {
         alignItems: 'center',
-        marginBottom: 50,
+        marginBottom: 40,
+    },
+    logo: {
+        width: 80,
+        height: 80,
+        borderRadius: 20,
+        marginBottom: 16,
     },
     title: {
-        fontSize: 32,
+        fontSize: 28,
         fontWeight: 'bold',
-        color: '#2563eb',
+        color: '#111827',
         marginBottom: 8,
     },
     subtitle: {
-        fontSize: 16,
+        fontSize: 14,
         color: '#6b7280',
     },
     form: {
-        backgroundColor: '#fff',
-        padding: 24,
-        borderRadius: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 3,
+        width: '100%',
     },
     label: {
         fontSize: 14,
         fontWeight: '600',
         color: '#374151',
         marginBottom: 8,
-        marginTop: 16,
+    },
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+        borderRadius: 8,
+        backgroundColor: '#f9fafb',
+        marginBottom: 20,
+    },
+    prefix: {
+        paddingLeft: 12,
+        fontSize: 16,
+        color: '#374151',
+        fontWeight: '500',
     },
     input: {
+        flex: 1,
+        padding: 12,
+        fontSize: 16,
+    },
+    otpInput: {
         borderWidth: 1,
         borderColor: '#d1d5db',
         borderRadius: 8,
         padding: 12,
-        fontSize: 16,
-        backgroundColor: '#fff',
+        fontSize: 24,
+        textAlign: 'center',
+        letterSpacing: 8,
+        backgroundColor: '#f9fafb',
+        marginBottom: 20,
     },
     button: {
         backgroundColor: '#2563eb',
         padding: 16,
         borderRadius: 8,
         alignItems: 'center',
-        marginTop: 24,
     },
     buttonDisabled: {
         backgroundColor: '#93c5fd',
@@ -178,12 +308,28 @@ const styles = StyleSheet.create({
     buttonText: {
         color: '#fff',
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: 'bold',
     },
-    footer: {
-        textAlign: 'center',
-        color: '#6b7280',
-        marginTop: 24,
+    resendButton: {
+        marginTop: 16,
+        alignItems: 'center',
+    },
+    resendText: {
+        color: '#2563eb',
         fontSize: 14,
+    },
+    registerFooter: {
+        marginTop: 40,
+        flexDirection: 'row',
+        justifyContent: 'center',
+    },
+    footerText: {
+        color: '#6b7280',
+        fontSize: 14,
+    },
+    registerLink: {
+        color: '#2563eb',
+        fontSize: 14,
+        fontWeight: 'bold',
     },
 });

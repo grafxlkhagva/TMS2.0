@@ -27,6 +27,15 @@ export default function TabsLayout() {
                 }}
             />
             <Tabs.Screen
+                name="vehicle"
+                options={{
+                    title: 'Миний машин',
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="bus-outline" size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tabs.Screen
                 name="profile"
                 options={{
                     title: 'Профайл',

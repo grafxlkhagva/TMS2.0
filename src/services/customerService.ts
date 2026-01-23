@@ -28,7 +28,8 @@ export const customerService = {
     // --- Customers ---
 
     /**
-     * Get paginated customers with optional search
+     * Get paginated customers with optional search by name (prefix, том/жижиг үсэг шалгахгүй).
+     * nameLower талбар ашиглана: where('nameLower', '>=', term.toLowerCase()), orderBy('nameLower').
      */
     async getCustomers(
         lastDoc: QueryDocumentSnapshot<DocumentData> | null = null,
@@ -36,31 +37,27 @@ export const customerService = {
         searchTerm: string = ''
     ) {
         try {
-            let q = query(
-                collection(db, CUSTOMERS_COLLECTION),
-                alignOrderBy(searchTerm), // Use helper to determine orderBy
-                limit(pageSize)
-            );
+            const term = (typeof searchTerm === 'string' ? searchTerm : '').trim();
+            let q;
 
-            if (searchTerm) {
-                // Simple client-side filtering simulation for Firestore 
-                // Note: Firestore doesn't support full-text search natively. 
-                // Ideally, use Algolia/Typesense for robust search.
-                // Here we can rely on client-side filtering or a specific "name" prefix query if configured.
-                // For this implementation, let's stick to name prefix if possible or just fetch standard list.
-                // If sorting by name is needed for prefix search:
+            if (term) {
+                const lower = term.toLowerCase();
                 q = query(
                     collection(db, CUSTOMERS_COLLECTION),
-                    where('name', '>=', searchTerm),
-                    where('name', '<=', searchTerm + '\uf8ff'),
+                    where('nameLower', '>=', lower),
+                    where('nameLower', '<=', lower + '\uf8ff'),
+                    orderBy('nameLower'),
                     limit(pageSize)
                 );
             } else {
-                q = query(collection(db, CUSTOMERS_COLLECTION), orderBy("createdAt", "desc"), limit(pageSize));
-            }
-
-            if (lastDoc && !searchTerm) {
-                q = query(q, startAfter(lastDoc));
+                q = query(
+                    collection(db, CUSTOMERS_COLLECTION),
+                    orderBy('createdAt', 'desc'),
+                    limit(pageSize)
+                );
+                if (lastDoc) {
+                    q = query(q, startAfter(lastDoc));
+                }
             }
 
             const snapshot = await getDocs(q);
@@ -79,6 +76,22 @@ export const customerService = {
             console.error("Error getting customers:", error);
             throw error;
         }
+    },
+
+    /**
+     * Хуучин харилцагчид nameLower талбар нэмнэ (том/жижиг үсэг шалгахгүй хайлтанд).
+     */
+    async backfillNameLower(): Promise<{ updated: number; skipped: number }> {
+        const snapshot = await getDocs(collection(db, CUSTOMERS_COLLECTION));
+        let updated = 0, skipped = 0;
+        for (const d of snapshot.docs) {
+            const data = d.data();
+            if (data.nameLower != null) { skipped++; continue; }
+            const nameVal = (data.name ?? '').toString();
+            await updateDoc(d.ref, { nameLower: nameVal.toLowerCase() });
+            updated++;
+        }
+        return { updated, skipped };
     },
 
     async getCustomerById(id: string): Promise<Customer | null> {
@@ -230,10 +243,3 @@ export const customerService = {
         }
     }
 };
-
-// Helper for dynamic ordering based on search (if we were using simple orderBy)
-function alignOrderBy(searchTerm: string) {
-    // This is a placeholder. Real implementation depends on index availability.
-    // Default to createdAt desc
-    return orderBy('createdAt', 'desc');
-}

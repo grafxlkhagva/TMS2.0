@@ -2,37 +2,57 @@ import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import 'firebase/compat/firestore';
 import Constants from 'expo-constants';
 
 // Firebase configuration from environment variables
+// Note: In SDK 50+, use Constants.expoConfig.extra
+const extra = Constants.expoConfig?.extra || {};
+
 const firebaseConfig = {
-    apiKey: Constants.expoConfig?.extra?.firebaseApiKey,
-    authDomain: Constants.expoConfig?.extra?.firebaseAuthDomain,
-    projectId: Constants.expoConfig?.extra?.firebaseProjectId,
-    storageBucket: Constants.expoConfig?.extra?.firebaseStorageBucket,
-    messagingSenderId: Constants.expoConfig?.extra?.firebaseMessagingSenderId,
-    appId: Constants.expoConfig?.extra?.firebaseAppId,
+    apiKey: extra.firebaseApiKey,
+    authDomain: extra.firebaseAuthDomain,
+    projectId: extra.firebaseProjectId,
+    storageBucket: extra.firebaseStorageBucket,
+    messagingSenderId: extra.firebaseMessagingSenderId,
+    appId: extra.firebaseAppId,
 };
 
 // Initialize Firebase
-let app: FirebaseApp | null = null;
-let auth: Auth | null = null;
-let db: Firestore | null = null;
-let storage: FirebaseStorage | null = null;
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
+let storage: FirebaseStorage;
 
-if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+if (firebaseConfig.apiKey) {
     try {
-        app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+        if (getApps().length === 0) {
+            // Modular initialization
+            app = initializeApp(firebaseConfig);
+            // Compat initialization (Required for some Expo libraries like Recaptcha)
+            firebase.initializeApp(firebaseConfig);
+            console.log('✅ Firebase initialized (Modular + Compat)');
+        } else {
+            app = getApp();
+            console.log('✅ Firebase initialized (Existing Instance)');
+        }
+
         auth = getAuth(app);
         db = getFirestore(app);
         storage = getStorage(app);
-
-        console.log('✅ Firebase initialized successfully');
     } catch (e) {
         console.error('❌ Failed to initialize Firebase:', e);
+        throw e;
     }
 } else {
-    console.warn('⚠️ Firebase config is incomplete. Firebase services will be unavailable.');
+    console.error('❌ Firebase config is missing. Check your .env file and app.config.js');
+    // Provide dummy objects to avoid crash on import, but logs will show the error
+    app = {} as FirebaseApp;
+    auth = {} as Auth;
+    db = {} as Firestore;
+    storage = {} as FirebaseStorage;
 }
 
 export { app, auth, db, storage };

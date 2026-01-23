@@ -1,0 +1,35 @@
+---
+description: Firestore rules шинжилж, засварласны дараа шууд Firebase рүү түлхэх
+alwaysApply: true
+---
+
+# Firestore rules — шинжилж, шууд Firestore рүү түлхэх
+
+## 1. Шинжилж, засахдаа
+
+`firestore.rules`-ийг засварлахдаа дараахыг **шинжилнэ**:
+
+- Синтакс, `get()`, `getRole()`/`getPhone()` — `null`-д найдвартай эсэх
+- `isAdmin`, `isDriver`, `isStaff` зэрэг эрхийн логик
+- Цуглуулга бүрт тохирох `read`/`write` (хэт өргөн эсвэл нарийн хэт хатуу эсэх)
+- `match /{document=**}` catch‑all — зөвхөн шаардлагатай collection-уудыг нээсэн эсэх
+
+## 2. Засварласны дараа — шууд Firestore рүү түлхэх
+
+`firestore.rules` (эсвэл `storage.rules`) **шинжилж, засварлаж дуусмагц** дараахыг хий:
+
+1. **Firestore rules deploy**
+   - Команд: `npm run deploy:rules`
+   - Ажиллуулах газар: TMS2.0 root (`TMS2.0/`)
+   - Эрх: `required_permissions: ["network"]`
+
+2. **Зөвхөн `storage.rules`** өөрчлөгдсөн бол (шаардлагатай бол):
+   - `npm run deploy:rules:storage`
+
+3. **Үр дүнг мэдэгдэх**
+   - Амжилттай: «Firestore rules Firebase рүү амжилттай түлхэгдлээ»
+   - Алдаа: `Failed to get Firebase project` / project сонгогдоогүй → «`firebase use <project-id>` эсвэл `firebase login` ажиллуулна уу». Project ID: `.env.local`-ийн `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+
+## 3. Товч
+
+- `firestore.rules` **шинжилсэн, засварласан** → `npm run deploy:rules` ажиллуулна, `required_permissions: ["network"]` — Firestore рүү **энэ төслөөс шууд түлхэнэ**.
