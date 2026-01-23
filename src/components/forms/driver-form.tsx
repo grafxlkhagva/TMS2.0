@@ -11,6 +11,7 @@ import { Timestamp } from 'firebase/firestore';
 import { Switch } from '@/components/ui/switch';
 import { FormDescription } from '@/components/ui/form';
 import { analyzeDriverLicense } from '@/ai/flows/analyze-driver-license';
+import { analyzeNationalId } from '@/ai/flows/analyze-national-id';
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
@@ -99,6 +100,7 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
 
     // AI шинжилгээ
     const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+    const [isAnalyzingNationalId, setIsAnalyzingNationalId] = React.useState(false);
 
     const avatarInputRef = React.useRef<HTMLInputElement>(null);
     const licenseFrontInputRef = React.useRef<HTMLInputElement>(null);
@@ -311,6 +313,79 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
             });
         } finally {
             setIsAnalyzing(false);
+        }
+    };
+
+    // AI-аар иргэний үнэмлэх шинжлэх
+    const handleNationalIdAIAnalysis = async () => {
+        if (!nationalIdFrontFile && !nationalIdBackFile && !nationalIdFrontPreview && !nationalIdBackPreview) {
+            toast({
+                variant: 'destructive',
+                title: 'Зураг оруулна уу',
+                description: 'AI шинжилгээ хийхийн тулд иргэний үнэмлэхний зураг оруулна уу.',
+            });
+            return;
+        }
+
+        setIsAnalyzingNationalId(true);
+        try {
+            let frontBase64: string | undefined;
+            let backBase64: string | undefined;
+
+            if (nationalIdFrontFile) {
+                frontBase64 = await fileToBase64(nationalIdFrontFile);
+            } else if (nationalIdFrontPreview && !nationalIdFrontPreview.startsWith('blob:')) {
+                const response = await fetch(nationalIdFrontPreview);
+                const blob = await response.blob();
+                frontBase64 = await fileToBase64(new File([blob], 'front.jpg', { type: blob.type }));
+            }
+
+            if (nationalIdBackFile) {
+                backBase64 = await fileToBase64(nationalIdBackFile);
+            } else if (nationalIdBackPreview && !nationalIdBackPreview.startsWith('blob:')) {
+                const response = await fetch(nationalIdBackPreview);
+                const blob = await response.blob();
+                backBase64 = await fileToBase64(new File([blob], 'back.jpg', { type: blob.type }));
+            }
+
+            const result = await analyzeNationalId({
+                frontImageBase64: frontBase64,
+                backImageBase64: backBase64,
+            });
+
+            // Форм талбаруудыг бөглөх
+            let fieldsUpdated = 0;
+
+            if (result.displayName) {
+                form.setValue('display_name', result.displayName);
+                fieldsUpdated++;
+            }
+            if (result.registerNumber) {
+                form.setValue('registerNumber', result.registerNumber);
+                fieldsUpdated++;
+            }
+            if (result.birthDate) {
+                const parsedBirthDate = safeParseDate(result.birthDate);
+                if (parsedBirthDate) {
+                    form.setValue('birthDate', parsedBirthDate);
+                    fieldsUpdated++;
+                }
+            }
+
+            toast({
+                title: 'AI шинжилгээ дууслаа',
+                description: `${fieldsUpdated} талбар автоматаар бөглөгдлөө. ${result.confidence ? `(${result.confidence}% итгэлтэй)` : ''}`,
+            });
+
+        } catch (error) {
+            console.error('National ID AI analysis error:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Алдаа',
+                description: 'AI шинжилгээ хийхэд алдаа гарлаа. Дахин оролдоно уу.',
+            });
+        } finally {
+            setIsAnalyzingNationalId(false);
         }
     };
 
@@ -745,6 +820,30 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
                                     </div>
                                 </div>
                             </div>
+
+                            {/* AI шинжилгээ товч - Иргэний үнэмлэх */}
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full mt-4 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-300 hover:border-blue-400 hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-cyan-500/20"
+                                onClick={handleNationalIdAIAnalysis}
+                                disabled={isAnalyzingNationalId || (!nationalIdFrontFile && !nationalIdBackFile && !nationalIdFrontPreview && !nationalIdBackPreview)}
+                            >
+                                {isAnalyzingNationalId ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        AI шинжилж байна...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="mr-2 h-4 w-4 text-blue-500" />
+                                        AI-аар мэдээлэл таних
+                                    </>
+                                )}
+                            </Button>
+                            <p className="text-xs text-muted-foreground text-center">
+                                Зургаас нэр, регистр, төрсөн огноо зэргийг автоматаар таниулна
+                            </p>
                         </div>
                     </div>
                 </div>
