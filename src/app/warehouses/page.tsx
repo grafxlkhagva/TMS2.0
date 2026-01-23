@@ -420,8 +420,15 @@ export default function WarehousesPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setItemToDelete(null)}>Цуцлах</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogCancel disabled={isDeleting}>Цуцлах</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }} 
+              disabled={isDeleting} 
+              className="bg-destructive hover:bg-destructive/90"
+            >
               {isDeleting ? "Устгаж байна..." : "Устгах"}
             </AlertDialogAction>
           </AlertDialogFooter>

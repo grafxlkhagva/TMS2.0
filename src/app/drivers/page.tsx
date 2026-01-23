@@ -575,8 +575,15 @@ export default function DriversPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDriverToDelete(null)}>Цуцлах</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteDriver} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogCancel disabled={isDeleting}>Цуцлах</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteDriver();
+              }} 
+              disabled={isDeleting} 
+              className="bg-destructive hover:bg-destructive/90"
+            >
               {isDeleting ? "Устгаж байна..." : "Устгах"}
             </AlertDialogAction>
           </AlertDialogFooter>

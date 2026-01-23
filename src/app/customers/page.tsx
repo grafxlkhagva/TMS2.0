@@ -312,8 +312,15 @@ export default function CustomersPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setCustomerToDelete(null)}>Цуцлах</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteCustomer} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+              <AlertDialogCancel disabled={isDeleting}>Цуцлах</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleDeleteCustomer();
+                }} 
+                disabled={isDeleting} 
+                className="bg-destructive hover:bg-destructive/90"
+              >
                 {isDeleting ? "Устгаж байна..." : "Устгах"}
               </AlertDialogAction>
             </AlertDialogFooter>
