@@ -37,26 +37,33 @@ const mongolianAlphabet = [
 ];
 
 export const vehicleFormSchema = z.object({
-    makeId: z.string().min(1, "Үйлдвэрлэгч сонгоно уу."),
-    modelId: z.string().min(1, "Загвар сонгоно уу."),
-    year: z.coerce.number().min(1980, "Оноо зөв оруулна уу.").max(new Date().getFullYear() + 1, "Оноо зөв оруулна уу."),
-    importedYear: z.coerce.number().min(1980, "Оноо зөв оруулна уу.").max(new Date().getFullYear() + 1, "Оноо зөв оруулна уу."),
-    licensePlateDigits: z.string().length(4, "4 оронтой тоо оруулна уу.").regex(/^[0-9]{4}$/, "Зөвхөн тоо оруулна уу."),
-    licensePlateChar1: z.string().min(1, "Үсэг сонгоно уу."),
-    licensePlateChar2: z.string().min(1, "Үсэг сонгоно уу."),
-    licensePlateChar3: z.string().min(1, "Үсэг сонгоно уу."),
+    // Үндсэн мэдээлэл - бүгд заавал биш
+    makeId: z.string().optional(),
+    modelId: z.string().optional(),
+    year: z.coerce.number().min(1980).max(new Date().getFullYear() + 1).optional().or(z.literal('')),
+    importedYear: z.coerce.number().min(1980).max(new Date().getFullYear() + 1).optional().or(z.literal('')),
+    
+    // Улсын дугаар - заавал биш
+    licensePlateDigits: z.string().optional(),
+    licensePlateChar1: z.string().optional(),
+    licensePlateChar2: z.string().optional(),
+    licensePlateChar3: z.string().optional(),
+    
+    // Чиргүүлийн дугаар
     trailerLicensePlateDigits: z.string().optional(),
     trailerLicensePlateChar1: z.string().optional(),
     trailerLicensePlateChar2: z.string().optional(),
-    vin: z.string().min(1, "Арлын дугаарыг оруулна уу."),
-    vehicleTypeId: z.string().min(1, "Машины төрөл сонгоно уу."),
-    trailerTypeId: z.string().min(1, "Тэвшний төрөл сонгоно уу."),
-    capacity: z.string().min(1, "Даацын мэдээллийг оруулна уу."),
-    fuelType: z.enum(fuelTypes),
+    
+    // Бусад
+    vin: z.string().optional(),
+    vehicleTypeId: z.string().optional(),
+    trailerTypeId: z.string().optional(),
+    capacity: z.string().optional(),
+    fuelType: z.enum(fuelTypes).optional(),
     notes: z.string().optional(),
 
-    // New Fields
-    odometer: z.coerce.number().min(0, "Гүйлт эерэг тоо байна.").optional(),
+    // Нэмэлт талбарууд
+    odometer: z.coerce.number().min(0).optional().or(z.literal('')),
     specs: z.object({
         tankCapacity: z.coerce.number().optional(),
         transmission: z.enum(transmissionTypes).optional(),

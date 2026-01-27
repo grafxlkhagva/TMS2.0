@@ -26,8 +26,11 @@ export default function NewVehiclePage() {
     }
     setIsSubmitting(true);
     try {
-      const licensePlateChars = `${values.licensePlateChar1}${values.licensePlateChar2}${values.licensePlateChar3}`;
-      const licensePlate = `${values.licensePlateDigits} ${licensePlateChars}`;
+      // Улсын дугаар үүсгэх (хоосон байж болно)
+      const licensePlateChars = `${values.licensePlateChar1 || ''}${values.licensePlateChar2 || ''}${values.licensePlateChar3 || ''}`;
+      const licensePlate = values.licensePlateDigits 
+        ? `${values.licensePlateDigits} ${licensePlateChars}`.trim() 
+        : '';
 
       const trailerLicensePlateChars = `${values.trailerLicensePlateChar1 || ''}${values.trailerLicensePlateChar2 || ''}`;
       const trailerLicensePlate = values.trailerLicensePlateDigits ? `${values.trailerLicensePlateDigits} ${trailerLicensePlateChars}` : '';
@@ -44,21 +47,28 @@ export default function NewVehiclePage() {
       const cleanSpecs = specs ? Object.fromEntries(Object.entries(specs).filter(([_, v]) => v !== undefined && v !== '')) : {};
       const cleanDates = dates ? Object.fromEntries(Object.entries(dates).filter(([_, v]) => v !== undefined)) : {};
 
-      // Need to fetch makeName and modelName as they are stored as strings in vehicle doc
+      // Make болон Model нэр татах (хоосон байж болно)
       const { getDoc, doc } = await import('firebase/firestore');
-      const makeSnap = await getDoc(doc(db, 'vehicle_makes', values.makeId));
-      const modelSnap = await getDoc(doc(db, 'vehicle_models', values.modelId));
-
-      const makeName = makeSnap.exists() ? makeSnap.data().name : '';
-      const modelName = modelSnap.exists() ? modelSnap.data().name : '';
+      let makeName = '';
+      let modelName = '';
+      
+      if (values.makeId) {
+        const makeSnap = await getDoc(doc(db, 'vehicle_makes', values.makeId));
+        makeName = makeSnap.exists() ? makeSnap.data().name : '';
+      }
+      
+      if (values.modelId) {
+        const modelSnap = await getDoc(doc(db, 'vehicle_models', values.modelId));
+        modelName = modelSnap.exists() ? modelSnap.data().name : '';
+      }
 
       const docRef = await addDoc(collection(db, 'vehicles'), {
         ...restOfValues,
         licensePlate,
-        licensePlateDigits: values.licensePlateDigits,
-        licensePlateChars: [values.licensePlateChar1, values.licensePlateChar2, values.licensePlateChar3],
+        licensePlateDigits: values.licensePlateDigits || '',
+        licensePlateChars: [values.licensePlateChar1 || '', values.licensePlateChar2 || '', values.licensePlateChar3 || ''],
         trailerLicensePlate,
-        trailerLicensePlateDigits: values.trailerLicensePlateDigits,
+        trailerLicensePlateDigits: values.trailerLicensePlateDigits || '',
         trailerLicensePlateChars: values.trailerLicensePlateDigits ? [values.trailerLicensePlateChar1, values.trailerLicensePlateChar2] : [],
         makeName,
         modelName,
