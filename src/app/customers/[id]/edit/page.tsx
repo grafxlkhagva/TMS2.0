@@ -29,13 +29,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const formSchema = z.object({
-  name: z.string().min(2, { message: 'Харилцагчийн нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
-  registerNumber: z.string().min(7, { message: 'Регистрийн дугаар буруу байна.' }),
-  industry: z.string().min(1, { message: 'Үйл ажиллагааны чиглэл сонгоно уу.' }),
-  address: z.string().min(5, { message: 'Хаяг дор хаяж 5 тэмдэгттэй байх ёстой.' }),
-  officePhone: z.string().min(8, { message: 'Утасны дугаар буруу байна.' }),
-  email: z.string().email({ message: 'Хүчинтэй и-мэйл хаяг оруулна уу.' }),
-  assignedToUid: z.string().min(1, { message: 'Хариуцсан ажилтан сонгоно уу.' }),
+  name: z.string().optional(),
+  registerNumber: z.string().optional(),
+  industry: z.string().optional(),
+  address: z.string().optional(),
+  officePhone: z.string().optional(),
+  email: z.string().optional(),
+  assignedToUid: z.string().optional(),
   note: z.string().optional(),
 });
 
@@ -127,7 +127,7 @@ export default function EditCustomerPage() {
       
       toast({
         title: 'Амжилттай шинэчиллээ',
-        description: `${values.name} нэртэй харилцагчийн мэдээллийг шинэчиллээ.`,
+        description: `${values.name || 'Харилцагчийн'} мэдээллийг шинэчиллээ.`,
       });
       
       router.push(`/customers/${id}`);
