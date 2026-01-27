@@ -236,8 +236,8 @@ export default function EditCustomerPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {industries.map(industry => (
-                            <SelectItem key={industry.id} value={industry.name}>
+                          {industries.map((industry, index) => (
+                            <SelectItem key={industry.id || `industry-${index}`} value={industry.name}>
                               {industry.name}
                             </SelectItem>
                           ))}
@@ -304,8 +304,8 @@ export default function EditCustomerPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {systemUsers.map(user => (
-                          <SelectItem key={user.uid} value={user.uid}>
+                        {systemUsers.map((user, index) => (
+                          <SelectItem key={user.uid || `user-${index}`} value={user.uid}>
                             {user.lastName} {user.firstName}
                           </SelectItem>
                         ))}
