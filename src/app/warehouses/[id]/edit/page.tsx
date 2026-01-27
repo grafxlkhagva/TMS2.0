@@ -31,19 +31,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import LocationPicker from '@/components/location-picker';
 
 const formSchema = z.object({
-  name: z.string().min(2, { message: 'Агуулахын нэр дор хаяж 2 үсэгтэй байх ёстой.' }),
-  regionId: z.string().min(1, { message: 'Бүс нутаг сонгоно уу.' }),
-  location: z.string().min(5, { message: 'Байршил сонгоно уу.' }),
+  name: z.string().optional(),
+  regionId: z.string().optional(),
+  location: z.string().optional(),
   geolocation: z.object({
     lat: z.number(),
     lng: z.number(),
-  }),
-  status: z.enum(['active', 'inactive', 'full', 'maintenance']),
-  type: z.enum(['General', 'Cold Storage', 'Hazardous', 'Bonded']),
+  }).optional(),
+  status: z.enum(['active', 'inactive', 'full', 'maintenance']).default('active'),
+  type: z.enum(['General', 'Cold Storage', 'Hazardous', 'Bonded']).optional(),
   capacityValue: z.string().optional(),
   capacityUnit: z.enum(['sqm', 'pallets', 'tons']).default('sqm'),
-  conditions: z.string().min(5, { message: 'Нөхцөлийн мэдээлэл дор хаяж 5 тэмдэгттэй байх ёстой.' }),
-  contactInfo: z.string().min(5, { message: 'Холбоо барих мэдээлэл дор хаяж 5 тэмдэгттэй байх ёстой.' }),
+  conditions: z.string().optional(),
+  contactInfo: z.string().optional(),
   contactName: z.string().optional(),
   contactPosition: z.string().optional(),
   customerId: z.string().optional(),
