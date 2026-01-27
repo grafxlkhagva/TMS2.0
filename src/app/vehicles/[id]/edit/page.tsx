@@ -5,14 +5,24 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
-import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDoc, deleteDoc } from 'firebase/firestore';
 import { db, storage } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VehicleForm, type VehicleFormValues } from '@/components/forms/vehicle-form';
 import type { Vehicle } from '@/types';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function EditVehiclePage() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +31,8 @@ export default function EditVehiclePage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [vehicle, setVehicle] = React.useState<Vehicle | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -164,6 +176,43 @@ export default function EditVehiclePage() {
     }
   }
 
+  async function handleDelete() {
+    if (!id || !vehicle) return;
+    setIsDeleting(true);
+    try {
+      // Зургуудыг устгах
+      if (vehicle.imageUrls && vehicle.imageUrls.length > 0) {
+        await Promise.all(vehicle.imageUrls.map(async (url) => {
+          try {
+            const imageRef = ref(storage, url);
+            await deleteObject(imageRef);
+          } catch (e) {
+            console.error("Error deleting image:", e);
+          }
+        }));
+      }
+
+      // Firestore-оос устгах
+      await deleteDoc(doc(db, 'vehicles', id));
+
+      toast({
+        title: 'Амжилттай устгалаа',
+        description: `${vehicle.licensePlate} дугаартай тээврийн хэрэгслийг устгалаа.`,
+      });
+      router.push('/vehicles');
+    } catch (error) {
+      console.error("Error deleting vehicle:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Алдаа',
+        description: 'Тээврийн хэрэгсэл устгахад алдаа гарлаа.',
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-6">
@@ -182,12 +231,22 @@ export default function EditVehiclePage() {
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
-        <Button variant="outline" size="sm" asChild className="mb-4">
-          <Link href="/vehicles">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Буцах
-          </Link>
-        </Button>
+        <div className="flex items-center justify-between mb-4">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/vehicles">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Буцах
+            </Link>
+          </Button>
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            onClick={() => setShowDeleteDialog(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Устгах
+          </Button>
+        </div>
         <h1 className="text-3xl font-headline font-bold">Тээврийн хэрэгсэл засах</h1>
         <p className="text-muted-foreground">
           Тээврийн хэрэгслийн мэдээллийг шинэчлэх.
@@ -198,6 +257,31 @@ export default function EditVehiclePage() {
           {vehicle && <VehicleForm initialData={vehicle} onSubmit={onSubmit} isSubmitting={isSubmitting} />}
         </CardContent>
       </Card>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{vehicle?.licensePlate}" дугаартай тээврийн хэрэгслийг устгах гэж байна. 
+              Энэ үйлдлийг буцаах боломжгүй бөгөөд холбоотой бүх зураг устгагдана.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Цуцлах</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }} 
+              disabled={isDeleting} 
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isDeleting ? "Устгаж байна..." : "Устгах"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
