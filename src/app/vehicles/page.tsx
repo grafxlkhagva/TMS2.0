@@ -213,11 +213,12 @@ export default function VehiclesPage() {
         if (searchTerm) {
           const lowerCaseSearch = searchTerm.toLowerCase();
           return (
-            vehicle.licensePlate.toLowerCase().includes(lowerCaseSearch) ||
+            (vehicle.licensePlate && vehicle.licensePlate.toLowerCase().includes(lowerCaseSearch)) ||
             (vehicle.trailerLicensePlate && vehicle.trailerLicensePlate.toLowerCase().includes(lowerCaseSearch)) ||
-            vehicle.makeName.toLowerCase().includes(lowerCaseSearch) ||
-            vehicle.modelName.toLowerCase().includes(lowerCaseSearch) ||
-            (vehicle.driverName && vehicle.driverName.toLowerCase().includes(lowerCaseSearch))
+            (vehicle.makeName && vehicle.makeName.toLowerCase().includes(lowerCaseSearch)) ||
+            (vehicle.modelName && vehicle.modelName.toLowerCase().includes(lowerCaseSearch)) ||
+            (vehicle.driverName && vehicle.driverName.toLowerCase().includes(lowerCaseSearch)) ||
+            (vehicle.notes && vehicle.notes.toLowerCase().includes(lowerCaseSearch))
           );
         }
         return true;
@@ -374,8 +375,8 @@ export default function VehiclesPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Хайх..."
-                className="pl-9 w-40"
+                placeholder="Дугаар, тэмдэглэл..."
+                className="pl-9 w-48"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
