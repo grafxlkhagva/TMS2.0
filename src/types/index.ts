@@ -135,6 +135,7 @@ export type Driver = {
     name: string;
     phone: string;
   };
+  notes?: string; // Нэмэлт тэмдэглэл
 };
 
 export type UserRole = 'admin' | 'management' | 'transport_manager' | 'finance_manager' | 'customer_officer' | 'manager' | 'driver';

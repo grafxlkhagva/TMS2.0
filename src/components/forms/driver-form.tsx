@@ -24,6 +24,7 @@ import {
     FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -47,6 +48,7 @@ export const driverFormSchema = z.object({
         phone: z.string().optional(),
     }).optional(),
     isAvailableForContracted: z.boolean().default(false),
+    notes: z.string().optional(),
 });
 
 export type DriverFormValues = z.infer<typeof driverFormSchema>;
@@ -124,6 +126,7 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
                 phone: initialData?.emergencyContact?.phone || '',
             },
             isAvailableForContracted: initialData?.isAvailableForContracted || false,
+            notes: initialData?.notes || '',
         },
     });
 
@@ -846,6 +849,31 @@ export function DriverForm({ initialData, onSubmit, isSubmitting }: DriverFormPr
                             </p>
                         </div>
                     </div>
+                </div>
+
+                {/* Нэмэлт тэмдэглэл */}
+                <div className="space-y-4 pt-6 border-t">
+                    <h3 className="text-lg font-semibold">Нэмэлт тэмдэглэл</h3>
+                    <FormField
+                        control={form.control}
+                        name="notes"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Тэмдэглэл</FormLabel>
+                                <FormControl>
+                                    <Textarea 
+                                        placeholder="Жолоочийн талаар нэмэлт мэдээлэл, тэмдэглэл оруулах..." 
+                                        className="min-h-[100px]"
+                                        {...field} 
+                                    />
+                                </FormControl>
+                                <FormDescription>
+                                    Жолоочийн онцлог, чадвар, туршлага эсвэл бусад хэрэгтэй мэдээллийг энд бичнэ үү.
+                                </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                 </div>
 
                 <div className="flex justify-end gap-3 pt-6 border-t">

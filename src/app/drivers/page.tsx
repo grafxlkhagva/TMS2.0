@@ -242,11 +242,16 @@ export default function DriversPage() {
     }
   };
 
-  const filteredDrivers = drivers.filter(driver =>
-    (driver.display_name && driver.display_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (driver.phone_number && driver.phone_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (driver.licenseNumber && driver.licenseNumber.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredDrivers = drivers.filter(driver => {
+    if (!searchTerm) return true;
+    const lowerSearch = searchTerm.toLowerCase();
+    return (
+      (driver.display_name && driver.display_name.toLowerCase().includes(lowerSearch)) ||
+      (driver.phone_number && driver.phone_number.toLowerCase().includes(lowerSearch)) ||
+      (driver.licenseNumber && driver.licenseNumber.toLowerCase().includes(lowerSearch)) ||
+      (driver.notes && driver.notes.toLowerCase().includes(lowerSearch))
+    );
+  });
 
   // Хуудаслалтын тооцоо
   const totalPages = Math.ceil(filteredDrivers.length / pageSize);
@@ -272,8 +277,8 @@ export default function DriversPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Нэр, утас, үнэмлэх..."
-              className="pl-9 w-[250px]"
+              placeholder="Нэр, утас, үнэмлэх, тэмдэглэл..."
+              className="pl-9 w-[280px]"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
