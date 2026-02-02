@@ -466,7 +466,12 @@ export default function VehiclesPage() {
                     </TableCell>
                     <TableCell className="font-mono">
                       <div className="flex items-center gap-2">
-                        {vehicle.licensePlate}
+                        <Link 
+                          href={`/vehicles/${vehicle.id}`} 
+                          className="hover:text-primary hover:underline transition-colors font-semibold"
+                        >
+                          {vehicle.licensePlate || 'Дугааргүй'}
+                        </Link>
                         {(() => {
                           const alerts = getVehicleAlerts(vehicle);
                           if (alerts.length > 0) {
