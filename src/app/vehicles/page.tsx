@@ -98,6 +98,7 @@ export default function VehiclesPage() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
   const [typeFilter, setTypeFilter] = React.useState('all');
+  const [alertFilter, setAlertFilter] = React.useState('all');
 
   // Хуудаслалт
   const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -196,47 +197,8 @@ export default function VehiclesPage() {
     setIsDialogOpen(true);
   };
 
-  const filteredVehicles = React.useMemo(() => {
-    return vehicles
-      .map(v => {
-        const vehicleTypeName = vehicleTypes.find(vt => vt.id === v.vehicleTypeId)?.name || v.vehicleTypeId;
-        const trailerTypeName = trailerTypes.find(tt => tt.id === v.trailerTypeId)?.name || v.trailerTypeId;
-        return { ...v, vehicleTypeName, trailerTypeName };
-      })
-      .filter(vehicle => {
-        if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
-          return false;
-        }
-        if (typeFilter !== 'all' && vehicle.vehicleTypeId !== typeFilter) {
-          return false;
-        }
-        if (searchTerm) {
-          const lowerCaseSearch = searchTerm.toLowerCase();
-          return (
-            (vehicle.licensePlate && vehicle.licensePlate.toLowerCase().includes(lowerCaseSearch)) ||
-            (vehicle.trailerLicensePlate && vehicle.trailerLicensePlate.toLowerCase().includes(lowerCaseSearch)) ||
-            (vehicle.makeName && vehicle.makeName.toLowerCase().includes(lowerCaseSearch)) ||
-            (vehicle.modelName && vehicle.modelName.toLowerCase().includes(lowerCaseSearch)) ||
-            (vehicle.driverName && vehicle.driverName.toLowerCase().includes(lowerCaseSearch)) ||
-            (vehicle.notes && vehicle.notes.toLowerCase().includes(lowerCaseSearch))
-          );
-        }
-        return true;
-      });
-  }, [vehicles, searchTerm, statusFilter, typeFilter, vehicleTypes, trailerTypes]);
-
-  // Хуудаслалтын тооцоо
-  const totalPages = Math.ceil(filteredVehicles.length / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedVehicles = filteredVehicles.slice(startIndex, endIndex);
-
-  // Хайлт/шүүлт өөрчлөгдөхөд эхний хуудас руу буцах
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter, typeFilter, pageSize]);
-
-  const getVehicleAlerts = (vehicle: Vehicle) => {
+  // Анхааруулга тооцоолох функц
+  const getVehicleAlerts = React.useCallback((vehicle: Vehicle) => {
     const alerts: { type: 'warning' | 'destructive', message: string }[] = [];
 
     if (vehicle.dates) {
@@ -257,7 +219,68 @@ export default function VehiclesPage() {
     }
 
     return alerts;
-  };
+  }, []);
+
+  // Шүүлт хийгдсэн жагсаалт
+  const filteredVehicles = React.useMemo(() => {
+    return vehicles
+      .map(v => {
+        const vehicleTypeName = vehicleTypes.find(vt => vt.id === v.vehicleTypeId)?.name || v.vehicleTypeId;
+        const trailerTypeName = trailerTypes.find(tt => tt.id === v.trailerTypeId)?.name || v.trailerTypeId;
+        return { ...v, vehicleTypeName, trailerTypeName };
+      })
+      .filter(vehicle => {
+        // Төлөвөөр шүүх
+        if (statusFilter !== 'all' && vehicle.status !== statusFilter) {
+          return false;
+        }
+        // Төрлөөр шүүх
+        if (typeFilter !== 'all' && vehicle.vehicleTypeId !== typeFilter) {
+          return false;
+        }
+        // Анхааруулгаар шүүх
+        if (alertFilter !== 'all') {
+          const alerts = getVehicleAlerts(vehicle);
+          if (alertFilter === 'expired') {
+            // Хугацаа дууссан
+            if (!alerts.some(a => a.type === 'destructive')) return false;
+          } else if (alertFilter === 'warning') {
+            // Дуусах дөхсөн (30 хоногоос бага)
+            if (!alerts.some(a => a.type === 'warning')) return false;
+          } else if (alertFilter === 'any') {
+            // Аль нэг анхааруулгатай
+            if (alerts.length === 0) return false;
+          } else if (alertFilter === 'none') {
+            // Анхааруулгагүй
+            if (alerts.length > 0) return false;
+          }
+        }
+        // Хайлтаар шүүх
+        if (searchTerm) {
+          const lowerCaseSearch = searchTerm.toLowerCase();
+          return (
+            (vehicle.licensePlate && vehicle.licensePlate.toLowerCase().includes(lowerCaseSearch)) ||
+            (vehicle.trailerLicensePlate && vehicle.trailerLicensePlate.toLowerCase().includes(lowerCaseSearch)) ||
+            (vehicle.makeName && vehicle.makeName.toLowerCase().includes(lowerCaseSearch)) ||
+            (vehicle.modelName && vehicle.modelName.toLowerCase().includes(lowerCaseSearch)) ||
+            (vehicle.driverName && vehicle.driverName.toLowerCase().includes(lowerCaseSearch)) ||
+            (vehicle.notes && vehicle.notes.toLowerCase().includes(lowerCaseSearch))
+          );
+        }
+        return true;
+      });
+  }, [vehicles, searchTerm, statusFilter, typeFilter, alertFilter, vehicleTypes, trailerTypes, getVehicleAlerts]);
+
+  // Хуудаслалтын тооцоо
+  const totalPages = Math.ceil(filteredVehicles.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedVehicles = filteredVehicles.slice(startIndex, endIndex);
+
+  // Хайлт/шүүлт өөрчлөгдөхөд эхний хуудас руу буцах
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, typeFilter, alertFilter, pageSize]);
 
   if (!db) {
     return (
@@ -402,6 +425,28 @@ export default function VehiclesPage() {
                 {vehicleTypes.map(type => (
                   <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={alertFilter} onValueChange={setAlertFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Анхааруулга..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Бүх анхааруулга</SelectItem>
+                <SelectItem value="expired">
+                  <span className="flex items-center gap-2">
+                    <AlertTriangle className="h-3 w-3 text-destructive" />
+                    Хугацаа дууссан
+                  </span>
+                </SelectItem>
+                <SelectItem value="warning">
+                  <span className="flex items-center gap-2">
+                    <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                    Дуусах дөхсөн
+                  </span>
+                </SelectItem>
+                <SelectItem value="any">Аль нэг анхааруулгатай</SelectItem>
+                <SelectItem value="none">Анхааруулгагүй</SelectItem>
               </SelectContent>
             </Select>
             </div>
