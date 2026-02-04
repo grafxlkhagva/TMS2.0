@@ -160,7 +160,10 @@ export default function NewOrderPage() {
         description: `${orderNumber} дугаартай шинэ захиалгыг системд бүртгэлээ.`,
       });
       
+      // Redirect to the new order's detail page
+      setIsSubmitting(false);
       router.push(`/orders/${docRef.id}`);
+      return;
 
     } catch (error) {
       console.error('Error creating order:', error);
@@ -169,7 +172,6 @@ export default function NewOrderPage() {
         title: 'Алдаа',
         description: 'Захиалга бүртгэхэд алдаа гарлаа. Та дахин оролдоно уу.',
       });
-    } finally {
       setIsSubmitting(false);
     }
   }
