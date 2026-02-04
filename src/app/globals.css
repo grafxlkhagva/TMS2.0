@@ -10,25 +10,26 @@ body {
 
 @layer base {
   :root {
-    --background: 220 25% 97%;
-    --foreground: 222.2 84% 4.9%;
+    /* Neutral enterprise theme */
+    --background: 210 20% 98%;
+    --foreground: 222.2 47.4% 11.2%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 222.2 47.4% 11.2%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 222.2 47.4% 11.2%;
 
-    --primary: 215 50% 45%;
+    --primary: 222 83% 53%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 215 20% 92%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 215 25% 95%;
+    --muted: 210 20% 96%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 215 60% 94%;
+    --accent: 210 20% 94%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
@@ -36,7 +37,13 @@ body {
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 215 50% 45%;
+    --ring: 222 83% 53%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 210 40% 98%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 222.2 47.4% 11.2%;
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -44,27 +51,27 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
 
-    --sidebar-background: 228 50% 23%;
-    --sidebar-foreground: 0 0% 100%;
+    --sidebar-background: 222.2 47.4% 11.2%;
+    --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 210 40% 98%;
     --sidebar-primary-foreground: 222.2 47.4% 11.2%;
-    --sidebar-accent: 228 50% 33%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 228 50% 33%;
-    --sidebar-ring: 212.7 26.8% 83.9%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 222 83% 53%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 222.2 47.4% 7%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 222.2 47.4% 10%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 222.2 47.4% 10%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
+    --primary: 222 83% 60%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
@@ -82,6 +89,12 @@ body {
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+
+    --success: 142 70% 45%;
+    --success-foreground: 210 40% 98%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 222.2 47.4% 11.2%;
     
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -89,22 +102,15 @@ body {
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
 
-    --sidebar-background: 228 50% 23%;
-    --sidebar-foreground: 0 0% 100%;
+    --sidebar-background: 222.2 47.4% 11.2%;
+    --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 210 40% 98%;
     --sidebar-primary-foreground: 222.2 47.4% 11.2%;
-    --sidebar-accent: 228 50% 33%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 228 50% 33%;
-    --sidebar-ring: 212.7 26.8% 83.9%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 222 83% 60%;
   }
-
-  .dark .dark-card-1 { background-color: hsl(220 80% 20%); color: hsl(210 40% 98%); .text-muted-foreground { color: hsl(210 40% 98% / 0.7); } }
-  .dark .dark-card-2 { background-color: hsl(300 80% 20%); color: hsl(210 40% 98%); .text-muted-foreground { color: hsl(210 40% 98% / 0.7); } }
-  .dark .dark-card-3 { background-color: hsl(145 70% 20%); color: hsl(210 40% 98%); .text-muted-foreground { color: hsl(210 40% 98% / 0.7); } }
-  .dark .dark-card-4 { background-color: hsl(45 90% 25%);  color: hsl(210 40% 98%); .text-muted-foreground { color: hsl(210 40% 98% / 0.7); } }
-  .dark .dark-card-5 { background-color: hsl(25 95% 25%);  color: hsl(210 40% 98%); .text-muted-foreground { color: hsl(210 40% 98% / 0.7); } }
-  .dark .dark-card-6 { background-color: hsl(0 80% 30%);   color: hsl(210 40% 98%); .text-muted-foreground { color: hsl(210 40% 98% / 0.7); } }
 }
 
 @layer base {

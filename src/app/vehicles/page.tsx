@@ -43,47 +43,13 @@ import { Input } from '@/components/ui/input';
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { Check, Truck, Wrench as WrenchIcon } from 'lucide-react';
+import { EmptyState, KpiCard, KpiGrid, PageContainer, PageHeader } from '@/components/patterns';
 
 function StatusBadge({ status }: { status: VehicleStatus }) {
   const variant = status === 'Available' ? 'success' : status === 'Maintenance' ? 'destructive' : status === 'Ready' ? 'default' : 'secondary';
   const text = status === 'Available' ? 'Сул' : status === 'In Use' ? 'Ашиглаж буй' : status === 'Maintenance' ? 'Засварт' : 'Бэлэн';
   return <Badge variant={variant}>{text}</Badge>;
 }
-
-type StatCardProps = {
-  title: string;
-  value: string | number;
-  icon: React.ElementType;
-  isLoading: boolean;
-};
-
-function StatCard({ title, value, icon: Icon, isLoading }: StatCardProps) {
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">{title}</CardTitle>
-          <Skeleton className="h-4 w-4" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-8 w-1/2" />
-        </CardContent>
-      </Card>
-    )
-  }
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-      </CardContent>
-    </Card>
-  );
-}
-
 
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = React.useState<Vehicle[]>([]);
@@ -284,40 +250,42 @@ export default function VehiclesPage() {
 
   if (!db) {
     return (
-      <div className="flex items-center justify-center h-40">
-        <p className="text-muted-foreground">Системтэй холбогдоход алдаа гарлаа. (Firestore initialization failed)</p>
-      </div>
+      <PageContainer>
+        <EmptyState
+          title="Системтэй холбогдож чадсангүй"
+          description="Firestore initialization failed. Тохиргоогоо шалгаад дахин оролдоно уу."
+        />
+      </PageContainer>
     );
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-headline font-bold">Тээврийн хэрэгсэл</h1>
-          <p className="text-muted-foreground">
-            Бүртгэлтэй тээврийн хэрэгслүүдийн нэгдсэн хяналт болон жагсаалт.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading}>
-            <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
-          </Button>
-          <Button asChild>
-            <Link href="/vehicles/new">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Шинэ хэрэгсэл
-            </Link>
-          </Button>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Тээврийн хэрэгсэл"
+        description="Бүртгэлтэй тээврийн хэрэгслүүдийн нэгдсэн хяналт болон жагсаалт."
+        actions={
+          <>
+            <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading}>
+              <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
+              <span className="sr-only">Сэргээх</span>
+            </Button>
+            <Button asChild>
+              <Link href="/vehicles/new">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Шинэ хэрэгсэл
+              </Link>
+            </Button>
+          </>
+        }
+      />
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Нийт" value={stats.total} icon={Car} isLoading={isLoading} />
-        <StatCard title="Сул" value={stats.available} icon={Check} isLoading={isLoading} />
-        <StatCard title="Ашиглаж буй" value={stats.inUse} icon={Truck} isLoading={isLoading} />
-        <StatCard title="Засварт" value={stats.maintenance} icon={WrenchIcon} isLoading={isLoading} />
-      </div>
+      <KpiGrid>
+        <KpiCard title="Нийт" value={stats.total} icon={Car} isLoading={isLoading} />
+        <KpiCard title="Сул" value={stats.available} icon={Check} isLoading={isLoading} />
+        <KpiCard title="Ашиглаж буй" value={stats.inUse} icon={Truck} isLoading={isLoading} />
+        <KpiCard title="Засварт" value={stats.maintenance} icon={WrenchIcon} isLoading={isLoading} />
+      </KpiGrid>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
@@ -460,7 +428,7 @@ export default function VehiclesPage() {
               <span>Хугацаа дууссан</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              <AlertTriangle className="h-4 w-4 text-warning" />
               <span>30 хоногоос бага үлдсэн</span>
             </div>
             <span className="text-muted-foreground">|</span>
@@ -525,7 +493,7 @@ export default function VehiclesPage() {
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger>
-                                    <AlertTriangle className={cn("h-4 w-4", alerts.some(a => a.type === 'destructive') ? "text-destructive" : "text-yellow-500")} />
+                                    <AlertTriangle className={cn("h-4 w-4", alerts.some(a => a.type === 'destructive') ? "text-destructive" : "text-warning")} />
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     {alerts.map((alert, i) => (
@@ -583,8 +551,12 @@ export default function VehiclesPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center h-24">
-                    Тээврийн хэрэгсэл бүртгэлгүй байна.
+                  <TableCell colSpan={11} className="p-0">
+                    <EmptyState
+                      icon={Car}
+                      title="Тээврийн хэрэгсэл олдсонгүй"
+                      description="Одоогоор системд тээврийн хэрэгсэл бүртгэлгүй байна."
+                    />
                   </TableCell>
                 </TableRow>
               )}
@@ -698,7 +670,7 @@ export default function VehiclesPage() {
         onOpenChange={setIsDialogOpen}
         onSuccess={fetchData}
       />
-    </div>
+    </PageContainer>
   );
 }
 

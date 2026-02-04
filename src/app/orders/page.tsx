@@ -3,22 +3,19 @@
 'use client';
 
 import * as React from 'react';
-import { collection, getDocs, orderBy, query, doc, deleteDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, doc, where, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Order } from '@/types';
+import { useRouter } from 'next/navigation';
 import {
-    Table,
-    TableBody,
     TableCell,
     TableHead,
-    TableHeader,
     TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { MoreHorizontal, PlusCircle, RefreshCw, Eye, Edit, Trash2, Search, FileText, Loader2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, RefreshCw, Eye, Edit, Trash2, Search, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -30,22 +27,22 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import {
-    AlertDialog,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 
 import { OrderStats } from '@/components/orders/order-stats';
 import { OrderFilters } from '@/components/orders/order-filters';
 import { DateRange } from 'react-day-picker';
 import { isWithinInterval } from 'date-fns';
+import {
+    ConfirmDialog,
+    DataTable,
+    EmptyState,
+    FilterBar,
+    PageContainer,
+    PageHeader,
+} from '@/components/patterns';
 
 export default function OrdersPage() {
+    const router = useRouter();
     const [orders, setOrders] = React.useState<Order[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [searchTerm, setSearchTerm] = React.useState('');
@@ -177,24 +174,32 @@ export default function OrdersPage() {
         });
     }, [orders, searchTerm, statusFilter, dateRange]);
 
+    const handleRowNavigate = React.useCallback(
+        (e: React.MouseEvent | React.KeyboardEvent, orderId: string) => {
+            // Don't navigate when interacting with controls inside the row.
+            const target = e.target as HTMLElement | null;
+            if (target?.closest('a,button,input,select,textarea,[role="menuitem"],[data-no-row-nav="true"]')) {
+                return;
+            }
+            router.push(`/orders/${orderId}`);
+        },
+        [router]
+    );
+
     return (
-        <div className="container mx-auto py-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                <div>
-                    <h1 className="text-3xl font-headline font-bold text-foreground">Захиалгын удирдлага</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Бүх захиалгуудыг хянах, удирдах хэсэг
-                    </p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Button asChild className="bg-primary hover:bg-primary/90 shadow-sm">
+        <PageContainer size="comfortable">
+            <PageHeader
+                title="Захиалгын удирдлага"
+                description="Бүх захиалгуудыг хянах, удирдах хэсэг"
+                actions={
+                    <Button asChild>
                         <Link href="/orders/new">
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Шинэ захиалга
                         </Link>
                     </Button>
-                </div>
-            </div>
+                }
+            />
 
             <OrderStats
                 totalOrders={stats.total}
@@ -205,10 +210,24 @@ export default function OrdersPage() {
 
             <Card className="shadow-sm border-border/50">
                 <CardHeader className="pb-3">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <FilterBar
+                        right={
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-9 w-9 shrink-0"
+                                onClick={fetchOrders}
+                                disabled={isLoading}
+                            >
+                                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                            </Button>
+                        }
+                    >
                         <div className="flex flex-col gap-1">
                             <CardTitle>Захиалгууд</CardTitle>
-                            <CardDescription>Нийт {filteredOrders.length} захиалга илэрцээс харж байна.</CardDescription>
+                            <CardDescription>
+                                Нийт {filteredOrders.length} захиалга илэрцээс харж байна.
+                            </CardDescription>
                         </div>
                         <div className="flex flex-col md:flex-row items-start md:items-center gap-2 w-full md:w-auto">
                             <OrderFilters
@@ -226,132 +245,152 @@ export default function OrdersPage() {
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
-                            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={fetchOrders} disabled={isLoading}>
-                                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                            </Button>
                         </div>
-                    </div>
+                    </FilterBar>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
+                    <DataTable
+                        header={
                             <TableRow className="hover:bg-transparent">
                                 <TableHead className="w-[180px]">Захиалгын дугаар</TableHead>
                                 <TableHead>Харилцагч</TableHead>
                                 <TableHead>Статус</TableHead>
                                 <TableHead>Бүртгэсэн ажилтан</TableHead>
                                 <TableHead>Бүртгүүлсэн</TableHead>
-                                <TableHead className="w-[70px]"><span className="sr-only">Үйлдэл</span></TableHead>
+                                <TableHead className="w-[70px]">
+                                    <span className="sr-only">Үйлдэл</span>
+                                </TableHead>
                             </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
-                                Array.from({ length: 5 }).map((_, index) => (
-                                    <TableRow key={index}>
-                                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                                        <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                        <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
-                                    </TableRow>
-                                ))
-                            ) : filteredOrders.length > 0 ? (
-                                filteredOrders.map((order) => (
-                                    <TableRow key={order.id} className="group cursor-pointer hover:bg-muted/50 transition-colors">
-                                        <TableCell className="font-mono font-medium text-primary">
-                                            <Link href={`/orders/${order.id}`} className="hover:underline flex items-center gap-2">
-                                                <FileText className="h-3 w-3 text-muted-foreground" />
-                                                {order.orderNumber}
-                                            </Link>
-                                        </TableCell>
-                                        <TableCell className="font-medium">{order.customerName}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={
-                                                order.status === 'Completed' ? 'success' :
-                                                    order.status === 'Cancelled' ? 'destructive' :
-                                                        order.status === 'Processing' ? 'default' :
-                                                            'secondary'
-                                            } className="shadow-none">
-                                                {order.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-muted-foreground text-sm">{order.createdBy?.name || 'N/A'}</TableCell>
-                                        <TableCell className="text-muted-foreground text-sm">{order.createdAt.toLocaleDateString()}</TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>Үйлдлүүд</DropdownMenuLabel>
-                                                    <DropdownMenuItem asChild>
-                                                        <Link href={`/orders/${order.id}`}>
-                                                            <Eye className="mr-2 h-4 w-4" />
-                                                            Дэлгэрэнгүй
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem asChild>
-                                                        <Link href={`/orders/${order.id}/edit`}>
-                                                            <Edit className="mr-2 h-4 w-4" />
-                                                            Засах
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => setOrderToDelete(order)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Устгах
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="h-64 flex flex-col items-center justify-center text-center">
-                                        <div className="bg-muted/30 p-4 rounded-full mb-4">
-                                            <Search className="h-8 w-8 text-muted-foreground" />
-                                        </div>
-                                        <h3 className="font-semibold text-lg">Захиалга олдсонгүй</h3>
-                                        <p className="text-muted-foreground max-w-sm mt-1">
-                                            {searchTerm ? `"${searchTerm}" хайлтад тохирох захиалга байхгүй байна.` : "Одоогоор системд ямар ч захиалга бүртгэгдээгүй байна."}
-                                        </p>
-                                        {searchTerm && (
-                                            <Button variant="link" onClick={() => setSearchTerm('')} className="mt-2">
-                                                Хайлт цэвэрлэх
+                        }
+                        colSpan={6}
+                        isLoading={isLoading}
+                        isEmpty={!isLoading && filteredOrders.length === 0}
+                        empty={
+                            <EmptyState
+                                icon={Search}
+                                title="Захиалга олдсонгүй"
+                                description={
+                                    searchTerm
+                                        ? `"${searchTerm}" хайлтад тохирох захиалга байхгүй байна.`
+                                        : "Одоогоор системд ямар ч захиалга бүртгэгдээгүй байна."
+                                }
+                                action={
+                                    searchTerm ? (
+                                        <Button variant="link" onClick={() => setSearchTerm('')}>
+                                            Хайлт цэвэрлэх
+                                        </Button>
+                                    ) : null
+                                }
+                            />
+                        }
+                    >
+                        {filteredOrders.map((order) => (
+                            <TableRow
+                                key={order.id}
+                                className="group cursor-pointer hover:bg-muted/50 transition-colors"
+                                tabIndex={0}
+                                onClick={(e) => handleRowNavigate(e, order.id)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        handleRowNavigate(e, order.id);
+                                    }
+                                }}
+                            >
+                                <TableCell className="font-mono font-medium text-primary">
+                                    <Link
+                                        href={`/orders/${order.id}`}
+                                        className="hover:underline flex items-center gap-2"
+                                    >
+                                        <FileText className="h-3 w-3 text-muted-foreground" />
+                                        {order.orderNumber}
+                                    </Link>
+                                </TableCell>
+                                <TableCell className="font-medium">{order.customerName}</TableCell>
+                                <TableCell>
+                                    <Badge
+                                        variant={
+                                            order.status === 'Completed'
+                                                ? 'success'
+                                                : order.status === 'Cancelled'
+                                                    ? 'destructive'
+                                                    : order.status === 'Processing'
+                                                        ? 'default'
+                                                        : 'secondary'
+                                        }
+                                        className="shadow-none"
+                                    >
+                                        {order.status}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                    {order.createdBy?.name || 'N/A'}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                    {order.createdAt.toLocaleDateString()}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:opacity-100 transition-opacity"
+                                                data-no-row-nav="true"
+                                            >
+                                                <MoreHorizontal className="h-4 w-4" />
+                                                <span className="sr-only">Үйлдэл</span>
                                             </Button>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>Үйлдлүүд</DropdownMenuLabel>
+                                            <DropdownMenuItem asChild>
+                                                <Link href={`/orders/${order.id}`}>
+                                                    <Eye className="mr-2 h-4 w-4" />
+                                                    Дэлгэрэнгүй
+                                                </Link>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem asChild>
+                                                <Link href={`/orders/${order.id}/edit`}>
+                                                    <Edit className="mr-2 h-4 w-4" />
+                                                    Засах
+                                                </Link>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                                onClick={() => setOrderToDelete(order)}
+                                                className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                            >
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Устгах
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </DataTable>
                 </CardContent>
             </Card>
-            <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !isDeleting && setOrderToDelete(open ? orderToDelete : null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Захиалга устгах</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Та "{orderToDelete?.orderNumber}" дугаартай захиалгыг устгахдаа итгэлтэй байна уу? <br /><br />
-                            <span className="text-destructive font-medium">Анхааруулга:</span> Энэ үйлдэл нь захиалгатай холбоотой бүх тээвэрлэлт, үнийн санал болон бусад мэдээллийг бүрмөсөн устгана. Буцаах боломжгүй.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isDeleting}>Цуцлах</AlertDialogCancel>
-                        <Button 
-                            onClick={handleDeleteOrder}
-                            disabled={isDeleting} 
-                            variant="destructive"
-                        >
-                            {isDeleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Устгаж байна...</> : "Устгах"}
-                        </Button>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </div>
+            <ConfirmDialog
+                open={!!orderToDelete}
+                onOpenChange={(open) => {
+                    if (!open) setOrderToDelete(null);
+                }}
+                title="Захиалга устгах"
+                description={
+                    <>
+                        Та "{orderToDelete?.orderNumber}" дугаартай захиалгыг устгахдаа итгэлтэй байна уу?
+                        <br />
+                        <br />
+                        <span className="text-destructive font-medium">Анхааруулга:</span> Энэ үйлдэл нь захиалгатай
+                        холбоотой бүх тээвэрлэлт, үнийн санал болон бусад мэдээллийг бүрмөсөн устгана. Буцаах боломжгүй.
+                    </>
+                }
+                confirmLabel={isDeleting ? "Устгаж байна..." : "Устгах"}
+                isConfirming={isDeleting}
+                onConfirm={handleDeleteOrder}
+            />
+        </PageContainer>
     );
 }

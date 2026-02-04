@@ -11,16 +11,6 @@ import { CustomerStats } from '@/components/customers/CustomerStats';
 import { CustomerListTable } from '@/components/customers/CustomerListTable';
 import { customerService } from '@/services/customerService';
 import type { Customer } from '@/types';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import {
   Select,
@@ -29,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ConfirmDialog, PageContainer, PageHeader } from "@/components/patterns";
 
 // Client-side хайлт: нэр, утас, и-мэйл, регистрээр хайна
 function filterCustomers(customers: Customer[], term: string): Customer[] {
@@ -138,26 +129,25 @@ export default function CustomersPage() {
   };
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-headline font-bold">Харилцагчид</h1>
-          <p className="text-muted-foreground">
-            Бүртгэлтэй харилцагчдын жагсаалт.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={fetchCustomers} disabled={isLoading}>
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </Button>
-          <Button asChild>
-            <Link href="/customers/new">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Шинэ харилцагч
-            </Link>
-          </Button>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Харилцагчид"
+        description="Бүртгэлтэй харилцагчдын жагсаалт."
+        actions={
+          <>
+            <Button variant="outline" size="icon" onClick={fetchCustomers} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <span className="sr-only">Сэргээх</span>
+            </Button>
+            <Button asChild>
+              <Link href="/customers/new">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Шинэ харилцагч
+              </Link>
+            </Button>
+          </>
+        }
+      />
 
       <div className="space-y-6">
         {/* Stats нь бүх харилцагчаар тооцогдоно (хайлтаас хамааралгүй) */}
@@ -303,31 +293,24 @@ export default function CustomersPage() {
           )}
         </Card>
 
-        <AlertDialog open={!!customerToDelete} onOpenChange={(open) => !open && setCustomerToDelete(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
-              <AlertDialogDescription>
-                "{customerToDelete?.name}" нэртэй харилцагчийг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй. Энэ харилцагчтай холбоотой бүх ажилтны мэдээлэл мөн устгагдана.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>Цуцлах</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleDeleteCustomer();
-                }} 
-                disabled={isDeleting} 
-                className="bg-destructive hover:bg-destructive/90"
-              >
-                {isDeleting ? "Устгаж байна..." : "Устгах"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <ConfirmDialog
+          open={!!customerToDelete}
+          onOpenChange={(open) => {
+            if (!open) setCustomerToDelete(null);
+          }}
+          title="Та итгэлтэй байна уу?"
+          description={
+            <>
+              "{customerToDelete?.name}" нэртэй харилцагчийг устгах гэж байна. Энэ үйлдлийг буцаах боломжгүй. Энэ
+              харилцагчтай холбоотой бүх ажилтны мэдээлэл мөн устгагдана.
+            </>
+          }
+          confirmLabel={isDeleting ? "Устгаж байна..." : "Устгах"}
+          isConfirming={isDeleting}
+          onConfirm={handleDeleteCustomer}
+        />
       </div>
-    </div>
+    </PageContainer>
   );
 }
 

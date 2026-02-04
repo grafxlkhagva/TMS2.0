@@ -14,43 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Briefcase, CheckCircle, Clock, DollarSign } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-
-type StatCardProps = {
-    title: string;
-    value: string | number;
-    icon: React.ElementType;
-    description: string;
-    isLoading: boolean;
-};
-
-function StatCard({ title, value, icon: Icon, description, isLoading }: StatCardProps) {
-    if (isLoading) {
-        return (
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                    <Skeleton className="h-4 w-4" />
-                </CardHeader>
-                <CardContent>
-                    <Skeleton className="h-8 w-1/2" />
-                    <Skeleton className="h-4 w-3/4 mt-1" />
-                </CardContent>
-            </Card>
-        )
-    }
-    return (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{value}</div>
-                <p className="text-xs text-muted-foreground">{description}</p>
-            </CardContent>
-        </Card>
-    );
-}
+import { KpiCard, KpiGrid, LoadingState, PageContainer, PageHeader } from '@/components/patterns';
 
 export default function DashboardPage() {
     const [stats, setStats] = React.useState({
@@ -130,44 +94,42 @@ export default function DashboardPage() {
     }, [toast]);
 
     return (
-        <div className="container mx-auto py-6 space-y-6">
-            <div>
-                <h1 className="text-3xl font-headline font-bold">Удирдах самбар</h1>
-                <p className="text-muted-foreground">
-                    Системийн ерөнхий статистик мэдээлэл.
-                </p>
-            </div>
+        <PageContainer>
+            <PageHeader
+                title="Удирдах самбар"
+                description="Системийн ерөнхий статистик мэдээлэл."
+            />
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatCard
+            <KpiGrid>
+                <KpiCard
                     title="Нийт захиалга"
                     value={stats.totalOrders}
                     icon={Briefcase}
                     description="Системд бүртгэгдсэн нийт захиалгын тоо"
                     isLoading={isLoading}
                 />
-                <StatCard
+                <KpiCard
                     title="Амжилттай"
                     value={stats.completedOrders}
                     icon={CheckCircle}
                     description="Амжилттай дууссан захиалгын тоо"
                     isLoading={isLoading}
                 />
-                <StatCard
+                <KpiCard
                     title="Хүлээгдэж буй"
                     value={stats.pendingOrders}
                     icon={Clock}
                     description="Шинээр орж ирсэн, хүлээгдэж буй захиалга"
                     isLoading={isLoading}
                 />
-                 <StatCard
+                <KpiCard
                     title="Нийт орлого"
                     value={`${stats.totalRevenue.toLocaleString()}₮`}
                     icon={DollarSign}
                     description="Батлагдсан нийт тээвэрлэлтийн орлого"
                     isLoading={isLoading}
                 />
-            </div>
+            </KpiGrid>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="lg:col-span-2">
@@ -177,7 +139,7 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                        {isLoading ? (
-                           <Skeleton className="h-[350px] w-full" />
+                           <LoadingState variant="chart" />
                        ) : (
                          <div className="h-[350px]">
                             <ResponsiveContainer width="100%" height="100%">
@@ -238,6 +200,6 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
             </div>
-        </div>
+        </PageContainer>
     );
 }

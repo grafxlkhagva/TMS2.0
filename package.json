@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:webpack": "next dev",
     "dev:clean": "./scripts/start-dev.sh",
     "deploy:rules": "./scripts/deploy-firestore-rules.sh",
     "deploy:rules:storage": "firebase deploy --only storage",
