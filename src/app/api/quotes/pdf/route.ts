@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Timestamp } from 'firebase/firestore';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const VAT_RATE = 0.1;
 
@@ -19,6 +21,35 @@ const convertTimestamps = (data: any): any => {
         return newData;
     }
     return data;
+};
+
+// Load and add custom font to jsPDF
+const addCyrillicFont = (doc: jsPDF) => {
+    try {
+        // Read font files
+        const fontDir = path.join(process.cwd(), 'src', 'fonts');
+        const regularFontPath = path.join(fontDir, 'Roboto-Regular.ttf');
+        const boldFontPath = path.join(fontDir, 'Roboto-Bold.ttf');
+        
+        if (fs.existsSync(regularFontPath)) {
+            const regularFontData = fs.readFileSync(regularFontPath);
+            const regularBase64 = regularFontData.toString('base64');
+            doc.addFileToVFS('Roboto-Regular.ttf', regularBase64);
+            doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+        }
+        
+        if (fs.existsSync(boldFontPath)) {
+            const boldFontData = fs.readFileSync(boldFontPath);
+            const boldBase64 = boldFontData.toString('base64');
+            doc.addFileToVFS('Roboto-Bold.ttf', boldBase64);
+            doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Error loading fonts:', error);
+        return false;
+    }
 };
 
 export async function POST(req: NextRequest) {
@@ -38,7 +69,11 @@ export async function POST(req: NextRequest) {
 
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
         
-        doc.setFont('helvetica');
+        // Add Cyrillic font support
+        const fontLoaded = addCyrillicFont(doc);
+        const fontFamily = fontLoaded ? 'Roboto' : 'helvetica';
+        
+        doc.setFont(fontFamily, 'normal');
         
         // Header
         doc.setFontSize(10);
@@ -53,7 +88,7 @@ export async function POST(req: NextRequest) {
 
         // Logo placeholder - right side
         doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
+        doc.setFont(fontFamily, 'bold');
         doc.setTextColor(255, 102, 0);
         doc.text('TUMEN TECH', 240, 25);
         doc.setFontSize(8);
@@ -63,9 +98,9 @@ export async function POST(req: NextRequest) {
 
         // Bill To
         doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
+        doc.setFont(fontFamily, 'bold');
         doc.text('BILL TO', 14, 55);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(fontFamily, 'normal');
         doc.text(order?.customerName || '', 14, 62);
         doc.text(order?.employeeName || '', 14, 69);
         doc.text(order?.employeeEmail || '', 14, 76);
@@ -107,7 +142,7 @@ export async function POST(req: NextRequest) {
                 cargoDesc,
                 startLocation,
                 endLocation,
-                item.totalDistance ? `${item.totalDistance}km` : '',
+                item.totalDistance ? `${item.totalDistance}км` : '',
                 getDetailName('vehicleTypes', item.vehicleTypeId),
                 getDetailName('trailerTypes', item.trailerTypeId),
                 Math.round(unitPrice).toLocaleString(),
@@ -121,21 +156,27 @@ export async function POST(req: NextRequest) {
         autoTable(doc, {
             startY: 92,
             head: [[
-                'No', 'Service Type', 'Cargo Info', 'Loading Point',
-                'Unloading Point', 'Distance', 'Vehicle Type', 'Trailer Size',
-                'Unit Price', 'Qty', 'Subtotal', 'VAT', 'Total'
+                '№', 'Үйлчилгээ', 'Ачааны мэдээлэл', 'Ачих цэг',
+                'Буулгах цэг', 'Зай', 'Машины төрөл', 'Чиргүүл',
+                'Нэгж үнэ', 'Тоо', 'Дүн', 'НӨАТ', 'Нийт'
             ]],
             body: tableData,
             theme: 'grid',
+            styles: {
+                font: fontFamily,
+                fontSize: 7,
+            },
             headStyles: {
                 fillColor: [79, 129, 189],
                 textColor: [255, 255, 255],
                 fontSize: 7,
-                halign: 'center'
+                halign: 'center',
+                font: fontFamily,
             },
             bodyStyles: {
                 fontSize: 7,
-                cellPadding: 2
+                cellPadding: 2,
+                font: fontFamily,
             },
             columnStyles: {
                 0: { cellWidth: 8, halign: 'center' },
@@ -160,19 +201,19 @@ export async function POST(req: NextRequest) {
         
         doc.setFillColor(217, 217, 217);
         doc.rect(14, finalY, 40, 7, 'F');
-        doc.setFont('helvetica', 'bold');
+        doc.setFont(fontFamily, 'bold');
         doc.setFontSize(9);
-        doc.text('Notes', 16, finalY + 5);
+        doc.text('Тайлбар', 16, finalY + 5);
 
-        doc.setFont('helvetica', 'normal');
+        doc.setFont(fontFamily, 'normal');
         doc.setFontSize(8);
         const notes = [
-            'Loading: Customer responsibility',
-            'Unloading: Customer responsibility',
-            'Vehicle availability: 24 hours',
-            'Transportation time: Standard 48 hours',
-            'Payment terms: According to contract',
-            'Insurance: Carrier liability insurance /3 billion/'
+            'Ачилт: Захиалагч тал хариуцна',
+            'Буулгалт: Захиалагч тал хариуцна',
+            'ТХ-ийн бэлэн байдал: 24 цаг',
+            'Тээвэрлэлтийн хугацаа: Стандартаар 48 цагын хугацаанд',
+            'Төлбөрийн нөхцөл: Гэрээний дагуу',
+            'Даатгал: Тээвэрлэгчийн хариуцлагын даатгал /3 тэрбум/'
         ];
         
         let noteY = finalY + 14;
