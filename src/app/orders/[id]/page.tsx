@@ -381,12 +381,15 @@ export default function OrderDetailPage() {
 
             await batch.commit();
 
+            // Close dialog and reset state BEFORE navigation
+            setIsDeletingOrder(false);
+            setShowDeleteOrderDialog(false);
+            
             toast({ title: 'Амжилттай', description: `Захиалга устгагдлаа.` });
             router.push('/orders');
         } catch (error) {
             console.error("Error deleting order:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалга устгахад алдаа гарлаа.' });
-        } finally {
             setIsDeletingOrder(false);
             setShowDeleteOrderDialog(false);
         }
@@ -982,7 +985,7 @@ export default function OrderDetailPage() {
                 </TabsContent>
             </Tabs>
 
-            <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+            <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !isSubmitting && !open && setItemToDelete(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
@@ -991,7 +994,7 @@ export default function OrderDetailPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isSubmitting}>Цуцлах</AlertDialogCancel>
+                        <AlertDialogCancel disabled={isSubmitting} onClick={() => setItemToDelete(null)}>Цуцлах</AlertDialogCancel>
                         <AlertDialogAction 
                             onClick={(e) => {
                                 e.preventDefault();
@@ -1006,7 +1009,7 @@ export default function OrderDetailPage() {
                 </AlertDialogContent>
             </AlertDialog>
 
-            <AlertDialog open={!!itemToShip} onOpenChange={(open) => !open && setItemToShip(null)}>
+            <AlertDialog open={!!itemToShip} onOpenChange={(open) => !isSubmitting && !open && setItemToShip(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Тээвэрлэлт үүсгэх</AlertDialogTitle>
@@ -1015,7 +1018,7 @@ export default function OrderDetailPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isSubmitting}>Цуцлах</AlertDialogCancel>
+                        <AlertDialogCancel disabled={isSubmitting} onClick={() => setItemToShip(null)}>Цуцлах</AlertDialogCancel>
                         <AlertDialogAction 
                             onClick={(e) => {
                                 e.preventDefault();
@@ -1029,7 +1032,7 @@ export default function OrderDetailPage() {
                 </AlertDialogContent>
             </AlertDialog>
 
-            <AlertDialog open={showDeleteOrderDialog} onOpenChange={setShowDeleteOrderDialog}>
+            <AlertDialog open={showDeleteOrderDialog} onOpenChange={(open) => !isDeletingOrder && setShowDeleteOrderDialog(open)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Захиалга устгах</AlertDialogTitle>
@@ -1038,7 +1041,7 @@ export default function OrderDetailPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isDeletingOrder}>Цуцлах</AlertDialogCancel>
+                        <AlertDialogCancel disabled={isDeletingOrder} onClick={() => setShowDeleteOrderDialog(false)}>Цуцлах</AlertDialogCancel>
                         <AlertDialogAction 
                             onClick={(e) => {
                                 e.preventDefault();
