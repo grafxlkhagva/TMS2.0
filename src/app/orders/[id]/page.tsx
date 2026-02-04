@@ -991,8 +991,15 @@ export default function OrderDetailPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Цуцлах</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteItem} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90">
+                        <AlertDialogCancel disabled={isSubmitting}>Цуцлах</AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleDeleteItem();
+                            }} 
+                            disabled={isSubmitting} 
+                            className="bg-destructive hover:bg-destructive/90"
+                        >
                             {isSubmitting ? "Устгаж байна..." : "Устгах"}
                         </AlertDialogAction>
                     </AlertDialogFooter>
@@ -1008,8 +1015,14 @@ export default function OrderDetailPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Цуцлах</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleCreateShipment} disabled={isSubmitting}>
+                        <AlertDialogCancel disabled={isSubmitting}>Цуцлах</AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleCreateShipment();
+                            }} 
+                            disabled={isSubmitting}
+                        >
                             {isSubmitting ? "Үүсгэж байна..." : "Тийм, үүсгэх"}
                         </AlertDialogAction>
                     </AlertDialogFooter>
@@ -1025,8 +1038,15 @@ export default function OrderDetailPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Цуцлах</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteOrder} disabled={isDeletingOrder} className="bg-destructive hover:bg-destructive/90">
+                        <AlertDialogCancel disabled={isDeletingOrder}>Цуцлах</AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleDeleteOrder();
+                            }} 
+                            disabled={isDeletingOrder} 
+                            className="bg-destructive hover:bg-destructive/90"
+                        >
                             {isDeletingOrder ? "Устгаж байна..." : "Устгах"}
                         </AlertDialogAction>
                     </AlertDialogFooter>

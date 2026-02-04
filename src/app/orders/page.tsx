@@ -336,8 +336,15 @@ export default function OrdersPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setOrderToDelete(null)}>Цуцлах</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteOrder} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                        <AlertDialogCancel disabled={isDeleting}>Цуцлах</AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleDeleteOrder();
+                            }} 
+                            disabled={isDeleting} 
+                            className="bg-destructive hover:bg-destructive/90"
+                        >
                             {isDeleting ? "Устгаж байна..." : "Устгах"}
                         </AlertDialogAction>
                     </AlertDialogFooter>
