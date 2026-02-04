@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import QuickAddDialog, { type QuickAddDialogProps } from '@/components/quick-add-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 
 const cargoItemSchema = z.object({
@@ -317,11 +318,59 @@ export default function EditOrderItemPage() {
                             <div className="space-y-4">
                                 <h5 className="font-semibold">Тээврийн чиглэл</h5>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <FormField control={form.control} name="startRegionId" render={({ field }) => (<FormItem><FormLabel>Ачих бүс</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map((r) => (<SelectItem key={r.id} value={r.id}> {r.name} </SelectItem>))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('regions', 'startRegionId')}><Plus className="h-4 w-4" /></Button></div><FormMessage /></FormItem>)} />
+                                    <FormField
+                                        control={form.control}
+                                        name="startRegionId"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Ачих бүс</FormLabel>
+                                                <div className="flex gap-2">
+                                                    <FormControl>
+                                                        <SearchableSelect
+                                                            items={(regions || []).map((r) => ({ value: r.id, label: r.name }))}
+                                                            value={field.value}
+                                                            onValueChange={field.onChange}
+                                                            placeholder="Ачих бүс..."
+                                                            searchPlaceholder="Бүс хайх..."
+                                                            emptyText="Бүс олдсонгүй."
+                                                        />
+                                                    </FormControl>
+                                                    <Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('regions', 'startRegionId')}>
+                                                        <Plus className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
                                     <FormField control={form.control} name="startWarehouseId" render={({ field }) => (<FormItem><FormLabel>Ачих агуулах</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Ачих агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map((w) => (<SelectItem key={w.id} value={w.id}> {w.name} </SelectItem>))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('warehouses', 'startWarehouseId')}><Plus className="h-4 w-4" /></Button></div><FormMessage /></FormItem>)} />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <FormField control={form.control} name="endRegionId" render={({ field }) => (<FormItem><FormLabel>Буулгах бүс</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах бүс..." /></SelectTrigger></FormControl><SelectContent>{regions.map((r) => (<SelectItem key={r.id} value={r.id}> {r.name} </SelectItem>))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('regions', 'endRegionId')}><Plus className="h-4 w-4" /></Button></div><FormMessage /></FormItem>)} />
+                                    <FormField
+                                        control={form.control}
+                                        name="endRegionId"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Буулгах бүс</FormLabel>
+                                                <div className="flex gap-2">
+                                                    <FormControl>
+                                                        <SearchableSelect
+                                                            items={(regions || []).map((r) => ({ value: r.id, label: r.name }))}
+                                                            value={field.value}
+                                                            onValueChange={field.onChange}
+                                                            placeholder="Буулгах бүс..."
+                                                            searchPlaceholder="Бүс хайх..."
+                                                            emptyText="Бүс олдсонгүй."
+                                                        />
+                                                    </FormControl>
+                                                    <Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('regions', 'endRegionId')}>
+                                                        <Plus className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
                                     <FormField control={form.control} name="endWarehouseId" render={({ field }) => (<FormItem><FormLabel>Буулгах агуулах</FormLabel><div className="flex gap-2"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Буулгах агуулах..." /></SelectTrigger></FormControl><SelectContent>{warehouses.map((w) => (<SelectItem key={w.id} value={w.id}> {w.name} </SelectItem>))}</SelectContent></Select><Button type="button" variant="outline" size="icon" onClick={() => handleQuickAdd('warehouses', 'endWarehouseId')}><Plus className="h-4 w-4" /></Button></div><FormMessage /></FormItem>)} />
                                 </div>
                                 <FormField control={form.control} name="totalDistance" render={({ field }) => (<FormItem><FormLabel>Нийт зам (км)</FormLabel><FormControl><Input type="number" placeholder="500" {...field} /></FormControl><FormMessage /></FormItem>)} />
