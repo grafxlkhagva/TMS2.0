@@ -3,8 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Timestamp } from 'firebase/firestore';
-import * as fs from 'fs';
-import * as path from 'path';
 
 const VAT_RATE = 0.1;
 
@@ -40,33 +38,8 @@ export async function POST(req: NextRequest) {
 
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
         
-        // Try to load custom Cyrillic font
-        let fontFamily = 'helvetica';
-        try {
-            const fontDir = path.join(process.cwd(), 'src', 'fonts');
-            const regularFontPath = path.join(fontDir, 'Roboto-Regular.ttf');
-            const boldFontPath = path.join(fontDir, 'Roboto-Bold.ttf');
-            
-            if (fs.existsSync(regularFontPath) && fs.existsSync(boldFontPath)) {
-                const regularFontData = fs.readFileSync(regularFontPath);
-                const boldFontData = fs.readFileSync(boldFontPath);
-                
-                const regularBase64 = regularFontData.toString('base64');
-                const boldBase64 = boldFontData.toString('base64');
-                
-                doc.addFileToVFS('Roboto-Regular.ttf', regularBase64);
-                doc.addFileToVFS('Roboto-Bold.ttf', boldBase64);
-                doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
-                doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
-                
-                fontFamily = 'Roboto';
-            }
-        } catch (fontError) {
-            console.error('Font loading error, falling back to helvetica:', fontError);
-            fontFamily = 'helvetica';
-        }
-        
-        doc.setFont(fontFamily, 'normal');
+        // Use default helvetica font
+        doc.setFont('helvetica', 'normal');
         
         // Header
         doc.setFontSize(10);
@@ -81,7 +54,7 @@ export async function POST(req: NextRequest) {
 
         // Logo placeholder - right side
         doc.setFontSize(16);
-        doc.setFont(fontFamily, 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setTextColor(255, 102, 0);
         doc.text('TUMEN TECH', 240, 25);
         doc.setFontSize(8);
@@ -91,9 +64,9 @@ export async function POST(req: NextRequest) {
 
         // Bill To
         doc.setFontSize(10);
-        doc.setFont(fontFamily, 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.text('BILL TO', 14, 55);
-        doc.setFont(fontFamily, 'normal');
+        doc.setFont('helvetica', 'normal');
         doc.text(order?.customerName || '', 14, 62);
         doc.text(order?.employeeName || '', 14, 69);
         doc.text(order?.employeeEmail || '', 14, 76);
@@ -146,18 +119,13 @@ export async function POST(req: NextRequest) {
             ];
         });
 
-        // Use Mongolian headers only if Roboto font is loaded, otherwise use English
-        const tableHeaders = fontFamily === 'Roboto' 
-            ? [['№', 'Үйлчилгээ', 'Ачааны мэдээлэл', 'Ачих цэг', 'Буулгах цэг', 'Зай', 'Машины төрөл', 'Чиргүүл', 'Нэгж үнэ', 'Тоо', 'Дүн', 'НӨАТ', 'Нийт']]
-            : [['No', 'Service', 'Cargo Info', 'Loading', 'Unloading', 'Dist', 'Vehicle', 'Trailer', 'Unit Price', 'Qty', 'Subtotal', 'VAT', 'Total']];
-
         autoTable(doc, {
             startY: 92,
-            head: tableHeaders,
+            head: [['No', 'Service', 'Cargo Info', 'Loading', 'Unloading', 'Dist', 'Vehicle', 'Trailer', 'Unit Price', 'Qty', 'Subtotal', 'VAT', 'Total']],
             body: tableData,
             theme: 'grid',
             styles: {
-                font: fontFamily,
+                font: 'helvetica',
                 fontSize: 7,
             },
             headStyles: {
@@ -165,12 +133,10 @@ export async function POST(req: NextRequest) {
                 textColor: [255, 255, 255],
                 fontSize: 7,
                 halign: 'center',
-                font: fontFamily,
             },
             bodyStyles: {
                 fontSize: 7,
                 cellPadding: 2,
-                font: fontFamily,
             },
             columnStyles: {
                 0: { cellWidth: 8, halign: 'center' },
@@ -195,30 +161,20 @@ export async function POST(req: NextRequest) {
         
         doc.setFillColor(217, 217, 217);
         doc.rect(14, finalY, 40, 7, 'F');
-        doc.setFont(fontFamily, 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(9);
-        doc.text(fontFamily === 'Roboto' ? 'Тайлбар' : 'Notes', 16, finalY + 5);
+        doc.text('Notes', 16, finalY + 5);
 
-        doc.setFont(fontFamily, 'normal');
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
-        
-        const notes = fontFamily === 'Roboto' 
-            ? [
-                'Ачилт: Захиалагч тал хариуцна',
-                'Буулгалт: Захиалагч тал хариуцна',
-                'ТХ-ийн бэлэн байдал: 24 цаг',
-                'Тээвэрлэлтийн хугацаа: Стандартаар 48 цагын хугацаанд',
-                'Төлбөрийн нөхцөл: Гэрээний дагуу',
-                'Даатгал: Тээвэрлэгчийн хариуцлагын даатгал /3 тэрбум/'
-            ]
-            : [
-                'Loading: Customer responsibility',
-                'Unloading: Customer responsibility',
-                'Vehicle availability: 24 hours',
-                'Transportation time: Standard 48 hours',
-                'Payment terms: According to contract',
-                'Insurance: Carrier liability insurance /3 billion/'
-            ];
+        const notes = [
+            'Loading: Customer responsibility',
+            'Unloading: Customer responsibility',
+            'Vehicle availability: 24 hours',
+            'Transportation time: Standard 48 hours',
+            'Payment terms: According to contract',
+            'Insurance: Carrier liability insurance /3 billion/'
+        ];
         
         let noteY = finalY + 14;
         notes.forEach(note => {
