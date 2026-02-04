@@ -168,7 +168,20 @@ export default function QuotePage() {
             });
             
             if (!response.ok) {
-                throw new Error('PDF файл үүсгэхэд алдаа гарлаа');
+                let msg = 'PDF файл үүсгэхэд алдаа гарлаа';
+                try {
+                    const ct = response.headers.get('content-type') || '';
+                    if (ct.includes('application/json')) {
+                        const data = await response.json();
+                        if (typeof data === 'string') msg = data;
+                        else if (typeof (data as any)?.message === 'string') msg = (data as any).message;
+                        else msg = JSON.stringify(data);
+                    } else {
+                        const text = await response.text();
+                        if (text) msg = text;
+                    }
+                } catch {}
+                throw new Error(String(msg));
             }
 
             const blob = await response.blob();
@@ -184,7 +197,8 @@ export default function QuotePage() {
 
         } catch (error) {
             console.error('PDF export error:', error);
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'PDF үүсгэхэд алдаа гарлаа.' });
+            const msg = error instanceof Error ? error.message : String(error);
+            toast({ variant: 'destructive', title: 'Алдаа', description: msg });
         } finally {
             setIsPdfExporting(false);
         }
