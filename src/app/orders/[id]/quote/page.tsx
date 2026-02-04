@@ -8,8 +8,7 @@ import { useParams, useRouter } from 'next/navigation';
 import type { Order, OrderItem, Warehouse, ServiceType, VehicleType, TrailerType, Region, PackagingType, OrderItemCargo } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { format } from "date-fns"
-import Image from 'next/image';
+import { format } from "date-fns";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -25,8 +24,6 @@ import {
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 const VAT_RATE = 0.1;
 
@@ -157,153 +154,32 @@ export default function QuotePage() {
         setIsPdfExporting(true);
 
         try {
-            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-            
-            // Add Mongolian font support - use default for now
-            doc.setFont('helvetica');
-            
-            // Header
-            doc.setFontSize(10);
-            doc.text('Ulaanbaatar city, Mongolia', 14, 15);
-            doc.text('Tumen Resources LLC, Mongol HD TOWER-905,', 14, 22);
-            doc.text('Sukhbaatar district, Baga toiruu-49, 210646, Ulaanbaatar city, Mongolia', 14, 29);
-            
-            doc.setTextColor(0, 0, 255);
-            doc.text('www.tumentech.mn', 14, 38);
-            doc.setTextColor(0, 0, 0);
-            doc.text('7775-1111', 14, 45);
+            const payload = {
+                order,
+                orderItems: selectedOrderItems,
+                allData,
+                quoteNumber
+            };
 
-            // Logo placeholder - right side
-            doc.setFontSize(16);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(255, 102, 0);
-            doc.text('TUMEN TECH', 240, 25);
-            doc.setFontSize(8);
-            doc.setTextColor(100, 100, 100);
-            doc.text('DIGITAL TRUCKING COMPANY', 240, 32);
-            doc.setTextColor(0, 0, 0);
-
-            // Bill To
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.text('BILL TO', 14, 55);
-            doc.setFont('helvetica', 'normal');
-            doc.text(order?.customerName || '', 14, 62);
-            doc.text(order?.employeeName || '', 14, 69);
-            doc.text(order?.employeeEmail || '', 14, 76);
-            doc.text(order?.employeePhone || '', 14, 83);
-
-            // Quote Info - right side
-            doc.text('Quote No:', 230, 62);
-            doc.text(quoteNumber, 260, 62);
-            doc.text('Quote Date:', 230, 69);
-            doc.text(format(new Date(), 'M/d/yyyy'), 260, 69);
-
-            // Table
-            const tableData = selectedOrderItems.map((item, index) => {
-                const finalPrice = item.finalPrice || 0;
-                const frequency = item.frequency || 1;
-                const unitPrice = frequency > 0 ? finalPrice / frequency : finalPrice;
-                const priceBeforeVat = item.withVAT ? finalPrice / (1 + VAT_RATE) : finalPrice;
-                const vatAmount = item.withVAT ? finalPrice - priceBeforeVat : 0;
-
-                const cargoDesc = item.cargoItems?.map((c: any) => {
-                    const parts = [];
-                    if (c.name) parts.push(c.name);
-                    if (c.quantity && c.unit) parts.push(`(${c.quantity} ${c.unit})`);
-                    return parts.join(' ');
-                }).join(', ') || '';
-
-                const startRegion = getDetailName('regions', item.startRegionId);
-                const startWarehouse = getDetailName('warehouses', item.startWarehouseId);
-                const startLocation = [startWarehouse, startRegion].filter(Boolean).join(', ');
-
-                const endRegion = getDetailName('regions', item.endRegionId);
-                const endWarehouse = getDetailName('warehouses', item.endWarehouseId);
-                const endLocation = [endWarehouse, endRegion].filter(Boolean).join(', ');
-
-                return [
-                    index + 1,
-                    getDetailName('serviceTypes', item.serviceTypeId),
-                    cargoDesc,
-                    startLocation,
-                    endLocation,
-                    item.totalDistance ? `${item.totalDistance}km` : '',
-                    getDetailName('vehicleTypes', item.vehicleTypeId),
-                    getDetailName('trailerTypes', item.trailerTypeId),
-                    unitPrice.toLocaleString(),
-                    frequency,
-                    Math.round(priceBeforeVat).toLocaleString(),
-                    Math.round(vatAmount).toLocaleString(),
-                    Math.round(finalPrice).toLocaleString()
-                ];
+            const response = await fetch('/api/quotes/pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
             });
-
-            autoTable(doc, {
-                startY: 92,
-                head: [[
-                    'No', 'Service Type', 'Cargo Info', 'Loading Point',
-                    'Unloading Point', 'Distance', 'Vehicle Type', 'Trailer Size',
-                    'Unit Price', 'Qty', 'Subtotal', 'VAT', 'Total'
-                ]],
-                body: tableData,
-                theme: 'grid',
-                headStyles: {
-                    fillColor: [79, 129, 189],
-                    textColor: [255, 255, 255],
-                    fontSize: 7,
-                    halign: 'center'
-                },
-                bodyStyles: {
-                    fontSize: 7,
-                    cellPadding: 2
-                },
-                columnStyles: {
-                    0: { cellWidth: 8, halign: 'center' },
-                    1: { cellWidth: 20 },
-                    2: { cellWidth: 35 },
-                    3: { cellWidth: 25 },
-                    4: { cellWidth: 25 },
-                    5: { cellWidth: 15 },
-                    6: { cellWidth: 20 },
-                    7: { cellWidth: 25 },
-                    8: { cellWidth: 18, halign: 'right' },
-                    9: { cellWidth: 10, halign: 'center' },
-                    10: { cellWidth: 20, halign: 'right' },
-                    11: { cellWidth: 18, halign: 'right' },
-                    12: { cellWidth: 20, halign: 'right' }
-                },
-                margin: { left: 14, right: 14 }
-            });
-
-            // Notes section
-            const finalY = (doc as any).lastAutoTable.finalY + 10;
             
-            doc.setFillColor(217, 217, 217);
-            doc.rect(14, finalY, 40, 7, 'F');
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(9);
-            doc.text('Notes', 16, finalY + 5);
+            if (!response.ok) {
+                throw new Error('PDF файл үүсгэхэд алдаа гарлаа');
+            }
 
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(8);
-            const notes = [
-                'Loading: Customer responsibility',
-                'Unloading: Customer responsibility',
-                'Vehicle availability: 24 hours',
-                'Transportation time: Standard 48 hours',
-                'Payment terms: According to contract',
-                'Insurance: Carrier liability insurance /3 billion/'
-            ];
-            
-            let noteY = finalY + 14;
-            notes.forEach(note => {
-                doc.text(note, 16, noteY);
-                noteY += 5;
-            });
-
-            // Save PDF
-            doc.save(`quote-${quoteNumber}.pdf`);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `quote-${quoteNumber}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
             toast({ title: 'Амжилттай', description: 'PDF файл татагдлаа.' });
 
         } catch (error) {
