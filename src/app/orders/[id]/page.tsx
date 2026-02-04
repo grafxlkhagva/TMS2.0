@@ -358,6 +358,12 @@ export default function OrderDetailPage() {
     const handleDeleteOrder = async () => {
         if (!order || !db) return;
         setIsDeletingOrder(true);
+        
+        // Blur active element to prevent aria-hidden focus conflict
+        if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+        }
+        
         try {
             const batch = writeBatch(db);
             const orderRef = doc(db, 'orders', order.id);
@@ -381,12 +387,15 @@ export default function OrderDetailPage() {
 
             await batch.commit();
 
-            // Close dialog and reset state BEFORE navigation
+            toast({ title: 'Амжилттай', description: `Захиалга устгагдлаа.` });
+            
+            // Close dialog first, then navigate after a short delay
             setIsDeletingOrder(false);
             setShowDeleteOrderDialog(false);
             
-            toast({ title: 'Амжилттай', description: `Захиалга устгагдлаа.` });
-            router.push('/orders');
+            setTimeout(() => {
+                router.push('/orders');
+            }, 100);
         } catch (error) {
             console.error("Error deleting order:", error);
             toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалга устгахад алдаа гарлаа.' });
@@ -398,6 +407,12 @@ export default function OrderDetailPage() {
     const handleDeleteItem = async () => {
         if (!itemToDelete || !db) return;
         setIsSubmitting(true);
+        
+        // Blur active element to prevent aria-hidden focus conflict
+        if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+        }
+        
         try {
             const batch = writeBatch(db);
             const itemRef = doc(db, 'order_items', itemToDelete.id);
@@ -652,6 +667,12 @@ export default function OrderDetailPage() {
         if (!itemToShip || !order || !itemToShip.acceptedQuoteId || !db) return;
 
         setIsSubmitting(true);
+        
+        // Blur active element to prevent aria-hidden focus conflict
+        if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+        }
+        
         try {
             const acceptedQuote = (quotes.get(itemToShip.id) || []).find(q => q.id === itemToShip.acceptedQuoteId);
             if (!acceptedQuote) {

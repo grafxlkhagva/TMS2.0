@@ -109,6 +109,12 @@ export default function OrdersPage() {
     const handleDeleteOrder = async () => {
         if (!orderToDelete || !db) return;
         setIsDeleting(true);
+        
+        // Blur active element to prevent aria-hidden focus conflict
+        if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+        }
+        
         try {
             const batch = writeBatch(db);
             const orderRef = doc(db, 'orders', orderToDelete.id);
