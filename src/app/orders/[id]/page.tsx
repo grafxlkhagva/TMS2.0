@@ -28,7 +28,6 @@ import {
 } from '@/components/ui/table';
 import {
     AlertDialog,
-    AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
     AlertDialogDescription,
@@ -1006,7 +1005,7 @@ export default function OrderDetailPage() {
                 </TabsContent>
             </Tabs>
 
-            <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !isSubmitting && !open && setItemToDelete(null)}>
+            <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !isSubmitting && setItemToDelete(open ? itemToDelete : null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Та итгэлтэй байна уу?</AlertDialogTitle>
@@ -1015,22 +1014,19 @@ export default function OrderDetailPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isSubmitting} onClick={() => setItemToDelete(null)}>Цуцлах</AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handleDeleteItem();
-                            }} 
+                        <AlertDialogCancel disabled={isSubmitting}>Цуцлах</AlertDialogCancel>
+                        <Button 
+                            onClick={handleDeleteItem}
                             disabled={isSubmitting} 
-                            className="bg-destructive hover:bg-destructive/90"
+                            variant="destructive"
                         >
-                            {isSubmitting ? "Устгаж байна..." : "Устгах"}
-                        </AlertDialogAction>
+                            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Устгаж байна...</> : "Устгах"}
+                        </Button>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
 
-            <AlertDialog open={!!itemToShip} onOpenChange={(open) => !isSubmitting && !open && setItemToShip(null)}>
+            <AlertDialog open={!!itemToShip} onOpenChange={(open) => !isSubmitting && setItemToShip(open ? itemToShip : null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Тээвэрлэлт үүсгэх</AlertDialogTitle>
@@ -1039,16 +1035,13 @@ export default function OrderDetailPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isSubmitting} onClick={() => setItemToShip(null)}>Цуцлах</AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handleCreateShipment();
-                            }} 
+                        <AlertDialogCancel disabled={isSubmitting}>Цуцлах</AlertDialogCancel>
+                        <Button 
+                            onClick={handleCreateShipment}
                             disabled={isSubmitting}
                         >
-                            {isSubmitting ? "Үүсгэж байна..." : "Тийм, үүсгэх"}
-                        </AlertDialogAction>
+                            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Үүсгэж байна...</> : "Тийм, үүсгэх"}
+                        </Button>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
@@ -1062,17 +1055,14 @@ export default function OrderDetailPage() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isDeletingOrder} onClick={() => setShowDeleteOrderDialog(false)}>Цуцлах</AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handleDeleteOrder();
-                            }} 
+                        <AlertDialogCancel disabled={isDeletingOrder}>Цуцлах</AlertDialogCancel>
+                        <Button 
+                            onClick={handleDeleteOrder}
                             disabled={isDeletingOrder} 
-                            className="bg-destructive hover:bg-destructive/90"
+                            variant="destructive"
                         >
-                            {isDeletingOrder ? "Устгаж байна..." : "Устгах"}
-                        </AlertDialogAction>
+                            {isDeletingOrder ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Устгаж байна...</> : "Устгах"}
+                        </Button>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

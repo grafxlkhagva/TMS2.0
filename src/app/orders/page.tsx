@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { MoreHorizontal, PlusCircle, RefreshCw, Eye, Edit, Trash2, Search, FileText } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, RefreshCw, Eye, Edit, Trash2, Search, FileText, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -32,7 +32,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
     AlertDialog,
-    AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
     AlertDialogDescription,
@@ -332,7 +331,7 @@ export default function OrdersPage() {
                     </Table>
                 </CardContent>
             </Card>
-            <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !open && setOrderToDelete(null)}>
+            <AlertDialog open={!!orderToDelete} onOpenChange={(open) => !isDeleting && setOrderToDelete(open ? orderToDelete : null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Захиалга устгах</AlertDialogTitle>
@@ -343,16 +342,13 @@ export default function OrdersPage() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel disabled={isDeleting}>Цуцлах</AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handleDeleteOrder();
-                            }} 
+                        <Button 
+                            onClick={handleDeleteOrder}
                             disabled={isDeleting} 
-                            className="bg-destructive hover:bg-destructive/90"
+                            variant="destructive"
                         >
-                            {isDeleting ? "Устгаж байна..." : "Устгах"}
-                        </AlertDialogAction>
+                            {isDeleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Устгаж байна...</> : "Устгах"}
+                        </Button>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
