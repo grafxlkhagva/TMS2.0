@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Order } from "@/types";
-import { ArrowLeft, Edit, MoreVertical, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, MoreVertical, Trash2, FileSpreadsheet } from "lucide-react";
 import Link from "next/link";
 import {
     DropdownMenu,
@@ -51,6 +51,12 @@ export function OrderDetailHeader({ order, onDelete }: OrderDetailHeaderProps) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button variant="outline" asChild>
+                        <Link href={`/orders/${order.id}/quote`}>
+                            <FileSpreadsheet className="mr-2 h-4 w-4" />
+                            Үнийн санал
+                        </Link>
+                    </Button>
                     <Button variant="outline" asChild>
                         <Link href={`/orders/${order.id}/edit`}>
                             <Edit className="mr-2 h-4 w-4" />

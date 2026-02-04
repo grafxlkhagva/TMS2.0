@@ -54,7 +54,7 @@ export default function QuotePage() {
                 const orderData = { id: orderDocSnap.id, ...orderDocSnap.data() } as Order;
                 setOrder(orderData);
 
-                const itemsQuery = query(collection(db, 'order_items'), where('orderId', '==', orderId), where('status', '==', 'Assigned'));
+                const itemsQuery = query(collection(db, 'order_items'), where('orderId', '==', orderId));
                 const itemsSnap = await getDocs(itemsQuery);
                 const itemsDataPromises = itemsSnap.docs.map(async (d) => {
                     const itemData = d.data();
@@ -261,7 +261,7 @@ export default function QuotePage() {
                             ) : (
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center h-24">
-                                        Үнийн санал гаргах боломжтой (жолоочид оногдсон) тээвэрлэлт олдсонгүй.
+                                        Тээвэрлэлт олдсонгүй. Эхлээд тээвэрлэлт нэмнэ үү.
                                     </TableCell>
                                 </TableRow>
                             )}
