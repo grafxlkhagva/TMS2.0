@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +28,7 @@ const steps = [
 ];
 
 export function OrderDetailHeader({ order, onDelete }: OrderDetailHeaderProps) {
+    const [dropdownOpen, setDropdownOpen] = useState(false);
     const currentStepIndex = steps.findIndex(s => s.id === order.status) === -1 ? 0 : steps.findIndex(s => s.id === order.status);
 
     return (
@@ -53,14 +57,20 @@ export function OrderDetailHeader({ order, onDelete }: OrderDetailHeaderProps) {
                             Засах
                         </Link>
                     </Button>
-                    <DropdownMenu>
+                    <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={onDelete} className="text-destructive">
+                            <DropdownMenuItem 
+                                onClick={() => {
+                                    setDropdownOpen(false);
+                                    setTimeout(() => onDelete(), 100);
+                                }} 
+                                className="text-destructive"
+                            >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Устгах
                             </DropdownMenuItem>
