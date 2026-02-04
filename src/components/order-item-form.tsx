@@ -7,7 +7,7 @@ import { format } from "date-fns";
 
 import type { Warehouse, ServiceType, VehicleType, TrailerType, Region, PackagingType } from '@/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, CalendarIcon, Loader2, Plus } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarIcon, Loader2, Plus, Clock } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import {
     Form,
@@ -157,10 +157,104 @@ function ShipmentItemForm({ form, itemIndex, onRemove, onQuickAdd, allData }: an
                 </div>
                 <FormField control={form.control} name={`items.${itemIndex}.totalDistance`} render={({ field }: any) => (<FormItem><FormLabel>Нийт зам (км)</FormLabel><FormControl><Input type="number" placeholder="500" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField control={form.control} name={`items.${itemIndex}.loadingDateRange`} render={({ field }: any) => (
-                        <FormItem className="flex flex-col"><FormLabel>Ачих огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'} className={cn('w-full justify-start text-left font-normal', !field.value?.from && 'text-muted-foreground')}><CalendarIcon className="mr-2 h-4 w-4" />{field.value?.from ? (field.value.to ? (<>{format(field.value.from, 'LLL dd, y')} - {format(field.value.to, 'LLL dd, y')}</>) : (format(field.value.from, 'LLL dd, y'))) : (<span>Огноо сонгох</span>)}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={field.value?.from} selected={field.value} onSelect={field.onChange} numberOfMonths={1} captionLayout="dropdown" fromYear={2020} toYear={new Date().getFullYear() + 2} /></PopoverContent></Popover><FormDescription>Эхлэх огноог сонгохдоо хоёр товшино уу.</FormDescription><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name={`items.${itemIndex}.unloadingDateRange`} render={({ field }: any) => (
-                        <FormItem className="flex flex-col"><FormLabel>Буулгах огноо</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={'outline'} className={cn('w-full justify-start text-left font-normal', !field.value?.from && 'text-muted-foreground')}><CalendarIcon className="mr-2 h-4 w-4" />{field.value?.from ? (field.value.to ? (<>{format(field.value.from, 'LLL dd, y')} - {format(field.value.to, 'LLL dd, y')}</>) : (format(field.value.from, 'LLL dd, y'))) : (<span>Огноо сонгох</span>)}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={field.value?.from} selected={field.value} onSelect={field.onChange} numberOfMonths={1} captionLayout="dropdown" fromYear={2020} toYear={new Date().getFullYear() + 2} /></PopoverContent></Popover><FormDescription>Эхлэх огноог сонгохдоо хоёр товшино уу.</FormDescription><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name={`items.${itemIndex}.loadingDateTime`} render={({ field }: any) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Ачих огноо, цаг</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button variant={'outline'} className={cn('w-full justify-start text-left font-normal', !field.value && 'text-muted-foreground')}>
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {field.value ? format(field.value, 'yyyy-MM-dd HH:mm') : <span>Огноо, цаг сонгох</span>}
+                                        </Button>
+                                    </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar 
+                                        initialFocus 
+                                        mode="single" 
+                                        selected={field.value} 
+                                        onSelect={(date) => {
+                                            if (date) {
+                                                const currentTime = field.value || new Date();
+                                                date.setHours(currentTime.getHours(), currentTime.getMinutes());
+                                            }
+                                            field.onChange(date);
+                                        }} 
+                                        captionLayout="dropdown" 
+                                        fromYear={2020} 
+                                        toYear={new Date().getFullYear() + 2} 
+                                    />
+                                    <div className="border-t p-3">
+                                        <div className="flex items-center gap-2">
+                                            <Clock className="h-4 w-4 text-muted-foreground" />
+                                            <Input 
+                                                type="time" 
+                                                className="w-full"
+                                                value={field.value ? format(field.value, 'HH:mm') : ''}
+                                                onChange={(e) => {
+                                                    const [hours, minutes] = e.target.value.split(':').map(Number);
+                                                    const newDate = field.value ? new Date(field.value) : new Date();
+                                                    newDate.setHours(hours || 0, minutes || 0);
+                                                    field.onChange(newDate);
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name={`items.${itemIndex}.unloadingDateTime`} render={({ field }: any) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Буулгах огноо, цаг</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button variant={'outline'} className={cn('w-full justify-start text-left font-normal', !field.value && 'text-muted-foreground')}>
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {field.value ? format(field.value, 'yyyy-MM-dd HH:mm') : <span>Огноо, цаг сонгох</span>}
+                                        </Button>
+                                    </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar 
+                                        initialFocus 
+                                        mode="single" 
+                                        selected={field.value} 
+                                        onSelect={(date) => {
+                                            if (date) {
+                                                const currentTime = field.value || new Date();
+                                                date.setHours(currentTime.getHours(), currentTime.getMinutes());
+                                            }
+                                            field.onChange(date);
+                                        }} 
+                                        captionLayout="dropdown" 
+                                        fromYear={2020} 
+                                        toYear={new Date().getFullYear() + 2} 
+                                    />
+                                    <div className="border-t p-3">
+                                        <div className="flex items-center gap-2">
+                                            <Clock className="h-4 w-4 text-muted-foreground" />
+                                            <Input 
+                                                type="time" 
+                                                className="w-full"
+                                                value={field.value ? format(field.value, 'HH:mm') : ''}
+                                                onChange={(e) => {
+                                                    const [hours, minutes] = e.target.value.split(':').map(Number);
+                                                    const newDate = field.value ? new Date(field.value) : new Date();
+                                                    newDate.setHours(hours || 0, minutes || 0);
+                                                    field.onChange(newDate);
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
                 </div>
             </div>
 

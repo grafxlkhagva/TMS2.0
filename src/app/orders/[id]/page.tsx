@@ -72,14 +72,8 @@ const orderItemSchema = z.object({
     endRegionId: z.string().min(1, "Буулгах бүс сонгоно уу."),
     endWarehouseId: z.string().min(1, "Буулгах агуулах сонгоно уу."),
     totalDistance: z.coerce.number().min(1, "Нийт зайг оруулна уу."),
-    loadingDateRange: z.object({
-        from: z.date({ required_error: "Ачих эхлэх огноо сонгоно уу." }),
-        to: z.date({ required_error: "Ачих дуусах огноо сонгоно уу." }),
-    }),
-    unloadingDateRange: z.object({
-        from: z.date({ required_error: "Буулгах эхлэх огноо сонгоно уу." }),
-        to: z.date({ required_error: "Буулгах дуусах огноо сонгоно уу." }),
-    }),
+    loadingDateTime: z.date({ required_error: "Ачих огноо, цаг сонгоно уу." }),
+    unloadingDateTime: z.date({ required_error: "Буулгах огноо, цаг сонгоно уу." }),
     vehicleTypeId: z.string().min(1, "Машины төрөл сонгоно уу."),
     trailerTypeId: z.string().min(1, "Тэвшний төрөл сонгоно уу."),
     profitMargin: z.coerce.number().min(0, "Ашгийн хувь 0-аас багагүй байна.").max(100, "Ашгийн хувь 100-аас ихгүй байна.").optional(),
@@ -533,7 +527,7 @@ export default function OrderDetailPage() {
             const orderRef = doc(db, 'orders', orderId);
 
             values.items.forEach((item: any) => {
-                const { loadingDateRange, unloadingDateRange, cargoItems, ...rest } = item;
+                const { loadingDateTime, unloadingDateTime, cargoItems, ...rest } = item;
 
                 const orderItemRef = doc(collection(db, 'order_items'));
                 batch.set(orderItemRef, {
@@ -547,10 +541,10 @@ export default function OrderDetailPage() {
                     serviceTypeRef: doc(db, 'service_types', item.serviceTypeId),
                     vehicleTypeRef: doc(db, 'vehicle_types', item.vehicleTypeId),
                     trailerTypeRef: doc(db, 'trailer_types', item.trailerTypeId),
-                    loadingStartDate: loadingDateRange.from,
-                    loadingEndDate: loadingDateRange.to,
-                    unloadingStartDate: unloadingDateRange.from,
-                    unloadingEndDate: unloadingDateRange.to,
+                    loadingStartDate: loadingDateTime,
+                    loadingEndDate: loadingDateTime,
+                    unloadingStartDate: unloadingDateTime,
+                    unloadingEndDate: unloadingDateTime,
                     status: 'Pending',
                     tenderStatus: 'Closed',
                     createdAt: serverTimestamp(),
@@ -832,8 +826,8 @@ export default function OrderDetailPage() {
             startWarehouseId: '',
             endRegionId: '',
             endWarehouseId: '',
-            loadingDateRange: { from: fromDate, to: toDate },
-            unloadingDateRange: { from: new Date(fromDate.getTime() + 2 * 24 * 60 * 60 * 1000), to: new Date(toDate.getTime() + 2 * 24 * 60 * 60 * 1000) },
+            loadingDateTime: undefined,
+            unloadingDateTime: undefined,
             vehicleTypeId: '',
             trailerTypeId: '',
             totalDistance: 0,
