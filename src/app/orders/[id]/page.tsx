@@ -65,27 +65,27 @@ function OrderDetailItem({ icon: Icon, label, value }: { icon: React.ElementType
 }
 
 const orderItemSchema = z.object({
-    serviceTypeId: z.string().min(1, "Үйлчилгээний төрөл сонгоно уу."),
-    frequency: z.coerce.number().min(1, "Давтамж дор хаяж 1 байх ёстой."),
-    startRegionId: z.string().min(1, "Ачих бүс сонгоно уу."),
-    startWarehouseId: z.string().min(1, "Ачих агуулах сонгоно уу."),
-    endRegionId: z.string().min(1, "Буулгах бүс сонгоно уу."),
-    endWarehouseId: z.string().min(1, "Буулгах агуулах сонгоно уу."),
-    totalDistance: z.coerce.number().min(1, "Нийт зайг оруулна уу."),
-    loadingDateTime: z.date({ required_error: "Ачих огноо, цаг сонгоно уу." }),
-    unloadingDateTime: z.date({ required_error: "Буулгах огноо, цаг сонгоно уу." }),
-    vehicleTypeId: z.string().min(1, "Машины төрөл сонгоно уу."),
-    trailerTypeId: z.string().min(1, "Тэвшний төрөл сонгоно уу."),
-    profitMargin: z.coerce.number().min(0, "Ашгийн хувь 0-аас багагүй байна.").max(100, "Ашгийн хувь 100-аас ихгүй байна.").optional(),
+    serviceTypeId: z.string().optional(),
+    frequency: z.coerce.number().min(1).optional().or(z.literal('')),
+    startRegionId: z.string().optional(),
+    startWarehouseId: z.string().optional(),
+    endRegionId: z.string().optional(),
+    endWarehouseId: z.string().optional(),
+    totalDistance: z.coerce.number().min(0).optional().or(z.literal('')),
+    loadingDateTime: z.date().optional(),
+    unloadingDateTime: z.date().optional(),
+    vehicleTypeId: z.string().optional(),
+    trailerTypeId: z.string().optional(),
+    profitMargin: z.coerce.number().min(0).max(100).optional().or(z.literal('')),
     withVAT: z.boolean().optional(),
     tenderStatus: z.enum(['Open', 'Closed']).optional(),
     cargoItems: z.array(z.object({
-        name: z.string().min(2, "Ачааны нэр дор хаяж 2 тэмдэгттэй байх ёстой."),
-        quantity: z.coerce.number().min(0.1, "Тоо хэмжээг оруулна уу."),
-        unit: z.string().min(1, "Хэмжих нэгжийг оруулна уу."),
-        packagingTypeId: z.string().min(1, "Баглаа боодол сонгоно уу."),
+        name: z.string().optional(),
+        quantity: z.coerce.number().min(0).optional().or(z.literal('')),
+        unit: z.string().optional(),
+        packagingTypeId: z.string().optional(),
         notes: z.string().optional(),
-    })).min(1, "Дор хаяж нэг ачаа нэмнэ үү."),
+    })).optional(),
 });
 
 const formSchema = z.object({
@@ -530,36 +530,51 @@ export default function OrderDetailPage() {
                 const { loadingDateTime, unloadingDateTime, cargoItems, ...rest } = item;
 
                 const orderItemRef = doc(collection(db, 'order_items'));
-                batch.set(orderItemRef, {
+                const orderItemData: any = {
                     ...rest,
                     orderId: orderId,
                     orderRef: orderRef,
-                    startRegionRef: doc(db, 'regions', item.startRegionId),
-                    startWarehouseRef: doc(db, 'warehouses', item.startWarehouseId),
-                    endRegionRef: doc(db, 'regions', item.endRegionId),
-                    endWarehouseRef: doc(db, 'warehouses', item.endWarehouseId),
-                    serviceTypeRef: doc(db, 'service_types', item.serviceTypeId),
-                    vehicleTypeRef: doc(db, 'vehicle_types', item.vehicleTypeId),
-                    trailerTypeRef: doc(db, 'trailer_types', item.trailerTypeId),
-                    loadingStartDate: loadingDateTime,
-                    loadingEndDate: loadingDateTime,
-                    unloadingStartDate: unloadingDateTime,
-                    unloadingEndDate: unloadingDateTime,
                     status: 'Pending',
-                    tenderStatus: 'Closed',
+                    tenderStatus: item.tenderStatus || 'Closed',
                     createdAt: serverTimestamp(),
-                });
+                };
 
-                cargoItems.forEach((cargo: any) => {
-                    const cargoRef = doc(collection(db, 'order_item_cargoes'));
-                    batch.set(cargoRef, {
-                        ...cargo,
-                        orderItemId: orderItemRef.id,
-                        orderItemRef: orderItemRef,
-                        packagingTypeId: cargo.packagingTypeId,
-                        packagingTypeRef: doc(db, 'packaging_types', cargo.packagingTypeId),
+                // Only add references if IDs are provided
+                if (item.startRegionId) orderItemData.startRegionRef = doc(db, 'regions', item.startRegionId);
+                if (item.startWarehouseId) orderItemData.startWarehouseRef = doc(db, 'warehouses', item.startWarehouseId);
+                if (item.endRegionId) orderItemData.endRegionRef = doc(db, 'regions', item.endRegionId);
+                if (item.endWarehouseId) orderItemData.endWarehouseRef = doc(db, 'warehouses', item.endWarehouseId);
+                if (item.serviceTypeId) orderItemData.serviceTypeRef = doc(db, 'service_types', item.serviceTypeId);
+                if (item.vehicleTypeId) orderItemData.vehicleTypeRef = doc(db, 'vehicle_types', item.vehicleTypeId);
+                if (item.trailerTypeId) orderItemData.trailerTypeRef = doc(db, 'trailer_types', item.trailerTypeId);
+                if (loadingDateTime) {
+                    orderItemData.loadingStartDate = loadingDateTime;
+                    orderItemData.loadingEndDate = loadingDateTime;
+                }
+                if (unloadingDateTime) {
+                    orderItemData.unloadingStartDate = unloadingDateTime;
+                    orderItemData.unloadingEndDate = unloadingDateTime;
+                }
+
+                batch.set(orderItemRef, orderItemData);
+
+                // Only add cargo items if they exist and have data
+                if (cargoItems && cargoItems.length > 0) {
+                    cargoItems.forEach((cargo: any) => {
+                        if (cargo.name || cargo.quantity) {
+                            const cargoRef = doc(collection(db, 'order_item_cargoes'));
+                            const cargoData: any = {
+                                ...cargo,
+                                orderItemId: orderItemRef.id,
+                                orderItemRef: orderItemRef,
+                            };
+                            if (cargo.packagingTypeId) {
+                                cargoData.packagingTypeRef = doc(db, 'packaging_types', cargo.packagingTypeId);
+                            }
+                            batch.set(cargoRef, cargoData);
+                        }
                     });
-                });
+                }
             });
 
             await batch.commit();

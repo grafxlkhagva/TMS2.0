@@ -38,30 +38,30 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 
 const cargoItemSchema = z.object({
-    id: z.string().optional(), // Keep track of existing items
-    name: z.string().min(2, "Ачааны нэр дор хаяж 2 тэмдэгттэй байх ёстой."),
-    quantity: z.coerce.number().min(0.1, "Тоо хэмжээг оруулна уу."),
-    unit: z.string().min(1, "Хэмжих нэгжийг оруулна уу."),
-    packagingTypeId: z.string().min(1, "Баглаа боодол сонгоно уу."),
+    id: z.string().optional(),
+    name: z.string().optional(),
+    quantity: z.coerce.number().min(0).optional().or(z.literal('')),
+    unit: z.string().optional(),
+    packagingTypeId: z.string().optional(),
     notes: z.string().optional(),
 });
 
 const formSchema = z.object({
-    serviceTypeId: z.string().min(1, "Үйлчилгээний төрөл сонгоно уу."),
-    frequency: z.coerce.number().min(1, "Давтамж дор хаяж 1 байх ёстой."),
-    startRegionId: z.string().min(1, "Ачих бүс сонгоно уу."),
-    startWarehouseId: z.string().min(1, "Ачих агуулах сонгоно уу."),
-    endRegionId: z.string().min(1, "Буулгах бүс сонгоно уу."),
-    endWarehouseId: z.string().min(1, "Буулгах агуулах сонгоно уу."),
-    totalDistance: z.coerce.number().min(1, "Нийт зайг оруулна уу."),
-    loadingDateTime: z.date({ required_error: "Ачих огноо, цаг сонгоно уу." }),
-    unloadingDateTime: z.date({ required_error: "Буулгах огноо, цаг сонгоно уу." }),
-    vehicleTypeId: z.string().min(1, "Машины төрөл сонгоно уу."),
-    trailerTypeId: z.string().min(1, "Тэвшний төрөл сонгоно уу."),
-    profitMargin: z.coerce.number().min(0, "Ашгийн хувь 0-аас багагүй байна.").max(100, "Ашгийн хувь 100-аас ихгүй байна.").optional(),
+    serviceTypeId: z.string().optional(),
+    frequency: z.coerce.number().min(1).optional().or(z.literal('')),
+    startRegionId: z.string().optional(),
+    startWarehouseId: z.string().optional(),
+    endRegionId: z.string().optional(),
+    endWarehouseId: z.string().optional(),
+    totalDistance: z.coerce.number().min(0).optional().or(z.literal('')),
+    loadingDateTime: z.date().optional(),
+    unloadingDateTime: z.date().optional(),
+    vehicleTypeId: z.string().optional(),
+    trailerTypeId: z.string().optional(),
+    profitMargin: z.coerce.number().min(0).max(100).optional().or(z.literal('')),
     withVAT: z.boolean().optional(),
     tenderStatus: z.enum(['Open', 'Closed']).optional(),
-    cargoItems: z.array(cargoItemSchema).min(1, "Дор хаяж нэг ачаа нэмнэ үү."),
+    cargoItems: z.array(cargoItemSchema).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -175,21 +175,30 @@ export default function EditOrderItemPage() {
             // 1. Update the Order Item
             const { loadingDateTime, unloadingDateTime, cargoItems, ...rest } = values;
             const orderItemRef = doc(db, 'order_items', itemId);
-            batch.update(orderItemRef, {
+            
+            const updateData: any = {
                 ...rest,
-                startRegionRef: doc(db, 'regions', values.startRegionId),
-                startWarehouseRef: doc(db, 'warehouses', values.startWarehouseId),
-                endRegionRef: doc(db, 'regions', values.endRegionId),
-                endWarehouseRef: doc(db, 'warehouses', values.endWarehouseId),
-                serviceTypeRef: doc(db, 'service_types', values.serviceTypeId),
-                vehicleTypeRef: doc(db, 'vehicle_types', values.vehicleTypeId),
-                trailerTypeRef: doc(db, 'trailer_types', values.trailerTypeId),
-                loadingStartDate: loadingDateTime,
-                loadingEndDate: loadingDateTime,
-                unloadingStartDate: unloadingDateTime,
-                unloadingEndDate: unloadingDateTime,
                 updatedAt: serverTimestamp(),
-            });
+            };
+
+            // Only add references if IDs are provided
+            if (values.startRegionId) updateData.startRegionRef = doc(db, 'regions', values.startRegionId);
+            if (values.startWarehouseId) updateData.startWarehouseRef = doc(db, 'warehouses', values.startWarehouseId);
+            if (values.endRegionId) updateData.endRegionRef = doc(db, 'regions', values.endRegionId);
+            if (values.endWarehouseId) updateData.endWarehouseRef = doc(db, 'warehouses', values.endWarehouseId);
+            if (values.serviceTypeId) updateData.serviceTypeRef = doc(db, 'service_types', values.serviceTypeId);
+            if (values.vehicleTypeId) updateData.vehicleTypeRef = doc(db, 'vehicle_types', values.vehicleTypeId);
+            if (values.trailerTypeId) updateData.trailerTypeRef = doc(db, 'trailer_types', values.trailerTypeId);
+            if (loadingDateTime) {
+                updateData.loadingStartDate = loadingDateTime;
+                updateData.loadingEndDate = loadingDateTime;
+            }
+            if (unloadingDateTime) {
+                updateData.unloadingStartDate = unloadingDateTime;
+                updateData.unloadingEndDate = unloadingDateTime;
+            }
+
+            batch.update(orderItemRef, updateData);
 
             // 2. Delete cargo items marked for deletion
             cargoToDelete.forEach(cargoId => {
@@ -197,25 +206,29 @@ export default function EditOrderItemPage() {
             });
 
             // 3. Update or create cargo items
-            cargoItems.forEach(cargo => {
-                const { id: cargoId, ...cargoData } = cargo;
-                const cargoRef = cargoId ? doc(db, 'order_item_cargoes', cargoId) : doc(collection(db, 'order_item_cargoes'));
+            if (cargoItems && cargoItems.length > 0) {
+                cargoItems.forEach(cargo => {
+                    const { id: cargoId, ...cargoData } = cargo;
+                    const cargoRef = cargoId ? doc(db, 'order_item_cargoes', cargoId) : doc(collection(db, 'order_item_cargoes'));
 
-                const dataToSave = {
-                    ...cargoData,
-                    packagingTypeRef: doc(db, 'packaging_types', cargoData.packagingTypeId),
-                }
+                    const dataToSave: any = {
+                        ...cargoData,
+                    };
+                    if (cargoData.packagingTypeId) {
+                        dataToSave.packagingTypeRef = doc(db, 'packaging_types', cargoData.packagingTypeId);
+                    }
 
-                if (cargoId) {
-                    batch.update(cargoRef, dataToSave);
-                } else {
-                    batch.set(cargoRef, {
-                        ...dataToSave,
-                        orderItemId: itemId,
-                        orderItemRef: orderItemRef,
-                    });
-                }
-            });
+                    if (cargoId) {
+                        batch.update(cargoRef, dataToSave);
+                    } else {
+                        batch.set(cargoRef, {
+                            ...dataToSave,
+                            orderItemId: itemId,
+                            orderItemRef: orderItemRef,
+                        });
+                    }
+                });
+            }
 
             await batch.commit();
 
