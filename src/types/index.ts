@@ -578,3 +578,235 @@ export type ContractedTransport = {
 };
 
 export type DriverWithVehicle = Driver & { vehicle?: Vehicle & { vehicleTypeName?: string; trailerTypeName?: string; } };
+
+// ==================== Transport Operations ====================
+
+export type TransportOperationType = 'local' | 'international' | 'distribution' | 'project';
+
+export type TransportOperationStatus = 'new' | 'planning' | 'in_progress' | 'completed' | 'cancelled';
+
+export type TransportShipmentDetails = {
+  mode: 'road' | 'rail' | 'sea' | 'air' | 'multimodal';
+  incoterms?: string;
+  cargoDescription?: string;
+  commodityCode?: string;
+  weightKg?: number;
+  volumeM3?: number;
+  packageCount?: number;
+  temperatureRequirement?: string;
+  specialHandling?: string;
+  origin: {
+    inputMethod?: 'address' | 'warehouse' | 'coordinates';
+    warehouseId?: string;
+    warehouseName?: string;
+    country?: string;
+    city?: string;
+    location?: string;
+    lat?: number;
+    lng?: number;
+  };
+  destination: {
+    inputMethod?: 'address' | 'warehouse' | 'coordinates';
+    warehouseId?: string;
+    warehouseName?: string;
+    country?: string;
+    city?: string;
+    location?: string;
+    lat?: number;
+    lng?: number;
+  };
+  plannedPickupDate?: Date;
+  plannedDeliveryDate?: Date;
+  customsRequired?: boolean;
+  dispatchTracking?: {
+    stage?: 'new' | 'planned' | 'assigned' | 'ready_to_depart' | 'in_transit' | 'delivered' | 'completed' | 'closed';
+    eta?: Date;
+    currentLocation?: string;
+    lastEventNote?: string;
+    lastEventAt?: Date;
+    stageHistory?: Array<{
+      stage: 'new' | 'planned' | 'assigned' | 'ready_to_depart' | 'in_transit' | 'delivered' | 'completed' | 'closed';
+      at?: Date;
+      note?: string;
+    }>;
+    workflow?: {
+      orderIntake?: {
+        validated?: boolean;
+        duplicateChecked?: boolean;
+        slaChecked?: boolean;
+        note?: string;
+      };
+      planning?: {
+        routeOptimized?: boolean;
+        costEstimated?: boolean;
+        loadPlanned?: boolean;
+        aiMatched?: boolean;
+        note?: string;
+      };
+      assignment?: {
+        driverNotified?: boolean;
+        accepted?: boolean;
+        digitalContractReady?: boolean;
+        note?: string;
+      };
+      preTrip?: {
+        checklistDone?: boolean;
+        fuelChecked?: boolean;
+        safetyChecked?: boolean;
+        docsChecked?: boolean;
+        inspectionPhotoUrl?: string;
+        note?: string;
+      };
+      transit?: {
+        checkpointLocation?: string;
+        checkpointEta?: Date;
+        distanceKm?: number;
+        incidentLog?: string;
+      };
+      delivery?: {
+        receiverName?: string;
+        podPhotoUrl?: string;
+        signatureCaptured?: boolean;
+        damageReport?: string;
+        deliveredAt?: Date;
+        note?: string;
+      };
+      postTrip?: {
+        actualDistanceKm?: number;
+        fuelCost?: number;
+        tollCost?: number;
+        delayInfo?: string;
+        reconciled?: boolean;
+        invoiceReady?: boolean;
+      };
+      analytics?: {
+        slaRate?: number;
+        utilizationRate?: number;
+        kpiPublished?: boolean;
+        note?: string;
+      };
+    };
+  };
+  transportAssignment?: {
+    driverId?: string;
+    driverName?: string;
+    driverPhone?: string;
+    vehicleId?: string;
+    vehiclePlate?: string;
+    trailerPlate?: string;
+    vehicleStatus?: string;
+    notes?: string;
+  };
+};
+
+export type TransportOperation = {
+  id: string;
+  transportType: TransportOperationType;
+  hasContract: boolean;
+  customerId: string;
+  customerName: string;
+  status: TransportOperationStatus;
+  shipmentDetails?: TransportShipmentDetails;
+  createdAt: Date;
+  updatedAt?: Date;
+  createdBy: {
+    uid: string;
+    name: string;
+  };
+};
+
+// ==================== Contracts (Гэрээний модуль) ====================
+
+/** Системийн entity-ээс татаж авах боломжтой эх сурвалж */
+export type ContractFieldSource = 'customer' | 'vehicle' | 'driver' | 'warehouse' | 'manual';
+
+/** Гэрээний загварын талбарын тодорхойлолт */
+export type ContractTemplateField = {
+  id: string;
+  label: string;
+  source: ContractFieldSource;
+  /** Системийн талбарын замын нэр, жишээ: name, address, registerNumber */
+  sourcePath?: string;
+  /** Гараар оруулах үед default утга */
+  defaultValue?: string;
+  required?: boolean;
+  order: number;
+};
+
+/** Гэрээний загвар */
+export type ContractTemplate = {
+  id: string;
+  name: string;
+  description?: string;
+  content: string;
+  fields: ContractTemplateField[];
+  createdAt: Date;
+  updatedAt?: Date;
+  createdBy: { uid: string; name: string };
+};
+
+/** Гэрээний статус */
+export type ContractStatus =
+  | 'draft'              // Ноорог
+  | 'pending_review'     // Хянуулж байна
+  | 'revision_requested' // Засвар шаардсан
+  | 'approved'           // Батлагдсан
+  | 'rejected'           // Татгалзсан
+  | 'active'             // Идэвхтэй
+  | 'expiring_soon'      // Хугацаа дуусах гэж байна
+  | 'expired'            // Хугацаа дууссан
+  | 'terminated';        // Цуцлагдсан
+
+/** Батлалтын алхам */
+export type ContractApprovalStep = {
+  id: string;
+  approverUid: string;
+  approverName: string;
+  role: UserRole;
+  status: 'pending' | 'approved' | 'rejected' | 'revision_requested';
+  comment?: string;
+  actionAt?: Date;
+  order: number;
+};
+
+/** Үйл ажиллагааны бүртгэл */
+export type ContractActivityEntry = {
+  id: string;
+  action: string;
+  performedBy: { uid: string; name: string };
+  comment?: string;
+  timestamp: Date;
+  metadata?: Record<string, string>;
+};
+
+/** Гэрээ (загвар дээр үндэслэсэн үүсгэсэн гэрээ) */
+export type Contract = {
+  id: string;
+  templateId: string;
+  templateName: string;
+  title: string;
+  contractNumber: string;
+  /** Шийдэгдсэн талбарууд: fieldId -> value */
+  resolvedData: Record<string, string>;
+  /** Холбогдсон entity ID-ууд */
+  linkedEntities: {
+    customerId?: string;
+    customerName?: string;
+    vehicleId?: string;
+    driverId?: string;
+    warehouseId?: string;
+  };
+  status: ContractStatus;
+  startDate?: Date;
+  endDate?: Date;
+  totalValue?: number;
+  approvalSteps: ContractApprovalStep[];
+  activityLog: ContractActivityEntry[];
+  currentApproverUid?: string;
+  submittedAt?: Date;
+  approvedAt?: Date;
+  rejectedReason?: string;
+  createdAt: Date;
+  updatedAt?: Date;
+  createdBy: { uid: string; name: string };
+};
