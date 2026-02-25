@@ -201,9 +201,8 @@ export function QuoteExportTab({ order, orderItems, allData }: QuoteExportTabPro
                                             <th className="border border-gray-300 p-2">Зай</th>
                                             <th className="border border-gray-300 p-2">Машин</th>
                                             <th className="border border-gray-300 p-2">Даац</th>
-                                            <th className="border border-gray-300 p-2">Үнэлгээ</th>
                                             <th className="border border-gray-300 p-2">Тоо</th>
-                                            <th className="border border-gray-300 p-2">Хөлс ₮</th>
+                                            <th className="border border-gray-300 p-2">Үнэлгээ</th>
                                             <th className="border border-gray-300 p-2">НӨАТ ₮</th>
                                             <th className="border border-gray-300 p-2">Нийт ₮</th>
                                         </tr>
@@ -212,7 +211,6 @@ export function QuoteExportTab({ order, orderItems, allData }: QuoteExportTabPro
                                         {selectedOrderItems.map((item, idx) => {
                                             const finalPrice = item.finalPrice || 0;
                                             const freq = item.frequency || 1;
-                                            const unitPrice = freq > 0 ? finalPrice / freq : finalPrice;
                                             const priceBeforeVat = item.withVAT ? finalPrice / (1 + VAT_RATE) : finalPrice;
                                             const vatAmt = item.withVAT ? finalPrice - priceBeforeVat : 0;
                                             const cargoDesc = item.cargoItems?.map((c: any) => `${c.name || ''} (${c.quantity || ''} ${c.unit || ''})`).join(', ') || '';
@@ -226,7 +224,6 @@ export function QuoteExportTab({ order, orderItems, allData }: QuoteExportTabPro
                                                     <td className="border border-gray-300 p-2 text-center">{item.totalDistance ? `${item.totalDistance}км` : ''}</td>
                                                     <td className="border border-gray-300 p-2">{getDetailName('vehicleTypes', item.vehicleTypeId)}</td>
                                                     <td className="border border-gray-300 p-2">{getDetailName('trailerTypes', item.trailerTypeId)}</td>
-                                                    <td className="border border-gray-300 p-2 text-right">{Math.round(unitPrice).toLocaleString()}</td>
                                                     <td className="border border-gray-300 p-2 text-center">{freq}</td>
                                                     <td className="border border-gray-300 p-2 text-right">{Math.round(priceBeforeVat).toLocaleString()}</td>
                                                     <td className="border border-gray-300 p-2 text-right">{Math.round(vatAmt).toLocaleString()}</td>
