@@ -1,247 +1,389 @@
-
 'use client';
 
 import * as React from 'react';
-import { doc, getDoc, type DocumentReference } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useParams, useRouter } from 'next/navigation';
-import type { Contract, Shipment, OrderItem } from '@/types';
-import { useToast } from '@/hooks/use-toast';
-import { format } from "date-fns"
-
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, FileSignature } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { Input } from '@/components/ui/input';
-import ContractPrintLayout from '@/components/contract-print-layout';
-import { Timestamp } from 'firebase/firestore';
-
-function DetailItem({ label, value }: { label: string, value?: string | React.ReactNode }) {
-  if (!value) return null;
-  return (
-    <div>
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <div className="font-medium">{value}</div>
-    </div>
-  );
-}
-
-const toDateSafe = (date: any): Date => {
-    if (date instanceof Timestamp) return date.toDate();
-    if (date instanceof Date) return date;
-    if (typeof date === 'string' || typeof date === 'number') {
-        const parsed = new Date(date);
-        if (!isNaN(parsed.getTime())) {
-            return parsed;
-        }
-    }
-    // Return a default or invalid date if parsing fails, to avoid crashes.
-    return new Date(); 
-};
-
+import { PageContainer } from '@/components/patterns/page-container';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  ArrowLeft, FileSignature, Clock, User, Building2, CalendarDays, DollarSign,
+} from 'lucide-react';
+import { contractService } from '@/services/contractService';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
+import { CONTRACT_STATUS_META } from '@/lib/contract-constants';
+import { ContractStatusStepper } from '@/components/contracts/contract-status-stepper';
+import { ContractApprovalChain } from '@/components/contracts/contract-approval-chain';
+import { ContractActivityLog } from '@/components/contracts/contract-activity-log';
+import { ContractActions } from '@/components/contracts/contract-actions';
+import { SubmitReviewDialog } from '@/components/contracts/submit-review-dialog';
+import type { Contract } from '@/types';
 
 export default function ContractDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const id = params.id as string;
 
   const [contract, setContract] = React.useState<Contract | null>(null);
-  const [shipment, setShipment] = React.useState<Shipment | null>(null);
-  const [orderItem, setOrderItem] = React.useState<OrderItem | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [contractPublicUrl, setContractPublicUrl] = React.useState('');
+  const [template, setTemplate] = React.useState<Awaited<ReturnType<typeof contractService.getTemplateById>>>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [submitDialogOpen, setSubmitDialogOpen] = React.useState(false);
+  const [actionDialogOpen, setActionDialogOpen] = React.useState(false);
+  const [actionType, setActionType] = React.useState<'approve' | 'reject' | 'revision' | 'terminate' | null>(null);
+  const [actionComment, setActionComment] = React.useState('');
+  const [actionLoading, setActionLoading] = React.useState(false);
 
-  React.useEffect(() => {
-    if (!id || !db) return;
-    setIsLoading(true);
-
-    const fetchContract = async () => {
-      try {
-        const docRef = doc(db, 'contracts', id);
-        const docSnap = await getDoc(docRef);
-
-        if (!docSnap.exists()) {
-          toast({ variant: 'destructive', title: 'Алдаа', description: 'Гэрээ олдсонгүй.' });
-          router.push('/shipments');
-          return;
-        }
-
-        const contractData = {
-          id: docSnap.id,
-          ...docSnap.data(),
-          createdAt: toDateSafe(docSnap.data().createdAt),
-          signedAt: docSnap.data().signedAt ? toDateSafe(docSnap.data().signedAt) : undefined,
-          estimatedDeliveryDate: toDateSafe(docSnap.data().estimatedDeliveryDate),
-        } as Contract;
-        setContract(contractData);
-
-        if (!contractData.shipmentId) {
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Гэрээнд холбогдох тээвэрлэлтийн мэдээлэл олдсонгүй.' });
-            setIsLoading(false);
-            return;
-        }
-
-        const shipmentRef = doc(db, 'shipments', contractData.shipmentId);
-        const shipmentSnap = await getDoc(shipmentRef);
-        if (!shipmentSnap.exists()) {
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрлэлтийн мэдээлэл олдсонгүй.' });
-            setIsLoading(false);
-            return;
-        }
-        
-        const shipmentData = {
-            ...shipmentSnap.data(),
-            orderItemRef: shipmentSnap.data().orderItemRef as DocumentReference | undefined
-        } as Shipment;
-        setShipment(shipmentData);
-
-        if (!shipmentData.orderItemRef) {
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрт холбогдох захиалгын мэдээлэл олдсонгүй.' });
-            setIsLoading(false);
-            return;
-        }
-        
-        const orderItemSnap = await getDoc(shipmentData.orderItemRef);
-        if (orderItemSnap.exists()) {
-            setOrderItem(orderItemSnap.data() as OrderItem);
-        } else {
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалгын дэлгэрэнгүй мэдээлэл олдсонгүй.' });
-        }
-
-      } catch (error) {
-        console.error("Error fetching contract:", error);
-        toast({ variant: 'destructive', title: 'Алдаа', description: 'Мэдээлэл татахад алдаа гарлаа.' });
-      } finally {
-        setIsLoading(false);
+  const fetchContract = React.useCallback(async () => {
+    if (!id) return;
+    try {
+      const c = await contractService.getContractById(id);
+      setContract(c);
+      if (c?.templateId) {
+        const t = await contractService.getTemplateById(c.templateId);
+        setTemplate(t);
       }
-    };
-
-    fetchContract();
-  }, [id, router, toast]);
-  
-   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setContractPublicUrl(`${window.location.origin}/sign/${id}`);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
   }, [id]);
 
+  React.useEffect(() => { fetchContract(); }, [fetchContract]);
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(contractPublicUrl);
-    toast({ title: "Хуулагдлаа", description: "Гэрээний холбоосыг санах ойд хууллаа." });
-  }
+  const currentUser = { uid: user?.uid || '', name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() };
+  const isStaff = ['admin', 'management', 'transport_manager'].includes(user?.role || '');
 
-  if (isLoading) {
+  const handleSubmitForReview = async (approvers: { uid: string; name: string; role: string }[]) => {
+    if (!contract) return;
+    try {
+      await contractService.submitForReview(id, contract, approvers, currentUser);
+      toast({ title: 'Хянуулахаар илгээлээ' });
+      fetchContract();
+    } catch { toast({ title: 'Алдаа', variant: 'destructive' }); }
+  };
+
+  const openActionDialog = (type: 'approve' | 'reject' | 'revision' | 'terminate') => {
+    setActionType(type);
+    setActionComment('');
+    setActionDialogOpen(true);
+  };
+
+  const handleAction = async () => {
+    if (!contract || !actionType) return;
+    setActionLoading(true);
+    try {
+      switch (actionType) {
+        case 'approve':
+          await contractService.approve(id, contract, currentUser.uid, currentUser.name, actionComment || undefined);
+          toast({ title: 'Батлагдлаа' });
+          break;
+        case 'reject':
+          await contractService.reject(id, contract, currentUser.uid, currentUser.name, actionComment || 'Татгалзсан');
+          toast({ title: 'Татгалзлаа' });
+          break;
+        case 'revision':
+          await contractService.requestRevision(id, contract, currentUser.uid, currentUser.name, actionComment || 'Засвар шаардлагатай');
+          toast({ title: 'Засвар шаардлаа' });
+          break;
+        case 'terminate':
+          await contractService.terminate(id, contract, currentUser, actionComment || undefined);
+          toast({ title: 'Цуцлагдлаа' });
+          break;
+      }
+      setActionDialogOpen(false);
+      fetchContract();
+    } catch { toast({ title: 'Алдаа', variant: 'destructive' }); }
+    finally { setActionLoading(false); }
+  };
+
+  const handleActivate = async () => {
+    if (!contract) return;
+    try {
+      await contractService.activate(id, contract, currentUser);
+      toast({ title: 'Идэвхжүүллээ' });
+      fetchContract();
+    } catch { toast({ title: 'Алдаа', variant: 'destructive' }); }
+  };
+
+  const handleResubmit = async () => {
+    if (!contract) return;
+    try {
+      await contractService.resubmit(id, contract, currentUser);
+      toast({ title: 'Дахин илгээлээ' });
+      fetchContract();
+    } catch { toast({ title: 'Алдаа', variant: 'destructive' }); }
+  };
+
+  const actionDialogTitles = {
+    approve: 'Гэрээ батлах',
+    reject: 'Гэрээ татгалзах',
+    revision: 'Засвар шаардах',
+    terminate: 'Гэрээ цуцлах',
+  };
+
+  if (loading) {
     return (
-      <div className="container mx-auto py-6">
-        <Skeleton className="h-8 w-32 mb-4" />
-        <Card>
-            <CardHeader><Skeleton className="h-8 w-1/2" /><Skeleton className="h-4 w-1/3 mt-2" /></CardHeader>
-            <CardContent><Skeleton className="h-64 w-full" /></CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!contract || !shipment || !orderItem) {
-    return (
-        <div className="container mx-auto py-6">
-            <Button variant="outline" size="sm" onClick={() => router.back()} className="mb-4">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Буцах
-            </Button>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Алдаа</CardTitle>
-                    <CardDescription>
-                        Гэрээний мэдээллийг дуудахад алдаа гарлаа. Шаардлагатай тээвэрлэлт эсвэл захиалгын мэдээлэл олдсонгүй.
-                    </CardDescription>
-                </CardHeader>
-            </Card>
+      <PageContainer>
+        <div className="flex items-center gap-3 mb-6">
+          <Skeleton className="h-9 w-9 rounded-md" />
+          <Skeleton className="h-8 w-48" />
         </div>
+        <Skeleton className="h-12 w-full mb-6" />
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2"><Skeleton className="h-64 w-full" /></div>
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </PageContainer>
     );
   }
-  
+
+  if (!contract) {
+    return (
+      <PageContainer>
+        <p className="text-muted-foreground">Гэрээ олдсонгүй</p>
+        <Button variant="outline" asChild className="mt-4"><Link href="/contracts">Буцах</Link></Button>
+      </PageContainer>
+    );
+  }
+
+  const statusMeta = CONTRACT_STATUS_META[contract.status] || CONTRACT_STATUS_META.draft;
+
   return (
-    <div className="container mx-auto py-6">
-      <div className="mb-6">
-        <Button variant="outline" size="sm" onClick={() => router.push(`/shipments/${contract.shipmentId}`)} className="mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Тээвэрлэлт рүү буцах
-        </Button>
-        <div className="flex items-center justify-between">
-            <div>
-                <h1 className="text-3xl font-headline font-bold">Тээвэрлэлтийн гэрээ</h1>
-                <p className="text-muted-foreground">
-                Тээвэрлэлт: {shipment.shipmentNumber}
-                </p>
+    <PageContainer>
+      {/* Header */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="icon" asChild>
+            <Link href="/contracts"><ArrowLeft className="h-4 w-4" /></Link>
+          </Button>
+          <div className="rounded-lg bg-primary/10 p-2">
+            <FileSignature className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-headline font-bold">{contract.title}</h1>
+              <Badge className={`${statusMeta.bgColor} ${statusMeta.color} ${statusMeta.borderColor} border`}>
+                {statusMeta.label}
+              </Badge>
             </div>
-             <div className="flex items-center gap-2">
-                <Button><Edit className="mr-2 h-4 w-4"/> Загвар засах</Button>
-            </div>
+            <p className="text-muted-foreground">{contract.contractNumber} • {contract.templateName}</p>
+          </div>
         </div>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-        <div className="md:col-span-2">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Гэрээний урьдчилсан харагдац</CardTitle>
-                </CardHeader>
+
+      {/* Lifecycle Stepper */}
+      <Card className="mt-4">
+        <CardContent className="pt-6 pb-4">
+          <ContractStatusStepper currentStatus={contract.status} />
+        </CardContent>
+      </Card>
+
+      {/* Main Content */}
+      <div className="grid gap-6 lg:grid-cols-3 mt-6">
+        {/* Left - Tabs */}
+        <div className="lg:col-span-2">
+          <Tabs defaultValue="info">
+            <TabsList>
+              <TabsTrigger value="info">Мэдээлэл</TabsTrigger>
+              <TabsTrigger value="approval">Батлалт ({contract.approvalSteps?.length || 0})</TabsTrigger>
+              <TabsTrigger value="history">Түүх ({contract.activityLog?.length || 0})</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="info" className="mt-4">
+              <Card>
+                <CardHeader><CardTitle>Гэрээний талбарууд</CardTitle></CardHeader>
                 <CardContent>
-                   <div className="prose prose-sm max-w-none border rounded-md p-6 bg-muted/20">
-                     <ContractPrintLayout 
-                        contract={contract}
-                        shipment={shipment}
-                        orderItem={orderItem}
-                     />
-                   </div>
-                </CardContent>
-            </Card>
-        </div>
-        <div className="space-y-6 sticky top-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Гэрээний төлөв</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <DetailItem label="Статус" value={<Badge variant={contract.status === 'signed' ? 'success' : 'secondary'}>{contract.status === 'signed' ? 'Гарын үсэг зурсан' : 'Хүлээгдэж буй'}</Badge>} />
-                    <DetailItem label="Жолооч" value={contract.driverInfo.name} />
-                    <DetailItem label="Үүсгэсэн огноо" value={format(contract.createdAt, 'yyyy-MM-dd')} />
-                    {contract.signedAt && (
-                         <DetailItem label="Зурсан огноо" value={format(contract.signedAt, 'yyyy-MM-dd HH:mm')} />
+                  <div className="space-y-3">
+                    {template
+                      ? template.fields.sort((a, b) => a.order - b.order).map((f) => (
+                          <div key={f.id} className="flex gap-4 py-2 border-b last:border-0">
+                            <span className="text-muted-foreground shrink-0 font-medium">{f.label}:</span>
+                            <span>{contract.resolvedData[f.id] || '(хоосон)'}</span>
+                          </div>
+                        ))
+                      : Object.entries(contract.resolvedData).map(([key, value]) => (
+                          <div key={key} className="flex gap-4 py-2 border-b last:border-0">
+                            <span className="text-muted-foreground shrink-0 font-medium">{key}:</span>
+                            <span>{value || '(хоосон)'}</span>
+                          </div>
+                        ))}
+                    {Object.keys(contract.resolvedData).length === 0 && (
+                      <p className="text-muted-foreground py-4">Талбар байхгүй</p>
                     )}
+                  </div>
                 </CardContent>
-            </Card>
-             <Card>
-                <CardHeader>
-                    <CardTitle>Жолоочид илгээх</CardTitle>
-                    <CardDescription>Энэ холбоосыг жолооч руу илгээж, гэрээг цахимаар баталгаажуулна уу.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex gap-2">
-                        <Input value={contractPublicUrl} readOnly />
-                        <Button onClick={copyToClipboard} variant="outline" disabled={!contractPublicUrl}>Хуулах</Button>
+              </Card>
+
+              {/* Dates & Value */}
+              {(contract.startDate || contract.endDate || contract.totalValue != null) && (
+                <Card className="mt-4">
+                  <CardContent className="pt-6">
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      {contract.startDate && (
+                        <div className="flex items-center gap-3">
+                          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Эхлэх огноо</p>
+                            <p className="text-sm font-medium">{new Date(contract.startDate).toLocaleDateString('mn-MN')}</p>
+                          </div>
+                        </div>
+                      )}
+                      {contract.endDate && (
+                        <div className="flex items-center gap-3">
+                          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Дуусах огноо</p>
+                            <p className="text-sm font-medium">{new Date(contract.endDate).toLocaleDateString('mn-MN')}</p>
+                          </div>
+                        </div>
+                      )}
+                      {contract.totalValue != null && (
+                        <div className="flex items-center gap-3">
+                          <DollarSign className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Нийт дүн</p>
+                            <p className="text-sm font-medium">{contract.totalValue.toLocaleString()}₮</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="approval" className="mt-4">
+              <Card>
+                <CardHeader><CardTitle>Батлалтын явц</CardTitle></CardHeader>
+                <CardContent>
+                  <ContractApprovalChain steps={contract.approvalSteps || []} />
                 </CardContent>
-                <CardFooter>
-                    <Button asChild className="w-full" disabled={!contractPublicUrl}>
-                        <Link href={contractPublicUrl} target="_blank">
-                            <FileSignature className="mr-2 h-4 w-4" />
-                            Холбоосыг нээх
-                        </Link>
-                    </Button>
-                </CardFooter>
-            </Card>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="history" className="mt-4">
+              <Card>
+                <CardHeader><CardTitle>Үйл ажиллагааны түүх</CardTitle></CardHeader>
+                <CardContent>
+                  <ContractActivityLog entries={contract.activityLog || []} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Right Sidebar */}
+        <div className="space-y-6">
+          {/* Actions */}
+          <Card>
+            <CardHeader><CardTitle className="text-base">Үйлдэл</CardTitle></CardHeader>
+            <CardContent>
+              <ContractActions
+                contract={contract}
+                currentUserUid={currentUser.uid}
+                isStaff={isStaff}
+                onSubmitForReview={() => setSubmitDialogOpen(true)}
+                onApprove={() => openActionDialog('approve')}
+                onReject={() => openActionDialog('reject')}
+                onRequestRevision={() => openActionDialog('revision')}
+                onActivate={handleActivate}
+                onTerminate={() => openActionDialog('terminate')}
+                onResubmit={handleResubmit}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Info Sidebar */}
+          <Card>
+            <CardHeader><CardTitle className="text-base">Ерөнхий мэдээлэл</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Үүсгэсэн огноо</p>
+                  <p className="text-sm font-medium">
+                    {contract.createdAt.toLocaleString('mn-MN', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              </div>
+              <Separator />
+              <div className="flex items-center gap-3">
+                <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Үүсгэсэн</p>
+                  <p className="text-sm font-medium">{contract.createdBy?.name || '—'}</p>
+                </div>
+              </div>
+              {contract.linkedEntities?.customerName && (
+                <>
+                  <Separator />
+                  <div className="flex items-center gap-3">
+                    <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Харилцагч</p>
+                      <p className="text-sm font-medium">{contract.linkedEntities.customerName}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+              {contract.rejectedReason && (
+                <>
+                  <Separator />
+                  <div className="rounded-md bg-red-50 p-3">
+                    <p className="text-xs text-red-600 font-medium">Татгалзсан шалтгаан</p>
+                    <p className="text-sm text-red-700 mt-1">{contract.rejectedReason}</p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </div>
+
+      {/* Submit for Review Dialog */}
+      <SubmitReviewDialog
+        open={submitDialogOpen}
+        onOpenChange={setSubmitDialogOpen}
+        onSubmit={handleSubmitForReview}
+      />
+
+      {/* Action Dialog (approve/reject/revision/terminate) */}
+      <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>{actionType ? actionDialogTitles[actionType] : ''}</DialogTitle>
+            <DialogDescription>Сэтгэгдэл үлдээх (заавал биш)</DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={actionComment}
+            onChange={(e) => setActionComment(e.target.value)}
+            placeholder="Сэтгэгдэл бичих..."
+            rows={3}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setActionDialogOpen(false)}>Цуцлах</Button>
+            <Button
+              onClick={handleAction}
+              disabled={actionLoading}
+              variant={actionType === 'reject' || actionType === 'terminate' ? 'destructive' : 'default'}
+            >
+              {actionLoading ? 'Уншиж байна...' : 'Баталгаажуулах'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </PageContainer>
   );
 }
-
-    
-
-    
