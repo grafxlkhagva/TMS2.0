@@ -23,6 +23,7 @@ import {
   AreaChart,
   Wrench,
   Fuel,
+  Route,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -70,7 +71,7 @@ interface NavItem {
 
 const baseNavItems: NavItem[] = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/orders', icon: Briefcase, label: 'Захиалга' },
+  { href: '/quotes', icon: Briefcase, label: 'Үнийн санал' },
   { href: '/contracted-transport', icon: FileSignature, label: 'Гэрээт тээвэр' },
   { href: '/direct-shipments', icon: Truck, label: 'Шууд тээвэрлэлт' },
   { href: '/shipments', icon: Truck, label: 'Тээвэрлэлт' },
@@ -135,11 +136,21 @@ function Nav() {
         }
         mainItems.push({ href: '/dashboard', icon: LayoutDashboard, label: 'Хянах самбар' });
 
-        const operationsItems = [
-          { href: '/orders', icon: Briefcase, label: 'Захиалга' },
+        const operationsItems: NavItem[] = [
+          { href: '/quotes', icon: Briefcase, label: 'Үнийн санал' },
           { href: '/contracted-transport', icon: FileSignature, label: 'Гэрээт тээвэр' },
           { href: '/direct-shipments', icon: Truck, label: 'Шууд тээвэрлэлт' },
           { href: '/shipments', icon: Truck, label: 'Тээвэрлэлт' },
+          {
+            href: '/transport-operations',
+            icon: Route,
+            label: 'Тээврийн үйл ажиллагаа',
+            subItems: [
+              { href: '/transport-operations', label: 'Тойм' },
+              { href: '/transport-operations/end-to-end', label: 'End-to-End' },
+              { href: '/contracts', label: 'Гэрээ' },
+            ],
+          },
         ];
 
         const resourcesItems = [
@@ -217,18 +228,19 @@ function Nav() {
                       </CollapsibleContent>
                     </Collapsible>
                   ) : (
-                    <Link href={item.href}>
-                      <SidebarMenuButton
-                        isActive={pathname === item.href}
-                        tooltip={state === 'collapsed' ? { children: item.label, side: 'right' } : undefined}
-                        className="relative"
-                      >
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === item.href}
+                      tooltip={state === 'collapsed' ? { children: item.label, side: 'right' } : undefined}
+                      className="relative"
+                    >
+                      <Link href={item.href} className="flex items-center gap-2 w-full">
                         {pathname === item.href && (
                           <div className="absolute left-0 h-4 w-1 rounded-r-full bg-primary" />
                         )}
                         <item.icon className="mr-2 h-4 w-4 shrink-0" />
                         <span>{item.label}</span>
-                        {item.label === 'Захиалга' && (
+                        {item.label === 'Үнийн санал' && (
                           <SidebarMenuBadge className="bg-primary/10 text-primary group-data-[active=true]:bg-white group-data-[active=true]:text-primary">
                             12
                           </SidebarMenuBadge>
@@ -238,8 +250,8 @@ function Nav() {
                             3
                           </SidebarMenuBadge>
                         )}
-                      </SidebarMenuButton>
-                    </Link>
+                      </Link>
+                    </SidebarMenuButton>
                   )}
                 </SidebarMenuItem>
               ))}
