@@ -4,8 +4,10 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { GoogleMap, Marker } from '@react-google-maps/api';
+import { GoogleMap } from '@react-google-maps/api';
 import type { Warehouse } from '@/types';
+import { AdvancedMarker } from '@/components/maps/advanced-marker';
+import { GOOGLE_MAPS_MAP_ID } from '@/lib/google-maps';
 
 const mapContainerStyle = {
     height: '400px',
@@ -44,10 +46,14 @@ export function ShipmentMap({ isMapLoaded, loadError, hasApiKey, startWarehouse,
                             mapContainerStyle={mapContainerStyle}
                             center={startWarehouse?.geolocation || { lat: 47.91976, lng: 106.91763 }}
                             zoom={5}
-                            options={{ streetViewControl: false, mapTypeControl: false }}
+                            options={{ streetViewControl: false, mapTypeControl: false, mapId: GOOGLE_MAPS_MAP_ID }}
                         >
-                            {startWarehouse?.geolocation && <Marker position={startWarehouse.geolocation} label="A" />}
-                            {endWarehouse?.geolocation && <Marker position={endWarehouse.geolocation} label="B" />}
+                            {startWarehouse?.geolocation && (
+                              <AdvancedMarker position={startWarehouse.geolocation} glyph="A" color="#2563eb" borderColor="#1e40af" />
+                            )}
+                            {endWarehouse?.geolocation && (
+                              <AdvancedMarker position={endWarehouse.geolocation} glyph="B" color="#dc2626" borderColor="#991b1b" />
+                            )}
                         </GoogleMap>
                     )}
                 </div>

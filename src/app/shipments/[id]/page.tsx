@@ -8,8 +8,9 @@ import type { Shipment, OrderItemCargo, ShipmentStatusType, PackagingType, Order
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from "date-fns"
-import { useLoadScript, GoogleMap, Marker } from '@react-google-maps/api';
+import { useLoadScript } from '@react-google-maps/api';
 import { useAuth } from '@/hooks/use-auth';
+import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_SCRIPT_ID } from '@/lib/google-maps';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -62,8 +63,6 @@ const updateFormSchema = z.object({
 type UpdateFormValues = z.infer<typeof updateFormSchema>;
 
 
-
-const libraries: ('places')[] = ['places'];
 
 const mapContainerStyle = {
   height: '400px',
@@ -132,10 +131,10 @@ export default function ShipmentDetailPage() {
   const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   const { isLoaded: isMapLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-    libraries,
+    id: GOOGLE_MAPS_SCRIPT_ID,
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+    libraries: GOOGLE_MAPS_LIBRARIES,
     preventGoogleFontsLoading: true,
-    preventLoading: !hasApiKey,
   });
 
   const fetchShipmentData = React.useCallback(async () => {
@@ -438,7 +437,7 @@ export default function ShipmentDetailPage() {
         toast({
           variant: 'destructive',
           title: 'Жолооч олдсонгүй',
-          description: 'Энэ утасны дугаартай жолооч системд бүртгэлгүй байна. Захиалгын дэлгэрэнгүйгээс жолоочийг бүртгэнэ үү.',
+          description: 'Энэ утасны дугаартай жолооч системд бүртгэлгүй байна. Үнийн саналын дэлгэрэнгүйгээс жолоочийг бүртгэнэ үү.',
         });
         return;
       }
@@ -636,7 +635,7 @@ export default function ShipmentDetailPage() {
       await batch.commit();
 
       toast({ title: 'Амжилттай', description: 'Тээвэрлэлт устгагдлаа.' });
-      router.push(`/orders/${shipment.orderId}`);
+      router.push(`/quotes/${shipment.orderId}`);
 
     } catch (error) {
       console.error("Error deleting shipment:", error);

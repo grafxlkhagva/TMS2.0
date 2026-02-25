@@ -5,7 +5,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   GoogleMap,
   useLoadScript,
-  Marker,
 } from '@react-google-maps/api';
 import usePlacesAutocomplete, {
   getGeocode,
@@ -17,6 +16,8 @@ import { Skeleton } from './ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { MapPin, Search } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_MAP_ID, GOOGLE_MAPS_SCRIPT_ID } from '@/lib/google-maps';
+import { AdvancedMarker } from '@/components/maps/advanced-marker';
 
 const mapContainerStyle = {
   height: '400px',
@@ -33,16 +34,15 @@ type LocationPickerProps = {
     onLocationSelect: (address: string, latLng: { lat: number; lng: number }) => void;
     initialValue?: string;
     initialCoordinates?: { lat: number; lng: number };
+    mode?: 'all' | 'search' | 'manual' | 'preview';
 }
 
-const libraries: ('places')[] = ['places'];
-
-function LocationPickerInner({ onLocationSelect, initialValue, initialCoordinates }: LocationPickerProps) {
+function LocationPickerInner({ onLocationSelect, initialValue, initialCoordinates, mode = 'all' }: LocationPickerProps) {
     const [marker, setMarker] = useState<{ lat: number; lng: number } | null>(initialCoordinates || null);
     const [center, setCenter] = useState(initialCoordinates || defaultCenter);
     const [manualLat, setManualLat] = useState(initialCoordinates?.lat.toString() || '');
     const [manualLng, setManualLng] = useState(initialCoordinates?.lng.toString() || '');
-    const [inputMode, setInputMode] = useState<'search' | 'manual'>('search');
+    const [inputMode, setInputMode] = useState<'search' | 'manual'>(mode === 'manual' ? 'manual' : 'search');
   
     const {
       ready,
@@ -59,9 +59,18 @@ function LocationPickerInner({ onLocationSelect, initialValue, initialCoordinate
             setValue(initialValue, false);
         }
     }, [initialValue, setValue]);
+
+    useEffect(() => {
+      if (!initialCoordinates) return;
+      setMarker(initialCoordinates);
+      setCenter(initialCoordinates);
+      setManualLat(initialCoordinates.lat.toString());
+      setManualLng(initialCoordinates.lng.toString());
+    }, [initialCoordinates]);
   
     const handleMapClick = useCallback(
       async (event: google.maps.MapMouseEvent) => {
+        if (mode === 'preview') return;
         if (event.latLng) {
           const lat = event.latLng.lat();
           const lng = event.latLng.lng();
@@ -83,7 +92,7 @@ function LocationPickerInner({ onLocationSelect, initialValue, initialCoordinate
           }
         }
       },
-      [onLocationSelect, setValue]
+      [mode, onLocationSelect, setValue]
     );
   
     const handleSelect = useCallback(
@@ -136,83 +145,99 @@ function LocationPickerInner({ onLocationSelect, initialValue, initialCoordinate
       }
     }, [manualLat, manualLng, onLocationSelect, setValue]);
 
+    useEffect(() => {
+      if (mode === 'manual') setInputMode('manual');
+      if (mode === 'search') setInputMode('search');
+    }, [mode]);
+
+    const showTabs = mode === 'all';
+    const isPreview = mode === 'preview';
+
+    const searchContent = (
+      <Popover open={status === 'OK'} onOpenChange={(open) => !open && clearSuggestions()}>
+        <PopoverTrigger asChild>
+          <div className="relative">
+            <Input
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              disabled={!ready}
+              placeholder="Хаягаар хайх..."
+              autoComplete="off"
+            />
+          </div>
+        </PopoverTrigger>
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+          <ul className="bg-background rounded-md shadow-lg">
+            {data.map(({ place_id, description }) => (
+              <li
+                key={place_id}
+                onClick={() => handleSelect(description)}
+                className="p-2 hover:bg-accent cursor-pointer text-sm"
+              >
+                {description}
+              </li>
+            ))}
+          </ul>
+        </PopoverContent>
+      </Popover>
+    );
+
+    const manualContent = (
+      <>
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Input
+              type="number"
+              step="any"
+              value={manualLat}
+              onChange={(e) => setManualLat(e.target.value)}
+              placeholder="Өргөрөг (lat) жш: 47.9197"
+            />
+          </div>
+          <div className="flex-1">
+            <Input
+              type="number"
+              step="any"
+              value={manualLng}
+              onChange={(e) => setManualLng(e.target.value)}
+              placeholder="Уртраг (lng) жш: 106.9176"
+            />
+          </div>
+          <Button 
+            type="button" 
+            onClick={handleManualCoordinates}
+            disabled={!manualLat || !manualLng}
+          >
+            <MapPin className="h-4 w-4 mr-1" />
+            Байршуулах
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          Өргөрөг: -90 ~ 90, Уртраг: -180 ~ 180. Жишээ: 47.9197, 106.9176 (Улаанбаатар)
+        </p>
+      </>
+    );
+
     return (
         <div className="space-y-4">
-          <Tabs value={inputMode} onValueChange={(v) => setInputMode(v as 'search' | 'manual')}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="search" className="gap-2">
-                <Search className="h-4 w-4" />
-                Хаягаар хайх
-              </TabsTrigger>
-              <TabsTrigger value="manual" className="gap-2">
-                <MapPin className="h-4 w-4" />
-                Координат оруулах
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="search" className="mt-3">
-              <Popover open={status === 'OK'} onOpenChange={(open) => !open && clearSuggestions()}>
-                <PopoverTrigger asChild>
-                  <div className="relative">
-                    <Input
-                      value={value}
-                      onChange={(e) => setValue(e.target.value)}
-                      disabled={!ready}
-                      placeholder="Хаягаар хайх..."
-                      autoComplete="off"
-                    />
-                  </div>
-                </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
-                  <ul className="bg-background rounded-md shadow-lg">
-                    {data.map(({ place_id, description }) => (
-                      <li
-                        key={place_id}
-                        onClick={() => handleSelect(description)}
-                        className="p-2 hover:bg-accent cursor-pointer text-sm"
-                      >
-                        {description}
-                      </li>
-                    ))}
-                  </ul>
-                </PopoverContent>
-              </Popover>
-            </TabsContent>
-
-            <TabsContent value="manual" className="mt-3">
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Input
-                    type="number"
-                    step="any"
-                    value={manualLat}
-                    onChange={(e) => setManualLat(e.target.value)}
-                    placeholder="Өргөрөг (lat) жш: 47.9197"
-                  />
-                </div>
-                <div className="flex-1">
-                  <Input
-                    type="number"
-                    step="any"
-                    value={manualLng}
-                    onChange={(e) => setManualLng(e.target.value)}
-                    placeholder="Уртраг (lng) жш: 106.9176"
-                  />
-                </div>
-                <Button 
-                  type="button" 
-                  onClick={handleManualCoordinates}
-                  disabled={!manualLat || !manualLng}
-                >
-                  <MapPin className="h-4 w-4 mr-1" />
-                  Байршуулах
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Өргөрөг: -90 ~ 90, Уртраг: -180 ~ 180. Жишээ: 47.9197, 106.9176 (Улаанбаатар)
-              </p>
-            </TabsContent>
-          </Tabs>
+          {isPreview ? null : showTabs ? (
+            <Tabs value={inputMode} onValueChange={(v) => setInputMode(v as 'search' | 'manual')}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="search" className="gap-2">
+                  <Search className="h-4 w-4" />
+                  Хаягаар хайх
+                </TabsTrigger>
+                <TabsTrigger value="manual" className="gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Координат оруулах
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="search" className="mt-3">{searchContent}</TabsContent>
+              <TabsContent value="manual" className="mt-3">{manualContent}</TabsContent>
+            </Tabs>
+          ) : (
+            <div>{mode === 'manual' ? manualContent : searchContent}</div>
+          )}
 
           {/* Одоогийн координат харуулах */}
           {marker && (
@@ -225,18 +250,21 @@ function LocationPickerInner({ onLocationSelect, initialValue, initialCoordinate
             mapContainerStyle={mapContainerStyle}
             zoom={marker ? 15 : 10}
             center={center}
-            onClick={handleMapClick}
+            onClick={isPreview ? undefined : handleMapClick}
             options={{
                 streetViewControl: false,
                 mapTypeControl: false,
+                mapId: GOOGLE_MAPS_MAP_ID,
             }}
           >
-            {marker && <Marker position={marker} />}
+            {marker && <AdvancedMarker position={marker} />}
           </GoogleMap>
           
-          <p className="text-xs text-muted-foreground">
-            Газрын зураг дээр дарж байршил сонгох боломжтой
-          </p>
+          {!isPreview && (
+            <p className="text-xs text-muted-foreground">
+              Газрын зураг дээр дарж байршил сонгох боломжтой
+            </p>
+          )}
         </div>
       );
 }
@@ -244,9 +272,9 @@ function LocationPickerInner({ onLocationSelect, initialValue, initialCoordinate
 export default function LocationPicker(props: LocationPickerProps) {
   const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-    libraries,
-    preventLoading: !hasApiKey,
+    id: GOOGLE_MAPS_SCRIPT_ID,
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   if (!hasApiKey) {

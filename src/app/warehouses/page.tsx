@@ -19,7 +19,6 @@ import { MoreHorizontal, PlusCircle, RefreshCw, Search, Eye, Edit, Trash2, Build
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';

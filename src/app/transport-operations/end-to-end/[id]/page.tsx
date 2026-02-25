@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { GoogleMap, Marker, Polyline, useLoadScript } from '@react-google-maps/api';
+import { GoogleMap, Polyline, useLoadScript } from '@react-google-maps/api';
 import { PageContainer } from '@/components/patterns/page-container';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +18,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import LocationPicker from '@/components/location-picker';
+import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_MAP_ID, GOOGLE_MAPS_SCRIPT_ID } from '@/lib/google-maps';
+import { AdvancedMarker } from '@/components/maps/advanced-marker';
 import {
   ArrowLeft,
   AlertTriangle,
@@ -143,8 +145,6 @@ const DISPATCH_PLAYBOOK: Record<DispatchStage, { title: string; focus: string; n
   },
 };
 const DISPATCH_STAGE_ORDER: DispatchStage[] = DISPATCH_STAGES.map((stage) => stage.value);
-const MAPS_SCRIPT_ID = 'tms-google-maps-script';
-const MAPS_LIBRARIES: ('places')[] = ['places'];
 
 type ShipmentFormState = {
   mode: TransportShipmentDetails['mode'];
@@ -403,9 +403,9 @@ export default function TransportOperationDetailPage() {
   const { toast } = useToast();
   const hasMapsApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const { isLoaded: isMapLoaded } = useLoadScript({
-    id: MAPS_SCRIPT_ID,
+    id: GOOGLE_MAPS_SCRIPT_ID,
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-    libraries: MAPS_LIBRARIES,
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   React.useEffect(() => {
@@ -1088,34 +1088,25 @@ export default function TransportOperationDetailPage() {
                         streetViewControl: false,
                         mapTypeControl: false,
                         fullscreenControl: false,
+                        mapId: GOOGLE_MAPS_MAP_ID,
                       }}
                     >
                       {originPoint && (
-                        <Marker
+                        <AdvancedMarker
                           position={originPoint}
                           title={`Ачих цэг: ${shipment.origin.location || shipment.origin.city || ''}`}
-                          icon={{
-                            path: google.maps.SymbolPath.CIRCLE,
-                            fillColor: '#2563eb',
-                            fillOpacity: 1,
-                            strokeColor: '#1e40af',
-                            strokeWeight: 2,
-                            scale: 7,
-                          }}
+                          color="#2563eb"
+                          borderColor="#1e40af"
+                          glyph="A"
                         />
                       )}
                       {destinationPoint && (
-                        <Marker
+                        <AdvancedMarker
                           position={destinationPoint}
                           title={`Буулгах цэг: ${shipment.destination.location || shipment.destination.city || ''}`}
-                          icon={{
-                            path: google.maps.SymbolPath.CIRCLE,
-                            fillColor: '#dc2626',
-                            fillOpacity: 1,
-                            strokeColor: '#991b1b',
-                            strokeWeight: 2,
-                            scale: 7,
-                          }}
+                          color="#dc2626"
+                          borderColor="#991b1b"
+                          glyph="B"
                         />
                       )}
                       {originPoint && destinationPoint && (

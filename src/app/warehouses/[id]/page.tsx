@@ -8,7 +8,9 @@ import { useParams, useRouter } from 'next/navigation';
 import type { Warehouse, Region } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { useLoadScript, GoogleMap, Marker } from '@react-google-maps/api';
+import { useLoadScript, GoogleMap } from '@react-google-maps/api';
+import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_MAP_ID, GOOGLE_MAPS_SCRIPT_ID } from '@/lib/google-maps';
+import { AdvancedMarker } from '@/components/maps/advanced-marker';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -46,8 +48,6 @@ function DetailItem({ icon: Icon, label, value, subValue }: { icon: React.Elemen
   );
 }
 
-const libraries: ('places')[] = ['places'];
-
 export default function WarehouseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -59,9 +59,9 @@ export default function WarehouseDetailPage() {
 
   const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const { isLoaded: isMapLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-    libraries,
-    preventLoading: !hasApiKey,
+    id: GOOGLE_MAPS_SCRIPT_ID,
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   React.useEffect(() => {
@@ -281,6 +281,7 @@ export default function WarehouseDetailPage() {
                   options={{
                     streetViewControl: false,
                     mapTypeControl: false,
+                    mapId: GOOGLE_MAPS_MAP_ID,
                     styles: [
                       {
                         featureType: "poi",
@@ -290,7 +291,7 @@ export default function WarehouseDetailPage() {
                     ]
                   }}
                 >
-                  <Marker position={warehouse.geolocation} />
+                  <AdvancedMarker position={warehouse.geolocation} />
                 </GoogleMap>
               ) : (
                 <div className="h-full w-full flex items-center justify-center bg-muted text-muted-foreground p-6 text-center">
@@ -325,5 +326,3 @@ export default function WarehouseDetailPage() {
     </div>
   );
 }
-
-

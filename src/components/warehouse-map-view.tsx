@@ -1,15 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, useLoadScript, InfoWindow } from '@react-google-maps/api';
 import type { Warehouse } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { MapPin, Eye } from 'lucide-react';
 import Link from 'next/link';
-
-const libraries: ('places')[] = ['places'];
+import { GOOGLE_MAPS_LIBRARIES, GOOGLE_MAPS_MAP_ID, GOOGLE_MAPS_SCRIPT_ID } from '@/lib/google-maps';
+import { AdvancedMarker } from '@/components/maps/advanced-marker';
 
 interface MapViewProps {
     warehouses: Warehouse[];
@@ -32,8 +32,9 @@ export function WarehouseMapView({
 }: MapViewProps) {
     const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     const { isLoaded, loadError } = useLoadScript({
-        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-        libraries,
+        id: GOOGLE_MAPS_SCRIPT_ID,
+        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+        libraries: GOOGLE_MAPS_LIBRARIES,
     });
 
     const center = React.useMemo(() => {
@@ -97,31 +98,28 @@ export function WarehouseMapView({
                             streetViewControl: false,
                             mapTypeControl: true,
                             fullscreenControl: true,
+                            mapId: GOOGLE_MAPS_MAP_ID,
                         }}
                     >
                         {warehouses.map((warehouse) => {
                             if (!warehouse.geolocation) return null;
 
                             return (
-                                <Marker
+                                <AdvancedMarker
                                     key={warehouse.id}
                                     position={warehouse.geolocation}
                                     onClick={() => onSelectWarehouse(warehouse)}
-                                    icon={{
-                                        path: google.maps.SymbolPath.CIRCLE,
-                                        scale: 12,
-                                        fillColor:
-                                            warehouse.status === 'active'
-                                                ? '#2563eb'
-                                                : warehouse.status === 'full'
-                                                    ? '#0c4a6e'
-                                                    : warehouse.status === 'maintenance'
-                                                        ? '#0ea5e9'
-                                                        : '#7dd3fc',
-                                        fillOpacity: 1,
-                                        strokeColor: '#ffffff',
-                                        strokeWeight: 3,
-                                    }}
+                                    color={
+                                        warehouse.status === 'active'
+                                            ? '#2563eb'
+                                            : warehouse.status === 'full'
+                                                ? '#0c4a6e'
+                                                : warehouse.status === 'maintenance'
+                                                    ? '#0ea5e9'
+                                                    : '#7dd3fc'
+                                    }
+                                    borderColor="#ffffff"
+                                    scale={1.1}
                                 />
                             );
                         })}
