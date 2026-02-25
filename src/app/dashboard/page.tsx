@@ -57,7 +57,7 @@ export default function DashboardPage() {
                     return acc;
                 }, {} as Record<string, number>);
 
-                const formattedChartData = Object.entries(statusCounts).map(([name, value]) => ({ name, Захиалга: value }));
+                const formattedChartData = Object.entries(statusCounts).map(([name, value]) => ({ name, count: value }));
                 setChartData(formattedChartData);
 
                 // Fetch recent orders
@@ -134,8 +134,8 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="lg:col-span-2">
                     <CardHeader>
-                        <CardTitle>Захиалгын статусын хуваарилалт</CardTitle>
-                        <CardDescription>Захиалгын төлөв байдлын ерөнхий харагдац.</CardDescription>
+                        <CardTitle>Үнийн саналын статусын хуваарилалт</CardTitle>
+                        <CardDescription>Үнийн саналын төлөв байдлын ерөнхий харагдац.</CardDescription>
                     </CardHeader>
                     <CardContent>
                        {isLoading ? (
@@ -155,7 +155,7 @@ export default function DashboardPage() {
                                         }}
                                     />
                                     <Legend />
-                                    <Bar dataKey="Захиалга" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="count" name="Үнийн санал" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -184,7 +184,7 @@ export default function DashboardPage() {
                                     {recentOrders.map(order => (
                                         <TableRow key={order.id}>
                                             <TableCell>
-                                                <Link href={`/orders/${order.id}`} className="font-medium hover:underline">
+                                                <Link href={`/quotes/${order.id}`} className="font-medium hover:underline">
                                                     {order.customerName}
                                                 </Link>
                                                 <div className="text-xs text-muted-foreground font-mono">{order.orderNumber}</div>

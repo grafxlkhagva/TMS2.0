@@ -1,12 +1,8 @@
 {
   "indexes": [
-    {
-      "collectionGroup": "customers",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "nameLower", "order": "ASCENDING" }
-      ]
-    }
+    {"collectionGroup":"customers","queryScope":"COLLECTION","fields":[{"fieldPath":"nameLower","order":"ASCENDING"}]},
+    {"collectionGroup":"contract_templates","queryScope":"COLLECTION","fields":[{"fieldPath":"createdAt","order":"DESCENDING"}]},
+    {"collectionGroup":"contracts","queryScope":"COLLECTION","fields":[{"fieldPath":"createdAt","order":"DESCENDING"}]}
   ],
   "fieldOverrides": []
 }

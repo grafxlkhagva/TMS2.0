@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
         const conditions = order.conditions || {};
 
         const newRow = [
-            order.orderNumber, // Захиалгын №
+            order.orderNumber, // Үнийн саналын №
             sentDate, // Илгээсэн огноо
             getDetailName('regions', orderItem.startRegionId), // Ачих бүс
             getDetailName('regions', orderItem.endRegionId), // Буулгах бүс

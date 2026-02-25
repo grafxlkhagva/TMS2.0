@@ -359,7 +359,17 @@ function ShipmentItemForm({ form, itemIndex, onRemove, onQuickAdd, allData }: an
     )
 }
 
-export default function OrderItemForm({ form, fields, remove, isSubmitting, onSubmit, onAddNewItem, allData, setAllData }: any) {
+export default function OrderItemForm({
+    form,
+    fields,
+    remove,
+    isSubmitting,
+    onSubmit,
+    onAddNewItem,
+    onQuickAddDraft,
+    allData,
+    setAllData
+}: any) {
     const [dialogProps, setDialogProps] = React.useState<Omit<QuickAddDialogProps, 'onClose'> | null>(null);
 
     const handleQuickAdd = (type: 'regions' | 'service_types' | 'vehicle_types' | 'trailer_types' | 'packaging_types' | 'warehouses', formField: any) => {
@@ -397,9 +407,16 @@ export default function OrderItemForm({ form, fields, remove, isSubmitting, onSu
                     />
                 ))}
                 <div className="flex justify-between items-center">
-                    <Button type="button" variant="outline" onClick={onAddNewItem}>
-                        <PlusCircle className="mr-2 h-4 w-4" /> Тээвэрлэлт нэмэх
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button type="button" variant="outline" onClick={onAddNewItem}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Тээвэрлэлт нэмэх
+                        </Button>
+                        {typeof onQuickAddDraft === 'function' && (
+                            <Button type="button" variant="secondary" onClick={onQuickAddDraft} disabled={isSubmitting}>
+                                <Plus className="mr-2 h-4 w-4" /> Шуурхай нэмэх
+                            </Button>
+                        )}
+                    </div>
                     {fields.length > 0 && (
                         <Button type="submit" disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Хадгалах

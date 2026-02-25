@@ -58,7 +58,7 @@ const ShipmentReportLayout = React.forwardRef<
       <section className="mb-6 grid grid-cols-2 gap-x-8 gap-y-4 no-break">
         <div>
             <h2 className="text-base font-bold mb-2 border-b">Ерөнхий мэдээлэл</h2>
-            <p><strong>Захиалгын №:</strong> {shipment.orderNumber}</p>
+            <p><strong>Үнийн саналын №:</strong> {shipment.orderNumber}</p>
             <p><strong>Харилцагч:</strong> {shipment.customerName}</p>
             <p><strong>Жолооч:</strong> {shipment.driverInfo.name}</p>
             <p><strong>Утас:</strong> {shipment.driverInfo.phone}</p>

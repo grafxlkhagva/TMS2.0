@@ -233,7 +233,7 @@ export default function MyDashboardPage() {
                              <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Захиалгын №</TableHead>
+                                        <TableHead>Үнийн саналын №</TableHead>
                                         <TableHead>Харилцагч</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -241,7 +241,7 @@ export default function MyDashboardPage() {
                                     {pendingOrders.length > 0 ? pendingOrders.map(order => (
                                         <TableRow key={order.id}>
                                             <TableCell>
-                                                <Link href={`/orders/${order.id}`} className="font-medium hover:underline font-mono">
+                                                <Link href={`/quotes/${order.id}`} className="font-medium hover:underline font-mono">
                                                     {order.orderNumber}
                                                 </Link>
                                             </TableCell>

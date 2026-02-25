@@ -36,7 +36,7 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
             const data = await customerService.getCustomerOrders(customerId);
             setOrders(data);
         } catch (error) {
-            toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалгын түүх авахад алдаа гарлаа.' });
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Үнийн саналын түүх авахад алдаа гарлаа.' });
         } finally {
             setLoading(false);
         }
@@ -54,14 +54,14 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Захиалгын Түүх</CardTitle>
+                <CardTitle>Үнийн саналын түүх</CardTitle>
                 <CardDescription>Нийт {orders.length} захиалга байна.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Захиалгын №</TableHead>
+                            <TableHead>Үнийн саналын №</TableHead>
                             <TableHead>Огноо</TableHead>
                             <TableHead>Статус</TableHead>
                             <TableHead>Үүсгэсэн</TableHead>
@@ -87,7 +87,7 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
                                     </TableCell>
                                     <TableCell>{order.createdBy?.name}</TableCell>
                                     <TableCell className="text-right">
-                                        <Link href={`/orders/${order.id}`} className="text-blue-500 hover:underline text-sm">
+                                        <Link href={`/quotes/${order.id}`} className="text-blue-500 hover:underline text-sm">
                                             Харах
                                         </Link>
                                     </TableCell>
@@ -96,7 +96,7 @@ export function CustomerOrdersTab({ customerId }: CustomerOrdersTabProps) {
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={5} className="text-center h-24">
-                                    Захиалга олдсонгүй.
+                                    Үнийн санал олдсонгүй.
                                 </TableCell>
                             </TableRow>
                         )}

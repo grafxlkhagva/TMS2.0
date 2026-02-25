@@ -1,8 +1,18 @@
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  // In a real app, you'd check for authentication status
-  // and redirect to /login if not authenticated.
-  // For now, we'll just redirect to dashboard.
-  redirect('/dashboard');
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace('/dashboard');
+  }, [router]);
+
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <span className="animate-pulse text-muted-foreground">Дахин чиглүүлж байна...</span>
+    </div>
+  );
 }

@@ -97,6 +97,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 
 const toDateSafe = (date: any): Date => {
+    // For optional fields we use `toDateOptional` instead.
     if (date instanceof Timestamp) return date.toDate();
     if (date instanceof Date) return date;
     // Handle Firestore-like object structure from serialization
@@ -113,6 +114,13 @@ const toDateSafe = (date: any): Date => {
     }
     // Return a default or invalid date if parsing fails, to avoid crashes.
     return new Date(0);
+};
+
+const toDateOptional = (date: any): Date | undefined => {
+    if (date == null) return undefined;
+    // Common Firestore "missing" values we treat as not-set
+    if (date === '') return undefined;
+    return toDateSafe(date);
 };
 
 
@@ -291,10 +299,10 @@ export default function OrderDetailPage() {
                     id: d.id,
                     ...itemData,
                     createdAt: toDateSafe(itemData.createdAt),
-                    loadingStartDate: toDateSafe(itemData.loadingStartDate),
-                    loadingEndDate: toDateSafe(itemData.loadingEndDate),
-                    unloadingStartDate: toDateSafe(itemData.unloadingStartDate),
-                    unloadingEndDate: toDateSafe(itemData.unloadingEndDate),
+                    loadingStartDate: toDateOptional(itemData.loadingStartDate),
+                    loadingEndDate: toDateOptional(itemData.loadingEndDate),
+                    unloadingStartDate: toDateOptional(itemData.unloadingStartDate),
+                    unloadingEndDate: toDateOptional(itemData.unloadingEndDate),
                     cargoItems: cargoItems
                 } as OrderItem
             });
@@ -589,6 +597,50 @@ export default function OrderDetailPage() {
             setIsSubmitting(false);
         }
     }
+
+    const handleQuickAddDraftItem = async () => {
+        if (!orderId || !db) return;
+        setIsSubmitting(true);
+        try {
+            const batch = writeBatch(db);
+            const orderRef = doc(db, 'orders', orderId);
+            const orderItemRef = doc(collection(db, 'order_items'));
+
+            // Create a draft item with safe defaults, so users can fill details later.
+            // We intentionally do not set optional refs/dates.
+            batch.set(orderItemRef, {
+                orderId,
+                orderRef,
+                status: 'Pending',
+                tenderStatus: 'Closed',
+                createdAt: serverTimestamp(),
+                frequency: 1,
+                totalDistance: 0,
+                profitMargin: 0,
+                withVAT: true,
+
+                // Keep string fields present but empty to avoid downstream crashes.
+                serviceTypeId: '',
+                startRegionId: '',
+                startWarehouseId: '',
+                endRegionId: '',
+                endWarehouseId: '',
+                vehicleTypeId: '',
+                trailerTypeId: '',
+
+                isDraft: true,
+            });
+
+            await batch.commit();
+            toast({ title: 'Амжилттай', description: 'Шуурхай тээвэрлэлт нэмэгдлээ. Дараа нь дэлгэрэнгүйг бөглөж болно.' });
+            fetchOrderData();
+        } catch (error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: 'Алдаа', description: 'Шуурхай тээвэрлэлт нэмэхэд алдаа гарлаа.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const handleAcceptQuote = async (item: OrderItem, quoteToAccept: DriverQuote) => {
         if (!db) return;
@@ -972,6 +1024,7 @@ export default function OrderDetailPage() {
                                 isSubmitting={isSubmitting}
                                 onSubmit={onNewItemSubmit}
                                 onAddNewItem={handleAddNewItem}
+                                onQuickAddDraft={handleQuickAddDraftItem}
                                 allData={allData}
                                 setAllData={{
                                     setServiceTypes,

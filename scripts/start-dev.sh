@@ -17,6 +17,9 @@ else
 fi
 
 echo ""
+echo ".next cache цэвэрлэж байна..."
+rm -rf "$PROJECT_DIR/.next"
+echo ""
 echo "TMS dev сервер асааж байна (http://localhost:$PORT)..."
 echo ""
 

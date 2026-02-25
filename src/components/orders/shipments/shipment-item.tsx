@@ -68,6 +68,15 @@ export function ShipmentItem({
     getItemStatusBadgeVariant
 }: ShipmentItemProps) {
     const acceptedQuote = quotes.find(q => q.id === item.acceptedQuoteId);
+    const isDraft = Boolean((item as any)?.isDraft);
+
+    const hasRoute =
+        Boolean(item.startRegionId) ||
+        Boolean(item.startWarehouseId) ||
+        Boolean(item.endRegionId) ||
+        Boolean(item.endWarehouseId);
+
+    const hasDates = Boolean((item as any).loadingStartDate) || Boolean((item as any).unloadingEndDate);
 
     return (
         <AccordionItem value={`item-${index}`} key={item.id}>
@@ -77,6 +86,9 @@ export function ShipmentItem({
                         <div className="flex-1 space-y-2">
                             <div className="flex items-center gap-2">
                                 <p className="font-semibold text-base">Тээвэрлэлт #{index + 1}</p>
+                                {isDraft && (
+                                    <Badge variant="secondary">Draft</Badge>
+                                )}
                                 {acceptedQuote && (
                                     <Badge variant="outline" className="ml-2">
                                         <User className="w-3 h-3 mr-1" />
@@ -87,15 +99,28 @@ export function ShipmentItem({
                             <div className="space-y-2 text-sm text-muted-foreground">
                                 <div className="flex items-center gap-2">
                                     <MapPin className="h-4 w-4 flex-shrink-0" />
-                                    <span>{getRegionName(item.startRegionId)} ({getWarehouseName(item.startWarehouseId)}) &rarr; {getRegionName(item.endRegionId)} ({getWarehouseName(item.endWarehouseId)})</span>
+                                    <span>
+                                        {hasRoute ? (
+                                            <>
+                                                {getRegionName(item.startRegionId || '')} ({getWarehouseName(item.startWarehouseId || '')}) &rarr;{' '}
+                                                {getRegionName(item.endRegionId || '')} ({getWarehouseName(item.endWarehouseId || '')})
+                                            </>
+                                        ) : (
+                                            'Чиглэл оруулаагүй'
+                                        )}
+                                    </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Calendar className="h-4 w-4 flex-shrink-0" />
-                                    <span>{format(new Date(item.loadingStartDate), "MM/dd")} - {format(new Date(item.unloadingEndDate), "MM/dd")}</span>
+                                    <span>
+                                        {hasDates && (item as any).loadingStartDate && (item as any).unloadingEndDate
+                                            ? `${format(new Date((item as any).loadingStartDate), "MM/dd")} - ${format(new Date((item as any).unloadingEndDate), "MM/dd")}`
+                                            : 'Огноо сонгоогүй'}
+                                    </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Truck className="h-4 w-4 flex-shrink-0" />
-                                    <span>{getVehicleTypeName(item.vehicleTypeId)}</span>
+                                    <span>{item.vehicleTypeId ? getVehicleTypeName(item.vehicleTypeId) : 'Машин сонгоогүй'}</span>
                                 </div>
                                 <div className="flex items-start gap-2">
                                     <Package className="h-4 w-4 flex-shrink-0 mt-0.5" />

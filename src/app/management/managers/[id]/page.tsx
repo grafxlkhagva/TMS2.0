@@ -192,7 +192,7 @@ export default function ManagerDetailPage() {
                          <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Захиалгын №</TableHead>
+                                    <TableHead>Үнийн саналын №</TableHead>
                                     <TableHead>Харилцагч</TableHead>
                                     <TableHead>Статус</TableHead>
                                 </TableRow>
@@ -201,7 +201,7 @@ export default function ManagerDetailPage() {
                                 {recentOrders.length > 0 ? recentOrders.map(order => (
                                     <TableRow key={order.id}>
                                         <TableCell>
-                                            <Link href={`/orders/${order.id}`} className="font-medium hover:underline font-mono">
+                                            <Link href={`/quotes/${order.id}`} className="font-medium hover:underline font-mono">
                                                 {order.orderNumber}
                                             </Link>
                                         </TableCell>
@@ -210,7 +210,7 @@ export default function ManagerDetailPage() {
                                     </TableRow>
                                 )) : (
                                     <TableRow>
-                                        <TableCell colSpan={3} className="text-center h-24">Захиалга олдсонгүй.</TableCell>
+                                        <TableCell colSpan={3} className="text-center h-24">Үнийн санал олдсонгүй.</TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>

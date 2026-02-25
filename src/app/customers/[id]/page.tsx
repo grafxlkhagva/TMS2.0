@@ -108,7 +108,7 @@ export default function CustomerDetailPage() {
         <TabsList>
           <TabsTrigger value="overview">Тойм</TabsTrigger>
           <TabsTrigger value="employees">Ажилтнууд</TabsTrigger>
-          <TabsTrigger value="orders">Захиалгын Түүх</TabsTrigger>
+          <TabsTrigger value="orders">Үнийн саналын түүх</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">

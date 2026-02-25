@@ -56,7 +56,7 @@ export function ShipmentInfoSidebar({ shipment, cargo, packagingTypes, statusTra
                         </div>
                         {isAfter(new Date(), shipment.estimatedDeliveryDate) && <Badge variant="destructive" className="animate-pulse">Delayed</Badge>}
                     </div>
-                    <DetailItem icon={FileText} label="Захиалгын дугаар" value={<Link href={`/orders/${shipment.orderId}`} className="text-primary hover:underline">{shipment.orderNumber}</Link>} />
+                    <DetailItem icon={FileText} label="Үнийн саналын дугаар" value={<Link href={`/quotes/${shipment.orderId}`} className="text-primary hover:underline">{shipment.orderNumber}</Link>} />
                     <DetailItem icon={User} label="Харилцагч" value={shipment.customerName} />
                     <DetailItem icon={Info} label="Статус" value={<Badge variant={getStatusBadgeVariant(shipment.status)}>{statusTranslations[shipment.status]}</Badge>} />
                     <DetailItem icon={Calendar} label="Үүсгэсэн огноо" value={format(shipment.createdAt, 'yyyy-MM-dd HH:mm')} />

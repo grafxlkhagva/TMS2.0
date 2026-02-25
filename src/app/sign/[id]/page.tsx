@@ -89,7 +89,7 @@ export default function SignContractPage() {
              if (orderItemSnap.exists()) {
                 setOrderItem(orderItemSnap.data() as OrderItem);
              } else {
-                toast({ variant: 'destructive', title: 'Алдаа', description: 'Захиалгын дэлгэрэнгүй мэдээлэл олдсонгүй.' });
+                toast({ variant: 'destructive', title: 'Алдаа', description: 'Үнийн саналын дэлгэрэнгүй мэдээлэл олдсонгүй.' });
              }
           } else {
              toast({ variant: 'destructive', title: 'Алдаа', description: 'Тээвэрлэлтийн мэдээлэл олдсонгүй.' });
