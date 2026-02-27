@@ -15,7 +15,15 @@ import { contractService } from '@/services/contractService';
 import { useToast } from '@/hooks/use-toast';
 import { SOURCE_LABELS } from '@/lib/contract-field-sources';
 import { TemplatePreviewDialog } from '@/components/contracts/template-preview-dialog';
-import type { ContractTemplate } from '@/types';
+import type { ContractTemplate, ContractFieldValueType } from '@/types';
+
+const FIELD_TYPE_LABELS: Record<ContractFieldValueType, string> = {
+  text: 'Текст',
+  textarea: 'Урт текст',
+  number: 'Тоо',
+  date: 'Огноо',
+  select: 'Сонголт',
+};
 
 export default function TemplateDetailPage() {
   const params = useParams();
@@ -143,8 +151,14 @@ export default function TemplateDetailPage() {
                       <span className="text-muted-foreground w-6">{i + 1}.</span>
                       <span className="font-medium">{f.label}</span>
                       <Badge variant="outline">{SOURCE_LABELS[f.source]}</Badge>
+                      <Badge variant="secondary">{FIELD_TYPE_LABELS[f.fieldType || 'text']}</Badge>
                       {f.sourcePath && (
                         <span className="text-sm text-muted-foreground">({f.sourcePath})</span>
+                      )}
+                      {f.fieldType === 'select' && f.selectOptions && f.selectOptions.length > 0 && (
+                        <span className="text-sm text-muted-foreground">
+                          [{f.selectOptions.join(', ')}]
+                        </span>
                       )}
                     </div>
                   ))}

@@ -719,14 +719,19 @@ export type TransportOperation = {
 
 /** Системийн entity-ээс татаж авах боломжтой эх сурвалж */
 export type ContractFieldSource = 'customer' | 'vehicle' | 'driver' | 'warehouse' | 'manual';
+export type ContractFieldValueType = 'text' | 'number' | 'date' | 'select' | 'textarea';
 
 /** Гэрээний загварын талбарын тодорхойлолт */
 export type ContractTemplateField = {
   id: string;
   label: string;
   source: ContractFieldSource;
+  /** UI input төрөл: text, number, date, select, textarea */
+  fieldType?: ContractFieldValueType;
   /** Системийн талбарын замын нэр, жишээ: name, address, registerNumber */
   sourcePath?: string;
+  /** select төрөлд ашиглах сонголтууд */
+  selectOptions?: string[];
   /** Гараар оруулах үед default утга */
   defaultValue?: string;
   required?: boolean;

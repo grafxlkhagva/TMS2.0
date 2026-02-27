@@ -243,6 +243,11 @@ export function TemplateEditor({ content, onChange, editorRef }: TemplateEditorP
           color: hsl(280 67% 35%);
           border: 1px solid hsl(280 67% 82%);
         }
+        .placeholder-manual {
+          background-color: hsl(210 20% 94%);
+          color: hsl(210 20% 30%);
+          border: 1px solid hsl(210 20% 80%);
+        }
         .ProseMirror p.is-editor-empty:first-child::before {
           content: attr(data-placeholder);
           float: left;

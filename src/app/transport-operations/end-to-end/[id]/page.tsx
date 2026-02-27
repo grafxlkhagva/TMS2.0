@@ -481,11 +481,11 @@ export default function TransportOperationDetailPage() {
 
   const shipmentForRoute = operation?.shipmentDetails;
   const originPoint =
-    shipmentForRoute?.origin.lat !== undefined && shipmentForRoute?.origin.lng !== undefined
+    shipmentForRoute?.origin?.lat !== undefined && shipmentForRoute?.origin?.lng !== undefined
       ? { lat: shipmentForRoute.origin.lat, lng: shipmentForRoute.origin.lng }
       : null;
   const destinationPoint =
-    shipmentForRoute?.destination.lat !== undefined && shipmentForRoute?.destination.lng !== undefined
+    shipmentForRoute?.destination?.lat !== undefined && shipmentForRoute?.destination?.lng !== undefined
       ? { lat: shipmentForRoute.destination.lat, lng: shipmentForRoute.destination.lng }
       : null;
   const routeCenter = React.useMemo(() => {
@@ -585,10 +585,10 @@ export default function TransportOperationDetailPage() {
   const dispatchWorkflow = shipment?.dispatchTracking?.workflow as Record<string, any> | undefined;
   const dispatchHistory = shipment?.dispatchTracking?.stageHistory || [];
   const dispatchRouteReady = Boolean(
-    shipment?.origin.lat !== undefined &&
-      shipment?.origin.lng !== undefined &&
-      shipment?.destination.lat !== undefined &&
-      shipment?.destination.lng !== undefined
+    shipment?.origin?.lat !== undefined &&
+      shipment?.origin?.lng !== undefined &&
+      shipment?.destination?.lat !== undefined &&
+      shipment?.destination?.lng !== undefined
   );
   const dispatchChecklist = [
     { label: 'Маршрутын цэг бүрэн', ready: dispatchRouteReady },
@@ -1094,7 +1094,7 @@ export default function TransportOperationDetailPage() {
                       {originPoint && (
                         <AdvancedMarker
                           position={originPoint}
-                          title={`Ачих цэг: ${shipment.origin.location || shipment.origin.city || ''}`}
+                          title={`Ачих цэг: ${shipment?.origin?.location || shipment?.origin?.city || ''}`}
                           color="#2563eb"
                           borderColor="#1e40af"
                           glyph="A"
@@ -1103,7 +1103,7 @@ export default function TransportOperationDetailPage() {
                       {destinationPoint && (
                         <AdvancedMarker
                           position={destinationPoint}
-                          title={`Буулгах цэг: ${shipment.destination.location || shipment.destination.city || ''}`}
+                          title={`Буулгах цэг: ${shipment?.destination?.location || shipment?.destination?.city || ''}`}
                           color="#dc2626"
                           borderColor="#991b1b"
                           glyph="B"
@@ -1130,11 +1130,11 @@ export default function TransportOperationDetailPage() {
                   <div className="mt-3 grid gap-2 sm:grid-cols-2 text-xs">
                     <p className="text-muted-foreground">
                       <span className="font-medium text-foreground">Ачих:</span>{' '}
-                      {[shipment.origin.city, shipment.origin.country].filter(Boolean).join(', ') || '-'}
+                      {[shipment?.origin?.city, shipment?.origin?.country].filter(Boolean).join(', ') || '-'}
                     </p>
                     <p className="text-muted-foreground">
                       <span className="font-medium text-foreground">Буулгах:</span>{' '}
-                      {[shipment.destination.city, shipment.destination.country].filter(Boolean).join(', ') || '-'}
+                      {[shipment?.destination?.city, shipment?.destination?.country].filter(Boolean).join(', ') || '-'}
                     </p>
                   </div>
                 </div>
@@ -1663,13 +1663,13 @@ export default function TransportOperationDetailPage() {
                   <div className="rounded-lg border p-4">
                     <p className="text-xs text-muted-foreground">Хаанаас</p>
                     <p className="font-semibold mt-1">
-                      {[shipment.origin.city, shipment.origin.country].filter(Boolean).join(', ') || '-'}
+                      {[shipment?.origin?.city, shipment?.origin?.country].filter(Boolean).join(', ') || '-'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Агуулах: {shipment.origin.warehouseName || '-'}
+                      Агуулах: {shipment?.origin?.warehouseName || '-'}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">{shipment.origin.location || '-'}</p>
-                    {shipment.origin.lat !== undefined && shipment.origin.lng !== undefined && (
+                    <p className="text-sm text-muted-foreground mt-1">{shipment?.origin?.location || '-'}</p>
+                    {shipment?.origin?.lat !== undefined && shipment?.origin?.lng !== undefined && (
                       <p className="text-xs text-muted-foreground mt-1">
                         {shipment.origin.lat.toFixed(6)}, {shipment.origin.lng.toFixed(6)}
                       </p>
@@ -1681,13 +1681,13 @@ export default function TransportOperationDetailPage() {
                   <div className="rounded-lg border p-4">
                     <p className="text-xs text-muted-foreground">Хаашаа</p>
                     <p className="font-semibold mt-1">
-                      {[shipment.destination.city, shipment.destination.country].filter(Boolean).join(', ') || '-'}
+                      {[shipment?.destination?.city, shipment?.destination?.country].filter(Boolean).join(', ') || '-'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Агуулах: {shipment.destination.warehouseName || '-'}
+                      Агуулах: {shipment?.destination?.warehouseName || '-'}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">{shipment.destination.location || '-'}</p>
-                    {shipment.destination.lat !== undefined && shipment.destination.lng !== undefined && (
+                    <p className="text-sm text-muted-foreground mt-1">{shipment?.destination?.location || '-'}</p>
+                    {shipment?.destination?.lat !== undefined && shipment?.destination?.lng !== undefined && (
                       <p className="text-xs text-muted-foreground mt-1">
                         {shipment.destination.lat.toFixed(6)}, {shipment.destination.lng.toFixed(6)}
                       </p>

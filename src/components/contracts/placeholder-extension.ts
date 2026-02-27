@@ -4,6 +4,8 @@ export interface PlaceholderAttrs {
   source: string;
   path: string;
   label: string;
+  fieldType?: string;
+  options?: string;
 }
 
 declare module '@tiptap/core' {
@@ -27,6 +29,8 @@ export const TemplatePlaceholder = Node.create({
       source: { default: '' },
       path: { default: '' },
       label: { default: '' },
+      fieldType: { default: 'text' },
+      options: { default: '' },
     };
   },
 
@@ -41,6 +45,8 @@ export const TemplatePlaceholder = Node.create({
         'data-placeholder': '',
         'data-source': HTMLAttributes.source,
         'data-path': HTMLAttributes.path,
+        'data-field-type': HTMLAttributes.fieldType || 'text',
+        'data-options': HTMLAttributes.options || '',
         class: `placeholder-chip placeholder-${HTMLAttributes.source}`,
       }),
       `{{${HTMLAttributes.label}}}`,

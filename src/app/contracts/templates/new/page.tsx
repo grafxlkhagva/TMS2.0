@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { TemplateEditor } from '@/components/contracts/template-editor';
 import { TemplateFieldSidebar } from '@/components/contracts/template-field-sidebar';
 import { TemplatePreviewDialog } from '@/components/contracts/template-preview-dialog';
+import type { ContractFieldSource, ContractFieldValueType } from '@/types';
 
 export default function NewTemplatePage() {
   const router = useRouter();
@@ -29,10 +30,26 @@ export default function NewTemplatePage() {
   const [previewOpen, setPreviewOpen] = React.useState(false);
   const editorRef = React.useRef<Editor | null>(null);
 
-  const handleInsertPlaceholder = (source: string, path: string, label: string) => {
+  const handleInsertPlaceholder = (
+    source: string,
+    path: string,
+    label: string,
+    fieldType: ContractFieldValueType = 'text',
+    selectOptions?: string[]
+  ) => {
     const editor = editorRef.current;
     if (!editor) return;
-    editor.chain().focus().insertPlaceholder({ source, path, label }).run();
+    editor
+      .chain()
+      .focus()
+      .insertPlaceholder({
+        source,
+        path,
+        label,
+        fieldType,
+        options: selectOptions && selectOptions.length > 0 ? JSON.stringify(selectOptions) : '',
+      })
+      .run();
   };
 
   const handleSubmit = async () => {
@@ -144,33 +161,57 @@ export default function NewTemplatePage() {
 function extractFieldsFromContent(html: string): {
   id: string;
   label: string;
-  source: 'customer' | 'vehicle' | 'driver' | 'warehouse' | 'manual';
+  source: ContractFieldSource;
+  fieldType?: ContractFieldValueType;
   sourcePath?: string;
+  selectOptions?: string[];
   required: boolean;
   order: number;
 }[] {
-  const regex = /data-source="([^"]+)"\s+data-path="([^"]+)"[^>]*>([^<]*)</g;
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const nodes = Array.from(doc.querySelectorAll('span[data-placeholder][data-source]'));
   const seen = new Set<string>();
   const fields: ReturnType<typeof extractFieldsFromContent> = [];
-  let match;
   let order = 0;
 
-  while ((match = regex.exec(html)) !== null) {
-    const source = match[1] as 'customer' | 'vehicle' | 'driver' | 'warehouse';
-    const path = match[2];
-    const key = `${source}.${path}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+  for (const node of nodes) {
+    const source = (node.getAttribute('data-source') || '') as ContractFieldSource;
+    const sourcePath = node.getAttribute('data-path') || '';
+    const fieldType = (node.getAttribute('data-field-type') || 'text') as ContractFieldValueType;
+    const optionsRaw = node.getAttribute('data-options') || '';
+    let selectOptions: string[] | undefined = undefined;
+    if (optionsRaw) {
+      try {
+        const parsed = JSON.parse(optionsRaw);
+        if (Array.isArray(parsed)) {
+          selectOptions = parsed.map((v) => String(v)).filter(Boolean);
+        }
+      } catch {
+        selectOptions = optionsRaw.split(',').map((v) => v.trim()).filter(Boolean);
+      }
+    }
+    const labelText = (node.textContent || '').replace(/[{}]/g, '').trim();
 
-    const labelText = match[3].replace(/[{}]/g, '').trim();
+    if (!source || !labelText) continue;
+
+    const dedupeKey = source === 'manual'
+      ? `manual.${sourcePath || labelText}`
+      : `${source}.${sourcePath}`;
+
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+
     fields.push({
       id: crypto.randomUUID(),
       label: labelText,
       source,
-      sourcePath: path,
+      fieldType,
+      sourcePath: sourcePath || undefined,
+      selectOptions,
       required: false,
       order: order++,
     });
   }
+
   return fields;
 }

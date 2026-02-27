@@ -4,6 +4,10 @@ import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Collapsible,
   CollapsibleContent,
@@ -12,7 +16,7 @@ import {
 import { Building2, Truck, UserSquare, Warehouse, ChevronDown, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SOURCE_FIELD_OPTIONS, SOURCE_LABELS } from '@/lib/contract-field-sources';
-import type { ContractFieldSource } from '@/types';
+import type { ContractFieldSource, ContractFieldValueType } from '@/types';
 
 const SOURCE_ICONS: Record<Exclude<ContractFieldSource, 'manual'>, { icon: typeof Building2; color: string; bg: string }> = {
   customer: { icon: Building2, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -22,21 +26,131 @@ const SOURCE_ICONS: Record<Exclude<ContractFieldSource, 'manual'>, { icon: typeo
 };
 
 interface FieldSidebarProps {
-  onInsertPlaceholder: (source: string, path: string, label: string) => void;
+  onInsertPlaceholder: (
+    source: string,
+    path: string,
+    label: string,
+    fieldType?: ContractFieldValueType,
+    selectOptions?: string[]
+  ) => void;
 }
 
 export function TemplateFieldSidebar({ onInsertPlaceholder }: FieldSidebarProps) {
+  const [manualLabel, setManualLabel] = React.useState('');
+  const [manualType, setManualType] = React.useState<ContractFieldValueType>('text');
+  const [manualOptions, setManualOptions] = React.useState('');
+  const [manualFields, setManualFields] = React.useState<Array<{
+    path: string;
+    label: string;
+    fieldType: ContractFieldValueType;
+    selectOptions?: string[];
+  }>>([]);
+
+  const makeManualPath = React.useCallback(
+    (label: string) => {
+      const base = label
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^\w-]/g, '');
+      let path = base || `manual_${Date.now()}`;
+      let i = 2;
+      while (manualFields.some((f) => f.path === path)) {
+        path = `${base || 'manual'}_${i++}`;
+      }
+      return path;
+    },
+    [manualFields]
+  );
+
+  const handleAddManualField = () => {
+    const label = manualLabel.trim();
+    if (!label) return;
+    const path = makeManualPath(label);
+    const selectOptions = manualType === 'select'
+      ? manualOptions.split(',').map((v) => v.trim()).filter(Boolean)
+      : undefined;
+    setManualFields((prev) => [...prev, { path, label, fieldType: manualType, selectOptions }]);
+    setManualLabel('');
+    if (manualType === 'select') {
+      setManualOptions('');
+    }
+    onInsertPlaceholder('manual', path, label, manualType, selectOptions);
+  };
+
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm">Системийн талбарууд</CardTitle>
+        <CardTitle className="text-sm">Талбарууд</CardTitle>
         <p className="text-xs text-muted-foreground">
-          Дарж гэрээний текст рүү оруулна
+          Системээс эсвэл гараас үүсгээд текст рүү оруулна
         </p>
       </CardHeader>
       <CardContent className="p-0">
         <ScrollArea className="h-[500px] px-4 pb-4">
-          <div className="space-y-2">
+          <div className="space-y-3">
+            <div className="rounded-lg border p-3 bg-muted/20">
+              <p className="text-xs font-semibold mb-2">Гараас талбар үүсгэх</p>
+              <div className="flex gap-2">
+                <Input
+                  value={manualLabel}
+                  onChange={(e) => setManualLabel(e.target.value)}
+                  placeholder="Жишээ: Ажлын хамрах хүрээ"
+                  className="h-8 text-xs"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddManualField();
+                    }
+                  }}
+                />
+                <Button type="button" size="sm" className="h-8 px-2" onClick={handleAddManualField}>
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <div className="mt-2">
+                <Select value={manualType} onValueChange={(v) => setManualType(v as ContractFieldValueType)}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Төрөл сонгох" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="text">Текст</SelectItem>
+                    <SelectItem value="textarea">Урт текст</SelectItem>
+                    <SelectItem value="number">Тоо</SelectItem>
+                    <SelectItem value="date">Огноо</SelectItem>
+                    <SelectItem value="select">Сонголт</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {manualType === 'select' && (
+                <Input
+                  value={manualOptions}
+                  onChange={(e) => setManualOptions(e.target.value)}
+                  placeholder="Сонголтууд: Тийм, Үгүй, Хүлээгдэж буй"
+                  className="mt-2 h-8 text-xs"
+                />
+              )}
+              {manualFields.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {manualFields.map((field) => (
+                    <button
+                      key={field.path}
+                      type="button"
+                      onClick={() =>
+                        onInsertPlaceholder('manual', field.path, field.label, field.fieldType, field.selectOptions)
+                      }
+                      className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"
+                    >
+                      <Plus className="h-3 w-3" />
+                      {field.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
             {(Object.entries(SOURCE_FIELD_OPTIONS) as [Exclude<ContractFieldSource, 'manual'>, typeof SOURCE_FIELD_OPTIONS['customer']][]).map(
               ([source, fields]) => {
                 const meta = SOURCE_ICONS[source];
@@ -63,7 +177,8 @@ export function TemplateFieldSidebar({ onInsertPlaceholder }: FieldSidebarProps)
                               onInsertPlaceholder(
                                 source,
                                 field.value,
-                                `${sourceLabel}.${field.label}`
+                                `${sourceLabel}.${field.label}`,
+                                'text'
                               )
                             }
                             className={cn(

@@ -14,12 +14,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, ArrowRight, Check, Loader2, Building2, Truck, UserSquare, Warehouse } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { contractService } from '@/services/contractService';
 import { customerService } from '@/services/customerService';
 import { SOURCE_LABELS } from '@/lib/contract-field-sources';
-import type { ContractTemplate, ContractFieldSource } from '@/types';
+import type { ContractTemplate, ContractFieldSource, ContractFieldValueType } from '@/types';
 
 const ENTITY_ICONS = {
   customer: Building2,
@@ -161,6 +163,67 @@ export function NewContractWizard({
     return true;
   }, [neededSources, linkedEntities]);
   const canSave = !!title.trim() && !!contractNumber.trim();
+
+  const renderFieldInput = React.useCallback(
+    (field: NonNullable<ContractTemplate['fields']>[number]) => {
+      const fieldType: ContractFieldValueType = field.fieldType || 'text';
+      const value = resolvedData[field.id] || '';
+
+      switch (fieldType) {
+        case 'number':
+          return (
+            <Input
+              type="number"
+              value={value}
+              onChange={(e) => setResolvedData((prev) => ({ ...prev, [field.id]: e.target.value }))}
+            />
+          );
+        case 'date':
+          return (
+            <Input
+              type="date"
+              value={value}
+              onChange={(e) => setResolvedData((prev) => ({ ...prev, [field.id]: e.target.value }))}
+            />
+          );
+        case 'textarea':
+          return (
+            <Textarea
+              rows={3}
+              value={value}
+              onChange={(e) => setResolvedData((prev) => ({ ...prev, [field.id]: e.target.value }))}
+            />
+          );
+        case 'select':
+          return (
+            <Select
+              value={value}
+              onValueChange={(val) => setResolvedData((prev) => ({ ...prev, [field.id]: val }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Сонголт сонгох" />
+              </SelectTrigger>
+              <SelectContent>
+                {(field.selectOptions || []).map((option) => (
+                  <SelectItem key={`${field.id}-${option}`} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          );
+        case 'text':
+        default:
+          return (
+            <Input
+              value={value}
+              onChange={(e) => setResolvedData((prev) => ({ ...prev, [field.id]: e.target.value }))}
+            />
+          );
+      }
+    },
+    [resolvedData]
+  );
 
   const handleClose = () => {
     setStep(1);
@@ -408,13 +471,16 @@ export function NewContractWizard({
               </div>
             </div>
             <div>
-              <Label>Шийдэгдсэн талбарууд</Label>
-              <ScrollArea className="h-32 rounded-md border mt-1 p-3">
-                <div className="space-y-2 text-sm">
+              <Label>Талбарын утгууд</Label>
+              <ScrollArea className="h-64 rounded-md border mt-1 p-3">
+                <div className="space-y-3 text-sm">
                   {selectedTemplate.fields.sort((a, b) => a.order - b.order).map((f) => (
-                    <div key={f.id} className="flex gap-2">
-                      <span className="text-muted-foreground shrink-0">{f.label}:</span>
-                      <span>{resolvedData[f.id] || '(хоосон)'}</span>
+                    <div key={f.id} className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">
+                        {f.label}
+                        <span className="ml-2 text-[10px] uppercase tracking-wide">{f.fieldType || 'text'}</span>
+                      </Label>
+                      {renderFieldInput(f)}
                     </div>
                   ))}
                 </div>
