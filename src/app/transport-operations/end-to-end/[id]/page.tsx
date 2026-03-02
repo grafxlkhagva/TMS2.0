@@ -79,14 +79,14 @@ const ROUTE_INPUT_METHODS = [
 type RouteInputMethod = (typeof ROUTE_INPUT_METHODS)[number]['value'];
 const mapContainerStyle = { width: '100%', height: '260px' };
 const DISPATCH_STAGES = [
-  { value: 'new', label: 'Order Intake', progress: 10, status: 'New' },
-  { value: 'planned', label: 'Planning / Pre-Dispatch', progress: 22, status: 'Planned' },
-  { value: 'assigned', label: 'Assignment', progress: 34, status: 'Assigned' },
-  { value: 'ready_to_depart', label: 'Pre-Trip Verification', progress: 50, status: 'Ready to Depart' },
-  { value: 'in_transit', label: 'In Transit', progress: 68, status: 'In Transit' },
-  { value: 'delivered', label: 'Delivery Execution', progress: 82, status: 'Delivered' },
-  { value: 'completed', label: 'Post-Trip / Reconciliation', progress: 92, status: 'Completed' },
-  { value: 'closed', label: 'Analytics / Performance', progress: 100, status: 'Closed' },
+  { value: 'new', label: 'Захиалга хүлээн авах', progress: 10, status: 'Шинэ' },
+  { value: 'planned', label: 'Төлөвлөлт / Урьдчилан илгээлт', progress: 22, status: 'Төлөвлөгдсөн' },
+  { value: 'assigned', label: 'Даалгавар оноох', progress: 34, status: 'Оноогдсон' },
+  { value: 'ready_to_depart', label: 'Гарахаас өмнөх шалгалт', progress: 50, status: 'Гарахад бэлэн' },
+  { value: 'in_transit', label: 'Замд явагдаж буй', progress: 68, status: 'Замд' },
+  { value: 'delivered', label: 'Хүргэлт гүйцэтгэх', progress: 82, status: 'Хүргэгдсэн' },
+  { value: 'completed', label: 'Аялалтын дараа / Тохирол', progress: 92, status: 'Дууссан' },
+  { value: 'closed', label: 'Шинжилгээ / Гүйцэтгэл', progress: 100, status: 'Хаагдсан' },
 ] as const;
 type DispatchStage = (typeof DISPATCH_STAGES)[number]['value'];
 const LEGACY_DISPATCH_STAGE_MAP: Partial<Record<string, DispatchStage>> = {
@@ -96,52 +96,52 @@ const LEGACY_DISPATCH_STAGE_MAP: Partial<Record<string, DispatchStage>> = {
 };
 const DISPATCH_PLAYBOOK: Record<DispatchStage, { title: string; focus: string; nextAction: string; output: string }> = {
   new: {
-    title: 'Order Intake',
-    focus: 'Захиалгыг стандартчлан бүртгэж validation, duplicate, SLA шалгалт хийх.',
-    nextAction: 'Order validation болон SLA шалгалт дуусмагц Planning руу шилжүүлнэ.',
-    output: 'New',
+    title: 'Захиалга хүлээн авах',
+    focus: 'Захиалгыг стандартчлан бүртгэж шалгалт, давхардал, SLA шалгалт хийх.',
+    nextAction: 'Захиалга шалгагдаад SLA шалгалт дуусмагц Төлөвлөлт руу шилжүүлнэ.',
+    output: 'Шинэ',
   },
   planned: {
-    title: 'Planning / Pre-Dispatch',
+    title: 'Төлөвлөлт / Урьдчилан илгээлт',
     focus: 'Маршрут, өртөг, даацын төлөвлөлт болон машин-жолоочийн тохиргоог хийх.',
-    nextAction: 'Төлөвлөлт баталгаажмагц Assignment шатанд даалгавар онооно.',
-    output: 'Planned',
+    nextAction: 'Төлөвлөлт баталгаажмагц Даалгавар оноох шатанд шилжүүлнэ.',
+    output: 'Төлөвлөгдсөн',
   },
   assigned: {
-    title: 'Assignment',
-    focus: 'Жолоочид даалгавар хүргэх, accept/reject удирдах, шаардлагатай бол дахин оноох.',
-    nextAction: 'Даалгавар баталгаажмагц Pre-Trip Verification руу шилжүүлнэ.',
-    output: 'Assigned',
+    title: 'Даалгавар оноох',
+    focus: 'Жолоочид даалгавар хүргэх, зөвшөөрөх/татгалзах удирдах, шаардлагатай бол дахин оноох.',
+    nextAction: 'Даалгавар баталгаажмагц Гарахаас өмнөх шалгалт руу шилжүүлнэ.',
+    output: 'Оноогдсон',
   },
   ready_to_depart: {
-    title: 'Pre-Trip Verification',
-    focus: 'Гарахаас өмнөх checklist, fuel/safety/docs хангалт, inspection нотолгоо.',
-    nextAction: 'Pre-trip шалгалт бүрэн бол In Transit шат руу шилжүүлнэ.',
-    output: 'Ready to Depart',
+    title: 'Гарахаас өмнөх шалгалт',
+    focus: 'Гарахаас өмнөх жагсаалт, түлш/аюулгүй байдал/баримт хангалт, шалгалтын нотолгоо.',
+    nextAction: 'Гарахаас өмнөх шалгалт бүрэн бол Замд явагдаж буй шат руу шилжүүлнэ.',
+    output: 'Гарахад бэлэн',
   },
   in_transit: {
-    title: 'In Transit',
-    focus: 'GPS, ETA, deviation, саатлын мэдээллийг real-time хянаж шинэчлэх.',
-    nextAction: 'Хүлээн авагч дээр хүрсний дараа Delivery Execution шат руу шилжүүлнэ.',
-    output: 'In Transit',
+    title: 'Замд явагдаж буй',
+    focus: 'GPS, ETA, хазайлт, саатлын мэдээллийг бодит цагийн хяналтаар шинэчлэх.',
+    nextAction: 'Хүлээн авагч дээр хүрсний дараа Хүргэлт гүйцэтгэх шат руу шилжүүлнэ.',
+    output: 'Замд',
   },
   delivered: {
-    title: 'Delivery Execution',
+    title: 'Хүргэлт гүйцэтгэх',
     focus: 'Хүргэлтийг POD, зураг, гарын үсэг, гэмтлийн тайлангаар баталгаажуулах.',
-    nextAction: 'Delivery баталгаажмагц Post-Trip / Reconciliation шат руу шилжүүлнэ.',
-    output: 'Delivered',
+    nextAction: 'Хүргэлт баталгаажмагц Аялалтын дараа / Тохирол шат руу шилжүүлнэ.',
+    output: 'Хүргэгдсэн',
   },
   completed: {
-    title: 'Post-Trip / Reconciliation',
-    focus: 'Бодит зардал, км, toll, суутгал, driver settlement, invoice хаалт хийх.',
-    nextAction: 'Санхүүгийн хаалт дуусмагц Analytics / Performance шат руу шилжүүлнэ.',
-    output: 'Completed',
+    title: 'Аялалтын дараа / Тохирол',
+    focus: 'Бодит зардал, км, цэнэглэлт, суутгал, жолоочийн тооцоо, нэхэмжлэх хаалт хийх.',
+    nextAction: 'Санхүүгийн хаалт дуусмагц Шинжилгээ / Гүйцэтгэл шат руу шилжүүлнэ.',
+    output: 'Дууссан',
   },
   closed: {
-    title: 'Analytics / Performance',
-    focus: 'KPI, SLA, utilization, cost шинжилгээ хийж ажлыг бүрэн хаах.',
+    title: 'Шинжилгээ / Гүйцэтгэл',
+    focus: 'KPI, SLA, ашиглалт, зардлын шинжилгээ хийж ажлыг бүрэн хаах.',
     nextAction: 'Ажил хаагдсан тул дараагийн захиалгын мөчлөг рүү шилжинэ.',
-    output: 'Closed',
+    output: 'Хаагдсан',
   },
 };
 const DISPATCH_STAGE_ORDER: DispatchStage[] = DISPATCH_STAGES.map((stage) => stage.value);
@@ -595,7 +595,7 @@ export default function TransportOperationDetailPage() {
     { label: 'Жолооч оноогдсон', ready: Boolean(shipment?.transportAssignment?.driverId) },
     { label: 'Тээврийн хэрэгсэл оноогдсон', ready: Boolean(shipment?.transportAssignment?.vehicleId) },
     { label: 'Ачилтын огноо төлөвлөгдсөн', ready: Boolean(shipment?.plannedPickupDate) },
-    { label: 'Order intake шалгалт', ready: Boolean(dispatchWorkflow?.orderIntake?.validated) },
+    { label: 'Захиалга хүлээн авах шалгалт', ready: Boolean(dispatchWorkflow?.orderIntake?.validated) },
   ];
   const dispatchReadinessScore = Math.round(
     (dispatchChecklist.filter((item) => item.ready).length / dispatchChecklist.length) * 100
@@ -608,31 +608,31 @@ export default function TransportOperationDetailPage() {
         : Boolean(dispatchWorkflow?.orderIntake?.duplicateChecked);
       const sla = editingDispatch ? dispatchForm.intakeSlaChecked : Boolean(dispatchWorkflow?.orderIntake?.slaChecked);
       return [
-        { label: 'Order validation', ready: validated },
-        { label: 'Duplicate check', ready: duplicate },
-        { label: 'SLA check', ready: sla },
+        { label: 'Захиалга шалгалт', ready: validated },
+        { label: 'Давхардлын шалгалт', ready: duplicate },
+        { label: 'SLA шалгалт', ready: sla },
       ];
     }
     if (dispatchStageForUi === 'planned') {
       return [
-        { label: 'Route optimization', ready: editingDispatch ? dispatchForm.planningRouteOptimized : Boolean(dispatchWorkflow?.planning?.routeOptimized) },
-        { label: 'Cost estimate', ready: editingDispatch ? dispatchForm.planningCostEstimated : Boolean(dispatchWorkflow?.planning?.costEstimated) },
-        { label: 'Load planning', ready: editingDispatch ? dispatchForm.planningLoadPlanned : Boolean(dispatchWorkflow?.planning?.loadPlanned) },
+        { label: 'Маршрут оновчлох', ready: editingDispatch ? dispatchForm.planningRouteOptimized : Boolean(dispatchWorkflow?.planning?.routeOptimized) },
+        { label: 'Зардлын тооцоо', ready: editingDispatch ? dispatchForm.planningCostEstimated : Boolean(dispatchWorkflow?.planning?.costEstimated) },
+        { label: 'Ачааны төлөвлөлт', ready: editingDispatch ? dispatchForm.planningLoadPlanned : Boolean(dispatchWorkflow?.planning?.loadPlanned) },
       ];
     }
     if (dispatchStageForUi === 'assigned') {
       return [
-        { label: 'Driver notification', ready: editingDispatch ? dispatchForm.assignmentDriverNotified : Boolean(dispatchWorkflow?.assignment?.driverNotified) },
-        { label: 'Accept / Reject', ready: editingDispatch ? dispatchForm.assignmentAccepted : Boolean(dispatchWorkflow?.assignment?.accepted) },
-        { label: 'Digital contract', ready: editingDispatch ? dispatchForm.assignmentContractReady : Boolean(dispatchWorkflow?.assignment?.digitalContractReady) },
+        { label: 'Жолооч руу мэдэгдэл', ready: editingDispatch ? dispatchForm.assignmentDriverNotified : Boolean(dispatchWorkflow?.assignment?.driverNotified) },
+        { label: 'Зөвшөөрөх / Татгалзах', ready: editingDispatch ? dispatchForm.assignmentAccepted : Boolean(dispatchWorkflow?.assignment?.accepted) },
+        { label: 'Цифр гэрээ', ready: editingDispatch ? dispatchForm.assignmentContractReady : Boolean(dispatchWorkflow?.assignment?.digitalContractReady) },
       ];
     }
     if (dispatchStageForUi === 'ready_to_depart') {
       return [
-        { label: 'Checklist completed', ready: editingDispatch ? dispatchForm.preTripChecklistDone : Boolean(dispatchWorkflow?.preTrip?.checklistDone) },
-        { label: 'Fuel checked', ready: editingDispatch ? dispatchForm.preTripFuelChecked : Boolean(dispatchWorkflow?.preTrip?.fuelChecked) },
-        { label: 'Safety checked', ready: editingDispatch ? dispatchForm.preTripSafetyChecked : Boolean(dispatchWorkflow?.preTrip?.safetyChecked) },
-        { label: 'Docs checked', ready: editingDispatch ? dispatchForm.preTripDocsChecked : Boolean(dispatchWorkflow?.preTrip?.docsChecked) },
+        { label: 'Шалгалтын жагсаалт дууссан', ready: editingDispatch ? dispatchForm.preTripChecklistDone : Boolean(dispatchWorkflow?.preTrip?.checklistDone) },
+        { label: 'Түлш шалгагдсан', ready: editingDispatch ? dispatchForm.preTripFuelChecked : Boolean(dispatchWorkflow?.preTrip?.fuelChecked) },
+        { label: 'Аюулгүй байдал шалгагдсан', ready: editingDispatch ? dispatchForm.preTripSafetyChecked : Boolean(dispatchWorkflow?.preTrip?.safetyChecked) },
+        { label: 'Баримт шалгагдсан', ready: editingDispatch ? dispatchForm.preTripDocsChecked : Boolean(dispatchWorkflow?.preTrip?.docsChecked) },
       ];
     }
     if (dispatchStageForUi === 'in_transit') {
@@ -657,7 +657,7 @@ export default function TransportOperationDetailPage() {
       return [
         { label: 'Хүлээн авагчийн мэдээлэл', ready: receiverReady },
         {
-          label: 'Signature captured',
+          label: 'Гарын үсэг авсан',
           ready: editingDispatch ? dispatchForm.deliveredSignatureCaptured : Boolean(dispatchWorkflow?.delivery?.signatureCaptured),
         },
         { label: 'Хүргэлтийн огноо бүртгэгдсэн', ready: deliveredAtReady },
@@ -665,18 +665,18 @@ export default function TransportOperationDetailPage() {
     }
     if (dispatchStageForUi === 'completed') {
       return [
-        { label: 'Actual distance logged', ready: editingDispatch ? Boolean(dispatchForm.postTripActualDistanceKm) : Boolean(dispatchWorkflow?.postTrip?.actualDistanceKm) },
-        { label: 'Reconciliation done', ready: editingDispatch ? dispatchForm.postTripReconciled : Boolean(dispatchWorkflow?.postTrip?.reconciled) },
-        { label: 'Invoice ready', ready: editingDispatch ? dispatchForm.postTripInvoiceReady : Boolean(dispatchWorkflow?.postTrip?.invoiceReady) },
+        { label: 'Бодит зай бүртгэгдсэн', ready: editingDispatch ? Boolean(dispatchForm.postTripActualDistanceKm) : Boolean(dispatchWorkflow?.postTrip?.actualDistanceKm) },
+        { label: 'Тохирол хийгдсэн', ready: editingDispatch ? dispatchForm.postTripReconciled : Boolean(dispatchWorkflow?.postTrip?.reconciled) },
+        { label: 'Нэхэмжлэх бэлэн', ready: editingDispatch ? dispatchForm.postTripInvoiceReady : Boolean(dispatchWorkflow?.postTrip?.invoiceReady) },
       ];
     }
     return [
-      { label: 'SLA KPI logged', ready: editingDispatch ? Boolean(dispatchForm.analyticsSlaRate) : Boolean(dispatchWorkflow?.analytics?.slaRate) },
+      { label: 'SLA KPI бүртгэгдсэн', ready: editingDispatch ? Boolean(dispatchForm.analyticsSlaRate) : Boolean(dispatchWorkflow?.analytics?.slaRate) },
       {
-        label: 'Utilization KPI logged',
+        label: 'Ашиглалтын KPI бүртгэгдсэн',
         ready: editingDispatch ? Boolean(dispatchForm.analyticsUtilizationRate) : Boolean(dispatchWorkflow?.analytics?.utilizationRate),
       },
-      { label: 'KPI published', ready: editingDispatch ? dispatchForm.analyticsKpiPublished : Boolean(dispatchWorkflow?.analytics?.kpiPublished) },
+      { label: 'KPI нийтлэгдсэн', ready: editingDispatch ? dispatchForm.analyticsKpiPublished : Boolean(dispatchWorkflow?.analytics?.kpiPublished) },
     ];
   })();
   const stageGateScore = Math.round(
@@ -960,13 +960,13 @@ export default function TransportOperationDetailPage() {
       setOperation((prev) => (prev ? { ...prev, shipmentDetails: merged, updatedAt: new Date() } : prev));
       setDispatchForm(dispatchToForm(merged));
       setEditingDispatch(false);
-      toast({ title: 'Амжилттай', description: 'Диспач мэдээлэл шинэчлэгдлээ.' });
+      toast({ title: 'Амжилттай', description: 'Илгээлтийн мэдээлэл шинэчлэгдлээ.' });
     } catch (error) {
       console.error('Error updating dispatch details:', error);
       toast({
         variant: 'destructive',
         title: 'Алдаа',
-        description: 'Диспач мэдээлэл хадгалах үед алдаа гарлаа.',
+        description: 'Илгээлтийн мэдээлэл хадгалах үед алдаа гарлаа.',
       });
     } finally {
       setSavingDispatch(false);
@@ -1144,7 +1144,7 @@ export default function TransportOperationDetailPage() {
 
           <Tabs defaultValue="dispatch" className="w-full">
             <TabsList>
-              <TabsTrigger value="dispatch">Диспач</TabsTrigger>
+              <TabsTrigger value="dispatch">Илгээлтийн алхамууд</TabsTrigger>
               <TabsTrigger value="order">Захиалгын мэдээлэл</TabsTrigger>
             </TabsList>
 
@@ -1844,7 +1844,7 @@ export default function TransportOperationDetailPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-base">Диспач</CardTitle>
+                <CardTitle className="text-base">Илгээлтийн алхамууд</CardTitle>
                 {editingDispatch ? (
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={cancelDispatchEdit} disabled={savingDispatch}>
@@ -1898,7 +1898,7 @@ export default function TransportOperationDetailPage() {
                   <p className="mt-1 text-sm font-semibold">{dispatchPlaybook.title}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{dispatchPlaybook.focus}</p>
                   <p className="mt-2 text-xs text-muted-foreground">Дараагийн алхам: {dispatchPlaybook.nextAction}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Гаралт / Статус: {dispatchPlaybook.output}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Гаралт / Төлөв: {dispatchPlaybook.output}</p>
                 </div>
                 <div className="rounded-md border p-3">
                   <div className="flex items-center justify-between gap-2">
@@ -1942,12 +1942,12 @@ export default function TransportOperationDetailPage() {
                 <div className="space-y-4">
                   {stageGateScore < 100 && (
                     <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                      Энэ үе шатанд шаардлагатай мэдээлэл бүрэн биш байна. Доорх checklist-ийг бүрэн хангаад хадгалахыг зөвлөж байна.
+                      Энэ үе шатанд шаардлагатай мэдээлэл бүрэн биш байна. Доорх жагсаалтыг бүрэн хангаад хадгалахыг зөвлөж байна.
                     </div>
                   )}
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="dispatchStage">Диспач үе шат</Label>
+                      <Label htmlFor="dispatchStage">Илгээлтийн үе шат</Label>
                       <select
                         id="dispatchStage"
                         className="w-full rounded-md border bg-background px-3 py-2 text-sm"
@@ -2004,7 +2004,7 @@ export default function TransportOperationDetailPage() {
                             checked={dispatchForm.intakeValidated}
                             onChange={(e) => setDispatchForm((prev) => ({ ...prev, intakeValidated: e.target.checked }))}
                           />
-                          Order validation хийгдсэн
+                          Захиалга шалгагдсан
                         </label>
                         <label className="flex items-center gap-2 text-sm">
                           <input
@@ -2014,7 +2014,7 @@ export default function TransportOperationDetailPage() {
                               setDispatchForm((prev) => ({ ...prev, intakeDuplicateChecked: e.target.checked }))
                             }
                           />
-                          Duplicate check хийгдсэн
+                          Давхардлын шалгалт хийгдсэн
                         </label>
                         <label className="flex items-center gap-2 text-sm">
                           <input
@@ -2025,7 +2025,7 @@ export default function TransportOperationDetailPage() {
                           SLA шалгалт хийгдсэн
                         </label>
                         <div className="space-y-2">
-                          <Label htmlFor="intakeNote">Order intake тэмдэглэл</Label>
+                          <Label htmlFor="intakeNote">Захиалга хүлээн авах тэмдэглэл</Label>
                           <Textarea
                             id="intakeNote"
                             rows={2}
@@ -2044,7 +2044,7 @@ export default function TransportOperationDetailPage() {
                             checked={dispatchForm.planningRouteOptimized}
                             onChange={(e) => setDispatchForm((prev) => ({ ...prev, planningRouteOptimized: e.target.checked }))}
                           />
-                          Route optimization хийгдсэн
+                          Маршрут оновчлол хийгдсэн
                         </label>
                         <label className="flex items-center gap-2 text-sm">
                           <input
@@ -2052,7 +2052,7 @@ export default function TransportOperationDetailPage() {
                             checked={dispatchForm.planningCostEstimated}
                             onChange={(e) => setDispatchForm((prev) => ({ ...prev, planningCostEstimated: e.target.checked }))}
                           />
-                          Cost estimate бэлэн
+                          Зардлын тооцоо бэлэн
                         </label>
                         <label className="flex items-center gap-2 text-sm">
                           <input
@@ -2060,7 +2060,7 @@ export default function TransportOperationDetailPage() {
                             checked={dispatchForm.planningLoadPlanned}
                             onChange={(e) => setDispatchForm((prev) => ({ ...prev, planningLoadPlanned: e.target.checked }))}
                           />
-                          Load planning бэлэн
+                          Ачааны төлөвлөлт бэлэн
                         </label>
                         <label className="flex items-center gap-2 text-sm">
                           <input
@@ -2071,7 +2071,7 @@ export default function TransportOperationDetailPage() {
                           AI matching ашигласан
                         </label>
                         <div className="space-y-2">
-                          <Label htmlFor="planningNote">Planning тэмдэглэл</Label>
+                          <Label htmlFor="planningNote">Төлөвлөлтийн тэмдэглэл</Label>
                           <Textarea
                             id="planningNote"
                             rows={2}
@@ -2092,7 +2092,7 @@ export default function TransportOperationDetailPage() {
                               setDispatchForm((prev) => ({ ...prev, assignmentDriverNotified: e.target.checked }))
                             }
                           />
-                          Driver notification илгээгдсэн
+                          Жолооч руу мэдэгдэл илгээгдсэн
                         </label>
                         <label className="flex items-center gap-2 text-sm">
                           <input
@@ -2100,7 +2100,7 @@ export default function TransportOperationDetailPage() {
                             checked={dispatchForm.assignmentAccepted}
                             onChange={(e) => setDispatchForm((prev) => ({ ...prev, assignmentAccepted: e.target.checked }))}
                           />
-                          Driver accept/reject бүртгэгдсэн
+                          Зөвшөөрөх/Татгалзах бүртгэгдсэн
                         </label>
                         <label className="flex items-center gap-2 text-sm">
                           <input
@@ -2110,10 +2110,10 @@ export default function TransportOperationDetailPage() {
                               setDispatchForm((prev) => ({ ...prev, assignmentContractReady: e.target.checked }))
                             }
                           />
-                          Digital contract бэлэн
+                          Цифр гэрээ бэлэн
                         </label>
                         <div className="space-y-2">
-                          <Label htmlFor="assignmentNote">Assignment тэмдэглэл</Label>
+                          <Label htmlFor="assignmentNote">Даалгаврын тэмдэглэл</Label>
                           <Textarea
                             id="assignmentNote"
                             rows={2}
@@ -2132,7 +2132,7 @@ export default function TransportOperationDetailPage() {
                             checked={dispatchForm.preTripChecklistDone}
                             onChange={(e) => setDispatchForm((prev) => ({ ...prev, preTripChecklistDone: e.target.checked }))}
                           />
-                          Checklist бүрэн
+                          Шалгалтын жагсаалт бүрэн
                         </label>
                         <label className="flex items-center gap-2 text-sm">
                           <input
@@ -2140,7 +2140,7 @@ export default function TransportOperationDetailPage() {
                             checked={dispatchForm.preTripFuelChecked}
                             onChange={(e) => setDispatchForm((prev) => ({ ...prev, preTripFuelChecked: e.target.checked }))}
                           />
-                          Fuel шалгалт
+                          Түлш шалгалт
                         </label>
                         <label className="flex items-center gap-2 text-sm">
                           <input
@@ -2148,7 +2148,7 @@ export default function TransportOperationDetailPage() {
                             checked={dispatchForm.preTripSafetyChecked}
                             onChange={(e) => setDispatchForm((prev) => ({ ...prev, preTripSafetyChecked: e.target.checked }))}
                           />
-                          Safety шалгалт
+                          Аюулгүй байдлын шалгалт
                         </label>
                         <label className="flex items-center gap-2 text-sm">
                           <input
@@ -2159,7 +2159,7 @@ export default function TransportOperationDetailPage() {
                           Баримт бичгийн шалгалт
                         </label>
                         <div className="space-y-2">
-                          <Label htmlFor="preTripInspectionPhotoUrl">Inspection зураг (URL)</Label>
+                          <Label htmlFor="preTripInspectionPhotoUrl">Шалгалтын зураг (URL)</Label>
                           <Input
                             id="preTripInspectionPhotoUrl"
                             value={dispatchForm.preTripInspectionPhotoUrl}
@@ -2170,7 +2170,7 @@ export default function TransportOperationDetailPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="preTripNote">Pre-trip тэмдэглэл</Label>
+                          <Label htmlFor="preTripNote">Гарахаас өмнөх тэмдэглэл</Label>
                           <Textarea
                             id="preTripNote"
                             rows={2}
@@ -2250,7 +2250,7 @@ export default function TransportOperationDetailPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="deliveredPodPhotoUrl">POD зураг/файл URL</Label>
+                            <Label htmlFor="deliveredPodPhotoUrl">Хүргэлтийн нотолгооны зураг/файл URL</Label>
                             <Input
                               id="deliveredPodPhotoUrl"
                               value={dispatchForm.deliveredPodPhotoUrl}
@@ -2269,7 +2269,7 @@ export default function TransportOperationDetailPage() {
                               setDispatchForm((prev) => ({ ...prev, deliveredSignatureCaptured: e.target.checked }))
                             }
                           />
-                          Signature capture хийгдсэн
+                          Гарын үсэг авсан
                         </label>
                         <div className="space-y-2">
                           <Label htmlFor="deliveredDamageReport">Гэмтлийн тайлан</Label>
@@ -2310,7 +2310,7 @@ export default function TransportOperationDetailPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="postTripFuelCost">Fuel зардал</Label>
+                            <Label htmlFor="postTripFuelCost">Түлшний зардал</Label>
                             <Input
                               id="postTripFuelCost"
                               type="number"
@@ -2320,7 +2320,7 @@ export default function TransportOperationDetailPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="postTripTollCost">Toll зардал</Label>
+                            <Label htmlFor="postTripTollCost">Цэнэглэлтийн зардал</Label>
                             <Input
                               id="postTripTollCost"
                               type="number"
@@ -2331,7 +2331,7 @@ export default function TransportOperationDetailPage() {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="postTripDelayInfo">Delay тайлбар</Label>
+                          <Label htmlFor="postTripDelayInfo">Саатлын тайлбар</Label>
                           <Textarea
                             id="postTripDelayInfo"
                             rows={2}
@@ -2345,7 +2345,7 @@ export default function TransportOperationDetailPage() {
                             checked={dispatchForm.postTripReconciled}
                             onChange={(e) => setDispatchForm((prev) => ({ ...prev, postTripReconciled: e.target.checked }))}
                           />
-                          Cost reconciliation хийгдсэн
+                          Зардлын тохирол хийгдсэн
                         </label>
                         <label className="flex items-center gap-2 text-sm">
                           <input
@@ -2353,7 +2353,7 @@ export default function TransportOperationDetailPage() {
                             checked={dispatchForm.postTripInvoiceReady}
                             onChange={(e) => setDispatchForm((prev) => ({ ...prev, postTripInvoiceReady: e.target.checked }))}
                           />
-                          Invoice бэлэн
+                          Нэхэмжлэх бэлэн
                         </label>
                       </>
                     )}
@@ -2373,7 +2373,7 @@ export default function TransportOperationDetailPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="analyticsUtilizationRate">Utilization (%)</Label>
+                            <Label htmlFor="analyticsUtilizationRate">Ашиглалт (%)</Label>
                             <Input
                               id="analyticsUtilizationRate"
                               type="number"
@@ -2394,10 +2394,10 @@ export default function TransportOperationDetailPage() {
                               setDispatchForm((prev) => ({ ...prev, analyticsKpiPublished: e.target.checked }))
                             }
                           />
-                          KPI dashboard нийтлэгдсэн
+                          KPI самбар нийтлэгдсэн
                         </label>
                         <div className="space-y-2">
-                          <Label htmlFor="analyticsNote">Analytics тэмдэглэл</Label>
+                          <Label htmlFor="analyticsNote">Шинжилгээний тэмдэглэл</Label>
                           <Textarea
                             id="analyticsNote"
                             rows={2}
@@ -2413,7 +2413,7 @@ export default function TransportOperationDetailPage() {
                 <>
                   <div className="rounded-lg border p-3">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">Диспач үе шат</p>
+                      <p className="text-xs text-muted-foreground">Илгээлтийн үе шат</p>
                       <Badge variant="outline">{dispatchStageMeta.label}</Badge>
                     </div>
                     <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -2423,7 +2423,7 @@ export default function TransportOperationDetailPage() {
                   </div>
 
                   <div className="rounded-lg border bg-muted/20 p-3">
-                    <p className="text-xs text-muted-foreground">Диспач бэлэн байдал</p>
+                    <p className="text-xs text-muted-foreground">Илгээлтийн бэлэн байдал</p>
                     <p className="mt-1 text-sm font-semibold">{dispatchReadinessScore}%</p>
                     <div className="mt-2 space-y-1">
                       {dispatchChecklist.map((item) => (
@@ -2465,36 +2465,36 @@ export default function TransportOperationDetailPage() {
                     <p className="text-xs text-muted-foreground">Үе шатны удирдлагын дэлгэрэнгүй</p>
                     {dispatchStage === 'new' ? (
                       <div className="mt-2 space-y-1 text-sm">
-                        <p>Validation: {dispatchWorkflow?.orderIntake?.validated ? 'Тийм' : 'Үгүй'}</p>
-                        <p>Duplicate check: {dispatchWorkflow?.orderIntake?.duplicateChecked ? 'Тийм' : 'Үгүй'}</p>
-                        <p>SLA check: {dispatchWorkflow?.orderIntake?.slaChecked ? 'Тийм' : 'Үгүй'}</p>
+                        <p>Шалгалт: {dispatchWorkflow?.orderIntake?.validated ? 'Тийм' : 'Үгүй'}</p>
+                        <p>Давхардлын шалгалт: {dispatchWorkflow?.orderIntake?.duplicateChecked ? 'Тийм' : 'Үгүй'}</p>
+                        <p>SLA шалгалт: {dispatchWorkflow?.orderIntake?.slaChecked ? 'Тийм' : 'Үгүй'}</p>
                         <p className="text-muted-foreground">{dispatchWorkflow?.orderIntake?.note || '-'}</p>
                       </div>
                     ) : null}
                     {dispatchStage === 'planned' ? (
                       <div className="mt-2 space-y-1 text-sm">
-                        <p>Route optimized: {dispatchWorkflow?.planning?.routeOptimized ? 'Тийм' : 'Үгүй'}</p>
-                        <p>Cost estimated: {dispatchWorkflow?.planning?.costEstimated ? 'Тийм' : 'Үгүй'}</p>
-                        <p>Load planned: {dispatchWorkflow?.planning?.loadPlanned ? 'Тийм' : 'Үгүй'}</p>
-                        <p>AI matched: {dispatchWorkflow?.planning?.aiMatched ? 'Тийм' : 'Үгүй'}</p>
+                        <p>Маршрут оновчлогдсон: {dispatchWorkflow?.planning?.routeOptimized ? 'Тийм' : 'Үгүй'}</p>
+                        <p>Зардал тооцоогдсон: {dispatchWorkflow?.planning?.costEstimated ? 'Тийм' : 'Үгүй'}</p>
+                        <p>Ачаа төлөвлөгдсөн: {dispatchWorkflow?.planning?.loadPlanned ? 'Тийм' : 'Үгүй'}</p>
+                        <p>AI тохируулсан: {dispatchWorkflow?.planning?.aiMatched ? 'Тийм' : 'Үгүй'}</p>
                         <p className="text-muted-foreground">{dispatchWorkflow?.planning?.note || '-'}</p>
                       </div>
                     ) : null}
                     {dispatchStage === 'assigned' ? (
                       <div className="mt-2 space-y-1 text-sm">
-                        <p>Driver notified: {dispatchWorkflow?.assignment?.driverNotified ? 'Тийм' : 'Үгүй'}</p>
-                        <p>Accepted: {dispatchWorkflow?.assignment?.accepted ? 'Тийм' : 'Үгүй'}</p>
-                        <p>Digital contract: {dispatchWorkflow?.assignment?.digitalContractReady ? 'Тийм' : 'Үгүй'}</p>
+                        <p>Жолооч мэдэгдэл хүлээн авсан: {dispatchWorkflow?.assignment?.driverNotified ? 'Тийм' : 'Үгүй'}</p>
+                        <p>Зөвшөөрсөн: {dispatchWorkflow?.assignment?.accepted ? 'Тийм' : 'Үгүй'}</p>
+                        <p>Цифр гэрээ: {dispatchWorkflow?.assignment?.digitalContractReady ? 'Тийм' : 'Үгүй'}</p>
                         <p className="text-muted-foreground">{dispatchWorkflow?.assignment?.note || '-'}</p>
                       </div>
                     ) : null}
                     {dispatchStage === 'ready_to_depart' ? (
                       <div className="mt-2 space-y-1 text-sm">
-                        <p>Checklist: {dispatchWorkflow?.preTrip?.checklistDone ? 'Тийм' : 'Үгүй'}</p>
-                        <p>Fuel checked: {dispatchWorkflow?.preTrip?.fuelChecked ? 'Тийм' : 'Үгүй'}</p>
-                        <p>Safety checked: {dispatchWorkflow?.preTrip?.safetyChecked ? 'Тийм' : 'Үгүй'}</p>
-                        <p>Docs checked: {dispatchWorkflow?.preTrip?.docsChecked ? 'Тийм' : 'Үгүй'}</p>
-                        <p className="break-all">Inspection: {dispatchWorkflow?.preTrip?.inspectionPhotoUrl || '-'}</p>
+                        <p>Шалгалтын жагсаалт: {dispatchWorkflow?.preTrip?.checklistDone ? 'Тийм' : 'Үгүй'}</p>
+                        <p>Түлш шалгагдсан: {dispatchWorkflow?.preTrip?.fuelChecked ? 'Тийм' : 'Үгүй'}</p>
+                        <p>Аюулгүй байдал шалгагдсан: {dispatchWorkflow?.preTrip?.safetyChecked ? 'Тийм' : 'Үгүй'}</p>
+                        <p>Баримт шалгагдсан: {dispatchWorkflow?.preTrip?.docsChecked ? 'Тийм' : 'Үгүй'}</p>
+                        <p className="break-all">Шалгалт: {dispatchWorkflow?.preTrip?.inspectionPhotoUrl || '-'}</p>
                         <p className="text-muted-foreground">{dispatchWorkflow?.preTrip?.note || '-'}</p>
                       </div>
                     ) : null}
@@ -2518,27 +2518,27 @@ export default function TransportOperationDetailPage() {
                             ? dispatchWorkflow.delivery.deliveredAt.toLocaleDateString('mn-MN')
                             : '-'}
                         </p>
-                        <p>Signature: {dispatchWorkflow?.delivery?.signatureCaptured ? 'Тийм' : 'Үгүй'}</p>
-                        <p className="break-all">POD: {dispatchWorkflow?.delivery?.podPhotoUrl || '-'}</p>
-                        <p>Damage report: {dispatchWorkflow?.delivery?.damageReport || '-'}</p>
+                        <p>Гарын үсэг: {dispatchWorkflow?.delivery?.signatureCaptured ? 'Тийм' : 'Үгүй'}</p>
+                        <p className="break-all">Хүргэлтийн нотолгоо: {dispatchWorkflow?.delivery?.podPhotoUrl || '-'}</p>
+                        <p>Гэмтлийн тайлан: {dispatchWorkflow?.delivery?.damageReport || '-'}</p>
                         <p className="text-muted-foreground">{dispatchWorkflow?.delivery?.note || '-'}</p>
                       </div>
                     ) : null}
                     {dispatchStage === 'completed' ? (
                       <div className="mt-2 space-y-1 text-sm">
-                        <p>Actual distance: {dispatchWorkflow?.postTrip?.actualDistanceKm ?? '-'} км</p>
-                        <p>Fuel cost: {dispatchWorkflow?.postTrip?.fuelCost ?? '-'}</p>
-                        <p>Toll cost: {dispatchWorkflow?.postTrip?.tollCost ?? '-'}</p>
-                        <p>Delay info: {dispatchWorkflow?.postTrip?.delayInfo || '-'}</p>
-                        <p>Reconciled: {dispatchWorkflow?.postTrip?.reconciled ? 'Тийм' : 'Үгүй'}</p>
-                        <p>Invoice ready: {dispatchWorkflow?.postTrip?.invoiceReady ? 'Тийм' : 'Үгүй'}</p>
+                        <p>Бодит зай: {dispatchWorkflow?.postTrip?.actualDistanceKm ?? '-'} км</p>
+                        <p>Түлшний зардал: {dispatchWorkflow?.postTrip?.fuelCost ?? '-'}</p>
+                        <p>Цэнэглэлтийн зардал: {dispatchWorkflow?.postTrip?.tollCost ?? '-'}</p>
+                        <p>Саатлын мэдээлэл: {dispatchWorkflow?.postTrip?.delayInfo || '-'}</p>
+                        <p>Тохирол хийгдсэн: {dispatchWorkflow?.postTrip?.reconciled ? 'Тийм' : 'Үгүй'}</p>
+                        <p>Нэхэмжлэх бэлэн: {dispatchWorkflow?.postTrip?.invoiceReady ? 'Тийм' : 'Үгүй'}</p>
                       </div>
                     ) : null}
                     {dispatchStage === 'closed' ? (
                       <div className="mt-2 space-y-1 text-sm">
                         <p>SLA: {dispatchWorkflow?.analytics?.slaRate ?? '-'}%</p>
-                        <p>Utilization: {dispatchWorkflow?.analytics?.utilizationRate ?? '-'}%</p>
-                        <p>KPI published: {dispatchWorkflow?.analytics?.kpiPublished ? 'Тийм' : 'Үгүй'}</p>
+                        <p>Ашиглалт: {dispatchWorkflow?.analytics?.utilizationRate ?? '-'}%</p>
+                        <p>KPI нийтлэгдсэн: {dispatchWorkflow?.analytics?.kpiPublished ? 'Тийм' : 'Үгүй'}</p>
                         <p className="text-muted-foreground">{dispatchWorkflow?.analytics?.note || '-'}</p>
                       </div>
                     ) : null}
